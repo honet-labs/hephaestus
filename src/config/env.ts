@@ -2,8 +2,11 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 
-// Load environment variables from .env file
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+// Load environment variables if .env file exists, but do not require it
+const envPath = path.resolve(__dirname, "../../.env");
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
 const DB_DIR = process.env.DB_DIR || (process.env.NODE_ENV === "production" ? "/app/data" : path.join(process.cwd(), "data"));
 const GRAFANA_CONFIG_FILE = path.join(DB_DIR, "grafana_config.json");
@@ -17,7 +20,7 @@ export interface GrafanaConfig {
 
 export const config = {
   port: parseInt(process.env.PORT || "5000", 10),
-  allowedOrigins: (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:5173")
+  allowedOrigins: (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:5173,http://localhost:16754,http://127.0.0.1:3000,http://127.0.0.1:5173")
     .split(",")
     .map(origin => origin.trim()),
   
@@ -26,7 +29,7 @@ export const config = {
   
   /**
    * Retrieves active Grafana credentials.
-   * Priority: 1. dynamic JSON file config, 2. environment variables.
+   * Priority: 1. dynamic JSON file config, 2. environment variables, 3. empty defaults.
    */
   getGrafanaConfig(): GrafanaConfig {
     if (fs.existsSync(GRAFANA_CONFIG_FILE)) {
@@ -46,24 +49,18 @@ export const config = {
       }
     }
     
-    // Fallback to environment variables
-    const envHost = process.env.GRAFANA_HOST || "http://localhost:3000";
+    // Fallback to environment variables or empty placeholders
+    const envHost = process.env.GRAFANA_HOST || "";
     const envToken = process.env.GRAFANA_TOKEN || "";
     const envUid = process.env.GRAFANA_DATASOURCE_UID || "bf5jy3ppyomwwd";
     
     return {
-      host: envHost.replace(/\/$/, ""),
+      host: envHost ? envHost.replace(/\/$/, "") : "",
       token: envToken,
       datasourceUid: envUid,
-      isConfigured: !!(process.env.GRAFANA_TOKEN && process.env.GRAFANA_TOKEN !== "your_grafana_service_account_token_here")
+      isConfigured: !!(envHost && envToken)
     };
   }
 };
-
-// Log warning on startup if environment config is missing and no file is set
-const activeConfig = config.getGrafanaConfig();
-if (!activeConfig.isConfigured) {
-  console.warn("⚠️  WARNING: Grafana integrations are not configured yet. Grafana API queries will fail.");
-}
 
 export default config;
