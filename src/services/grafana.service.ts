@@ -1,4 +1,5 @@
 import axios from "axios";
+import fs from "fs";
 import config from "../config/env";
 
 export interface Datapoint {
@@ -51,7 +52,7 @@ export class GrafanaService {
    * Constructs the Grafana JSON request body dynamically based on parameters.
    */
   private buildQueryPayload(fromMs: string, toMs: string, targetRouter: string) {
-    // Generate PromQL expression using dynamic node/router name
+    const activeConfig = config.getGrafanaConfig();
     const expr = `mktxp_system_cpu_load{routerboard_name="${targetRouter}"}`;
 
     return {
@@ -62,7 +63,7 @@ export class GrafanaService {
           refId: "A",
           datasource: {
             type: "prometheus",
-            uid: config.grafana.datasourceUid
+            uid: activeConfig.datasourceUid
           },
           expr: expr,
           format: "time_series",
@@ -79,18 +80,23 @@ export class GrafanaService {
    */
   public async queryCpuLoad(params: GrafanaQueryRequest): Promise<Datapoint[]> {
     try {
+      const activeConfig = config.getGrafanaConfig();
+      if (!activeConfig.isConfigured || !activeConfig.token) {
+        throw new Error("Grafana token is not configured. Please set the integration details in System Settings.");
+      }
+
       // 1. Time conversion validation
       const fromEpoch = this.convertToEpochMs(params.from);
       const toEpoch = this.convertToEpochMs(params.to);
 
       // 2. Build Payload
       const payload = this.buildQueryPayload(fromEpoch, toEpoch, params.targetRouter);
-      const targetUrl = `${config.grafana.host}/api/ds/query`;
+      const targetUrl = `${activeConfig.host}/api/ds/query`;
 
       // 3. Setup authentication headers
       const headers = {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.grafana.token}`
+        "Authorization": `Bearer ${activeConfig.token}`
       };
 
       // 4. Send POST request to Grafana ds query endpoint
@@ -101,7 +107,7 @@ export class GrafanaService {
       return this.parseAndSanitize(response.data);
     } catch (error: any) {
       this.handleHttpError(error);
-      throw error; // Re-throw if handleHttpError didn't throw (fallback)
+      throw error;
     }
   }
 
@@ -110,7 +116,6 @@ export class GrafanaService {
    * results.A.frames[0].data.values
    */
   private parseAndSanitize(responseData: any): Datapoint[] {
-    // Navigate nested properties safely using optional chaining
     const frame = responseData?.results?.A?.frames?.[0];
     if (!frame) {
       throw new Error("Invalid response schema: No series data (results.A.frames[0]) returned from Grafana.");
@@ -118,7 +123,6 @@ export class GrafanaService {
 
     const values = frame.data?.values;
     if (!values || !Array.isArray(values) || values.length < 2) {
-      // Could mean the query executed successfully but returned empty result sets (no datapoints)
       console.log("[GrafanaService] Grafana returned empty values array. Returning empty dataset.");
       return [];
     }
@@ -130,14 +134,12 @@ export class GrafanaService {
       throw new Error("Invalid response schema: Timestamps or metrics are not structured as arrays.");
     }
 
-    // Map the two independent parallel arrays into a single clean list of objects
     const cleanData: Datapoint[] = [];
     const size = Math.min(timestamps.length, metrics.length);
 
     for (let i = 0; i < size; i++) {
       cleanData.push({
         timestamp: Number(timestamps[i]),
-        // Round values or preserve precision depending on requirements. Standard number formatting is sufficient here.
         value: metrics[i] !== null && metrics[i] !== undefined ? Number(metrics[i]) : null
       });
     }
@@ -146,9 +148,83 @@ export class GrafanaService {
   }
 
   /**
+   * Tests connection to a Grafana Host using the provided Token.
+   * Calls /api/health to confirm host accessibility and credentials validity.
+   */
+  public async testConnection(host: string, token: string): Promise<boolean> {
+    try {
+      const cleanedHost = host.trim().replace(/\/$/, "");
+      const targetUrl = `${cleanedHost}/api/health`;
+
+      console.log(`[GrafanaService] Testing Grafana API connection: GET ${targetUrl}`);
+      const response = await axios.get(targetUrl, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        timeout: 5000
+      });
+
+      return response.status === 200;
+    } catch (error: any) {
+      console.error("[GrafanaService] Grafana connection test failed:", error.message);
+      
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 401) {
+          throw new Error("Otorisasi gagal: Token Grafana tidak valid atau tidak memiliki akses (401 Unauthorized).");
+        }
+        if (status === 403) {
+          throw new Error("Akses dilarang (403 Forbidden).");
+        }
+        throw new Error(`Grafana merespons dengan status ${status}: ${error.response.data?.message || error.message}`);
+      }
+      
+      throw new Error(`Gagal menghubungi server Grafana: ${error.message}`);
+    }
+  }
+
+  /**
+   * Saves the Grafana integration configuration to disk.
+   */
+  public saveConfig(host: string, token: string, datasourceUid: string): void {
+    try {
+      if (!fs.existsSync(config.dbDir)) {
+        fs.mkdirSync(config.dbDir, { recursive: true });
+      }
+
+      const payload = {
+        host: host.trim(),
+        token: token.trim(),
+        datasourceUid: (datasourceUid || "bf5jy3ppyomwwd").trim()
+      };
+
+      fs.writeFileSync(config.grafanaConfigFile, JSON.stringify(payload, null, 2), "utf-8");
+      console.log(`[GrafanaService] Successfully saved Grafana config file to ${config.grafanaConfigFile}`);
+    } catch (error: any) {
+      throw new Error(`Gagal menulis file konfigurasi Grafana: ${error.message}`);
+    }
+  }
+
+  /**
+   * Resets the dynamic Grafana configuration (reverts to env variables).
+   */
+  public resetConfig(): void {
+    try {
+      if (fs.existsSync(config.grafanaConfigFile)) {
+        fs.unlinkSync(config.grafanaConfigFile);
+        console.log(`[GrafanaService] Dynamic config file deleted. Reverting to environment variables.`);
+      }
+    } catch (error: any) {
+      throw new Error(`Gagal mereset konfigurasi Grafana: ${error.message}`);
+    }
+  }
+
+  /**
    * Helper method to map and log HTTP request errors contextually
    */
   private handleHttpError(error: any): void {
+    const activeConfig = config.getGrafanaConfig();
+    
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
       const errorData = error.response?.data;
@@ -166,13 +242,12 @@ export class GrafanaService {
         throw new Error("Grafana access forbidden (403): Your token may not have sufficient access to the data source.");
       }
       if (status === 404) {
-        throw new Error(`Grafana endpoint not found (404): Verify that your GRAFANA_HOST ("${config.grafana.host}") is correct.`);
+        throw new Error(`Grafana endpoint not found (404): Verify that your GRAFANA_HOST ("${activeConfig.host}") is correct.`);
       }
       
       throw new Error(`Failed to query Grafana API (HTTP ${status}): ${error.message}`);
     }
 
-    // Non-axios/Network connection errors
     console.error("[GrafanaService] Unexpected error occurred:", error);
     throw new Error(error.message || "An unexpected error occurred while communicating with the Grafana service.");
   }

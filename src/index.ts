@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import config from "./config/env";
 import reportRoutes from "./routes/report.routes";
+import settingsRoutes from "./routes/settings.routes";
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.get("/health", (req: Request, res: Response) => {
 
 // 4. API Routes registration
 app.use("/api/v1/report", reportRoutes);
+app.use("/api/v1/settings", settingsRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
@@ -71,10 +73,11 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 // Start listening
 const server = app.listen(config.port, () => {
+  const activeGrafana = config.getGrafanaConfig();
   console.log(`🚀 Hephaestus backend service version 2.0.0 started successfully.`);
   console.log(`📡 Listening on http://localhost:${config.port}`);
   console.log(`🔒 Allowed CORS origins: ${config.allowedOrigins.join(", ")}`);
-  console.log(`📊 Target Grafana: ${config.grafana.host}`);
+  console.log(`📊 Target Grafana: ${activeGrafana.host}`);
 });
 
 export default server;
