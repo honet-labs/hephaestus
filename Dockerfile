@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy dependency files first for efficient caching
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy tsconfig and source files
 COPY tsconfig.json ./
@@ -21,7 +21,7 @@ ENV NODE_ENV=production
 
 # Copy package descriptors and install production-only dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy compiled build output from the builder stage
 COPY --from=builder /app/dist ./dist
