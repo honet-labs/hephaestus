@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import path from "path";
 import config from "./config/env";
 import reportRoutes from "./routes/report.routes";
 import settingsRoutes from "./routes/settings.routes";
@@ -36,6 +37,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req: Request, res: Response, next: NextFunction) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Origin: ${req.get("origin") || "N/A"}`);
   next();
+});
+
+// Serve static web UI files
+app.use(express.static(path.join(__dirname, "../public")));
+
+// Root route serves the Web UI index.html
+app.get("/", (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
 // 3. Healthcheck route

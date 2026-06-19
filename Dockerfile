@@ -26,6 +26,9 @@ RUN npm install --omit=dev
 # Copy compiled build output from the builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy static Web UI files
+COPY public/ ./public
+
 # Create persistent data directory for fallback db.json storage (if used)
 RUN mkdir -p /app/data
 
