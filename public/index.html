@@ -3,251 +3,499 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HEPHAESTUS - Prometheus & Grafana Telemetry Portal</title>
+  <title>HEPHAESTUS DEVOPS PORTAL v2.0.0</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
-  <header>
-    <div class="logo-container">
-      <div class="logo-icon">H</div>
-      <div class="logo-text">HEPHAESTUS</div>
-      <div class="logo-sub">Grafana API Portal</div>
-    </div>
-    <div id="system-status-indicator" class="status-badge">
-      <span class="dot"></span>
-      <span class="status-text">Loading...</span>
-    </div>
-  </header>
-
-  <!-- Main Container -->
-  <div class="container">
-
-    <!-- Sub-tab Navigation -->
-    <div class="tabs-nav">
-      <button class="tab-btn active" onclick="switchTab('grafana')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-        Grafana Integration
-      </button>
-      <button class="tab-btn" onclick="switchTab('telemetry')">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-        Telemetry Console
-      </button>
-    </div>
-
-    <!-- Active Tab Content Area -->
-
-    <!-- TAB 1: GRAFANA INTEGRATION -->
-    <div id="tab-grafana" class="grid-layout">
-      <!-- Left Column: Form -->
-      <div style="display: flex; flex-direction: column; gap: 24px;">
-        <div class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-              Grafana Connection Parameters
-            </h2>
-          </div>
-
-          <form id="grafana-form" onsubmit="testGrafanaConnection(event)" style="display: flex; flex-direction: column; gap: 16px;">
-            <div class="form-group">
-              <label for="grafana-host">Grafana Host URL</label>
-              <input type="text" id="grafana-host" placeholder="http://grafana-server-ip:3000" required>
-              <span class="form-help">URL host server Grafana Anda. Contoh: <code class="font-mono">http://192.168.10.25:3000</code></span>
-            </div>
-
-            <div class="form-group">
-              <label for="grafana-token">Service Account Token (Bearer)</label>
-              <input type="password" id="grafana-token" placeholder="glsa_xxxxxxxxxxxxxxxxxxxxxx" required>
-              <span class="form-help">Token otorisasi Grafana. Kredensial akan disamarkan demi keamanan dan disimpan aman di volume disk.</span>
-            </div>
-
-            <div class="form-group">
-              <label for="grafana-datasource-uid">Prometheus Datasource UID</label>
-              <input type="text" id="grafana-datasource-uid" placeholder="bf5jy3ppyomwwd" required>
-              <span class="form-help">UID dari DataSource Prometheus target di Grafana Anda.</span>
-            </div>
-
-            <div class="btn-group">
-              <button type="submit" id="btn-test-grafana" class="btn btn-secondary">
-                <span class="spinner hidden" id="spinner-test"></span>
-                <span>Test Connection</span>
-              </button>
-              <button type="button" id="btn-save-grafana" onclick="saveGrafanaConfiguration()" class="btn btn-primary">
-                <span class="spinner hidden" id="spinner-save"></span>
-                <span>Save & Apply Configuration</span>
-              </button>
-            </div>
-          </form>
-
-          <!-- Alert feedbacks -->
-          <div id="grafana-feedback" class="alert hidden">
-            <span class="alert-title" id="feedback-title"></span>
-            <span id="feedback-desc"></span>
-          </div>
-        </div>
-
-        <!-- Revert Default Box -->
-        <div id="revert-box" class="panel hidden">
-          <div class="panel-header">
-            <h2 class="panel-title" style="color: #ff7b72;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
-              Revert Configuration
-            </h2>
-          </div>
-          <p class="form-help">Hapus konfigurasi penyimpanan kustom dan kembalikan ke konfigurasi default lingkungan backend.</p>
-          <div class="btn-group">
-            <button onclick="resetGrafanaConfiguration()" id="btn-reset-grafana" class="btn btn-danger">
-              <span class="spinner hidden" id="spinner-reset"></span>
-              <span>Revert to default settings</span>
-            </button>
-          </div>
+  <div class="app-layout">
+    
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar">
+      <!-- Sidebar Header -->
+      <div class="sidebar-header">
+        <div class="logo-icon">H</div>
+        <div>
+          <div class="logo-title">HEPHAESTUS</div>
+          <div class="logo-subtitle">DEVOPS PORTAL v2.0.0</div>
         </div>
       </div>
 
-      <!-- Right Column: Status & Notes -->
-      <div style="display: flex; flex-direction: column; gap: 24px;">
-        <div class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">Active Settings Info</h2>
+      <!-- Menu Section -->
+      <div class="menu-section">
+        <span class="menu-section-title">OPERATIONAL MODULES</span>
+        <nav class="menu-list">
+          <a href="#" id="menu-overview" class="menu-item active" onclick="navigate('overview')">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">Overview</div>
+              <div class="menu-item-sub">Grafana status & metrics</div>
+            </div>
+          </a>
+          <a href="#" id="menu-settings" class="menu-item" onclick="navigate('settings')">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">Grafana Settings</div>
+              <div class="menu-item-sub">Integration & tokens setup</div>
+            </div>
+          </a>
+          <a href="#" id="menu-telemetry" class="menu-item" onclick="navigate('telemetry')">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">Telemetry Console</div>
+              <div class="menu-item-sub">CPU metric reporting</div>
+            </div>
+          </a>
+          <a href="#" id="menu-diagnostics" class="menu-item" onclick="navigate('diagnostics')">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">System Diagnostics</div>
+              <div class="menu-item-sub">API endpoints & health</div>
+            </div>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <span class="menu-section-title" style="padding: 0 0 4px 0;">INFRASTRUCTURE STATUS</span>
+        <div class="status-list">
+          <div class="status-row">
+            <span>Grafana API</span>
+            <span id="infra-grafana-dot" class="status-dot dot-yellow"></span>
           </div>
-          <div class="info-box">
-            <div class="info-item">
-              <span class="info-label">Active Host URL</span>
-              <span id="active-host" class="info-val code font-mono">-</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Datasource UID</span>
-              <span id="active-datasource" class="info-val code font-mono">-</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Config State</span>
-              <span id="active-state" class="status-badge status-default">
-                <span class="dot dot-inactive"></span>
-                <span>Unconfigured</span>
-              </span>
-            </div>
+          <div class="status-row">
+            <span>Storage Engine</span>
+            <span class="status-text-blue">JSON</span>
+          </div>
+          <div class="status-row">
+            <span>Security Mode</span>
+            <span class="status-text-green">ENFORCED</span>
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">Integration Guide</h2>
+        <div class="user-profile">
+          <div class="avatar">sys</div>
+          <div class="user-info">
+            <div class="username">sysadmin</div>
+            <div class="userrole">ADMIN</div>
           </div>
-          <p class="form-help" style="color: #c9d1d9;">
-            Portal Hephaestus menghubungkan sistem pelaporan langsung ke HTTP Query API Grafana (<code class="font-mono">/api/ds/query</code>).
-          </p>
-          <p class="form-help">
-            Hal ini menjamin kalkulasi metrik CPU, persentil, dan SLA 100% identik dengan panel visual yang ditampilkan pada dashboard Grafana Anda.
-          </p>
-          <p class="form-help">
-            Pastikan Service Account Token Anda memiliki akses minimal <code class="font-mono">Viewer</code> ke organisasi Grafana terkait.
-          </p>
         </div>
       </div>
-    </div>
+    </aside>
 
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+      
+      <!-- Topbar Header -->
+      <div class="topbar">
+        <div class="active-module-badge">
+          ACTIVE MODULE: <span id="active-module-name">OVERVIEW</span>
+        </div>
+        <div class="topbar-right">
+          <span class="status-text-green" id="health-status">● Server Online</span>
+          <a href="#" class="docs-link" onclick="navigate('diagnostics')">Docs Reference</a>
+        </div>
+      </div>
 
-    <!-- TAB 2: TELEMETRY CONSOLE -->
-    <div id="tab-telemetry" class="grid-layout hidden">
-      <!-- Left Column: Metrics Form & Results -->
-      <div style="display: flex; flex-direction: column; gap: 24px;">
-        <div class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              Telemetry Query Parameters
-            </h2>
+      <!-- Page Scrollable Container -->
+      <div class="content-container">
+
+        <!-- 1. PAGE TITLE HEADER -->
+        <div class="page-header">
+          <div>
+            <h1 id="page-title">System Overview</h1>
+            <p id="page-desc" class="page-title-desc">Ringkasan status integrasi Grafana dan telemetri metrik real-time.</p>
+          </div>
+        </div>
+
+        <!-- 2. SYSTEM STATUS WIDGETS (4 Columns) -->
+        <div class="dashboard-grid">
+          <div class="stat-card">
+            <div class="stat-card-left">
+              <span class="stat-card-title">Grafana Server</span>
+              <span id="widget-grafana-status" class="stat-card-value" style="color: #ff7b72;">Disconnected</span>
+              <span id="widget-grafana-sub" class="stat-card-sub">No active custom configuration</span>
+            </div>
+            <span class="stat-card-icon">⚡</span>
           </div>
 
-          <form id="telemetry-form" onsubmit="queryTelemetry(event)" style="display: flex; flex-direction: column; gap: 16px;">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="telemetry-from">From Date</label>
-                <input type="datetime-local" id="telemetry-from" required>
+          <div class="stat-card">
+            <div class="stat-card-left">
+              <span class="stat-card-title">Active Datasource</span>
+              <span id="widget-datasource-uid" class="stat-card-value">-</span>
+              <span class="stat-card-sub">Prometheus UID Target</span>
+            </div>
+            <span class="stat-card-icon">🗄️</span>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-left">
+              <span class="stat-card-title">Telemetry Scrapes</span>
+              <span id="widget-scrapes" class="stat-card-value">0</span>
+              <span class="stat-card-sub">Total reports processed</span>
+            </div>
+            <span class="stat-card-icon">📊</span>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-left">
+              <span class="stat-card-title">Storage Mode</span>
+              <span class="stat-card-value" style="color: #58a6ff;">Fallback</span>
+              <span class="stat-card-sub">data/grafana_config.json</span>
+            </div>
+            <span class="stat-card-icon">💾</span>
+          </div>
+        </div>
+
+
+        <!-- DYNAMIC PAGE BODY CONTENT -->
+
+        <!-- PAGE 1: OVERVIEW -->
+        <div id="page-overview" class="main-grid">
+          <!-- Left Column -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>
+                  Activity Trend Monitor
+                </h3>
               </div>
-              <div class="form-group">
-                <label for="telemetry-to">To Date</label>
-                <input type="datetime-local" id="telemetry-to" required>
+              <!-- Mock Chart Panel representing metric states -->
+              <div class="chart-container" id="overview-chart">
+                <div class="chart-bar-wrapper">
+                  <div class="chart-bar" style="height: 10%;"></div>
+                  <span class="chart-bar-label">00:00</span>
+                </div>
+                <div class="chart-bar-wrapper">
+                  <div class="chart-bar" style="height: 25%;"></div>
+                  <span class="chart-bar-label">04:00</span>
+                </div>
+                <div class="chart-bar-wrapper">
+                  <div class="chart-bar" style="height: 55%;"></div>
+                  <span class="chart-bar-label">08:00</span>
+                </div>
+                <div class="chart-bar-wrapper">
+                  <div class="chart-bar" style="height: 80%;"></div>
+                  <span class="chart-bar-label">12:00</span>
+                </div>
+                <div class="chart-bar-wrapper">
+                  <div class="chart-bar" style="height: 40%;"></div>
+                  <span class="chart-bar-label">16:00</span>
+                </div>
+                <div class="chart-bar-wrapper">
+                  <div class="chart-bar" style="height: 70%;"></div>
+                  <span class="chart-bar-label">20:00</span>
+                </div>
+                <div class="chart-bar-wrapper">
+                  <div class="chart-bar" style="height: 90%;"></div>
+                  <span class="chart-bar-label">Now</span>
+                </div>
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="telemetry-router">Target Router / Node IP</label>
-              <input type="text" id="telemetry-router" placeholder="e.g. router-1, 10.201.10.1" required>
-              <span class="form-help">Node/Router identifier yang dikirimkan sebagai filter label query Prometheus.</span>
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Integration Logs</h3>
+              </div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Module</th>
+                      <th>Message</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="logs-tbody">
+                    <tr>
+                      <td class="font-mono">Loading...</td>
+                      <td>System</td>
+                      <td>Initializing interface components...</td>
+                      <td><span class="status-badge status-default">INFO</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Active Settings</h3>
+              </div>
+              <div class="info-box">
+                <div class="info-item">
+                  <span class="info-label">Active Host</span>
+                  <span id="overview-host" class="info-val code font-mono">-</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Active Datasource</span>
+                  <span id="overview-datasource" class="info-val code font-mono">-</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Configuration State</span>
+                  <span id="overview-state" class="status-badge status-default">Default Env</span>
+                </div>
+              </div>
             </div>
 
-            <div class="btn-group">
-              <button type="submit" id="btn-query-telemetry" class="btn btn-primary">
-                <span class="spinner hidden" id="spinner-query"></span>
-                <span>Execute Query</span>
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Quick Actions</h3>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" onclick="navigate('settings')" style="width: 100%; justify-content: center;">Configure Grafana</button>
+                <button class="btn btn-secondary" onclick="navigate('telemetry')" style="width: 100%; justify-content: center;">Query Telemetry</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- PAGE 2: SETTINGS -->
+        <div id="page-settings" class="main-grid hidden">
+          <!-- Left Column -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                  Grafana Core API Configuration
+                </h3>
+              </div>
+
+              <form id="grafana-form" onsubmit="testGrafanaConnection(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="form-group">
+                  <label for="grafana-host">Grafana Host URL</label>
+                  <input type="text" id="grafana-host" placeholder="e.g. http://192.168.10.15:3000" required>
+                  <span class="form-help">The primary base URL of your target Grafana server instance.</span>
+                </div>
+
+                <div class="form-group">
+                  <label for="grafana-token">Bearer Service Account Token</label>
+                  <input type="password" id="grafana-token" placeholder="glsa_xxxxxxxxxxxxxxxxxxxxxxxx" required>
+                  <span class="form-help">Service Account Token created with Viewer or Editor permissions. Will be masked for security.</span>
+                </div>
+
+                <div class="form-group">
+                  <label for="grafana-datasource-uid">Prometheus Datasource UID</label>
+                  <input type="text" id="grafana-datasource-uid" placeholder="e.g. bf5jy3ppyomwwd" required>
+                  <span class="form-help">The unique ID of the target Prometheus datasource mapped in your Grafana.</span>
+                </div>
+
+                <div class="btn-group">
+                  <button type="submit" id="btn-test-grafana" class="btn btn-secondary">
+                    <span class="spinner hidden" id="spinner-test"></span>
+                    <span>Test Connection</span>
+                  </button>
+                  <button type="button" id="btn-save-grafana" onclick="saveGrafanaConfiguration()" class="btn btn-primary">
+                    <span class="spinner hidden" id="spinner-save"></span>
+                    <span>Save & Apply Settings</span>
+                  </button>
+                </div>
+              </form>
+
+              <div id="grafana-feedback" class="alert hidden">
+                <span class="alert-title" id="feedback-title"></span>
+                <span id="feedback-desc"></span>
+              </div>
+            </div>
+
+            <!-- Revert Section -->
+            <div id="revert-box" class="panel hidden">
+              <div class="panel-header">
+                <h3 class="panel-title" style="color: #ff7b72;">Revert Custom Registry</h3>
+              </div>
+              <p class="form-help" style="margin-bottom: 12px;">Hapus konfigurasi penyimpanan kustom dan kembalikan ke nilai default lingkungan (.env).</p>
+              <button onclick="resetGrafanaConfiguration()" id="btn-reset-grafana" class="btn btn-danger">
+                <span class="spinner hidden" id="spinner-reset"></span>
+                <span>Reset to System Default</span>
               </button>
             </div>
-          </form>
+          </div>
 
-          <!-- Query alert feedback -->
-          <div id="telemetry-feedback" class="alert hidden">
-            <span class="alert-title" id="telemetry-feedback-title"></span>
-            <span id="telemetry-feedback-desc"></span>
+          <!-- Right Column -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Integration Guideline</h3>
+              </div>
+              <p class="form-help" style="color: #c9d1d9; margin-bottom: 8px;">
+                Hephaestus-tools query metrics target: <code class="font-mono">/api/ds/query</code>.
+              </p>
+              <p class="form-help" style="margin-bottom: 8px;">
+                This ensures data retrieved matches 100% with panels calculation.
+              </p>
+              <p class="form-help">
+                Persistent configuration is written to Docker Volume file storage <code class="font-mono">data/grafana_config.json</code> dynamically.
+              </p>
+            </div>
           </div>
         </div>
 
-        <!-- Telemetry Results Table -->
-        <div class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">Parsed Telemetry Metric Stream</h2>
-            <span id="metrics-count" class="form-help">0 records</span>
+
+        <!-- PAGE 3: TELEMETRY CONSOLE -->
+        <div id="page-telemetry" class="main-grid hidden">
+          <!-- Left Column -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  Execute Metrics Query
+                </h3>
+              </div>
+
+              <form id="telemetry-form" onsubmit="queryTelemetry(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="telemetry-from">Start Date</label>
+                    <input type="datetime-local" id="telemetry-from" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="telemetry-to">End Date</label>
+                    <input type="datetime-local" id="telemetry-to" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="telemetry-router">Target Router Label (IP / Name)</label>
+                  <input type="text" id="telemetry-router" placeholder="e.g. router-1" required>
+                </div>
+
+                <button type="submit" id="btn-query-telemetry" class="btn btn-primary">
+                  <span class="spinner hidden" id="spinner-query"></span>
+                  <span>Execute Telemetry Stream</span>
+                </button>
+              </form>
+
+              <div id="telemetry-feedback" class="alert hidden">
+                <span class="alert-title" id="telemetry-feedback-title"></span>
+                <span id="telemetry-feedback-desc"></span>
+              </div>
+            </div>
+
+            <!-- Table Panel -->
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Metrics Output Stream</h3>
+                <span id="metrics-count" class="form-help">0 records</span>
+              </div>
+
+              <div class="table-wrapper">
+                <table id="metrics-table">
+                  <thead>
+                    <tr>
+                      <th>Epoch Timestamp</th>
+                      <th>Localized Time</th>
+                      <th>CPU Usage %</th>
+                    </tr>
+                  </thead>
+                  <tbody id="metrics-tbody">
+                    <tr>
+                      <td colspan="3">
+                        <div class="empty-state">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                          <span>Execute query to fetch metrics streams from Grafana backend.</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <div class="table-wrapper">
-            <table id="metrics-table">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Formatted Time</th>
-                  <th>Metric Value (CPU Load %)</th>
-                </tr>
-              </thead>
-              <tbody id="metrics-tbody">
-                <tr>
-                  <td colspan="3">
-                    <div class="empty-state">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l-7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                      <span>No metrics query executed yet. Enter parameters above to stream data.</span>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- Right Column -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Query Processing Details</h3>
+              </div>
+              <div class="info-box">
+                <div class="info-item">
+                  <span class="info-label">1. Time Converter</span>
+                  <p class="form-help">Datetime strings are translated in backend into **Unix Epoch Milliseconds** values required by Grafana.</p>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">2. Payload Builder</span>
+                  <p class="form-help">Request constructs a Grafana POST JSON payload with targets querying datasource UID.</p>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">3. Array Parser</span>
+                  <p class="form-help">Backend sanitizes multi-level arrays returned from Grafana metrics into clean coordinates <code class="font-mono">[timestamp, value]</code>.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+
+        <!-- PAGE 4: DIAGNOSTICS -->
+        <div id="page-diagnostics" class="main-grid hidden">
+          <!-- Left Column -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">API Diagnostic Statistics</h3>
+              </div>
+              <div class="info-box" style="gap: 16px;">
+                <div class="info-item">
+                  <span class="info-label">System Health Status</span>
+                  <span class="status-badge status-configured" style="width: fit-content;">● RUNNING OK</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Service Name</span>
+                  <span class="info-val code font-mono">Hephaestus Grafana Integration API</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Server Local Timestamp</span>
+                  <span id="diag-time" class="info-val font-mono">-</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">API Endpoints Mapped</span>
+                  <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+                    <span class="info-val code font-mono"><strong style="color: #56d364;">GET</strong> /health - Health diagnostics check</span>
+                    <span class="info-val code font-mono"><strong style="color: #56d364;">GET</strong> /api/v1/settings/grafana - Read active settings</span>
+                    <span class="info-val code font-mono"><strong style="color: #ff7b72;">POST</strong> /api/v1/settings/grafana - Test/save settings</span>
+                    <span class="info-val code font-mono"><strong style="color: #ff7b72;">POST</strong> /api/v1/report/cpu - Query metric report</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel">
+              <div class="panel-header">
+                <h3 class="panel-title">About Hephaestus</h3>
+              </div>
+              <p class="form-help" style="margin-bottom: 8px;">
+                **Hephaestus Devops Portal v2** is a dynamic orchestration portal that allows direct Grafana HTTP API mapping.
+              </p>
+              <p class="form-help">
+                By bypassing static .env configuration limits, users can seamlessly manage settings in production runtime environments.
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
-
-      <!-- Right Column: API Info -->
-      <div style="display: flex; flex-direction: column; gap: 24px;">
-        <div class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">Query Processing Details</h2>
-          </div>
-          <div class="info-box" style="gap: 16px;">
-            <div class="info-item">
-              <span class="info-label">Epoch Conversion</span>
-              <p class="form-help">Input DateTime lokal dikonversi secara otomatis di backend ke bentuk **Epoch Milliseconds (13 digit)** yang diterima oleh API Grafana.</p>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Payload Builder</span>
-              <p class="form-help">Backend merakit payload query Grafana yang kompleks dengan target DataSource UID yang dikonfigurasi aktif.</p>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Matriks Parsing</span>
-              <p class="form-help">Hasil query array multidimensi terluar dari API Grafana didekontaminasi dan disederhanakan menjadi pasangan datar <code class="font-mono">[timestamp, value]</code>.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </main>
 
   </div>
 
