@@ -222,11 +222,11 @@ export class GrafanaService {
   /**
    * Fetches all datasources from the Grafana server.
    */
-  public async getDatasources(): Promise<any[]> {
+  public async getDatasources(overrideHost?: string, overrideToken?: string): Promise<any[]> {
     try {
       const activeConfig = config.getGrafanaConfig();
-      const host = activeConfig.host;
-      const token = activeConfig.token;
+      const host = overrideHost || activeConfig.host;
+      const token = overrideToken || activeConfig.token;
 
       if (!host || !token) {
         throw new Error("Grafana host and token must be configured before listing datasources.");

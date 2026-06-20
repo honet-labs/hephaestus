@@ -153,11 +153,43 @@ export class SettingsController {
           return;
         }
 
+        // Detect datasource UID if not provided or empty
+        let finalDatasourceUid = datasourceUid ? datasourceUid.trim() : "";
+        let autoDetectedName = "";
+        
+        if (!finalDatasourceUid) {
+          try {
+            const datasources = await grafanaService.getDatasources(host, targetToken);
+            const promoDs = datasources.find((ds: any) => ds.type === "prometheus");
+            if (promoDs) {
+              finalDatasourceUid = promoDs.uid;
+              autoDetectedName = promoDs.name;
+              console.log(`[SettingsController] Auto-detected Prometheus datasource: ${autoDetectedName} (${finalDatasourceUid})`);
+            } else if (datasources.length > 0) {
+              finalDatasourceUid = datasources[0].uid;
+              autoDetectedName = datasources[0].name;
+              console.log(`[SettingsController] No Prometheus datasource found. Selected first available: ${autoDetectedName} (${finalDatasourceUid})`);
+            }
+          } catch (err: any) {
+            console.error("[SettingsController] Failed to auto-detect datasource UID:", err.message);
+          }
+        }
+
+        if (!finalDatasourceUid) {
+          finalDatasourceUid = "bf5jy3ppyomwwd"; // Fallback to original default
+        }
+
         // Save
-        grafanaService.saveConfig(host, targetToken, datasourceUid);
+        grafanaService.saveConfig(host, targetToken, finalDatasourceUid);
+        
+        let successMessage = "Konfigurasi Grafana berhasil disimpan dan diterapkan!";
+        if (autoDetectedName) {
+          successMessage += ` (Prometheus UID terdeteksi otomatis: "${autoDetectedName}")`;
+        }
+
         res.status(200).json({
           success: true,
-          message: "Konfigurasi Grafana berhasil disimpan dan diterapkan!"
+          message: successMessage
         });
         return;
       }
