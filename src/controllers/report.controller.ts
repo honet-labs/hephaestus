@@ -52,7 +52,9 @@ export class ReportController {
         expr: expr,
         format: format,
         intervalMs: intervalMs,
-        maxDataPoints: maxDataPoints
+        maxDataPoints: maxDataPoints,
+        datasourceUid: req.body.datasourceUid && typeof req.body.datasourceUid === "string" ? req.body.datasourceUid : undefined,
+        datasourceType: req.body.datasourceType && typeof req.body.datasourceType === "string" ? req.body.datasourceType : undefined
       });
 
       // 4. Return clean, formatted response

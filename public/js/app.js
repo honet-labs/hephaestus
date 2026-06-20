@@ -40,6 +40,8 @@ const feedbackAlert = document.getElementById('grafana-feedback');
 const feedbackTitle = document.getElementById('feedback-title');
 const feedbackDesc = document.getElementById('feedback-desc');
 
+let defaultDatasourceUid = 'bf5jy3ppyomwwd';
+
 // Dashboards & Panels State
 const DEFAULT_DASHBOARDS = [
   {
@@ -246,6 +248,7 @@ async function loadGrafanaSettings() {
     const result = await res.json();
     if (result.success && result.data) {
       const { host, datasourceUid, isConfigured, maskedToken } = result.data;
+      defaultDatasourceUid = datasourceUid || 'bf5jy3ppyomwwd';
       
       // Update config views
       activeHost.textContent = host || 'None (No active config)';
@@ -791,10 +794,66 @@ function deletePanel(panelId) {
   renderDashboardPanels();
 }
 
+async function loadDatasourcesDropdown(selectedUid) {
+  const selectEl = document.getElementById('panel-datasource-select');
+  if (!selectEl) return;
+
+  selectEl.innerHTML = '<option value="">-- Loading datasources... --</option>';
+
+  try {
+    const res = await fetch('/api/v1/settings/grafana/datasources');
+    const result = await res.json();
+    if (res.ok && result.success && Array.isArray(result.data)) {
+      const datasources = result.data;
+      if (datasources.length === 0) {
+        selectEl.innerHTML = '<option value="">No datasources found (Check Settings)</option>';
+        return;
+      }
+      
+      const activeUid = selectedUid || defaultDatasourceUid;
+      let options = '';
+      datasources.forEach(ds => {
+        const isSelected = ds.uid === activeUid ? 'selected' : '';
+        options += `<option value="${ds.uid}" data-type="${ds.type}" ${isSelected}>${ds.name} (${ds.type})</option>`;
+      });
+      selectEl.innerHTML = options;
+    } else {
+      selectEl.innerHTML = '<option value="">Failed to load datasources</option>';
+    }
+  } catch (error) {
+    console.error('Error loading datasources:', error);
+    selectEl.innerHTML = '<option value="">Failed to load datasources (Connection Error)</option>';
+  }
+}
+
+function onPanelDatasourceChange() {
+  const selectEl = document.getElementById('panel-datasource-select');
+  if (!selectEl) return;
+  const selectedOption = selectEl.options[selectEl.selectedIndex];
+  if (!selectedOption) return;
+  
+  const dsType = selectedOption.getAttribute('data-type') || '';
+  const queryLabel = document.getElementById('panel-query-label');
+  const queryHelp = document.getElementById('panel-query-help');
+  const queryInput = document.getElementById('panel-query-input');
+
+  if (queryLabel && queryHelp && queryInput) {
+    if (dsType.toLowerCase().includes('prom')) {
+      queryLabel.textContent = 'PromQL Query Expression (expr)';
+      queryInput.placeholder = 'e.g. mktxp_system_cpu_load{routerboard_name="RC_HONET"}';
+      queryHelp.textContent = 'Masukkan PromQL expression lengkap (seperti parameter \'expr\' di Postman).';
+    } else {
+      queryLabel.textContent = `Query Expression (${dsType.toUpperCase()} rawSql / query)`;
+      queryInput.placeholder = 'e.g. SELECT time, value FROM metrics WHERE host = \'RC_HONET\'';
+      queryHelp.textContent = `Masukkan query query/rawSql yang sesuai untuk datasource tipe ${dsType}.`;
+    }
+  }
+}
+
 // Panel Query Modal
 let activePanelId = null;
 
-function openEditPanelModal(panelId) {
+async function openEditPanelModal(panelId) {
   activePanelId = panelId;
   const db = dashboards.find(d => d.id === activeDashboardId);
   if (!db) return;
@@ -816,6 +875,10 @@ function openEditPanelModal(panelId) {
   document.getElementById('panel-from-input').value = panel.fromDate || formatDateTimeForInput(oneHourAgo);
 
   hidePanelQueryFeedback();
+  
+  await loadDatasourcesDropdown(panel.datasourceUid);
+  onPanelDatasourceChange();
+
   document.getElementById('query-modal').classList.add('active');
 }
 
@@ -853,8 +916,13 @@ async function applyPanelQuery(event) {
   const intervalMs = parseInt(document.getElementById('panel-interval-input').value, 10) || 60000;
   const maxDataPoints = parseInt(document.getElementById('panel-max-datapoints-input').value, 10) || 1000;
 
+  const selectEl = document.getElementById('panel-datasource-select');
+  const datasourceUid = selectEl ? selectEl.value : "";
+  const selectedOption = selectEl ? selectEl.options[selectEl.selectedIndex] : null;
+  const datasourceType = selectedOption ? selectedOption.getAttribute('data-type') : "prometheus";
+
   if (!query) {
-    showPanelQueryFeedback('danger', 'Form Error', 'Query PromQL expression wajib diisi.');
+    showPanelQueryFeedback('danger', 'Form Error', 'Query expression wajib diisi.');
     return;
   }
 
@@ -871,7 +939,7 @@ async function applyPanelQuery(event) {
   if (spinner) spinner.classList.remove('hidden');
   hidePanelQueryFeedback();
 
-  addLog('Telemetry', `Querying metric for panel "${title}": ${query.split('{')[0]}`, 'INFO');
+  addLog('Telemetry', `Querying metric for report "${title}" via ${datasourceType.toUpperCase()}...`, 'INFO');
 
   try {
     const res = await fetch(API_REPORT_URL, {
@@ -883,7 +951,9 @@ async function applyPanelQuery(event) {
         query: query,
         format: format,
         intervalMs: intervalMs,
-        maxDataPoints: maxDataPoints
+        maxDataPoints: maxDataPoints,
+        datasourceUid: datasourceUid,
+        datasourceType: datasourceType
       })
     });
 
@@ -898,6 +968,8 @@ async function applyPanelQuery(event) {
       panel.format = format;
       panel.intervalMs = intervalMs;
       panel.maxDataPoints = maxDataPoints;
+      panel.datasourceUid = datasourceUid;
+      panel.datasourceType = datasourceType;
       panel.data = data;
 
       saveDashboardsToStorage();
@@ -1115,7 +1187,8 @@ function previewPanel(panelId) {
   if (!panel) return;
 
   previewTitle.textContent = `Report Preview: ${panel.title}`;
-  previewQuery.textContent = `PromQL: ${panel.query || 'No query configured'}`;
+  const dsType = panel.datasourceType || 'prometheus';
+  previewQuery.textContent = `${dsType.toUpperCase()} Query: ${panel.query || 'No query configured'}`;
 
   // Configure export button in the preview modal
   btnPreviewExport.onclick = () => exportPanelCSV(panel.id);

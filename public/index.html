@@ -544,9 +544,16 @@
           </div>
 
           <div class="form-group">
-            <label for="panel-query-input">PromQL Query Expression (expr)</label>
+            <label for="panel-datasource-select">Grafana Datasource</label>
+            <select id="panel-datasource-select" onchange="onPanelDatasourceChange()">
+              <option value="">-- Loading Datasources... --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="panel-query-input" id="panel-query-label">PromQL Query Expression (expr)</label>
             <input type="text" id="panel-query-input" placeholder='e.g. mktxp_system_cpu_load{routerboard_name="RC_HONET"}' required>
-            <span class="form-help" style="color: var(--text-muted); font-size: 11px;">Masukkan PromQL expression lengkap (seperti parameter 'expr' di Postman).</span>
+            <span class="form-help" id="panel-query-help" style="color: var(--text-muted); font-size: 11px;">Masukkan PromQL expression lengkap (seperti parameter 'expr' di Postman).</span>
           </div>
 
           <div class="form-row-3">

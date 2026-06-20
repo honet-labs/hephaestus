@@ -14,6 +14,8 @@ export interface GrafanaQueryRequest {
   format?: string;
   intervalMs?: number;
   maxDataPoints?: number;
+  datasourceUid?: string;
+  datasourceType?: string;
 }
 
 export class GrafanaService {
@@ -60,26 +62,36 @@ export class GrafanaService {
     expr: string,
     format: string = "time_series",
     intervalMs: number = 60000,
-    maxDataPoints: number = 1000
+    maxDataPoints: number = 1000,
+    datasourceUid?: string,
+    datasourceType?: string
   ) {
     const activeConfig = config.getGrafanaConfig();
+    const dsType = datasourceType || "prometheus";
+    const dsUid = datasourceUid || activeConfig.datasourceUid || "bf5jy3ppyomwwd";
+
+    const queryObj: any = {
+      refId: "A",
+      datasource: {
+        type: dsType,
+        uid: dsUid
+      },
+      format: format,
+      intervalMs: intervalMs,
+      maxDataPoints: maxDataPoints
+    };
+
+    if (dsType.toLowerCase() === "prometheus") {
+      queryObj.expr = expr;
+    } else {
+      queryObj.rawSql = expr;
+      queryObj.expr = expr;
+    }
 
     return {
       from: fromMs,
       to: toMs,
-      queries: [
-        {
-          refId: "A",
-          datasource: {
-            type: "prometheus",
-            uid: activeConfig.datasourceUid
-          },
-          expr: expr,
-          format: format,
-          intervalMs: intervalMs,
-          maxDataPoints: maxDataPoints
-        }
-      ]
+      queries: [queryObj]
     };
   }
 
@@ -105,7 +117,9 @@ export class GrafanaService {
         params.expr,
         params.format,
         params.intervalMs,
-        params.maxDataPoints
+        params.maxDataPoints,
+        params.datasourceUid,
+        params.datasourceType
       );
       const targetUrl = `${activeConfig.host}/api/ds/query`;
 
