@@ -10,17 +10,8 @@ const app = express();
 // 1. CORS Configuration
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, postman, or same-origin)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Check if the request origin is in the allowed list, or if wildcard is enabled
-    if (config.allowedOrigins.includes("*") || config.allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    // Allow all origins dynamically to prevent CORS issues on different ports or IP addresses
+    callback(null, true);
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
