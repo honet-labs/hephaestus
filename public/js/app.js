@@ -40,23 +40,93 @@ const feedbackAlert = document.getElementById('grafana-feedback');
 const feedbackTitle = document.getElementById('feedback-title');
 const feedbackDesc = document.getElementById('feedback-desc');
 
-// Telemetry
-const formTelemetry = document.getElementById('telemetry-form');
-const inputTelemetryFrom = document.getElementById('telemetry-from');
-const inputTelemetryTo = document.getElementById('telemetry-to');
-const inputTelemetryQuery = document.getElementById('telemetry-query');
-const inputTelemetryFormat = document.getElementById('telemetry-format');
-const inputTelemetryInterval = document.getElementById('telemetry-interval');
-const inputTelemetryMaxDatapoints = document.getElementById('telemetry-max-datapoints');
-const btnQueryTelemetry = document.getElementById('btn-query-telemetry');
-const spinnerQuery = document.getElementById('spinner-query');
-const telemetryFeedback = document.getElementById('telemetry-feedback');
-const telemetryFeedbackTitle = document.getElementById('telemetry-feedback-title');
-const telemetryFeedbackDesc = document.getElementById('telemetry-feedback-desc');
-const thMetricHeader = document.getElementById('th-metric-header');
+// Dashboards & Panels State
+const DEFAULT_DASHBOARDS = [
+  {
+    id: "db-linux",
+    name: "Dashboard Agent Overview - Linux",
+    targetGroup: "-- Semua Group (All Groups) --",
+    panels: [
+      {
+        id: "panel-linux-cpu",
+        title: "Linux CPU Utilization",
+        query: 'mktxp_system_cpu_load{routerboard_name="RC_HONET"}',
+        fromDate: "",
+        toDate: "",
+        format: "time_series",
+        intervalMs: 60000,
+        maxDataPoints: 1000,
+        data: []
+      },
+      {
+        id: "panel-linux-mem",
+        title: "Linux Memory Overview",
+        query: 'mktxp_system_cpu_load',
+        fromDate: "",
+        toDate: "",
+        format: "time_series",
+        intervalMs: 60000,
+        maxDataPoints: 1000,
+        data: []
+      }
+    ]
+  },
+  {
+    id: "db-windows",
+    name: "Dashboard Agent Overview - Windows",
+    targetGroup: "-- Semua Group (All Groups) --",
+    panels: [
+      {
+        id: "panel-windows-cpu",
+        title: "Windows CPU Load",
+        query: 'mktxp_system_cpu_load{routerboard_name="RC_HONET"}',
+        fromDate: "",
+        toDate: "",
+        format: "time_series",
+        intervalMs: 60000,
+        maxDataPoints: 1000,
+        data: []
+      },
+      {
+        id: "panel-windows-mem",
+        title: "Windows Active Memory",
+        query: 'mktxp_system_cpu_load',
+        fromDate: "",
+        toDate: "",
+        format: "time_series",
+        intervalMs: 60000,
+        maxDataPoints: 1000,
+        data: []
+      }
+    ]
+  },
+  {
+    id: "db-ogg",
+    name: "Dashboard Status OGG",
+    targetGroup: "-- Semua Group (All Groups) --",
+    panels: [
+      {
+        id: "panel-ogg-status",
+        title: "OGG Process Status",
+        query: 'mktxp_system_cpu_load',
+        fromDate: "",
+        toDate: "",
+        format: "time_series",
+        intervalMs: 60000,
+        maxDataPoints: 1000,
+        data: []
+      }
+    ]
+  }
+];
 
-const metricsCount = document.getElementById('metrics-count');
-const metricsTbody = document.getElementById('metrics-tbody');
+let dashboards = JSON.parse(localStorage.getItem('hephaestus_dashboards')) || DEFAULT_DASHBOARDS;
+let activeDashboardId = null;
+
+function saveDashboardsToStorage() {
+  localStorage.setItem('hephaestus_dashboards', JSON.stringify(dashboards));
+}
+
 const logsTbody = document.getElementById('logs-tbody');
 
 // Dynamic Datasources Panel elements
@@ -70,15 +140,8 @@ let systemLogs = [];
 
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
-  // Set query date range (default last 1 hour)
-  const now = new Date();
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-  
-  inputTelemetryTo.value = formatDateTimeForInput(now);
-  inputTelemetryFrom.value = formatDateTimeForInput(oneHourAgo);
-  
   // Set local diagnostic time
-  diagTime.textContent = now.toLocaleString();
+  diagTime.textContent = new Date().toLocaleString();
   
   addLog('System', 'Initializing portal and modules...', 'INFO');
   
@@ -129,8 +192,9 @@ function showPage(pageId) {
     pageTitle.textContent = 'Grafana Settings';
     pageDesc.textContent = 'Konfigurasi integrasi API Grafana dan kredensial token.';
   } else if (pageId === 'telemetry') {
-    pageTitle.textContent = 'Telemetry Console';
+    pageTitle.textContent = 'Query Data';
     pageDesc.textContent = 'Eksekusi query dan filter metrik Prometheus secara real-time.';
+    exitDashboardDetail();
   } else if (pageId === 'diagnostics') {
     pageTitle.textContent = 'System Diagnostics';
     pageDesc.textContent = 'Informasi endpoint API backend dan diagnostik kesehatan sistem.';
@@ -358,28 +422,372 @@ async function resetGrafanaConfiguration() {
   }
 }
 
-// 6. Telemetry CPU metric query
-async function queryTelemetry(event) {
-  event.preventDefault();
-  
-  const fromDate = inputTelemetryFrom.value;
-  const toDate = inputTelemetryTo.value;
-  const query = inputTelemetryQuery.value.trim();
-  const format = inputTelemetryFormat.value;
-  const intervalMs = parseInt(inputTelemetryInterval.value, 10) || 60000;
-  const maxDataPoints = parseInt(inputTelemetryMaxDatapoints.value, 10) || 1000;
+// 6. Dashboard List & Panels Logic
+function renderDashboardsList() {
+  const tbody = document.getElementById('telemetry-dashboards-tbody');
+  if (!tbody) return;
 
-  if (!fromDate || !toDate || !query) {
-    showTelemetryFeedback('danger', 'Form Error', 'Semua parameter pencarian wajib diisi.');
+  if (dashboards.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">
+          No dashboards found. Click "+ Create Dashboard" to build one.
+        </td>
+      </tr>
+    `;
     return;
   }
 
-  btnQueryTelemetry.disabled = true;
-  spinnerQuery.classList.remove('hidden');
-  hideTelemetryFeedback();
+  let html = '';
+  dashboards.forEach(db => {
+    const totalPanels = db.panels ? db.panels.length : 0;
+    html += `
+      <tr>
+        <td style="font-weight: 600; color: #58a6ff; cursor: pointer;" onclick="enterDashboardDetail('${db.id}')">
+          📊 ${db.name}
+        </td>
+        <td style="color: var(--text-muted);">${db.targetGroup || '-- Semua Group (All Groups) --'}</td>
+        <td>
+          <span class="status-badge status-default" style="color: var(--text-muted); border-color: var(--app-border); background: var(--app-card-dark);">
+            ${totalPanels} Panels
+          </span>
+        </td>
+        <td style="text-align: right; padding-right: 20px;">
+          <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="enterDashboardDetail('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto;">👁️ View</button>
+            <button class="btn btn-secondary" onclick="openEditDashboardModal('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto;">⚙️ Edit</button>
+            <button class="btn btn-danger" onclick="deleteDashboard('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto; background: #ff7b72; color: #0d1117; border-color: #ff7b72;">🗑️ Delete</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
+function enterDashboardDetail(dbId) {
+  activeDashboardId = dbId;
+  const db = dashboards.find(d => d.id === dbId);
+  if (!db) return;
+
+  document.getElementById('telemetry-list-view').classList.add('hidden');
+  document.getElementById('telemetry-detail-view').classList.remove('hidden');
+  document.getElementById('active-dashboard-title').textContent = db.name;
+
+  renderDashboardPanels();
+}
+
+function exitDashboardDetail() {
+  activeDashboardId = null;
+  document.getElementById('telemetry-detail-view').classList.add('hidden');
+  document.getElementById('telemetry-list-view').classList.remove('hidden');
+  renderDashboardsList();
+}
+
+function renderDashboardPanels() {
+  const container = document.getElementById('telemetry-panels-container');
+  if (!container) return;
+
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db) return;
+
+  if (!db.panels || db.panels.length === 0) {
+    container.innerHTML = `
+      <div style="grid-column: span 2; text-align: center; padding: 40px; color: var(--text-muted); border: 1px dashed var(--app-border); border-radius: 6px; background: var(--app-card-dark);">
+        No data panels in this dashboard. Click "+ Add Panel" to create one.
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  db.panels.forEach(panel => {
+    const hasData = panel.data && panel.data.length > 0;
+    
+    let chartHtml = `
+      <div class="empty-state" style="padding: 20px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span style="font-size: 11px; margin-top: 8px;">No data loaded. Edit query to configure.</span>
+      </div>
+    `;
+    
+    if (hasData) {
+      const step = Math.max(1, Math.floor(panel.data.length / 7));
+      let barsHtml = '';
+      for (let index = 0; index < 7; index++) {
+        const dataIndex = Math.min(panel.data.length - 1, index * step);
+        const item = panel.data[dataIndex];
+        let val = 0;
+        if (Array.isArray(item)) {
+          val = parseFloat(item[1]) || 0;
+        } else if (item && typeof item === 'object') {
+          val = parseFloat(item.value) || 0;
+        }
+        const heightPercent = Math.max(4, Math.min(95, val));
+        
+        let timeLabel = '';
+        if (item) {
+          const t = Array.isArray(item) ? item[0] : item.timestamp;
+          const dateObj = new Date(t);
+          timeLabel = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+        }
+
+        barsHtml += `
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" style="height: ${heightPercent}%;"></div>
+            <span class="chart-bar-label">${timeLabel}</span>
+          </div>
+        `;
+      }
+
+      chartHtml = `
+        <div class="chart-container" style="display: flex; align-items: flex-end; justify-content: space-around; padding: 16px 24px; position: relative; height: 120px; margin-top: 12px;">
+          ${barsHtml}
+        </div>
+      `;
+    }
+
+    let tableHtml = '';
+    if (hasData) {
+      const isCpu = panel.query && panel.query.toLowerCase().includes('cpu');
+      const suffix = isCpu ? ' %' : '';
+      
+      let rows = '';
+      const latestData = panel.data.slice(-5).reverse();
+      latestData.forEach(item => {
+        let timestamp, value;
+        if (Array.isArray(item)) {
+          timestamp = item[0];
+          value = item[1];
+        } else {
+          timestamp = item.timestamp;
+          value = item.value;
+        }
+        const timeStr = new Date(timestamp).toLocaleTimeString();
+        rows += `
+          <tr>
+            <td class="font-mono" style="font-size: 11px; color: var(--text-muted);">${timestamp}</td>
+            <td style="font-size: 11px;">${timeStr}</td>
+            <td class="font-mono" style="font-size: 11px; color: var(--prometheus-orange); font-weight: bold; text-align: right;">
+              ${parseFloat(value).toFixed(3)}${suffix}
+            </td>
+          </tr>
+        `;
+      });
+
+      tableHtml = `
+        <div class="table-wrapper" style="margin-top: 12px; max-height: 200px; overflow-y: auto;">
+          <table style="width: 100%;">
+            <thead>
+              <tr>
+                <th style="font-size: 10px;">Epoch Timestamp</th>
+                <th style="font-size: 10px;">Time</th>
+                <th style="font-size: 10px; text-align: right;">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    html += `
+      <div class="panel" style="display: flex; flex-direction: column;">
+        <div class="panel-header" style="padding-bottom: 12px; border-bottom: 1px solid var(--app-border);">
+          <h3 class="panel-title" style="font-size: 13px;">📊 ${panel.title}</h3>
+          <div class="dashboard-panel-actions">
+            <button class="dashboard-panel-action-btn" onclick="openEditPanelModal('${panel.id}')" title="Edit Query">⚙️</button>
+            <button class="dashboard-panel-action-btn" onclick="deletePanel('${panel.id}')" title="Remove Panel" style="color: #ff7b72;">🗑️</button>
+          </div>
+        </div>
+        
+        <div style="font-size: 10px; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px; font-family: monospace; word-break: break-all; margin-top: 8px;">
+          ${panel.query || 'No query configured'}
+        </div>
+
+        ${chartHtml}
+        ${tableHtml}
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// Dashboard Modals and CRUD
+function openCreateDashboardModal() {
+  document.getElementById('dashboard-modal-title').textContent = "Create Dashboard";
+  document.getElementById('dashboard-id-input').value = "";
+  document.getElementById('dashboard-name-input').value = "";
+  document.getElementById('dashboard-group-input').value = "";
+  document.getElementById('dashboard-modal').classList.add('active');
+}
+
+function openEditDashboardModal(dbId) {
+  const db = dashboards.find(d => d.id === dbId);
+  if (!db) return;
+  document.getElementById('dashboard-modal-title').textContent = "Edit Dashboard";
+  document.getElementById('dashboard-id-input').value = db.id;
+  document.getElementById('dashboard-name-input').value = db.name;
+  document.getElementById('dashboard-group-input').value = db.targetGroup || "";
+  document.getElementById('dashboard-modal').classList.add('active');
+}
+
+function closeDashboardModal() {
+  document.getElementById('dashboard-modal').classList.remove('active');
+}
+
+function saveDashboard(event) {
+  event.preventDefault();
+  const id = document.getElementById('dashboard-id-input').value;
+  const name = document.getElementById('dashboard-name-input').value.trim();
+  const targetGroup = document.getElementById('dashboard-group-input').value.trim();
+
+  if (id) {
+    const db = dashboards.find(d => d.id === id);
+    if (db) {
+      db.name = name;
+      db.targetGroup = targetGroup;
+    }
+  } else {
+    const newDb = {
+      id: "db-" + Date.now(),
+      name: name,
+      targetGroup: targetGroup,
+      panels: []
+    };
+    dashboards.push(newDb);
+  }
+
+  saveDashboardsToStorage();
+  closeDashboardModal();
+  renderDashboardsList();
+}
+
+function deleteDashboard(dbId) {
+  if (!confirm("Are you sure you want to delete this dashboard?")) return;
+  dashboards = dashboards.filter(d => d.id !== dbId);
+  saveDashboardsToStorage();
+  renderDashboardsList();
+}
+
+// Panel CRUD
+function addNewPanel() {
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db) return;
+
+  const panelId = "panel-" + Date.now();
+  const newPanel = {
+    id: panelId,
+    title: "New Panel",
+    query: "",
+    fromDate: "",
+    toDate: "",
+    format: "time_series",
+    intervalMs: 60000,
+    maxDataPoints: 1000,
+    data: []
+  };
+
+  db.panels.push(newPanel);
+  saveDashboardsToStorage();
+  renderDashboardPanels();
+  openEditPanelModal(panelId);
+}
+
+function deletePanel(panelId) {
+  if (!confirm("Are you sure you want to remove this panel?")) return;
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db) return;
+
+  db.panels = db.panels.filter(p => p.id !== panelId);
+  saveDashboardsToStorage();
+  renderDashboardPanels();
+}
+
+// Panel Query Modal
+let activePanelId = null;
+
+function openEditPanelModal(panelId) {
+  activePanelId = panelId;
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db) return;
+
+  const panel = db.panels.find(p => p.id === panelId);
+  if (!panel) return;
+
+  document.getElementById('query-panel-id').value = panelId;
+  document.getElementById('panel-title-input').value = panel.title || "";
+  document.getElementById('panel-query-input').value = panel.query || "";
+  document.getElementById('panel-format-select').value = panel.format || "time_series";
+  document.getElementById('panel-interval-input').value = panel.intervalMs || 60000;
+  document.getElementById('panel-max-datapoints-input').value = panel.maxDataPoints || 1000;
+
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
   
-  const logMessage = `Querying metric: ${query.split('{')[0]}`;
-  addLog('Telemetry', logMessage, 'INFO');
+  document.getElementById('panel-to-input').value = panel.toDate || formatDateTimeForInput(now);
+  document.getElementById('panel-from-input').value = panel.fromDate || formatDateTimeForInput(oneHourAgo);
+
+  hidePanelQueryFeedback();
+  document.getElementById('query-modal').classList.add('active');
+}
+
+function closeQueryModal() {
+  document.getElementById('query-modal').classList.remove('active');
+  activePanelId = null;
+}
+
+function showPanelQueryFeedback(type, title, description) {
+  const alertEl = document.getElementById('panel-query-feedback');
+  const titleEl = document.getElementById('panel-query-feedback-title');
+  const descEl = document.getElementById('panel-query-feedback-desc');
+  if (alertEl && titleEl && descEl) {
+    alertEl.className = `alert alert-${type}`;
+    titleEl.textContent = title;
+    descEl.textContent = description;
+    alertEl.classList.remove('hidden');
+  }
+}
+
+function hidePanelQueryFeedback() {
+  const alertEl = document.getElementById('panel-query-feedback');
+  if (alertEl) alertEl.classList.add('hidden');
+}
+
+async function applyPanelQuery(event) {
+  event.preventDefault();
+  
+  const panelId = document.getElementById('query-panel-id').value;
+  const title = document.getElementById('panel-title-input').value.trim();
+  const query = document.getElementById('panel-query-input').value.trim();
+  const fromDate = document.getElementById('panel-from-input').value;
+  const toDate = document.getElementById('panel-to-input').value;
+  const format = document.getElementById('panel-format-select').value;
+  const intervalMs = parseInt(document.getElementById('panel-interval-input').value, 10) || 60000;
+  const maxDataPoints = parseInt(document.getElementById('panel-max-datapoints-input').value, 10) || 1000;
+
+  if (!query) {
+    showPanelQueryFeedback('danger', 'Form Error', 'Query PromQL expression wajib diisi.');
+    return;
+  }
+
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db) return;
+
+  const panel = db.panels.find(p => p.id === panelId);
+  if (!panel) return;
+
+  const btn = document.getElementById('btn-apply-query');
+  const spinner = document.getElementById('spinner-apply-query');
+  
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  hidePanelQueryFeedback();
+
+  addLog('Telemetry', `Querying metric for panel "${title}": ${query.split('{')[0]}`, 'INFO');
 
   try {
     const res = await fetch(API_REPORT_URL, {
@@ -398,105 +806,35 @@ async function queryTelemetry(event) {
     const result = await res.json();
     if (res.ok && result.success) {
       const data = result.data || [];
-      renderTelemetryTable(data, query);
-      updateChartHeights(data);
       
-      // Update scrapes count
+      panel.title = title;
+      panel.query = query;
+      panel.fromDate = fromDate;
+      panel.toDate = toDate;
+      panel.format = format;
+      panel.intervalMs = intervalMs;
+      panel.maxDataPoints = maxDataPoints;
+      panel.data = data;
+
+      saveDashboardsToStorage();
+      renderDashboardPanels();
+      
       totalScrapes++;
       widgetScrapes.textContent = totalScrapes;
       
-      showTelemetryFeedback('success', 'Query Succeeded', `Berhasil mengambil ${data.length} baris data metrik.`);
-      addLog('Telemetry', `Stream success: Fetched ${data.length} records`, 'SUCCESS');
+      addLog('Telemetry', `Panel query success: Fetched ${data.length} records`, 'SUCCESS');
+      closeQueryModal();
     } else {
-      renderTelemetryTable([], query);
-      updateChartHeights([]);
-      showTelemetryFeedback('danger', 'Query Failed', result.message || result.error || 'Gagal mengambil data metrik.');
+      showPanelQueryFeedback('danger', 'Query Failed', result.message || result.error || 'Gagal mengambil data metrik.');
       addLog('Telemetry', `Stream failed: ${result.message || 'Server error'}`, 'ERROR');
     }
   } catch (error) {
-    renderTelemetryTable([], query);
-    updateChartHeights([]);
-    showTelemetryFeedback('danger', 'API Error', error.message || 'Gagal menghubungi endpoint telemetri.');
+    showPanelQueryFeedback('danger', 'API Error', error.message || 'Gagal menghubungi endpoint telemetri.');
     addLog('Telemetry', 'API Connection timeout.', 'ERROR');
   } finally {
-    btnQueryTelemetry.disabled = false;
-    spinnerQuery.classList.add('hidden');
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
   }
-}
-
-function renderTelemetryTable(data, queryUsed) {
-  metricsCount.textContent = `${data.length} records`;
-  
-  if (thMetricHeader) {
-    thMetricHeader.textContent = queryUsed ? queryUsed.split('{')[0] : 'Metric Value';
-  }
-  
-  if (data.length === 0) {
-    metricsTbody.innerHTML = `
-      <tr>
-        <td colspan="3">
-          <div class="empty-state">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            <span>No data stream matching targets.</span>
-          </div>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  let html = '';
-  const isCpu = queryUsed && queryUsed.toLowerCase().includes('cpu');
-  const suffix = isCpu ? ' %' : '';
-  
-  data.forEach((item) => {
-    let timestamp, value;
-    if (Array.isArray(item)) {
-      timestamp = item[0];
-      value = item[1];
-    } else if (item && typeof item === 'object') {
-      timestamp = item.timestamp;
-      value = item.value;
-    } else {
-      return;
-    }
-    const timeStr = new Date(timestamp).toLocaleString();
-    html += `
-      <tr>
-        <td class="font-mono" style="color: var(--text-muted);">${timestamp}</td>
-        <td>${timeStr}</td>
-        <td class="font-mono" style="color: var(--prometheus-orange); font-weight: bold;">${parseFloat(value).toFixed(3)}${suffix}</td>
-      </tr>
-    `;
-  });
-  metricsTbody.innerHTML = html;
-}
-
-// Update the visual chart heights based on query output sample
-function updateChartHeights(data) {
-  const bars = document.querySelectorAll('.chart-bar');
-  if (data.length === 0) {
-    bars.forEach(bar => {
-      bar.style.height = '4px';
-    });
-    return;
-  }
-  
-  // Distribute values to 7 mock bar columns
-  const step = Math.max(1, Math.floor(data.length / 7));
-  bars.forEach((bar, index) => {
-    const dataIndex = Math.min(data.length - 1, index * step);
-    const item = data[dataIndex];
-    let value = 0;
-    if (Array.isArray(item)) {
-      value = parseFloat(item[1]) || 0;
-    } else if (item && typeof item === 'object') {
-      value = parseFloat(item.value) || 0;
-    }
-    // Map value percentage safely to bar height (max 90% space)
-    const heightPercent = Math.max(4, Math.min(95, value));
-    bar.style.height = `${heightPercent}%`;
-  });
 }
 
 // 7. Fetch all datasources from Grafana server
@@ -584,18 +922,6 @@ function showFeedback(type, title, description) {
 
 function hideFeedback() {
   feedbackAlert.classList.add('hidden');
-}
-
-// Telemetry
-function showTelemetryFeedback(type, title, description) {
-  telemetryFeedback.className = `alert alert-${type}`;
-  telemetryFeedbackTitle.textContent = title;
-  telemetryFeedbackDesc.textContent = description;
-  telemetryFeedback.classList.remove('hidden');
-}
-
-function hideTelemetryFeedback() {
-  telemetryFeedback.classList.add('hidden');
 }
 
 function setLoading(loading, type = '') {
