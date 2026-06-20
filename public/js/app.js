@@ -494,6 +494,138 @@ function exitDashboardDetail() {
   renderDashboardsList();
 }
 
+function generateLineOrAreaChart(data, isArea = false) {
+  if (!data || data.length === 0) return '';
+  
+  const values = data.map(item => {
+    if (Array.isArray(item)) return parseFloat(item[1]) || 0;
+    if (item && typeof item === 'object') return parseFloat(item.value) || 0;
+    return 0;
+  });
+
+  const maxVal = Math.max(10, ...values);
+  const minVal = Math.min(0, ...values);
+  const range = Math.max(1, maxVal - minVal);
+
+  const width = 300;
+  const height = 100;
+  const padding = 10;
+  const usableHeight = height - padding * 2;
+  const usableWidth = width;
+
+  const points = values.map((val, idx) => {
+    const x = (idx / Math.max(1, values.length - 1)) * usableWidth;
+    const y = height - padding - ((val - minVal) / range) * usableHeight;
+    return { x, y };
+  });
+
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+  let fillPathD = '';
+  if (isArea && points.length > 0) {
+    fillPathD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${height} L ${points[0].x.toFixed(1)} ${height} Z`;
+  }
+
+  return `
+    <div style="height: 120px; width: 100%; margin-top: 12px; position: relative;">
+      <svg viewBox="0 0 ${width} ${height}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;">
+        <defs>
+          <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--prometheus-orange)" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="var(--prometheus-orange)" stop-opacity="0.0"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="${height - padding}" x2="${width}" y2="${height - padding}" stroke="var(--app-border)" stroke-width="1" stroke-dasharray="4"/>
+        <line x1="0" y1="${padding}" x2="${width}" y2="${padding}" stroke="var(--app-border)" stroke-width="1" stroke-dasharray="4"/>
+        
+        ${isArea ? `<path d="${fillPathD}" fill="url(#area-grad)" stroke="none" />` : ''}
+        <path d="${pathD}" fill="none" stroke="var(--prometheus-orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </div>
+  `;
+}
+
+function generateBarChart(data) {
+  if (!data || data.length === 0) return '';
+  const step = Math.max(1, Math.floor(data.length / 7));
+  let barsHtml = '';
+  for (let index = 0; index < 7; index++) {
+    const dataIndex = Math.min(data.length - 1, index * step);
+    const item = data[dataIndex];
+    let val = 0;
+    if (Array.isArray(item)) {
+      val = parseFloat(item[1]) || 0;
+    } else if (item && typeof item === 'object') {
+      val = parseFloat(item.value) || 0;
+    }
+    const heightPercent = Math.max(4, Math.min(95, val));
+    
+    let timeLabel = '';
+    if (item) {
+      const t = Array.isArray(item) ? item[0] : item.timestamp;
+      const dateObj = new Date(t);
+      timeLabel = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+    }
+
+    barsHtml += `
+      <div class="chart-bar-wrapper">
+        <div class="chart-bar" style="height: ${heightPercent}%;"></div>
+        <span class="chart-bar-label">${timeLabel}</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="chart-container" style="display: flex; align-items: flex-end; justify-content: space-around; padding: 16px 24px; position: relative; height: 120px; margin-top: 12px;">
+      ${barsHtml}
+    </div>
+  `;
+}
+
+function generateDonutOrPieChart(data, isDonut = true) {
+  if (!data || data.length === 0) return '';
+  const latestItem = data[data.length - 1];
+  let val = 0;
+  if (Array.isArray(latestItem)) {
+    val = parseFloat(latestItem[1]) || 0;
+  } else if (latestItem && typeof latestItem === 'object') {
+    val = parseFloat(latestItem.value) || 0;
+  }
+
+  const percent = Math.min(100, Math.max(0, val));
+  const radius = 35;
+  const strokeWidth = isDonut ? 8 : 24;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percent / 100) * circumference;
+
+  return `
+    <div style="display: flex; align-items: center; justify-content: center; height: 120px; margin-top: 12px; gap: 20px;">
+      <div style="position: relative; width: 90px; height: 90px;">
+        <svg width="90" height="90" viewBox="0 0 90 90" style="transform: rotate(-90deg);">
+          <circle cx="45" cy="45" r="${radius}" stroke="var(--app-border)" stroke-width="${strokeWidth}" fill="${isDonut ? 'none' : 'rgba(255,255,255,0.05)'}"/>
+          <circle cx="45" cy="45" r="${radius}" stroke="var(--prometheus-orange)" stroke-width="${strokeWidth}" fill="none"
+            stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}" stroke-linecap="round"
+            style="transition: stroke-dashoffset 0.35s;"/>
+        </svg>
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <span class="font-mono" style="font-size: 13px; font-weight: bold; color: var(--text-white);">${percent.toFixed(1)}%</span>
+          <span style="font-size: 8px; color: var(--text-muted); text-transform: uppercase;">Latest</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--prometheus-orange);"></span>
+          <span style="color: var(--text-white);">Active: ${percent.toFixed(2)}%</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--app-border);"></span>
+          <span style="color: var(--text-muted);">Idle: ${(100 - percent).toFixed(2)}%</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderDashboardPanels() {
   const container = document.getElementById('telemetry-panels-container');
   if (!container) return;
@@ -513,48 +645,31 @@ function renderDashboardPanels() {
   let html = '';
   db.panels.forEach(panel => {
     const hasData = panel.data && panel.data.length > 0;
+    const format = panel.format || 'line_chart';
     
-    let chartHtml = `
-      <div class="empty-state" style="padding: 20px;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-        <span style="font-size: 11px; margin-top: 8px;">No data loaded. Edit query to configure.</span>
-      </div>
-    `;
+    let chartHtml = '';
     
-    if (hasData) {
-      const step = Math.max(1, Math.floor(panel.data.length / 7));
-      let barsHtml = '';
-      for (let index = 0; index < 7; index++) {
-        const dataIndex = Math.min(panel.data.length - 1, index * step);
-        const item = panel.data[dataIndex];
-        let val = 0;
-        if (Array.isArray(item)) {
-          val = parseFloat(item[1]) || 0;
-        } else if (item && typeof item === 'object') {
-          val = parseFloat(item.value) || 0;
-        }
-        const heightPercent = Math.max(4, Math.min(95, val));
-        
-        let timeLabel = '';
-        if (item) {
-          const t = Array.isArray(item) ? item[0] : item.timestamp;
-          const dateObj = new Date(t);
-          timeLabel = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
-        }
-
-        barsHtml += `
-          <div class="chart-bar-wrapper">
-            <div class="chart-bar" style="height: ${heightPercent}%;"></div>
-            <span class="chart-bar-label">${timeLabel}</span>
+    if (format !== 'table') {
+      if (!hasData) {
+        chartHtml = `
+          <div class="empty-state" style="padding: 20px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span style="font-size: 11px; margin-top: 8px;">No data loaded. Edit query to configure.</span>
           </div>
         `;
+      } else {
+        if (format === 'line_chart') {
+          chartHtml = generateLineOrAreaChart(panel.data, false);
+        } else if (format === 'area_chart') {
+          chartHtml = generateLineOrAreaChart(panel.data, true);
+        } else if (format === 'bar_chart' || format === 'time_series') {
+          chartHtml = generateBarChart(panel.data);
+        } else if (format === 'pie_chart') {
+          chartHtml = generateDonutOrPieChart(panel.data, false);
+        } else if (format === 'donut_chart') {
+          chartHtml = generateDonutOrPieChart(panel.data, true);
+        }
       }
-
-      chartHtml = `
-        <div class="chart-container" style="display: flex; align-items: flex-end; justify-content: space-around; padding: 16px 24px; position: relative; height: 120px; margin-top: 12px;">
-          ${barsHtml}
-        </div>
-      `;
     }
 
     let tableHtml = '';
@@ -611,6 +726,9 @@ function renderDashboardPanels() {
             ${panel.title}
           </h3>
           <div class="dashboard-panel-actions">
+            <button class="dashboard-panel-action-btn" onclick="exportPanelCSV('${panel.id}')" title="Export CSV" style="color: #38bdf8;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
             <button class="dashboard-panel-action-btn" onclick="openEditPanelModal('${panel.id}')" title="Edit Query">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
@@ -955,4 +1073,79 @@ function setLoading(loading, type = '') {
     spinnerSave.classList.add('hidden');
     spinnerReset.classList.add('hidden');
   }
+function exportPanelCSV(panelId) {
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db) return;
+  const panel = db.panels.find(p => p.id === panelId);
+  if (!panel || !panel.data || panel.data.length === 0) {
+    alert("No data available to export.");
+    return;
+  }
+
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "Epoch Timestamp,Time,Value\n";
+
+  panel.data.forEach(item => {
+    let timestamp, value;
+    if (Array.isArray(item)) {
+      timestamp = item[0];
+      value = item[1];
+    } else {
+      timestamp = item.timestamp;
+      value = item.value;
+    }
+    const timeStr = new Date(timestamp).toLocaleString().replace(/,/g, '');
+    csvContent += `${timestamp},${timeStr},${value}\n`;
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `${panel.title.replace(/\s+/g, '_')}_report.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function exportDashboardCSV() {
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db || !db.panels || db.panels.length === 0) {
+    alert("No panels available to export.");
+    return;
+  }
+
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += "Panel Title,Epoch Timestamp,Time,Value\n";
+
+  let hasAnyData = false;
+  db.panels.forEach(panel => {
+    if (panel.data && panel.data.length > 0) {
+      hasAnyData = true;
+      panel.data.forEach(item => {
+        let timestamp, value;
+        if (Array.isArray(item)) {
+          timestamp = item[0];
+          value = item[1];
+        } else {
+          timestamp = item.timestamp;
+          value = item.value;
+        }
+        const timeStr = new Date(timestamp).toLocaleString().replace(/,/g, '');
+        csvContent += `"${panel.title}",${timestamp},${timeStr},${value}\n`;
+      });
+    }
+  });
+
+  if (!hasAnyData) {
+    alert("No data available to export.");
+    return;
+  }
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `${db.name.replace(/\s+/g, '_')}_full_report.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
