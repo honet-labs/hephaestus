@@ -117,148 +117,149 @@
           </div>
         </div>
 
-        <!-- 2. SYSTEM STATUS WIDGETS (4 Columns) -->
-        <div class="dashboard-grid">
-          <div class="stat-card">
-            <div class="stat-card-left">
-              <span class="stat-card-title">Grafana Server</span>
-              <span id="widget-grafana-status" class="stat-card-value" style="color: #ff7b72;">Disconnected</span>
-              <span id="widget-grafana-sub" class="stat-card-sub">No active custom configuration</span>
-            </div>
-            <span class="stat-card-icon">⚡</span>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-card-left">
-              <span class="stat-card-title">Active Datasource</span>
-              <span id="widget-datasource-uid" class="stat-card-value">-</span>
-              <span class="stat-card-sub">Prometheus UID Target</span>
-            </div>
-            <span class="stat-card-icon">🗄️</span>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-card-left">
-              <span class="stat-card-title">Telemetry Scrapes</span>
-              <span id="widget-scrapes" class="stat-card-value">0</span>
-              <span class="stat-card-sub">Total reports processed</span>
-            </div>
-            <span class="stat-card-icon">📊</span>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-card-left">
-              <span class="stat-card-title">Storage Mode</span>
-              <span class="stat-card-value" style="color: #58a6ff;">Fallback</span>
-              <span class="stat-card-sub">data/grafana_config.json</span>
-            </div>
-            <span class="stat-card-icon">💾</span>
-          </div>
-        </div>
-
-
         <!-- DYNAMIC PAGE BODY CONTENT -->
 
         <!-- PAGE 1: OVERVIEW -->
-        <div id="page-overview" class="main-grid">
-          <!-- Left Column -->
-          <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="panel">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>
-                  Activity Trend Monitor
-                </h3>
+        <div id="page-overview">
+          <!-- 2. SYSTEM STATUS WIDGETS (4 Columns) -->
+          <div class="dashboard-grid">
+            <div class="stat-card">
+              <div class="stat-card-left">
+                <span class="stat-card-title">Grafana Server</span>
+                <span id="widget-grafana-status" class="stat-card-value" style="color: #ff7b72;">Disconnected</span>
+                <span id="widget-grafana-sub" class="stat-card-sub">No active custom configuration</span>
               </div>
-              <!-- Mock Chart Panel representing metric states -->
-              <div class="chart-container" id="overview-chart">
-                <div class="chart-bar-wrapper">
-                  <div class="chart-bar" style="height: 10%;"></div>
-                  <span class="chart-bar-label">00:00</span>
-                </div>
-                <div class="chart-bar-wrapper">
-                  <div class="chart-bar" style="height: 25%;"></div>
-                  <span class="chart-bar-label">04:00</span>
-                </div>
-                <div class="chart-bar-wrapper">
-                  <div class="chart-bar" style="height: 55%;"></div>
-                  <span class="chart-bar-label">08:00</span>
-                </div>
-                <div class="chart-bar-wrapper">
-                  <div class="chart-bar" style="height: 80%;"></div>
-                  <span class="chart-bar-label">12:00</span>
-                </div>
-                <div class="chart-bar-wrapper">
-                  <div class="chart-bar" style="height: 40%;"></div>
-                  <span class="chart-bar-label">16:00</span>
-                </div>
-                <div class="chart-bar-wrapper">
-                  <div class="chart-bar" style="height: 70%;"></div>
-                  <span class="chart-bar-label">20:00</span>
-                </div>
-                <div class="chart-bar-wrapper">
-                  <div class="chart-bar" style="height: 90%;"></div>
-                  <span class="chart-bar-label">Now</span>
-                </div>
-              </div>
+              <span class="stat-card-icon">⚡</span>
             </div>
 
-            <div class="panel">
-              <div class="panel-header">
-                <h3 class="panel-title">Integration Logs</h3>
+            <div class="stat-card">
+              <div class="stat-card-left">
+                <span class="stat-card-title">Active Datasource</span>
+                <span id="widget-datasource-uid" class="stat-card-value">-</span>
+                <span class="stat-card-sub">Prometheus UID Target</span>
               </div>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Module</th>
-                      <th>Message</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="logs-tbody">
-                    <tr>
-                      <td class="font-mono">Loading...</td>
-                      <td>System</td>
-                      <td>Initializing interface components...</td>
-                      <td><span class="status-badge status-default">INFO</span></td>
-                    </tr>
-                  </tbody>
-                </table>
+              <span class="stat-card-icon">🗄️</span>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-left">
+                <span class="stat-card-title">Telemetry Scrapes</span>
+                <span id="widget-scrapes" class="stat-card-value">0</span>
+                <span class="stat-card-sub">Total reports processed</span>
               </div>
+              <span class="stat-card-icon">📊</span>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-left">
+                <span class="stat-card-title">Storage Mode</span>
+                <span class="stat-card-value" style="color: #58a6ff;">Fallback</span>
+                <span class="stat-card-sub">data/grafana_config.json</span>
+              </div>
+              <span class="stat-card-icon">💾</span>
             </div>
           </div>
 
-          <!-- Right Column -->
-          <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="panel">
-              <div class="panel-header">
-                <h3 class="panel-title">Active Settings</h3>
+          <div class="main-grid">
+            <!-- Left Column -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              <div class="panel">
+                <div class="panel-header">
+                  <h3 class="panel-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path></svg>
+                    Activity Trend Monitor
+                  </h3>
+                </div>
+                <!-- Mock Chart Panel representing metric states -->
+                <div class="chart-container" id="overview-chart">
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar" style="height: 10%;"></div>
+                    <span class="chart-bar-label">00:00</span>
+                  </div>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar" style="height: 25%;"></div>
+                    <span class="chart-bar-label">04:00</span>
+                  </div>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar" style="height: 55%;"></div>
+                    <span class="chart-bar-label">08:00</span>
+                  </div>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar" style="height: 80%;"></div>
+                    <span class="chart-bar-label">12:00</span>
+                  </div>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar" style="height: 40%;"></div>
+                    <span class="chart-bar-label">16:00</span>
+                  </div>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar" style="height: 70%;"></div>
+                    <span class="chart-bar-label">20:00</span>
+                  </div>
+                  <div class="chart-bar-wrapper">
+                    <div class="chart-bar" style="height: 90%;"></div>
+                    <span class="chart-bar-label">Now</span>
+                  </div>
+                </div>
               </div>
-              <div class="info-box">
-                <div class="info-item">
-                  <span class="info-label">Active Host</span>
-                  <span id="overview-host" class="info-val code font-mono">-</span>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <h3 class="panel-title">Integration Logs</h3>
                 </div>
-                <div class="info-item">
-                  <span class="info-label">Active Datasource</span>
-                  <span id="overview-datasource" class="info-val code font-mono">-</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Configuration State</span>
-                  <span id="overview-state" class="status-badge status-default">Default Env</span>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Module</th>
+                        <th>Message</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="logs-tbody">
+                      <tr>
+                        <td class="font-mono">Loading...</td>
+                        <td>System</td>
+                        <td>Initializing interface components...</td>
+                        <td><span class="status-badge status-default">INFO</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
 
-            <div class="panel">
-              <div class="panel-header">
-                <h3 class="panel-title">Quick Actions</h3>
+            <!-- Right Column -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              <div class="panel">
+                <div class="panel-header">
+                  <h3 class="panel-title">Active Settings</h3>
+                </div>
+                <div class="info-box">
+                  <div class="info-item">
+                    <span class="info-label">Active Host</span>
+                    <span id="overview-host" class="info-val code font-mono">-</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Active Datasource</span>
+                    <span id="overview-datasource" class="info-val code font-mono">-</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Configuration State</span>
+                    <span id="overview-state" class="status-badge status-default">Default Env</span>
+                  </div>
+                </div>
               </div>
-              <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="btn btn-primary" onclick="navigate('settings')" style="width: 100%; justify-content: center;">Configure Grafana</button>
-                <button class="btn btn-secondary" onclick="navigate('telemetry')" style="width: 100%; justify-content: center;">Query Telemetry</button>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <h3 class="panel-title">Quick Actions</h3>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <button class="btn btn-primary" onclick="navigate('settings')" style="width: 100%; justify-content: center;">Configure Grafana</button>
+                  <button class="btn btn-secondary" onclick="navigate('telemetry')" style="width: 100%; justify-content: center;">Query Telemetry</button>
+                </div>
               </div>
             </div>
           </div>
