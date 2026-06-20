@@ -8,14 +8,16 @@ export class ReportController {
    */
   public async getCpuReport(req: Request, res: Response): Promise<void> {
     try {
-      const { from_date, to_date, target_router } = req.body;
+      const from_date_val = req.body.from_date || req.body.fromDate;
+      const to_date_val = req.body.to_date || req.body.toDate;
+      const target_router_val = req.body.target_router || req.body.target;
 
       // 1. Validate required fields
-      if (!target_router || typeof target_router !== "string" || target_router.trim() === "") {
+      if (!target_router_val || typeof target_router_val !== "string" || target_router_val.trim() === "") {
         res.status(400).json({
           success: false,
           error: "Validation Error",
-          message: "The parameter 'target_router' is required and must be a non-empty string."
+          message: "The parameter 'target_router' or 'target' is required and must be a non-empty string."
         });
         return;
       }
@@ -25,23 +27,23 @@ export class ReportController {
       const now = new Date();
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
-      const fromVal = from_date !== undefined && from_date !== null ? from_date : oneHourAgo.toISOString();
-      const toVal = to_date !== undefined && to_date !== null ? to_date : now.toISOString();
+      const fromVal = from_date_val !== undefined && from_date_val !== null ? from_date_val : oneHourAgo.toISOString();
+      const toVal = to_date_val !== undefined && to_date_val !== null ? to_date_val : now.toISOString();
 
-      console.log(`[ReportController] Request received. Router: "${target_router}", Range: [${fromVal}] -> [${toVal}]`);
+      console.log(`[ReportController] Request received. Router: "${target_router_val}", Range: [${fromVal}] -> [${toVal}]`);
 
       // 3. Invoke service to fetch and sanitize Grafana data
       const dataPoints = await grafanaService.queryCpuLoad({
         from: fromVal,
         to: toVal,
-        targetRouter: target_router.trim()
+        targetRouter: target_router_val.trim()
       });
 
       // 4. Return clean, formatted response
       res.status(200).json({
         success: true,
         meta: {
-          target_router: target_router.trim(),
+          target_router: target_router_val.trim(),
           from_parsed: fromVal,
           to_parsed: toVal,
           datapoints_count: dataPoints.length
