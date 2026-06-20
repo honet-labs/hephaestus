@@ -1073,6 +1073,8 @@ function setLoading(loading, type = '') {
     spinnerSave.classList.add('hidden');
     spinnerReset.classList.add('hidden');
   }
+}
+
 function exportPanelCSV(panelId) {
   const db = dashboards.find(d => d.id === activeDashboardId);
   if (!db) return;
