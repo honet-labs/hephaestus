@@ -78,6 +78,10 @@ window.addEventListener('DOMContentLoaded', () => {
   
   addLog('System', 'Initializing portal and modules...', 'INFO');
   
+  // Setup hash navigation
+  handleHashNavigation();
+  window.addEventListener('hashchange', handleHashNavigation);
+
   // Load configuration
   loadGrafanaSettings();
 });
@@ -94,16 +98,20 @@ function formatDateTimeForInput(date) {
 
 // 1. Navigation routing
 function navigate(pageId) {
+  window.location.hash = pageId;
+}
+
+function showPage(pageId) {
   pages.forEach(p => {
     const pageEl = document.getElementById(`page-${p}`);
     const menuEl = document.getElementById(`menu-${p}`);
     
     if (p === pageId) {
-      pageEl.classList.remove('hidden');
-      menuEl.classList.add('active');
+      if (pageEl) pageEl.classList.remove('hidden');
+      if (menuEl) menuEl.classList.add('active');
     } else {
-      pageEl.classList.add('hidden');
-      menuEl.classList.remove('active');
+      if (pageEl) pageEl.classList.add('hidden');
+      if (menuEl) menuEl.classList.remove('active');
     }
   });
 
@@ -123,6 +131,15 @@ function navigate(pageId) {
     pageTitle.textContent = 'System Diagnostics';
     pageDesc.textContent = 'Informasi endpoint API backend dan diagnostik kesehatan sistem.';
     diagTime.textContent = new Date().toLocaleString();
+  }
+}
+
+function handleHashNavigation() {
+  const hash = window.location.hash.replace('#', '') || 'overview';
+  if (pages.includes(hash)) {
+    showPage(hash);
+  } else {
+    showPage('overview');
   }
 }
 
