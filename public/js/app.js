@@ -1126,6 +1126,7 @@ function previewPanel(panelId) {
   // 1. Render Chart
   let chartHtml = '';
   if (format !== 'table') {
+    previewChartContainer.style.display = 'block';
     if (!hasData) {
       chartHtml = `
         <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-muted);">
@@ -1146,6 +1147,8 @@ function previewPanel(panelId) {
         chartHtml = generateDonutOrPieChart(panel.data, true);
       }
     }
+  } else {
+    previewChartContainer.style.display = 'none';
   }
   previewChartContainer.innerHTML = chartHtml;
 
