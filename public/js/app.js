@@ -431,7 +431,7 @@ function renderDashboardsList() {
     tbody.innerHTML = `
       <tr>
         <td colspan="4" style="padding: 20px; text-align: center; color: var(--text-muted);">
-          No dashboards found. Click "+ Create Dashboard" to build one.
+          No reports found. Click "+ Create Report" to build one.
         </td>
       </tr>
     `;
@@ -450,7 +450,7 @@ function renderDashboardsList() {
         <td style="color: var(--text-muted);">${db.targetGroup || '-- Semua Group (All Groups) --'}</td>
         <td>
           <span class="status-badge status-default" style="color: var(--text-muted); border-color: var(--app-border); background: var(--app-card-dark);">
-            ${totalPanels} Panels
+            ${totalPanels} Metrics
           </span>
         </td>
         <td style="text-align: right; padding-right: 20px;">
@@ -636,7 +636,7 @@ function renderDashboardPanels() {
   if (!db.panels || db.panels.length === 0) {
     container.innerHTML = `
       <div style="grid-column: span 2; text-align: center; padding: 40px; color: var(--text-muted); border: 1px dashed var(--app-border); border-radius: 6px; background: var(--app-card-dark);">
-        No reports configured in this section. Click "+ Add Panel" to create one.
+        No reports configured in this section. Click "+ Add Report" to create one.
       </div>
     `;
     return;
@@ -702,7 +702,7 @@ function renderDashboardPanels() {
 
 // Dashboard Modals and CRUD
 function openCreateDashboardModal() {
-  document.getElementById('dashboard-modal-title').textContent = "Create Dashboard";
+  document.getElementById('dashboard-modal-title').textContent = "Create Report";
   document.getElementById('dashboard-id-input').value = "";
   document.getElementById('dashboard-name-input').value = "";
   document.getElementById('dashboard-group-input').value = "";
@@ -712,7 +712,7 @@ function openCreateDashboardModal() {
 function openEditDashboardModal(dbId) {
   const db = dashboards.find(d => d.id === dbId);
   if (!db) return;
-  document.getElementById('dashboard-modal-title').textContent = "Edit Dashboard";
+  document.getElementById('dashboard-modal-title').textContent = "Edit Report";
   document.getElementById('dashboard-id-input').value = db.id;
   document.getElementById('dashboard-name-input').value = db.name;
   document.getElementById('dashboard-group-input').value = db.targetGroup || "";
@@ -751,7 +751,7 @@ function saveDashboard(event) {
 }
 
 function deleteDashboard(dbId) {
-  if (!confirm("Are you sure you want to delete this dashboard?")) return;
+  if (!confirm("Are you sure you want to delete this report?")) return;
   dashboards = dashboards.filter(d => d.id !== dbId);
   saveDashboardsToStorage();
   renderDashboardsList();
@@ -765,7 +765,7 @@ function addNewPanel() {
   const panelId = "panel-" + Date.now();
   const newPanel = {
     id: panelId,
-    title: "New Panel",
+    title: "New Report",
     query: "",
     fromDate: "",
     toDate: "",
@@ -782,7 +782,7 @@ function addNewPanel() {
 }
 
 function deletePanel(panelId) {
-  if (!confirm("Are you sure you want to remove this panel?")) return;
+  if (!confirm("Are you sure you want to remove this report?")) return;
   const db = dashboards.find(d => d.id === activeDashboardId);
   if (!db) return;
 
