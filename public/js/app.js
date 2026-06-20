@@ -449,7 +449,17 @@ function renderTelemetryTable(data, queryUsed) {
   const isCpu = queryUsed && queryUsed.toLowerCase().includes('cpu');
   const suffix = isCpu ? ' %' : '';
   
-  data.forEach(([timestamp, value]) => {
+  data.forEach((item) => {
+    let timestamp, value;
+    if (Array.isArray(item)) {
+      timestamp = item[0];
+      value = item[1];
+    } else if (item && typeof item === 'object') {
+      timestamp = item.timestamp;
+      value = item.value;
+    } else {
+      return;
+    }
     const timeStr = new Date(timestamp).toLocaleString();
     html += `
       <tr>
@@ -476,7 +486,13 @@ function updateChartHeights(data) {
   const step = Math.max(1, Math.floor(data.length / 7));
   bars.forEach((bar, index) => {
     const dataIndex = Math.min(data.length - 1, index * step);
-    const value = parseFloat(data[dataIndex][1]);
+    const item = data[dataIndex];
+    let value = 0;
+    if (Array.isArray(item)) {
+      value = parseFloat(item[1]) || 0;
+    } else if (item && typeof item === 'object') {
+      value = parseFloat(item.value) || 0;
+    }
     // Map value percentage safely to bar height (max 90% space)
     const heightPercent = Math.max(4, Math.min(95, value));
     bar.style.height = `${heightPercent}%`;
