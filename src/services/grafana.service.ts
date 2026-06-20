@@ -10,8 +10,10 @@ export interface Datapoint {
 export interface GrafanaQueryRequest {
   from: string; // 13-digit epoch ms as string
   to: string;   // 13-digit epoch ms as string
-  targetRouter: string;
-  customQuery?: string;
+  expr: string;
+  format?: string;
+  intervalMs?: number;
+  maxDataPoints?: number;
 }
 
 export class GrafanaService {
@@ -52,11 +54,15 @@ export class GrafanaService {
   /**
    * Constructs the Grafana JSON request body dynamically based on parameters.
    */
-  private buildQueryPayload(fromMs: string, toMs: string, targetRouter: string, customQuery?: string) {
+  private buildQueryPayload(
+    fromMs: string,
+    toMs: string,
+    expr: string,
+    format: string = "time_series",
+    intervalMs: number = 60000,
+    maxDataPoints: number = 1000
+  ) {
     const activeConfig = config.getGrafanaConfig();
-    const expr = customQuery && customQuery.trim() !== "" 
-      ? customQuery 
-      : `mktxp_system_cpu_load{routerboard_name="${targetRouter}"}`;
 
     return {
       from: fromMs,
@@ -69,9 +75,9 @@ export class GrafanaService {
             uid: activeConfig.datasourceUid
           },
           expr: expr,
-          format: "time_series",
-          intervalMs: 60000,
-          maxDataPoints: 1000
+          format: format,
+          intervalMs: intervalMs,
+          maxDataPoints: maxDataPoints
         }
       ]
     };
@@ -93,7 +99,14 @@ export class GrafanaService {
       const toEpoch = this.convertToEpochMs(params.to);
 
       // 2. Build Payload
-      const payload = this.buildQueryPayload(fromEpoch, toEpoch, params.targetRouter, params.customQuery);
+      const payload = this.buildQueryPayload(
+        fromEpoch,
+        toEpoch,
+        params.expr,
+        params.format,
+        params.intervalMs,
+        params.maxDataPoints
+      );
       const targetUrl = `${activeConfig.host}/api/ds/query`;
 
       // 3. Setup authentication headers

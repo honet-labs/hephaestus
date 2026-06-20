@@ -406,15 +406,27 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="telemetry-query">Custom PromQL Expression / Metric (Optional)</label>
-                  <input type="text" id="telemetry-query" placeholder="e.g. mktxp_system_cpu_load{routerboard_name=&quot;RC_HONET&quot;}">
-                  <span class="form-help" style="color: var(--text-muted); font-size: 11px;">Jika diisi, query ini akan dijalankan langsung ke Grafana. Jika kosong, default query CPU Load akan digunakan.</span>
+                  <label for="telemetry-query">PromQL Query Expression (expr)</label>
+                  <input type="text" id="telemetry-query" placeholder='e.g. mktxp_system_cpu_load{routerboard_name="RC_HONET"}' required>
+                  <span class="form-help" style="color: var(--text-muted); font-size: 11px;">Masukkan PromQL expression lengkap (seperti parameter 'expr' di Postman).</span>
                 </div>
 
-                <div class="form-group">
-                  <label for="telemetry-router">Target Router Label (IP / Name)</label>
-                  <input type="text" id="telemetry-router" placeholder="e.g. RC_HONET">
-                  <span class="form-help" style="color: var(--text-muted); font-size: 11px;">Wajib diisi jika field Custom PromQL di atas dikosongkan.</span>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="telemetry-format">Format</label>
+                    <select id="telemetry-format" style="width: 100%; background: #0d1117; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; padding: 8px;">
+                      <option value="time_series" selected>time_series</option>
+                      <option value="table">table</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="telemetry-interval">Interval (ms)</label>
+                    <input type="number" id="telemetry-interval" value="60000" min="1000" step="1000" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="telemetry-max-datapoints">Max Data Points</label>
+                    <input type="number" id="telemetry-max-datapoints" value="1000" min="1" step="10" required>
+                  </div>
                 </div>
 
                 <button type="submit" id="btn-query-telemetry" class="btn btn-primary">

@@ -45,7 +45,9 @@ const formTelemetry = document.getElementById('telemetry-form');
 const inputTelemetryFrom = document.getElementById('telemetry-from');
 const inputTelemetryTo = document.getElementById('telemetry-to');
 const inputTelemetryQuery = document.getElementById('telemetry-query');
-const inputTelemetryRouter = document.getElementById('telemetry-router');
+const inputTelemetryFormat = document.getElementById('telemetry-format');
+const inputTelemetryInterval = document.getElementById('telemetry-interval');
+const inputTelemetryMaxDatapoints = document.getElementById('telemetry-max-datapoints');
 const btnQueryTelemetry = document.getElementById('btn-query-telemetry');
 const spinnerQuery = document.getElementById('spinner-query');
 const telemetryFeedback = document.getElementById('telemetry-feedback');
@@ -362,16 +364,13 @@ async function queryTelemetry(event) {
   
   const fromDate = inputTelemetryFrom.value;
   const toDate = inputTelemetryTo.value;
-  const target = inputTelemetryRouter.value.trim();
   const query = inputTelemetryQuery.value.trim();
+  const format = inputTelemetryFormat.value;
+  const intervalMs = parseInt(inputTelemetryInterval.value, 10) || 60000;
+  const maxDataPoints = parseInt(inputTelemetryMaxDatapoints.value, 10) || 1000;
 
-  if (!fromDate || !toDate) {
-    showTelemetryFeedback('danger', 'Form Error', 'Start Date dan End Date wajib diisi.');
-    return;
-  }
-
-  if (!target && !query) {
-    showTelemetryFeedback('danger', 'Form Error', 'Harap isi salah satu: Target Router atau Custom PromQL Expression.');
+  if (!fromDate || !toDate || !query) {
+    showTelemetryFeedback('danger', 'Form Error', 'Semua parameter pencarian wajib diisi.');
     return;
   }
 
@@ -379,9 +378,7 @@ async function queryTelemetry(event) {
   spinnerQuery.classList.remove('hidden');
   hideTelemetryFeedback();
   
-  const logMessage = query 
-    ? `Querying custom metric: ${query.split('{')[0]}`
-    : `Querying CPU stream metrics for: ${target}`;
+  const logMessage = `Querying metric: ${query.split('{')[0]}`;
   addLog('Telemetry', logMessage, 'INFO');
 
   try {
@@ -391,8 +388,10 @@ async function queryTelemetry(event) {
       body: JSON.stringify({
         fromDate: new Date(fromDate).toISOString(),
         toDate: new Date(toDate).toISOString(),
-        target: target,
-        query: query
+        query: query,
+        format: format,
+        intervalMs: intervalMs,
+        maxDataPoints: maxDataPoints
       })
     });
 
@@ -429,11 +428,7 @@ function renderTelemetryTable(data, queryUsed) {
   metricsCount.textContent = `${data.length} records`;
   
   if (thMetricHeader) {
-    if (queryUsed) {
-      thMetricHeader.textContent = queryUsed.split('{')[0];
-    } else {
-      thMetricHeader.textContent = 'CPU Usage %';
-    }
+    thMetricHeader.textContent = queryUsed ? queryUsed.split('{')[0] : 'Metric Value';
   }
   
   if (data.length === 0) {
@@ -451,7 +446,9 @@ function renderTelemetryTable(data, queryUsed) {
   }
 
   let html = '';
-  const suffix = queryUsed ? '' : ' %';
+  const isCpu = queryUsed && queryUsed.toLowerCase().includes('cpu');
+  const suffix = isCpu ? ' %' : '';
+  
   data.forEach(([timestamp, value]) => {
     const timeStr = new Date(timestamp).toLocaleString();
     html += `

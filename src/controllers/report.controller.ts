@@ -13,18 +13,28 @@ export class ReportController {
       const target_router_val = req.body.target_router || req.body.target;
       const query_expression_val = req.body.query_expression || req.body.queryExpression || req.body.query;
 
-      // 1. Validate required fields
-      const queryExpression = query_expression_val && typeof query_expression_val === "string" ? query_expression_val.trim() : "";
+      // 1. Build PromQL query expression
+      let expr = query_expression_val && typeof query_expression_val === "string" ? query_expression_val.trim() : "";
       const targetRouter = target_router_val && typeof target_router_val === "string" ? target_router_val.trim() : "";
 
-      if (!queryExpression && !targetRouter) {
-        res.status(400).json({
-          success: false,
-          error: "Validation Error",
-          message: "Either 'target_router' / 'target' OR a custom 'query_expression' / 'query' parameter must be provided."
-        });
-        return;
+      if (!expr) {
+        if (!targetRouter) {
+          res.status(400).json({
+            success: false,
+            error: "Validation Error",
+            message: "Parameter 'query' (PromQL expression) or 'target' (Router Label) is required."
+          });
+          return;
+        }
+        expr = `mktxp_system_cpu_load{routerboard_name="${targetRouter}"}`;
       }
+
+      // Read optional Advanced Query parameters
+      const format = req.body.format && typeof req.body.format === "string" ? req.body.format : "time_series";
+      const intervalMs = req.body.intervalMs !== undefined 
+        ? Number(req.body.intervalMs) 
+        : (req.body.interval !== undefined ? Number(req.body.interval) : 60000);
+      const maxDataPoints = req.body.maxDataPoints !== undefined ? Number(req.body.maxDataPoints) : 1000;
 
       // 2. Set default dates if not provided
       const now = new Date();
@@ -33,22 +43,26 @@ export class ReportController {
       const fromVal = from_date_val !== undefined && from_date_val !== null ? from_date_val : oneHourAgo.toISOString();
       const toVal = to_date_val !== undefined && to_date_val !== null ? to_date_val : now.toISOString();
 
-      console.log(`[ReportController] Request received. Router: "${targetRouter}", Query: "${queryExpression}", Range: [${fromVal}] -> [${toVal}]`);
+      console.log(`[ReportController] Request received. Query: "${expr}", Range: [${fromVal}] -> [${toVal}]`);
 
       // 3. Invoke service to fetch and sanitize Grafana data
       const dataPoints = await grafanaService.queryCpuLoad({
         from: fromVal,
         to: toVal,
-        targetRouter: targetRouter,
-        customQuery: queryExpression
+        expr: expr,
+        format: format,
+        intervalMs: intervalMs,
+        maxDataPoints: maxDataPoints
       });
 
       // 4. Return clean, formatted response
       res.status(200).json({
         success: true,
         meta: {
-          target_router: targetRouter || "custom_query",
-          query_expression: queryExpression || `mktxp_system_cpu_load{routerboard_name="${targetRouter}"}`,
+          query_expression: expr,
+          format: format,
+          interval_ms: intervalMs,
+          max_datapoints: maxDataPoints,
           from_parsed: fromVal,
           to_parsed: toVal,
           datapoints_count: dataPoints.length
