@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HEPHAESTUS DEVOPS PORTAL v2.0.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -386,7 +389,7 @@
           <!-- 3.1: DASHBOARD LIST VIEW -->
           <div id="telemetry-list-view">
             <div class="header-action-group">
-              <span class="menu-section-title" style="margin: 0; padding: 0;">Query Data</span>
+              <h2 style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-white);">Query Data</h2>
               <button class="btn btn-primary" onclick="openCreateDashboardModal()">+ Create Dashboard</button>
             </div>
 
@@ -546,10 +549,10 @@
             <span class="form-help" style="color: var(--text-muted); font-size: 11px;">Masukkan PromQL expression lengkap (seperti parameter 'expr' di Postman).</span>
           </div>
 
-          <div class="form-row">
+          <div class="form-row-3">
             <div class="form-group">
               <label for="panel-format-select">Format</label>
-              <select id="panel-format-select" style="width: 100%; background: var(--app-card-dark); color: var(--text-white); border: 1px solid var(--app-border); border-radius: 4px; padding: 8px 12px; outline: none;">
+              <select id="panel-format-select">
                 <option value="table" selected>Table</option>
                 <option value="line_chart">Line Chart</option>
                 <option value="area_chart">Area Chart</option>
