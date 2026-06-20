@@ -314,6 +314,39 @@
               </div>
             </div>
 
+            <!-- Available Datasources Panel -->
+            <div id="datasources-panel" class="panel hidden">
+              <div class="panel-header">
+                <h3 class="panel-title">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                  Available Grafana Datasources
+                </h3>
+                <button type="button" class="btn btn-secondary" onclick="fetchDatasources()" style="padding: 4px 8px; font-size: 10px; height: auto;">
+                  <span class="spinner hidden" id="spinner-sync-ds"></span>
+                  <span>Sync List</span>
+                </button>
+              </div>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>UID</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="datasources-tbody">
+                    <tr>
+                      <td colspan="4" class="text-center" style="padding: 20px; text-align: center; color: var(--text-muted);">
+                        Click "Sync List" to fetch datasources.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <!-- Revert Section -->
             <div id="revert-box" class="panel hidden">
               <div class="panel-header">

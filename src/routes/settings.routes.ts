@@ -11,6 +11,13 @@ const router = Router();
 router.get("/grafana", (req, res) => settingsController.getGrafanaSettings(req, res));
 
 /**
+ * @route   GET /api/v1/settings/grafana/datasources
+ * @desc    Get all datasources available on Grafana server
+ * @access  Admin
+ */
+router.get("/grafana/datasources", (req, res) => settingsController.getGrafanaDatasources(req, res));
+
+/**
  * @route   POST /api/v1/settings/grafana
  * @desc    Perform Grafana connection testing, saving, and resetting configurations
  * @access  Admin

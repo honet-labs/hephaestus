@@ -40,6 +40,27 @@ export class SettingsController {
   }
 
   /**
+   * GET /api/v1/settings/grafana/datasources
+   * Fetch all datasources from Grafana server using active configuration
+   */
+  public async getGrafanaDatasources(req: Request, res: Response): Promise<void> {
+    try {
+      const datasources = await grafanaService.getDatasources();
+      res.status(200).json({
+        success: true,
+        data: datasources
+      });
+    } catch (error: any) {
+      console.error("[SettingsController] GET datasources error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Grafana Datasources Error",
+        message: error.message || "Failed to retrieve datasources from Grafana server."
+      });
+    }
+  }
+
+  /**
    * POST /api/v1/settings/grafana
    * Handles actions: test, save, reset
    */

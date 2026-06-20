@@ -55,6 +55,11 @@ const metricsCount = document.getElementById('metrics-count');
 const metricsTbody = document.getElementById('metrics-tbody');
 const logsTbody = document.getElementById('logs-tbody');
 
+// Dynamic Datasources Panel elements
+const datasourcesPanel = document.getElementById('datasources-panel');
+const datasourcesTbody = document.getElementById('datasources-tbody');
+const spinnerSyncDs = document.getElementById('spinner-sync-ds');
+
 // App state
 let totalScrapes = 0;
 let systemLogs = [];
@@ -181,6 +186,10 @@ async function loadGrafanaSettings() {
         inputToken.value = maskedToken || '****************';
         
         addLog('Configuration', 'Loaded custom Grafana configuration from local storage', 'OK');
+        
+        // Show and fetch datasources
+        datasourcesPanel.classList.remove('hidden');
+        fetchDatasources();
       } else {
         // Status updates (defaults)
         activeState.className = 'status-badge status-default';
@@ -198,6 +207,10 @@ async function loadGrafanaSettings() {
           inputToken.value = maskedToken || '';
           
           addLog('Configuration', 'Using static .env configuration defaults', 'INFO');
+          
+          // Show and fetch datasources
+          datasourcesPanel.classList.remove('hidden');
+          fetchDatasources();
         } else {
           widgetGrafanaStatus.textContent = 'Offline';
           widgetGrafanaStatus.style.color = '#ff7b72';
@@ -205,6 +218,7 @@ async function loadGrafanaSettings() {
           infraGrafanaDot.className = 'status-dot dot-yellow';
           
           addLog('Configuration', 'No environment or custom settings loaded. Please configure.', 'WARN');
+          datasourcesPanel.classList.add('hidden');
         }
       }
     }
@@ -433,6 +447,81 @@ function updateChartHeights(data) {
   });
 }
 
+// 7. Fetch all datasources from Grafana server
+async function fetchDatasources() {
+  const host = inputHost.value.trim();
+  const token = inputToken.value.trim();
+
+  if (!host) {
+    addLog('Grafana API', 'Cannot sync datasources: Host URL is empty.', 'WARN');
+    return;
+  }
+
+  spinnerSyncDs.classList.remove('hidden');
+  addLog('Grafana API', 'Syncing list of datasources from Grafana...', 'INFO');
+
+  try {
+    const res = await fetch('/api/v1/settings/grafana/datasources');
+    const result = await res.json();
+
+    if (res.ok && result.success) {
+      const data = result.data || [];
+      renderDatasourcesTable(data);
+      addLog('Grafana API', `Successfully retrieved ${data.length} datasources.`, 'SUCCESS');
+    } else {
+      renderDatasourcesTable([]);
+      addLog('Grafana API', `Failed to sync datasources: ${result.message || 'Server error'}`, 'ERROR');
+    }
+  } catch (error) {
+    renderDatasourcesTable([]);
+    addLog('Grafana API', `Error fetching datasources list: ${error.message}`, 'ERROR');
+  } finally {
+    spinnerSyncDs.classList.add('hidden');
+  }
+}
+
+function renderDatasourcesTable(datasources) {
+  if (datasources.length === 0) {
+    datasourcesTbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 15px;">
+          No datasources found. Make sure host and token are correct.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  let html = '';
+  datasources.forEach(ds => {
+    const isPrometheus = ds.type === 'prometheus';
+    const highlightStyle = isPrometheus ? 'color: var(--prometheus-orange); font-weight: bold;' : 'color: var(--text-muted);';
+    const actionBtn = isPrometheus 
+      ? `<button type="button" class="btn btn-primary" onclick="selectDatasource('${ds.uid}')" style="padding: 4px 8px; font-size: 10px; text-transform: none;">Select UID</button>`
+      : `<span style="font-size: 10px; color: var(--text-muted);">Non-Prometheus</span>`;
+
+    html += `
+      <tr>
+        <td style="font-weight: 600;">${ds.name}</td>
+        <td style="${highlightStyle}">${ds.type}</td>
+        <td class="font-mono" style="font-size: 11px;">${ds.uid}</td>
+        <td>${actionBtn}</td>
+      </tr>
+    `;
+  });
+  datasourcesTbody.innerHTML = html;
+}
+
+function selectDatasource(uid) {
+  inputDatasource.value = uid;
+  addLog('Configuration', `Automatically filled Prometheus UID field with: ${uid}`, 'INFO');
+  // Highlight the input temporarily to give visual feedback
+  inputDatasource.style.borderColor = 'var(--prometheus-orange)';
+  setTimeout(() => {
+    inputDatasource.style.borderColor = 'var(--app-border)';
+  }, 1500);
+}
+
 // Helpers
 function showFeedback(type, title, description) {
   feedbackAlert.className = `alert alert-${type}`;
@@ -445,6 +534,7 @@ function hideFeedback() {
   feedbackAlert.classList.add('hidden');
 }
 
+// Telemetry
 function showTelemetryFeedback(type, title, description) {
   telemetryFeedback.className = `alert alert-${type}`;
   telemetryFeedbackTitle.textContent = title;

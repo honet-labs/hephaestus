@@ -220,6 +220,40 @@ export class GrafanaService {
   }
 
   /**
+   * Fetches all datasources from the Grafana server.
+   */
+  public async getDatasources(): Promise<any[]> {
+    try {
+      const activeConfig = config.getGrafanaConfig();
+      const host = activeConfig.host;
+      const token = activeConfig.token;
+
+      if (!host || !token) {
+        throw new Error("Grafana host and token must be configured before listing datasources.");
+      }
+
+      const cleanedHost = host.trim().replace(/\/$/, "");
+      const targetUrl = `${cleanedHost}/api/datasources`;
+
+      console.log(`[GrafanaService] Fetching datasources: GET ${targetUrl}`);
+      const response = await axios.get(targetUrl, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        timeout: 10000
+      });
+
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error: any) {
+      console.error("[GrafanaService] Failed to fetch datasources:", error.message);
+      if (error.response) {
+        throw new Error(`Failed to fetch Grafana datasources (HTTP ${error.response.status}): ${error.response.data?.message || error.message}`);
+      }
+      throw new Error(`Failed to fetch Grafana datasources: ${error.message}`);
+    }
+  }
+
+  /**
    * Helper method to map and log HTTP request errors contextually
    */
   private handleHttpError(error: any): void {
