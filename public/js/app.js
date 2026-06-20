@@ -130,7 +130,7 @@ function showPage(pageId) {
     pageDesc.textContent = 'Konfigurasi integrasi API Grafana dan kredensial token.';
   } else if (pageId === 'telemetry') {
     pageTitle.textContent = 'Telemetry Console';
-    pageDesc.textContent = 'Eksekusi query dan filter metrik CPU real-time.';
+    pageDesc.textContent = 'Eksekusi query dan filter metrik Prometheus secara real-time.';
   } else if (pageId === 'diagnostics') {
     pageTitle.textContent = 'System Diagnostics';
     pageDesc.textContent = 'Informasi endpoint API backend dan diagnostik kesehatan sistem.';
