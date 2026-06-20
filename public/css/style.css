@@ -14,10 +14,10 @@
   --app-card: #22252d;
   --app-card-dark: #12141c;
   --app-border: #2e323b;
-  --prometheus-orange: #e6522c;
-  --prometheus-orange-hover: #f0623e;
-  --prometheus-orange-active: #c43c1b;
-  --prometheus-orange-muted: rgba(230, 82, 44, 0.12);
+  --prometheus-orange: #38bdf8;
+  --prometheus-orange-hover: #7dd3fc;
+  --prometheus-orange-active: #0ea5e9;
+  --prometheus-orange-muted: rgba(56, 189, 248, 0.15);
   --success: #2ea043;
   --success-border: rgba(46, 160, 67, 0.4);
   --error: #f85149;

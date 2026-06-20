@@ -443,8 +443,9 @@ function renderDashboardsList() {
     const totalPanels = db.panels ? db.panels.length : 0;
     html += `
       <tr>
-        <td style="font-weight: 600; color: #58a6ff; cursor: pointer;" onclick="enterDashboardDetail('${db.id}')">
-          📊 ${db.name}
+        <td style="font-weight: 600; color: #38bdf8; cursor: pointer;" onclick="enterDashboardDetail('${db.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px; opacity: 0.8;"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          ${db.name}
         </td>
         <td style="color: var(--text-muted);">${db.targetGroup || '-- Semua Group (All Groups) --'}</td>
         <td>
@@ -454,9 +455,18 @@ function renderDashboardsList() {
         </td>
         <td style="text-align: right; padding-right: 20px;">
           <div style="display: flex; gap: 8px; justify-content: flex-end;">
-            <button class="btn btn-secondary" onclick="enterDashboardDetail('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto;">👁️ View</button>
-            <button class="btn btn-secondary" onclick="openEditDashboardModal('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto;">⚙️ Edit</button>
-            <button class="btn btn-danger" onclick="deleteDashboard('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto; background: #ff7b72; color: #0d1117; border-color: #ff7b72;">🗑️ Delete</button>
+            <button class="btn btn-secondary" onclick="enterDashboardDetail('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto; display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              View
+            </button>
+            <button class="btn btn-secondary" onclick="openEditDashboardModal('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto; display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              Edit
+            </button>
+            <button class="btn btn-danger" onclick="deleteDashboard('${db.id}')" style="padding: 4px 8px; font-size: 10px; height: auto; background: rgba(248, 81, 73, 0.15); color: #ff7b72; border-color: rgba(248, 81, 73, 0.4); display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              Delete
+            </button>
           </div>
         </td>
       </tr>
@@ -596,10 +606,17 @@ function renderDashboardPanels() {
     html += `
       <div class="panel" style="display: flex; flex-direction: column;">
         <div class="panel-header" style="padding-bottom: 12px; border-bottom: 1px solid var(--app-border);">
-          <h3 class="panel-title" style="font-size: 13px;">📊 ${panel.title}</h3>
+          <h3 class="panel-title" style="font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #38bdf8; opacity: 0.9;"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            ${panel.title}
+          </h3>
           <div class="dashboard-panel-actions">
-            <button class="dashboard-panel-action-btn" onclick="openEditPanelModal('${panel.id}')" title="Edit Query">⚙️</button>
-            <button class="dashboard-panel-action-btn" onclick="deletePanel('${panel.id}')" title="Remove Panel" style="color: #ff7b72;">🗑️</button>
+            <button class="dashboard-panel-action-btn" onclick="openEditPanelModal('${panel.id}')" title="Edit Query">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </button>
+            <button class="dashboard-panel-action-btn" onclick="deletePanel('${panel.id}')" title="Remove Panel" style="color: #ff7b72;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
           </div>
         </div>
         
