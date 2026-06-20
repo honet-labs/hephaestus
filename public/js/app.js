@@ -636,117 +636,66 @@ function renderDashboardPanels() {
   if (!db.panels || db.panels.length === 0) {
     container.innerHTML = `
       <div style="grid-column: span 2; text-align: center; padding: 40px; color: var(--text-muted); border: 1px dashed var(--app-border); border-radius: 6px; background: var(--app-card-dark);">
-        No data panels in this dashboard. Click "+ Add Panel" to create one.
+        No reports configured in this section. Click "+ Add Panel" to create one.
       </div>
     `;
     return;
   }
 
-  let html = '';
+  let html = `
+    <div style="grid-column: span 2; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; overflow: hidden; margin-top: 10px; width: 100%;">
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 600px;">
+          <thead>
+            <tr style="background: rgba(255, 255, 255, 0.02); border-bottom: 1px solid var(--app-border);">
+              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 25%;">Report Title</th>
+              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 40%;">PromQL Expression</th>
+              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 15%;">Format</th>
+              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 10%;">Interval</th>
+              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; text-align: right; width: 10%;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
   db.panels.forEach(panel => {
-    const hasData = panel.data && panel.data.length > 0;
-    const format = panel.format || 'line_chart';
+    const formatLabel = panel.format ? panel.format.replace('_', ' ').toUpperCase() : 'LINE CHART';
+    const intervalStr = panel.intervalMs ? `${panel.intervalMs}ms` : '60000ms';
     
-    let chartHtml = '';
-    
-    if (format !== 'table') {
-      if (!hasData) {
-        chartHtml = `
-          <div class="empty-state" style="padding: 20px;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            <span style="font-size: 11px; margin-top: 8px;">No data loaded. Edit query to configure.</span>
-          </div>
-        `;
-      } else {
-        if (format === 'line_chart') {
-          chartHtml = generateLineOrAreaChart(panel.data, false);
-        } else if (format === 'area_chart') {
-          chartHtml = generateLineOrAreaChart(panel.data, true);
-        } else if (format === 'bar_chart' || format === 'time_series') {
-          chartHtml = generateBarChart(panel.data);
-        } else if (format === 'pie_chart') {
-          chartHtml = generateDonutOrPieChart(panel.data, false);
-        } else if (format === 'donut_chart') {
-          chartHtml = generateDonutOrPieChart(panel.data, true);
-        }
-      }
-    }
-
-    let tableHtml = '';
-    if (hasData) {
-      const isCpu = panel.query && panel.query.toLowerCase().includes('cpu');
-      const suffix = isCpu ? ' %' : '';
-      
-      let rows = '';
-      const latestData = panel.data.slice(-5).reverse();
-      latestData.forEach(item => {
-        let timestamp, value;
-        if (Array.isArray(item)) {
-          timestamp = item[0];
-          value = item[1];
-        } else {
-          timestamp = item.timestamp;
-          value = item.value;
-        }
-        const timeStr = new Date(timestamp).toLocaleTimeString();
-        rows += `
-          <tr>
-            <td class="font-mono" style="font-size: 11px; color: var(--text-muted);">${timestamp}</td>
-            <td style="font-size: 11px;">${timeStr}</td>
-            <td class="font-mono" style="font-size: 11px; color: var(--prometheus-orange); font-weight: bold; text-align: right;">
-              ${parseFloat(value).toFixed(3)}${suffix}
-            </td>
-          </tr>
-        `;
-      });
-
-      tableHtml = `
-        <div class="table-wrapper" style="margin-top: 12px; max-height: 200px; overflow-y: auto;">
-          <table style="width: 100%;">
-            <thead>
-              <tr>
-                <th style="font-size: 10px;">Epoch Timestamp</th>
-                <th style="font-size: 10px;">Time</th>
-                <th style="font-size: 10px; text-align: right;">Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-
     html += `
-      <div class="panel" style="display: flex; flex-direction: column;">
-        <div class="panel-header" style="padding-bottom: 12px; border-bottom: 1px solid var(--app-border);">
-          <h3 class="panel-title" style="font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #38bdf8; opacity: 0.9;"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-            ${panel.title}
-          </h3>
-          <div class="dashboard-panel-actions">
-            <button class="dashboard-panel-action-btn" onclick="exportPanelCSV('${panel.id}')" title="Export CSV" style="color: #38bdf8;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            </button>
-            <button class="dashboard-panel-action-btn" onclick="openEditPanelModal('${panel.id}')" title="Edit Query">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-            </button>
-            <button class="dashboard-panel-action-btn" onclick="deletePanel('${panel.id}')" title="Remove Panel" style="color: #ff7b72;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            </button>
-          </div>
-        </div>
-        
-        <div style="font-size: 10px; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 4px; font-family: monospace; word-break: break-all; margin-top: 8px;">
-          ${panel.query || 'No query configured'}
-        </div>
-
-        ${chartHtml}
-        ${tableHtml}
-      </div>
+            <tr style="border-bottom: 1px solid var(--app-border); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.01)'" onmouseout="this.style.background='transparent'">
+              <td style="padding: 14px 16px; font-size: 12px; font-weight: 500; color: var(--text-white);">${panel.title}</td>
+              <td style="padding: 14px 16px; font-size: 11px; font-family: monospace; color: var(--text-muted); word-break: break-all;">${panel.query || '-'}</td>
+              <td style="padding: 14px 16px; font-size: 11px;">
+                <span style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 10px;">${formatLabel}</span>
+              </td>
+              <td style="padding: 14px 16px; font-size: 12px; color: var(--text-muted);">${intervalStr}</td>
+              <td style="padding: 14px 16px; text-align: right;">
+                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                  <button class="btn btn-secondary" onclick="previewPanel('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;" title="Preview Report Data">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    Preview
+                  </button>
+                  <button class="btn btn-secondary" onclick="openEditPanelModal('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;" title="Edit Config">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Edit
+                  </button>
+                  <button class="btn btn-secondary" onclick="deletePanel('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px; color: #ff7b72;" title="Remove Report">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
     `;
   });
+
+  html += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
 
   container.innerHTML = html;
 }
@@ -1150,4 +1099,119 @@ function exportDashboardCSV() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+const previewModal = document.getElementById('preview-modal');
+const previewTitle = document.getElementById('preview-title');
+const previewQuery = document.getElementById('preview-query');
+const previewChartContainer = document.getElementById('preview-chart-container');
+const previewTableContainer = document.getElementById('preview-table-container');
+const btnPreviewExport = document.getElementById('btn-preview-export');
+
+function previewPanel(panelId) {
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db) return;
+  const panel = db.panels.find(p => p.id === panelId);
+  if (!panel) return;
+
+  previewTitle.textContent = `Report Preview: ${panel.title}`;
+  previewQuery.textContent = `PromQL: ${panel.query || 'No query configured'}`;
+
+  // Configure export button in the preview modal
+  btnPreviewExport.onclick = () => exportPanelCSV(panel.id);
+
+  const hasData = panel.data && panel.data.length > 0;
+  const format = panel.format || 'line_chart';
+
+  // 1. Render Chart
+  let chartHtml = '';
+  if (format !== 'table') {
+    if (!hasData) {
+      chartHtml = `
+        <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-muted);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <div style="font-size: 11px; margin-top: 8px;">No data loaded. Edit query to configure.</div>
+        </div>
+      `;
+    } else {
+      if (format === 'line_chart') {
+        chartHtml = generateLineOrAreaChart(panel.data, false);
+      } else if (format === 'area_chart') {
+        chartHtml = generateLineOrAreaChart(panel.data, true);
+      } else if (format === 'bar_chart' || format === 'time_series') {
+        chartHtml = generateBarChart(panel.data);
+      } else if (format === 'pie_chart') {
+        chartHtml = generateDonutOrPieChart(panel.data, false);
+      } else if (format === 'donut_chart') {
+        chartHtml = generateDonutOrPieChart(panel.data, true);
+      }
+    }
+  }
+  previewChartContainer.innerHTML = chartHtml;
+
+  // 2. Render Table (Show all data points!)
+  let tableHtml = '';
+  if (hasData) {
+    const isCpu = panel.query && panel.query.toLowerCase().includes('cpu');
+    const suffix = isCpu ? ' %' : '';
+    
+    let rows = '';
+    // Show all data points, reverse to show newest first
+    const allData = [...panel.data].reverse();
+    allData.forEach(item => {
+      let timestamp, value;
+      if (Array.isArray(item)) {
+        timestamp = item[0];
+        value = item[1];
+      } else {
+        timestamp = item.timestamp;
+        value = item.value;
+      }
+      const timeStr = new Date(timestamp).toLocaleTimeString();
+      const dateStr = new Date(timestamp).toLocaleDateString();
+      rows += `
+        <tr style="border-bottom: 1px solid var(--app-border);">
+          <td class="font-mono" style="font-size: 11px; color: var(--text-muted); padding: 8px 12px;">${timestamp}</td>
+          <td style="font-size: 11px; padding: 8px 12px;">${dateStr} ${timeStr}</td>
+          <td class="font-mono" style="font-size: 11px; color: #38bdf8; font-weight: bold; text-align: right; padding: 8px 12px;">
+            ${parseFloat(value).toFixed(3)}${suffix}
+          </td>
+        </tr>
+      `;
+    });
+
+    tableHtml = `
+      <div style="margin-top: 12px;">
+        <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Detailed Data Points (${panel.data.length} records)</h4>
+        <div class="table-wrapper" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);">
+                <th style="font-size: 10px; padding: 8px 12px; color: var(--text-muted);">Epoch Timestamp</th>
+                <th style="font-size: 10px; padding: 8px 12px; color: var(--text-muted);">Date & Time</th>
+                <th style="font-size: 10px; padding: 8px 12px; text-align: right; color: var(--text-muted);">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else {
+    tableHtml = `
+      <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 11px; border: 1px dashed var(--app-border); border-radius: 4px;">
+        No data table available.
+      </div>
+    `;
+  }
+  previewTableContainer.innerHTML = tableHtml;
+
+  // Open the modal
+  previewModal.classList.add('active');
+}
+
+function closePreviewModal() {
+  previewModal.classList.remove('active');
 }
