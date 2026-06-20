@@ -406,8 +406,15 @@
                 </div>
 
                 <div class="form-group">
+                  <label for="telemetry-query">Custom PromQL Expression / Metric (Optional)</label>
+                  <input type="text" id="telemetry-query" placeholder="e.g. mktxp_system_cpu_load{routerboard_name=&quot;RC_HONET&quot;}">
+                  <span class="form-help" style="color: var(--text-muted); font-size: 11px;">Jika diisi, query ini akan dijalankan langsung ke Grafana. Jika kosong, default query CPU Load akan digunakan.</span>
+                </div>
+
+                <div class="form-group">
                   <label for="telemetry-router">Target Router Label (IP / Name)</label>
-                  <input type="text" id="telemetry-router" placeholder="e.g. router-1" required>
+                  <input type="text" id="telemetry-router" placeholder="e.g. RC_HONET">
+                  <span class="form-help" style="color: var(--text-muted); font-size: 11px;">Wajib diisi jika field Custom PromQL di atas dikosongkan.</span>
                 </div>
 
                 <button type="submit" id="btn-query-telemetry" class="btn btn-primary">
@@ -435,7 +442,7 @@
                     <tr>
                       <th>Epoch Timestamp</th>
                       <th>Localized Time</th>
-                      <th>CPU Usage %</th>
+                      <th id="th-metric-header">CPU Usage %</th>
                     </tr>
                   </thead>
                   <tbody id="metrics-tbody">

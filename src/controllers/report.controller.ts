@@ -11,39 +11,44 @@ export class ReportController {
       const from_date_val = req.body.from_date || req.body.fromDate;
       const to_date_val = req.body.to_date || req.body.toDate;
       const target_router_val = req.body.target_router || req.body.target;
+      const query_expression_val = req.body.query_expression || req.body.queryExpression || req.body.query;
 
       // 1. Validate required fields
-      if (!target_router_val || typeof target_router_val !== "string" || target_router_val.trim() === "") {
+      const queryExpression = query_expression_val && typeof query_expression_val === "string" ? query_expression_val.trim() : "";
+      const targetRouter = target_router_val && typeof target_router_val === "string" ? target_router_val.trim() : "";
+
+      if (!queryExpression && !targetRouter) {
         res.status(400).json({
           success: false,
           error: "Validation Error",
-          message: "The parameter 'target_router' or 'target' is required and must be a non-empty string."
+          message: "Either 'target_router' / 'target' OR a custom 'query_expression' / 'query' parameter must be provided."
         });
         return;
       }
 
       // 2. Set default dates if not provided
-      // Default from_date to 1 hour ago, to_date to current time
       const now = new Date();
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
       const fromVal = from_date_val !== undefined && from_date_val !== null ? from_date_val : oneHourAgo.toISOString();
       const toVal = to_date_val !== undefined && to_date_val !== null ? to_date_val : now.toISOString();
 
-      console.log(`[ReportController] Request received. Router: "${target_router_val}", Range: [${fromVal}] -> [${toVal}]`);
+      console.log(`[ReportController] Request received. Router: "${targetRouter}", Query: "${queryExpression}", Range: [${fromVal}] -> [${toVal}]`);
 
       // 3. Invoke service to fetch and sanitize Grafana data
       const dataPoints = await grafanaService.queryCpuLoad({
         from: fromVal,
         to: toVal,
-        targetRouter: target_router_val.trim()
+        targetRouter: targetRouter,
+        customQuery: queryExpression
       });
 
       // 4. Return clean, formatted response
       res.status(200).json({
         success: true,
         meta: {
-          target_router: target_router_val.trim(),
+          target_router: targetRouter || "custom_query",
+          query_expression: queryExpression || `mktxp_system_cpu_load{routerboard_name="${targetRouter}"}`,
           from_parsed: fromVal,
           to_parsed: toVal,
           datapoints_count: dataPoints.length

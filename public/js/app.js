@@ -44,12 +44,14 @@ const feedbackDesc = document.getElementById('feedback-desc');
 const formTelemetry = document.getElementById('telemetry-form');
 const inputTelemetryFrom = document.getElementById('telemetry-from');
 const inputTelemetryTo = document.getElementById('telemetry-to');
+const inputTelemetryQuery = document.getElementById('telemetry-query');
 const inputTelemetryRouter = document.getElementById('telemetry-router');
 const btnQueryTelemetry = document.getElementById('btn-query-telemetry');
 const spinnerQuery = document.getElementById('spinner-query');
 const telemetryFeedback = document.getElementById('telemetry-feedback');
 const telemetryFeedbackTitle = document.getElementById('telemetry-feedback-title');
 const telemetryFeedbackDesc = document.getElementById('telemetry-feedback-desc');
+const thMetricHeader = document.getElementById('th-metric-header');
 
 const metricsCount = document.getElementById('metrics-count');
 const metricsTbody = document.getElementById('metrics-tbody');
@@ -361,16 +363,26 @@ async function queryTelemetry(event) {
   const fromDate = inputTelemetryFrom.value;
   const toDate = inputTelemetryTo.value;
   const target = inputTelemetryRouter.value.trim();
+  const query = inputTelemetryQuery.value.trim();
 
-  if (!fromDate || !toDate || !target) {
-    showTelemetryFeedback('danger', 'Form Error', 'Semua parameter pencarian wajib diisi.');
+  if (!fromDate || !toDate) {
+    showTelemetryFeedback('danger', 'Form Error', 'Start Date dan End Date wajib diisi.');
+    return;
+  }
+
+  if (!target && !query) {
+    showTelemetryFeedback('danger', 'Form Error', 'Harap isi salah satu: Target Router atau Custom PromQL Expression.');
     return;
   }
 
   btnQueryTelemetry.disabled = true;
   spinnerQuery.classList.remove('hidden');
   hideTelemetryFeedback();
-  addLog('Telemetry', `Querying CPU stream metrics for: ${target}`, 'INFO');
+  
+  const logMessage = query 
+    ? `Querying custom metric: ${query.split('{')[0]}`
+    : `Querying CPU stream metrics for: ${target}`;
+  addLog('Telemetry', logMessage, 'INFO');
 
   try {
     const res = await fetch(API_REPORT_URL, {
@@ -379,14 +391,15 @@ async function queryTelemetry(event) {
       body: JSON.stringify({
         fromDate: new Date(fromDate).toISOString(),
         toDate: new Date(toDate).toISOString(),
-        target: target
+        target: target,
+        query: query
       })
     });
 
     const result = await res.json();
     if (res.ok && result.success) {
       const data = result.data || [];
-      renderTelemetryTable(data);
+      renderTelemetryTable(data, query);
       updateChartHeights(data);
       
       // Update scrapes count
@@ -394,15 +407,15 @@ async function queryTelemetry(event) {
       widgetScrapes.textContent = totalScrapes;
       
       showTelemetryFeedback('success', 'Query Succeeded', `Berhasil mengambil ${data.length} baris data metrik.`);
-      addLog('Telemetry', `Stream success: Fetched ${data.length} records for ${target}`, 'SUCCESS');
+      addLog('Telemetry', `Stream success: Fetched ${data.length} records`, 'SUCCESS');
     } else {
-      renderTelemetryTable([]);
+      renderTelemetryTable([], query);
       updateChartHeights([]);
       showTelemetryFeedback('danger', 'Query Failed', result.message || result.error || 'Gagal mengambil data metrik.');
       addLog('Telemetry', `Stream failed: ${result.message || 'Server error'}`, 'ERROR');
     }
   } catch (error) {
-    renderTelemetryTable([]);
+    renderTelemetryTable([], query);
     updateChartHeights([]);
     showTelemetryFeedback('danger', 'API Error', error.message || 'Gagal menghubungi endpoint telemetri.');
     addLog('Telemetry', 'API Connection timeout.', 'ERROR');
@@ -412,8 +425,16 @@ async function queryTelemetry(event) {
   }
 }
 
-function renderTelemetryTable(data) {
+function renderTelemetryTable(data, queryUsed) {
   metricsCount.textContent = `${data.length} records`;
+  
+  if (thMetricHeader) {
+    if (queryUsed) {
+      thMetricHeader.textContent = queryUsed.split('{')[0];
+    } else {
+      thMetricHeader.textContent = 'CPU Usage %';
+    }
+  }
   
   if (data.length === 0) {
     metricsTbody.innerHTML = `
@@ -430,13 +451,14 @@ function renderTelemetryTable(data) {
   }
 
   let html = '';
+  const suffix = queryUsed ? '' : ' %';
   data.forEach(([timestamp, value]) => {
     const timeStr = new Date(timestamp).toLocaleString();
     html += `
       <tr>
         <td class="font-mono" style="color: var(--text-muted);">${timestamp}</td>
         <td>${timeStr}</td>
-        <td class="font-mono" style="color: var(--prometheus-orange); font-weight: bold;">${parseFloat(value).toFixed(3)} %</td>
+        <td class="font-mono" style="color: var(--prometheus-orange); font-weight: bold;">${parseFloat(value).toFixed(3)}${suffix}</td>
       </tr>
     `;
   });

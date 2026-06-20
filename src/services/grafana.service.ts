@@ -11,6 +11,7 @@ export interface GrafanaQueryRequest {
   from: string; // 13-digit epoch ms as string
   to: string;   // 13-digit epoch ms as string
   targetRouter: string;
+  customQuery?: string;
 }
 
 export class GrafanaService {
@@ -51,9 +52,11 @@ export class GrafanaService {
   /**
    * Constructs the Grafana JSON request body dynamically based on parameters.
    */
-  private buildQueryPayload(fromMs: string, toMs: string, targetRouter: string) {
+  private buildQueryPayload(fromMs: string, toMs: string, targetRouter: string, customQuery?: string) {
     const activeConfig = config.getGrafanaConfig();
-    const expr = `mktxp_system_cpu_load{routerboard_name="${targetRouter}"}`;
+    const expr = customQuery && customQuery.trim() !== "" 
+      ? customQuery 
+      : `mktxp_system_cpu_load{routerboard_name="${targetRouter}"}`;
 
     return {
       from: fromMs,
@@ -90,7 +93,7 @@ export class GrafanaService {
       const toEpoch = this.convertToEpochMs(params.to);
 
       // 2. Build Payload
-      const payload = this.buildQueryPayload(fromEpoch, toEpoch, params.targetRouter);
+      const payload = this.buildQueryPayload(fromEpoch, toEpoch, params.targetRouter, params.customQuery);
       const targetUrl = `${activeConfig.host}/api/ds/query`;
 
       // 3. Setup authentication headers
@@ -100,7 +103,7 @@ export class GrafanaService {
       };
 
       // 4. Send POST request to Grafana ds query endpoint
-      console.log(`[GrafanaService] Fetching metrics from Grafana API: POST ${targetUrl}`);
+      console.log(`[GrafanaService] Fetching metrics from Grafana API: POST ${targetUrl} (expr: ${payload.queries[0].expr})`);
       const response = await axios.post(targetUrl, payload, { headers, timeout: 15000 });
 
       // 5. Parse and sanitize the response
