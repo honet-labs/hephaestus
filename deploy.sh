@@ -20,11 +20,23 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# 2. Build production Docker image
+# 2. Run Gatekeeper Automation Checks (Local CI/CD Pipeline)
+echo -e "${YELLOW}Running Gatekeeper Automation Checks...${NC}"
+if [ -f ./local-ci.sh ]; then
+    chmod +x ./local-ci.sh
+    if ! ./local-ci.sh; then
+        echo -e "${RED}Error: Gatekeeper automation checks failed. Code is not safe to deploy! Aborting deploy.${NC}"
+        exit 1
+    fi
+else
+    echo -e "${YELLOW}Warning: 'local-ci.sh' not found. Skipping gatekeeper checks.${NC}"
+fi
+
+# 3. Build production Docker image
 echo -e "${YELLOW}[1/4] Building production Docker image...${NC}"
 docker build -t hephaestus-backend:latest .
 
-# 3. Check and clean up existing container
+# 4. Check and clean up existing container
 echo -e "${YELLOW}[2/4] Checking for existing containers...${NC}"
 if docker ps -a --format '{{.Names}}' | grep -Eq "^hephaestus-backend$"; then
     echo -e "${BLUE}Stopping and removing existing 'hephaestus-backend' container...${NC}"
@@ -32,7 +44,7 @@ if docker ps -a --format '{{.Names}}' | grep -Eq "^hephaestus-backend$"; then
     docker rm hephaestus-backend || true
 fi
 
-# 4. Handle persistence and environment variables
+# 5. Handle persistence and environment variables
 echo -e "${YELLOW}[3/4] Initializing docker volume and variables...${NC}"
 docker volume create hephaestus-backend-data || true
 
@@ -53,7 +65,7 @@ docker run -d \
     --restart unless-stopped \
     hephaestus-backend:latest
 
-# 5. Verify deployment status
+# 6. Verify deployment status
 echo -e "${YELLOW}[4/4] Verifying backend deployment status...${NC}"
 sleep 3
 

@@ -20,12 +20,24 @@ else
     echo -e "${BLUE}[1/5] Directory is not a git repository. Skipping git pull.${NC}"
 fi
 
-# 2. Rebuild the Docker image
-echo -e "${YELLOW}[2/5] Rebuilding Docker image...${NC}"
+# 2. Run Gatekeeper Automation Checks (Local CI/CD Pipeline)
+echo -e "${YELLOW}[2/6] Running Gatekeeper Automation Checks...${NC}"
+if [ -f ./local-ci.sh ]; then
+    chmod +x ./local-ci.sh
+    if ! ./local-ci.sh; then
+        echo -e "${RED}Error: Gatekeeper automation checks failed. Code is not safe to deploy! Aborting update.${NC}"
+        exit 1
+    fi
+else
+    echo -e "${YELLOW}Warning: 'local-ci.sh' not found. Skipping gatekeeper checks.${NC}"
+fi
+
+# 3. Rebuild the Docker image
+echo -e "${YELLOW}[3/6] Rebuilding Docker image...${NC}"
 docker build -t hephaestus-backend:latest .
 
-# 3. Stop and remove active container
-echo -e "${YELLOW}[3/5] Stopping and removing running container...${NC}"
+# 4. Stop and remove active container
+echo -e "${YELLOW}[4/6] Stopping and removing running container...${NC}"
 if docker ps -a --format '{{.Names}}' | grep -Eq "^hephaestus-backend$"; then
     docker stop hephaestus-backend || true
     docker rm hephaestus-backend || true
@@ -33,8 +45,8 @@ else
     echo -e "${BLUE}No active container named 'hephaestus-backend' found. Proceeding with clean run.${NC}"
 fi
 
-# 4. Start updated container with persistent volume
-echo -e "${YELLOW}[4/5] Starting updated container with persistent volume...${NC}"
+# 5. Start updated container with persistent volume
+echo -e "${YELLOW}[5/6] Starting updated container with persistent volume...${NC}"
 docker volume create hephaestus-backend-data || true
 
 ENV_FLAG=""
@@ -53,11 +65,11 @@ docker run -d \
     --restart unless-stopped \
     hephaestus-backend:latest
 
-# 5. Clean up dangling images
-echo -e "${YELLOW}[5/5] Cleaning up unused Docker images to save space...${NC}"
+# 6. Clean up dangling images
+echo -e "${YELLOW}[6/6] Cleaning up unused Docker images to save space...${NC}"
 docker image prune -f
 
-# 6. Verify and output access details
+# 7. Verify and output access details
 echo -e "${GREEN}====================================================${NC}"
 echo -e "${GREEN} SUCCESS: Backend updated and container restarted!  ${NC}"
 IP_ADDR=$(hostname -I | awk '{print $1}' || echo "localhost")
