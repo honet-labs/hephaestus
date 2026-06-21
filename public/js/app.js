@@ -785,8 +785,23 @@ async function refreshReportTelemetry() {
   try {
     if (db.panels && db.panels.length > 0) {
       const promises = db.panels.map(async (panel) => {
-        const fromVal = panel.fromDate || oneHourAgo.toISOString();
-        const toVal = panel.toDate || now.toISOString();
+        let fromVal = panel.fromDate;
+        let toVal = panel.toDate;
+
+        if (panel.timePreset && panel.timePreset !== 'custom') {
+          const nowRef = new Date();
+          let durationMs = 60 * 60 * 1000;
+          if (panel.timePreset === '6h') durationMs = 6 * 60 * 60 * 1000;
+          else if (panel.timePreset === '24h') durationMs = 24 * 60 * 60 * 1000;
+          else if (panel.timePreset === '7d') durationMs = 7 * 24 * 60 * 60 * 1000;
+          
+          fromVal = new Date(nowRef.getTime() - durationMs).toISOString();
+          toVal = nowRef.toISOString();
+        } else {
+          if (!fromVal) fromVal = oneHourAgo.toISOString();
+          if (!toVal) toVal = now.toISOString();
+        }
+
         try {
           const res = await fetch('/api/v1/report/cpu', {
             method: 'POST',
@@ -1283,11 +1298,12 @@ function addNewPanel() {
   const panelId = "panel-" + Date.now();
   const newPanel = {
     id: panelId,
-    title: "New Report",
+    title: "New Metric",
     query: "",
+    timePreset: "1h",
     fromDate: "",
     toDate: "",
-    format: "time_series",
+    format: "line_chart",
     intervalMs: 60000,
     maxDataPoints: 1000,
     grafanaConfigId: "",
@@ -1408,7 +1424,70 @@ function onPanelDatasourceChange() {
   }
 }
 
-// Panel Query Modal
+// Panel Query Modal Helpers
+function onMetricPresetChange() {
+  const preset = document.getElementById('panel-preset-select').value;
+  const titleInput = document.getElementById('panel-title-input');
+  const queryInput = document.getElementById('panel-query-input');
+  const formatSelect = document.getElementById('panel-format-select');
+
+  if (preset === 'custom') {
+    return;
+  }
+
+  const presets = {
+    mikrotik_cpu: {
+      title: 'Mikrotik Router CPU Load',
+      query: 'mktxp_system_cpu_load',
+      format: 'line_chart'
+    },
+    node_cpu: {
+      title: 'Node Exporter CPU Utilization (%)',
+      query: '100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)',
+      format: 'line_chart'
+    },
+    node_memory: {
+      title: 'Node Exporter Memory Usage (%)',
+      query: 'node_memory_Active_bytes / node_memory_MemTotal_bytes * 100',
+      format: 'line_chart'
+    },
+    node_disk: {
+      title: 'Node Exporter Disk Utilization (%)',
+      query: '(node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100',
+      format: 'bar_chart'
+    },
+    prometheus_uptime: {
+      title: 'Prometheus Instance Uptime',
+      query: 'process_uptime_seconds',
+      format: 'table'
+    }
+  };
+
+  const selected = presets[preset];
+  if (selected) {
+    titleInput.value = selected.title;
+    queryInput.value = selected.query;
+    formatSelect.value = selected.format;
+  }
+}
+
+function onTimePresetChange() {
+  const preset = document.getElementById('panel-time-preset-select').value;
+  const customDateRow = document.getElementById('custom-date-row');
+  const fromInput = document.getElementById('panel-from-input');
+  const toInput = document.getElementById('panel-to-input');
+
+  if (preset === 'custom') {
+    customDateRow.classList.remove('hidden');
+    fromInput.required = true;
+    toInput.required = true;
+  } else {
+    customDateRow.classList.add('hidden');
+    fromInput.required = false;
+    toInput.required = false;
+  }
+}
+
 let activePanelId = null;
 
 async function openEditPanelModal(panelId) {
@@ -1420,17 +1499,31 @@ async function openEditPanelModal(panelId) {
   if (!panel) return;
 
   document.getElementById('query-panel-id').value = panelId;
+  document.getElementById('panel-preset-select').value = "custom";
   document.getElementById('panel-title-input').value = panel.title || "";
   document.getElementById('panel-query-input').value = panel.query || "";
   document.getElementById('panel-format-select').value = panel.format || "time_series";
   document.getElementById('panel-interval-input').value = panel.intervalMs || 60000;
   document.getElementById('panel-max-datapoints-input').value = panel.maxDataPoints || 1000;
 
-  const now = new Date();
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+  const timePreset = panel.timePreset || "1h";
+  document.getElementById('panel-time-preset-select').value = timePreset;
   
-  document.getElementById('panel-to-input').value = panel.toDate || formatDateTimeForInput(now);
-  document.getElementById('panel-from-input').value = panel.fromDate || formatDateTimeForInput(oneHourAgo);
+  const customDateRow = document.getElementById('custom-date-row');
+  const fromInput = document.getElementById('panel-from-input');
+  const toInput = document.getElementById('panel-to-input');
+
+  if (timePreset === 'custom') {
+    customDateRow.classList.remove('hidden');
+    fromInput.value = panel.fromDate || "";
+    toInput.value = panel.toDate || "";
+    fromInput.required = true;
+    toInput.required = true;
+  } else {
+    customDateRow.classList.add('hidden');
+    fromInput.required = false;
+    toInput.required = false;
+  }
 
   hidePanelQueryFeedback();
   
@@ -1469,8 +1562,30 @@ async function applyPanelQuery(event) {
   const panelId = document.getElementById('query-panel-id').value;
   const title = document.getElementById('panel-title-input').value.trim();
   const query = document.getElementById('panel-query-input').value.trim();
-  const fromDate = document.getElementById('panel-from-input').value;
-  const toDate = document.getElementById('panel-to-input').value;
+  const timePreset = document.getElementById('panel-time-preset-select').value;
+  
+  let fromDate = "";
+  let toDate = "";
+
+  if (timePreset === 'custom') {
+    fromDate = document.getElementById('panel-from-input').value;
+    toDate = document.getElementById('panel-to-input').value;
+    if (!fromDate || !toDate) {
+      showPanelQueryFeedback('danger', 'Form Error', 'Start Date dan End Date wajib diisi untuk range kustom.');
+      return;
+    }
+  } else {
+    const now = new Date();
+    let durationMs = 60 * 60 * 1000; // default 1h
+    if (timePreset === '6h') durationMs = 6 * 60 * 60 * 1000;
+    else if (timePreset === '24h') durationMs = 24 * 60 * 60 * 1000;
+    else if (timePreset === '7d') durationMs = 7 * 24 * 60 * 60 * 1000;
+
+    const fromTime = new Date(now.getTime() - durationMs);
+    fromDate = fromTime.toISOString();
+    toDate = now.toISOString();
+  }
+
   const format = document.getElementById('panel-format-select').value;
   const intervalMs = parseInt(document.getElementById('panel-interval-input').value, 10) || 60000;
   const maxDataPoints = parseInt(document.getElementById('panel-max-datapoints-input').value, 10) || 1000;
@@ -1508,8 +1623,8 @@ async function applyPanelQuery(event) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fromDate: new Date(fromDate).toISOString(),
-        toDate: new Date(toDate).toISOString(),
+        fromDate: timePreset === 'custom' ? new Date(fromDate).toISOString() : fromDate,
+        toDate: timePreset === 'custom' ? new Date(toDate).toISOString() : toDate,
         query: query,
         format: format,
         intervalMs: intervalMs,
@@ -1526,6 +1641,7 @@ async function applyPanelQuery(event) {
       
       panel.title = title;
       panel.query = query;
+      panel.timePreset = timePreset;
       panel.fromDate = fromDate;
       panel.toDate = toDate;
       panel.format = format;
