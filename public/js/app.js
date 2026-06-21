@@ -2000,6 +2000,8 @@ let activePlatform = 'linux-amd64';
 const installerData = {
   node: {
     name: "Node Exporter",
+    category: "system",
+    desc: "Host system metrics (CPU, RAM, Disk, Network)",
     repo: "https://github.com/prometheus/node_exporter",
     port: 9100,
     job: `  - job_name: 'node_exporter'
@@ -2205,6 +2207,8 @@ brew services start node_exporter
   },
   blackbox: {
     name: "Blackbox Exporter",
+    category: "network",
+    desc: "Network probing (HTTP, HTTPS, DNS, TCP, ICMP)",
     repo: "https://github.com/prometheus/blackbox_exporter",
     port: 9115,
     job: `  - job_name: 'blackbox'
@@ -2421,6 +2425,8 @@ brew services start blackbox_exporter
   },
   snmp: {
     name: "SNMP Exporter",
+    category: "network",
+    desc: "Network devices metrics monitoring (SNMP v1/v2/v3)",
     repo: "https://github.com/prometheus/snmp_exporter",
     port: 9116,
     job: `  - job_name: 'snmp'
@@ -2631,25 +2637,1203 @@ brew services start snmp_exporter
         `
       }
     }
+  },
+  mysqld: {
+    name: "MySQLD Exporter",
+    category: "database",
+    desc: "MySQL database server metrics",
+    repo: "https://github.com/prometheus/mysqld_exporter",
+    port: 9104,
+    job: `  - job_name: 'mysqld_exporter'
+    static_configs:
+      - targets: ['localhost:9104']`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: MySQLD Exporter (Linux AMD64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/mysqld_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.1"
+fi
+
+ARCH="amd64"
+URL="https://github.com/prometheus/mysqld_exporter/releases/download/v\${VERSION}/mysqld_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading MySQLD Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf mysqld_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv mysqld_exporter-\${VERSION}.linux-\${ARCH}/mysqld_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false mysqld_exporter || true
+
+# Systemd Service Configuration
+# Catatan: DATA_SOURCE_NAME harus disesuaikan dengan user & password MySQL Anda
+cat <<EOF | sudo tee /etc/systemd/system/mysqld_exporter.service
+[Unit]
+Description=MySQLD Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=mysqld_exporter
+Group=mysqld_exporter
+Type=simple
+Environment=DATA_SOURCE_NAME="user:password@(localhost:3306)/"
+ExecStart=/usr/local/bin/mysqld_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable mysqld_exporter
+sudo systemctl start mysqld_exporter
+sudo systemctl status mysqld_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis MySQLD Exporter resmi terbaru untuk Linux AMD64.</li>
+            <li>Memindahkan binary ke <code>/usr/local/bin</code> dan mendaftarkan service systemd.</li>
+            <li>Menggunakan variabel lingkungan <code>DATA_SOURCE_NAME</code> untuk kredensial koneksi database MySQL.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: MySQLD Exporter (Linux ARM64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/mysqld_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.1"
+fi
+
+ARCH="arm64"
+URL="https://github.com/prometheus/mysqld_exporter/releases/download/v\${VERSION}/mysqld_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading MySQLD Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf mysqld_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv mysqld_exporter-\${VERSION}.linux-\${ARCH}/mysqld_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false mysqld_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/mysqld_exporter.service
+[Unit]
+Description=MySQLD Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=mysqld_exporter
+Group=mysqld_exporter
+Type=simple
+Environment=DATA_SOURCE_NAME="user:password@(localhost:3306)/"
+ExecStart=/usr/local/bin/mysqld_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable mysqld_exporter
+sudo systemctl start mysqld_exporter
+sudo systemctl status mysqld_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARM64 untuk platform 64-bit ARM.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: MySQLD Exporter (Linux ARMv7)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/mysqld_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.1"
+fi
+
+ARCH="armv7"
+URL="https://github.com/prometheus/mysqld_exporter/releases/download/v\${VERSION}/mysqld_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading MySQLD Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf mysqld_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv mysqld_exporter-\${VERSION}.linux-\${ARCH}/mysqld_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false mysqld_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/mysqld_exporter.service
+[Unit]
+Description=MySQLD Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=mysqld_exporter
+Group=mysqld_exporter
+Type=simple
+Environment=DATA_SOURCE_NAME="user:password@(localhost:3306)/"
+ExecStart=/usr/local/bin/mysqld_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable mysqld_exporter
+sudo systemctl start mysqld_exporter
+sudo systemctl status mysqld_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARMv7 untuk platform 32-bit ARM.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows Installation (MySQLD Exporter)
+# Jalankan PowerShell sebagai Administrator:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/prometheus/mysqld_exporter/releases/latest").tag_name
+$version = $version -replace '^v', ''
+if (!$version) { $version = "0.15.1" }
+
+$url = "https://github.com/prometheus/mysqld_exporter/releases/download/v$version/mysqld_exporter-$version.windows-amd64.zip"
+$output = "$env:TEMP\\mysqld_exporter.zip"
+$dest = "C:\\Program Files\\mysqld_exporter"
+
+Write-Host "Downloading mysqld_exporter v$version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Extracting files..."
+Expand-Archive -Path $output -DestinationPath $dest -Force
+Move-Item -Path "$dest\\mysqld_exporter-$version.windows-amd64\\*" -Destination $dest -Force -ErrorAction SilentlyContinue
+
+# Jalankan service dengan environment variables untuk kredensial
+$mySqlDSN = "user:password@(localhost:3306)/"
+[Environment]::SetEnvironmentVariable("DATA_SOURCE_NAME", $mySqlDSN, "Machine")
+
+New-Service -Name "mysqld_exporter" -BinaryPathName "$dest\\mysqld_exporter.exe" -DisplayName "MySQLD Exporter" -StartupType Automatic
+Start-Service -Name "mysqld_exporter"
+Get-Service -Name "mysqld_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis Windows ZIP, mengekstrak, dan membuat Windows Service <code>mysqld_exporter</code>.</li>
+            <li>Mengatur environment variable tingkat mesin <code>DATA_SOURCE_NAME</code> untuk kredensial MySQL.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+brew install mysqld_exporter
+# Atur environment variable di launchd atau jalankan langsung dengan DSN
+export DATA_SOURCE_NAME="user:password@(localhost:3306)/"
+mysqld_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan Homebrew untuk instalasi client macOS.</li>
+          </ul>
+        `
+      }
+    }
+  },
+  postgres: {
+    name: "PostgreSQL Exporter",
+    category: "database",
+    desc: "PostgreSQL database server metrics",
+    repo: "https://github.com/prometheus-community/postgres_exporter",
+    port: 9187,
+    job: `  - job_name: 'postgres_exporter'
+    static_configs:
+      - targets: ['localhost:9187']`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: Postgres Exporter (Linux AMD64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus-community/postgres_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.0"
+fi
+
+ARCH="amd64"
+URL="https://github.com/prometheus-community/postgres_exporter/releases/download/v\${VERSION}/postgres_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Postgres Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf postgres_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv postgres_exporter-\${VERSION}.linux-\${ARCH}/postgres_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false postgres_exporter || true
+
+# Systemd Service Configuration
+cat <<EOF | sudo tee /etc/systemd/system/postgres_exporter.service
+[Unit]
+Description=Postgres Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=postgres_exporter
+Group=postgres_exporter
+Type=simple
+Environment=DATA_SOURCE_NAME="postgresql://username:password@localhost:5432/postgres?sslmode=disable"
+ExecStart=/usr/local/bin/postgres_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable postgres_exporter
+sudo systemctl start postgres_exporter
+sudo systemctl status postgres_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis Postgres Exporter resmi terbaru untuk Linux AMD64.</li>
+            <li>Memindahkan binary ke <code>/usr/local/bin</code> dan mendaftarkan service systemd.</li>
+            <li>Menggunakan variabel lingkungan <code>DATA_SOURCE_NAME</code> untuk URI koneksi PostgreSQL.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: Postgres Exporter (Linux ARM64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus-community/postgres_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.0"
+fi
+
+ARCH="arm64"
+URL="https://github.com/prometheus-community/postgres_exporter/releases/download/v\${VERSION}/postgres_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Postgres Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf postgres_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv postgres_exporter-\${VERSION}.linux-\${ARCH}/postgres_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false postgres_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/postgres_exporter.service
+[Unit]
+Description=Postgres Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=postgres_exporter
+Group=postgres_exporter
+Type=simple
+Environment=DATA_SOURCE_NAME="postgresql://username:password@localhost:5432/postgres?sslmode=disable"
+ExecStart=/usr/local/bin/postgres_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable postgres_exporter
+sudo systemctl start postgres_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARM64 untuk platform 64-bit ARM.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: Postgres Exporter (Linux ARMv7)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus-community/postgres_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.0"
+fi
+
+ARCH="armv7"
+URL="https://github.com/prometheus-community/postgres_exporter/releases/download/v\${VERSION}/postgres_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Postgres Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf postgres_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv postgres_exporter-\${VERSION}.linux-\${ARCH}/postgres_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false postgres_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/postgres_exporter.service
+[Unit]
+Description=Postgres Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=postgres_exporter
+Group=postgres_exporter
+Type=simple
+Environment=DATA_SOURCE_NAME="postgresql://username:password@localhost:5432/postgres?sslmode=disable"
+ExecStart=/usr/local/bin/postgres_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable postgres_exporter
+sudo systemctl start postgres_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARMv7 untuk platform 32-bit ARM.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows Installation (PostgreSQL Exporter)
+# Jalankan PowerShell sebagai Administrator:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/prometheus-community/postgres_exporter/releases/latest").tag_name
+$version = $version -replace '^v', ''
+if (!$version) { $version = "0.15.0" }
+
+$url = "https://github.com/prometheus-community/postgres_exporter/releases/download/v$version/postgres_exporter-$version.windows-amd64.zip"
+$output = "$env:TEMP\\postgres_exporter.zip"
+$dest = "C:\\Program Files\\postgres_exporter"
+
+Write-Host "Downloading postgres_exporter v$version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Extracting files..."
+Expand-Archive -Path $output -DestinationPath $dest -Force
+Move-Item -Path "$dest\\postgres_exporter-$version.windows-amd64\\*" -Destination $dest -Force -ErrorAction SilentlyContinue
+
+$postgresDSN = "postgresql://username:password@localhost:5432/postgres?sslmode=disable"
+[Environment]::SetEnvironmentVariable("DATA_SOURCE_NAME", $postgresDSN, "Machine")
+
+New-Service -Name "postgres_exporter" -BinaryPathName "$dest\\postgres_exporter.exe" -DisplayName "PostgreSQL Exporter" -StartupType Automatic
+Start-Service -Name "postgres_exporter"
+Get-Service -Name "postgres_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh ZIP rilis Windows, mengekstrak, dan mendaftarkannya sebagai Windows Service otomatis.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+brew install postgres_exporter
+export DATA_SOURCE_NAME="postgresql://username:password@localhost:5432/postgres?sslmode=disable"
+postgres_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Instalasi menggunakan Homebrew untuk macOS.</li>
+          </ul>
+        `
+      }
+    }
+  },
+  redis: {
+    name: "Redis Exporter",
+    category: "database",
+    desc: "Redis In-Memory Key-Value store metrics",
+    repo: "https://github.com/oliver006/redis_exporter",
+    port: 9121,
+    job: `  - job_name: 'redis_exporter'
+    static_configs:
+      - targets: ['localhost:9121']`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: Redis Exporter (Linux AMD64)
+
+VERSION=$(curl -s https://api.github.com/repos/oliver006/redis_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.58.0"
+fi
+
+ARCH="amd64"
+URL="https://github.com/oliver006/redis_exporter/releases/download/v\${VERSION}/redis_exporter-v\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Redis Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf redis_exporter-v\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv redis_exporter-v\${VERSION}.linux-\${ARCH}/redis_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false redis_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/redis_exporter.service
+[Unit]
+Description=Redis Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=redis_exporter
+Group=redis_exporter
+Type=simple
+ExecStart=/usr/local/bin/redis_exporter -redis.addr localhost:6379
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable redis_exporter
+sudo systemctl start redis_exporter
+sudo systemctl status redis_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis Redis Exporter (oliver006/redis_exporter) terbaru.</li>
+            <li>Mendaftarkan service systemd with flag <code>-redis.addr</code> to your local Redis instance.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: Redis Exporter (Linux ARM64)
+
+VERSION=$(curl -s https://api.github.com/repos/oliver006/redis_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.58.0"
+fi
+
+ARCH="arm64"
+URL="https://github.com/oliver006/redis_exporter/releases/download/v\${VERSION}/redis_exporter-v\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Redis Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf redis_exporter-v\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv redis_exporter-v\${VERSION}.linux-\${ARCH}/redis_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false redis_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/redis_exporter.service
+[Unit]
+Description=Redis Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=redis_exporter
+Group=redis_exporter
+Type=simple
+ExecStart=/usr/local/bin/redis_exporter -redis.addr localhost:6379
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable redis_exporter
+sudo systemctl start redis_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARM64 untuk platform 64-bit ARM.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: Redis Exporter (Linux ARMv7)
+
+VERSION=$(curl -s https://api.github.com/repos/oliver006/redis_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.58.0"
+fi
+
+ARCH="armv7"
+URL="https://github.com/oliver006/redis_exporter/releases/download/v\${VERSION}/redis_exporter-v\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Redis Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf redis_exporter-v\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv redis_exporter-v\${VERSION}.linux-\${ARCH}/redis_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false redis_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/redis_exporter.service
+[Unit]
+Description=Redis Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=redis_exporter
+Group=redis_exporter
+Type=simple
+ExecStart=/usr/local/bin/redis_exporter -redis.addr localhost:6379
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable redis_exporter
+sudo systemctl start redis_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARMv7 untuk platform 32-bit ARM.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows Installation (Redis Exporter)
+# Jalankan PowerShell sebagai Administrator:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/oliver006/redis_exporter/releases/latest").tag_name
+if (!$version) { $version = "v1.58.0" }
+
+$url = "https://github.com/oliver006/redis_exporter/releases/download/$version/redis_exporter-$version.windows-amd64.zip"
+$output = "$env:TEMP\\redis_exporter.zip"
+$dest = "C:\\Program Files\\redis_exporter"
+
+Write-Host "Downloading redis_exporter $version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Extracting files..."
+Expand-Archive -Path $output -DestinationPath $dest -Force
+Move-Item -Path "$dest\\redis_exporter-$version.windows-amd64\\*" -Destination $dest -Force -ErrorAction SilentlyContinue
+
+New-Service -Name "redis_exporter" -BinaryPathName "$dest\\redis_exporter.exe -redis.addr localhost:6379" -DisplayName "Redis Exporter" -StartupType Automatic
+Start-Service -Name "redis_exporter"
+Get-Service -Name "redis_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh dan mengekstrak zip redis_exporter untuk Windows AMD64.</li>
+            <li>Membuat Windows Service otomatis.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+brew install redis_exporter
+brew services start redis_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan Homebrew untuk macOS.</li>
+          </ul>
+        `
+      }
+    }
+  },
+  nginx: {
+    name: "NGINX Exporter",
+    category: "webserver",
+    desc: "NGINX Web Server stub_status metrics",
+    repo: "https://github.com/nginxinc/nginx-prometheus-exporter",
+    port: 9113,
+    job: `  - job_name: 'nginx_exporter'
+    static_configs:
+      - targets: ['localhost:9113']`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: Nginx Exporter (Linux AMD64)
+
+VERSION=$(curl -s https://api.github.com/repos/nginxinc/nginx-prometheus-exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.1.0"
+fi
+
+ARCH="amd64"
+URL="https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v\${VERSION}/nginx-prometheus-exporter_\${VERSION}_linux_\${ARCH}.tar.gz"
+echo "Downloading Nginx Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf nginx-prometheus-exporter_\${VERSION}_linux_\${ARCH}.tar.gz
+sudo mv nginx-prometheus-exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false nginx_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/nginx_exporter.service
+[Unit]
+Description=Nginx Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=nginx_exporter
+Group=nginx_exporter
+Type=simple
+ExecStart=/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://127.0.0.1/stub_status
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable nginx_exporter
+sudo systemctl start nginx_exporter
+sudo systemctl status nginx_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis Nginx Prometheus Exporter resmi terbaru.</li>
+            <li>Membutuhkan modul <code>stub_status</code> diaktifkan di konfigurasi Nginx Anda.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: Nginx Exporter (Linux ARM64)
+
+VERSION=$(curl -s https://api.github.com/repos/nginxinc/nginx-prometheus-exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.1.0"
+fi
+
+ARCH="arm64"
+URL="https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v\${VERSION}/nginx-prometheus-exporter_\${VERSION}_linux_\${ARCH}.tar.gz"
+echo "Downloading Nginx Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf nginx-prometheus-exporter_\${VERSION}_linux_\${ARCH}.tar.gz
+sudo mv nginx-prometheus-exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false nginx_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/nginx_exporter.service
+[Unit]
+Description=Nginx Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=nginx_exporter
+Group=nginx_exporter
+Type=simple
+ExecStart=/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://127.0.0.1/stub_status
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable nginx_exporter
+sudo systemctl start nginx_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARM64 untuk platform 64-bit ARM.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: Nginx Exporter (Linux ARMv7)
+
+VERSION=$(curl -s https://api.github.com/repos/nginxinc/nginx-prometheus-exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.1.0"
+fi
+
+ARCH="armv7"
+URL="https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v\${VERSION}/nginx-prometheus-exporter_\${VERSION}_linux_\${ARCH}.tar.gz"
+echo "Downloading Nginx Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf nginx-prometheus-exporter_\${VERSION}_linux_\${ARCH}.tar.gz
+sudo mv nginx-prometheus-exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false nginx_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/nginx_exporter.service
+[Unit]
+Description=Nginx Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=nginx_exporter
+Group=nginx_exporter
+Type=simple
+ExecStart=/usr/local/bin/nginx-prometheus-exporter -nginx.scrape-uri=http://127.0.0.1/stub_status
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable nginx_exporter
+sudo systemctl start nginx_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARMv7 untuk platform 32-bit ARM.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows Installation (Nginx Exporter)
+# Jalankan PowerShell sebagai Administrator:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/nginxinc/nginx-prometheus-exporter/releases/latest").tag_name
+$version = $version -replace '^v', ''
+if (!$version) { $version = "1.1.0" }
+
+$url = "https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v$version/nginx-prometheus-exporter_$version`_windows_amd64.zip"
+$output = "$env:TEMP\\nginx_exporter.zip"
+$dest = "C:\\Program Files\\nginx_exporter"
+
+Write-Host "Downloading nginx_exporter v$version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Extracting files..."
+Expand-Archive -Path $output -DestinationPath $dest -Force
+Move-Item -Path "$dest\\nginx-prometheus-exporter.exe" -Destination $dest -Force -ErrorAction SilentlyContinue
+
+New-Service -Name "nginx_exporter" -BinaryPathName "$dest\\nginx-prometheus-exporter.exe -nginx.scrape-uri=http://127.0.0.1/stub_status" -DisplayName "Nginx Exporter" -StartupType Automatic
+Start-Service -Name "nginx_exporter"
+Get-Service -Name "nginx_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh, mengekstrak, dan mendaftarkannya sebagai Windows Service.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+brew install nginx-prometheus-exporter
+brew services start nginx-prometheus-exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan Homebrew untuk instalasi client macOS.</li>
+          </ul>
+        `
+      }
+    }
+  },
+  apache: {
+    name: "Apache Exporter",
+    category: "webserver",
+    desc: "Apache HTTPD Web Server server-status metrics",
+    repo: "https://github.com/Lusitaniae/apache_exporter",
+    port: 9117,
+    job: `  - job_name: 'apache_exporter'
+    static_configs:
+      - targets: ['localhost:9117']`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: Apache Exporter (Linux AMD64)
+
+VERSION=$(curl -s https://api.github.com/repos/Lusitaniae/apache_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.0.8"
+fi
+
+ARCH="amd64"
+URL="https://github.com/Lusitaniae/apache_exporter/releases/download/v\${VERSION}/apache_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Apache Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf apache_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv apache_exporter-\${VERSION}.linux-\${ARCH}/apache_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false apache_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/apache_exporter.service
+[Unit]
+Description=Apache Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=apache_exporter
+Group=apache_exporter
+Type=simple
+ExecStart=/usr/local/bin/apache_exporter --scrape_uri="http://127.0.0.1/server-status/?auto"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable apache_exporter
+sudo systemctl start apache_exporter
+sudo systemctl status apache_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis Apache Exporter resmi terbaru untuk Linux AMD64.</li>
+            <li>Membutuhkan <code>mod_status</code> diaktifkan di konfigurasi Apache Server Anda dengan parameter <code>ExtendedStatus On</code>.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: Apache Exporter (Linux ARM64)
+
+VERSION=$(curl -s https://api.github.com/repos/Lusitaniae/apache_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.0.8"
+fi
+
+ARCH="arm64"
+URL="https://github.com/Lusitaniae/apache_exporter/releases/download/v\${VERSION}/apache_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Apache Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf apache_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv apache_exporter-\${VERSION}.linux-\${ARCH}/apache_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false apache_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/apache_exporter.service
+[Unit]
+Description=Apache Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=apache_exporter
+Group=apache_exporter
+Type=simple
+ExecStart=/usr/local/bin/apache_exporter --scrape_uri="http://127.0.0.1/server-status/?auto"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable apache_exporter
+sudo systemctl start apache_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARM64 untuk platform 64-bit ARM.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: Apache Exporter (Linux ARMv7)
+
+VERSION=$(curl -s https://api.github.com/repos/Lusitaniae/apache_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.0.8"
+fi
+
+ARCH="armv7"
+URL="https://github.com/Lusitaniae/apache_exporter/releases/download/v\${VERSION}/apache_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Apache Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf apache_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv apache_exporter-\${VERSION}.linux-\${ARCH}/apache_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false apache_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/apache_exporter.service
+[Unit]
+Description=Apache Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=apache_exporter
+Group=apache_exporter
+Type=simple
+ExecStart=/usr/local/bin/apache_exporter --scrape_uri="http://127.0.0.1/server-status/?auto"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable apache_exporter
+sudo systemctl start apache_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARMv7 untuk platform 32-bit ARM.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows Installation (Apache Exporter)
+# Jalankan PowerShell sebagai Administrator:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/Lusitaniae/apache_exporter/releases/latest").tag_name
+$version = $version -replace '^v', ''
+if (!$version) { $version = "1.0.8" }
+
+$url = "https://github.com/Lusitaniae/apache_exporter/releases/download/v$version/apache_exporter-$version.windows-amd64.zip"
+$output = "$env:TEMP\\apache_exporter.zip"
+$dest = "C:\\Program Files\\apache_exporter"
+
+Write-Host "Downloading apache_exporter v$version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Extracting files..."
+Expand-Archive -Path $output -DestinationPath $dest -Force
+Move-Item -Path "$dest\\apache_exporter-$version.windows-amd64\\*" -Destination $dest -Force -ErrorAction SilentlyContinue
+
+New-Service -Name "apache_exporter" -BinaryPathName "$dest\\apache_exporter.exe --scrape_uri \`"http://127.0.0.1/server-status/?auto\`"" -DisplayName "Apache Exporter" -StartupType Automatic
+Start-Service -Name "apache_exporter"
+Get-Service -Name "apache_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh dan mengekstrak zip biner, mendaftarkannya sebagai Windows Service otomatis.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+brew install apache-exporter
+brew services start apache-exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan Homebrew untuk instalasi client macOS.</li>
+          </ul>
+        `
+      }
+    }
+  },
+  haproxy: {
+    name: "HAProxy Exporter",
+    category: "webserver",
+    desc: "HAProxy Load Balancer metrics",
+    repo: "https://github.com/prometheus/haproxy_exporter",
+    port: 9101,
+    job: `  - job_name: 'haproxy_exporter'
+    static_configs:
+      - targets: ['localhost:9101']`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: HAProxy Exporter (Linux AMD64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/haproxy_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.0"
+fi
+
+ARCH="amd64"
+URL="https://github.com/prometheus/haproxy_exporter/releases/download/v\${VERSION}/haproxy_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading HAProxy Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf haproxy_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv haproxy_exporter-\${VERSION}.linux-\${ARCH}/haproxy_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false haproxy_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/haproxy_exporter.service
+[Unit]
+Description=HAProxy Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=haproxy_exporter
+Group=haproxy_exporter
+Type=simple
+ExecStart=/usr/local/bin/haproxy_exporter --haproxy.scrape-uri="http://localhost:1936/;csv"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable haproxy_exporter
+sudo systemctl start haproxy_exporter
+sudo systemctl status haproxy_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis HAProxy Exporter resmi terbaru untuk Linux AMD64.</li>
+            <li>Membutuhkan stats page diaktifkan di konfigurasi HAProxy Anda.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: HAProxy Exporter (Linux ARM64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/haproxy_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.0"
+fi
+
+ARCH="arm64"
+URL="https://github.com/prometheus/haproxy_exporter/releases/download/v\${VERSION}/haproxy_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading HAProxy Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf haproxy_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv haproxy_exporter-\${VERSION}.linux-\${ARCH}/haproxy_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false haproxy_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/haproxy_exporter.service
+[Unit]
+Description=HAProxy Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=haproxy_exporter
+Group=haproxy_exporter
+Type=simple
+ExecStart=/usr/local/bin/haproxy_exporter --haproxy.scrape-uri="http://localhost:1936/;csv"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable haproxy_exporter
+sudo systemctl start haproxy_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARM64 untuk platform 64-bit ARM.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: HAProxy Exporter (Linux ARMv7)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/haproxy_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.15.0"
+fi
+
+ARCH="armv7"
+URL="https://github.com/prometheus/haproxy_exporter/releases/download/v\${VERSION}/haproxy_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading HAProxy Exporter v\${VERSION}..."
+curl -LO "\$URL"
+
+tar -xvf haproxy_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv haproxy_exporter-\${VERSION}.linux-\${ARCH}/haproxy_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false haproxy_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/haproxy_exporter.service
+[Unit]
+Description=HAProxy Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=haproxy_exporter
+Group=haproxy_exporter
+Type=simple
+ExecStart=/usr/local/bin/haproxy_exporter --haproxy.scrape-uri="http://localhost:1936/;csv"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable haproxy_exporter
+sudo systemctl start haproxy_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARMv7 untuk platform 32-bit ARM.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows Installation (HAProxy Exporter)
+# Jalankan PowerShell sebagai Administrator:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/prometheus/haproxy_exporter/releases/latest").tag_name
+$version = $version -replace '^v', ''
+if (!$version) { $version = "0.15.0" }
+
+$url = "https://github.com/prometheus/haproxy_exporter/releases/download/v$version/haproxy_exporter-$version.windows-amd64.zip"
+$output = "$env:TEMP\\haproxy_exporter.zip"
+$dest = "C:\\Program Files\\haproxy_exporter"
+
+Write-Host "Downloading haproxy_exporter v$version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Extracting files..."
+Expand-Archive -Path $output -DestinationPath $dest -Force
+Move-Item -Path "$dest\\haproxy_exporter-$version.windows-amd64\\*" -Destination $dest -Force -ErrorAction SilentlyContinue
+
+New-Service -Name "haproxy_exporter" -BinaryPathName "$dest\\haproxy_exporter.exe --haproxy.scrape-uri \`"http://localhost:1936/;csv\`"" -DisplayName "HAProxy Exporter" -StartupType Automatic
+Start-Service -Name "haproxy_exporter"
+Get-Service -Name "haproxy_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh dan mendaftarkan HAProxy Exporter sebagai Windows Service.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+brew install haproxy_exporter
+brew services start haproxy_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan Homebrew untuk instalasi client macOS.</li>
+          </ul>
+        `
+      }
+    }
   }
 };
 
-function selectExporter(expType) {
-  activeExporter = expType;
+function renderExporterCards() {
+  const container = document.getElementById('exporter-cards-list');
+  if (!container) return;
+
+  const categoryFilter = document.getElementById('exporter-category-filter').value;
+  const searchQuery = document.getElementById('exporter-search-input').value.toLowerCase();
+
+  let html = '';
   
-  ['node', 'blackbox', 'snmp'].forEach(t => {
-    const el = document.getElementById(`card-exp-${t}`);
-    if (el) {
-      if (t === expType) {
-        el.style.border = '2px solid #1971c2';
-        el.style.background = 'rgba(25, 113, 194, 0.05)';
-      } else {
-        el.style.border = '1px solid var(--app-border)';
-        el.style.background = 'none';
-      }
+  Object.keys(installerData).forEach(key => {
+    const item = installerData[key];
+    
+    // Apply category filter
+    if (categoryFilter !== 'all' && item.category !== categoryFilter) {
+      return;
     }
+    
+    // Apply search filter
+    if (searchQuery && !item.name.toLowerCase().includes(searchQuery) && !item.desc.toLowerCase().includes(searchQuery)) {
+      return;
+    }
+
+    const isSelected = key === activeExporter;
+    const borderStyle = isSelected ? '2px solid #1971c2' : '1px solid var(--app-border)';
+    const bgStyle = isSelected ? 'rgba(25, 113, 194, 0.05)' : 'none';
+
+    html += `
+      <div class="stat-card" id="card-exp-${key}" onclick="selectExporter('${key}')" style="cursor: pointer; border: ${borderStyle}; margin-bottom: 0; padding: 16px; background: ${bgStyle};">
+        <div class="stat-card-left">
+          <span class="stat-card-title">${item.name}</span>
+          <span class="stat-card-sub" style="font-size: 10px; margin-top: 4px; line-height: 1.4;">${item.desc}</span>
+        </div>
+      </div>
+    `;
   });
 
+  if (!html) {
+    html = `
+      <div style="grid-column: span 3; text-align: center; padding: 35px; color: var(--text-muted); font-size: 11px;">
+        No exporters found matching the criteria.
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+function filterExporters() {
+  renderExporterCards();
+}
+
+function selectExporter(expType) {
+  activeExporter = expType;
+  renderExporterCards();
   renderInstallerContent();
 }
 
@@ -2700,6 +3884,12 @@ function copyInstallerScript() {
 }
 
 function initInstallerPage() {
+  // Reset fields
+  const catFilter = document.getElementById('exporter-category-filter');
+  if (catFilter) catFilter.value = 'all';
+  const searchInput = document.getElementById('exporter-search-input');
+  if (searchInput) searchInput.value = '';
+
   selectExporter('node');
   selectPlatform('linux-amd64');
 }
