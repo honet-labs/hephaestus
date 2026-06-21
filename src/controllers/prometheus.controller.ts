@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import fs from "fs";
+import path from "path";
 import { prometheusService } from "../services/prometheus.service";
 
 export class PrometheusController {
@@ -194,6 +195,85 @@ export class PrometheusController {
    * POST /api/v1/prometheus/configs/test
    * Test connection credentials before saving.
    */
+  /**
+   * Helper to verify if the path or containing folder is writeable by the process.
+   */
+  private checkLocalWriteable(targetPath: string): { writeable: boolean; message: string } {
+    try {
+      const dir = path.dirname(targetPath);
+      
+      // If file exists, check if we can read and write to it
+      if (fs.existsSync(targetPath)) {
+        try {
+          fs.accessSync(targetPath, fs.constants.R_OK | fs.constants.W_OK);
+          return {
+            writeable: true,
+            message: "Local configuration file exists and is readable/writeable."
+          };
+        } catch (e: any) {
+          return {
+            writeable: false,
+            message: `Local file exists but is not writeable: ${e.message || e}`
+          };
+        }
+      }
+
+      // If file doesn't exist, check if parent directory exists and is writeable
+      if (!fs.existsSync(dir)) {
+        // Find closest existing ancestor directory
+        let parentDir = dir;
+        while (parentDir && !fs.existsSync(parentDir)) {
+          const nextParent = path.dirname(parentDir);
+          if (nextParent === parentDir) break; // Root directory reached
+          parentDir = nextParent;
+        }
+        
+        if (parentDir && fs.existsSync(parentDir)) {
+          try {
+            fs.accessSync(parentDir, fs.constants.W_OK);
+            return {
+              writeable: true,
+              message: `Configuration file does not exist yet, but containing folder will be created automatically under writeable directory: ${parentDir}`
+            };
+          } catch (e: any) {
+            return {
+              writeable: false,
+              message: `Parent directory ${parentDir} is not writeable: ${e.message || e}`
+            };
+          }
+        } else {
+          return {
+            writeable: false,
+            message: `Containing path directory structure is invalid or inaccessible.`
+          };
+        }
+      }
+
+      // Directory exists, check if writeable
+      try {
+        fs.accessSync(dir, fs.constants.W_OK);
+        return {
+          writeable: true,
+          message: "Configuration file does not exist yet, but containing directory is writeable (will be created automatically)."
+        };
+      } catch (e: any) {
+        return {
+          writeable: false,
+          message: `Containing directory exists but is not writeable: ${e.message || e}`
+        };
+      }
+    } catch (err: any) {
+      return {
+        writeable: false,
+        message: `Error checking path: ${err.message || err}`
+      };
+    }
+  }
+
+  /**
+   * POST /api/v1/prometheus/configs/test
+   * Test connection credentials before saving.
+   */
   public async testConnection(req: Request, res: Response) {
     try {
       const profile = req.body;
@@ -206,12 +286,10 @@ export class PrometheusController {
       }
 
       if (profile.mode === "local") {
-        const pathExists = fs.existsSync(profile.path);
+        const check = this.checkLocalWriteable(profile.path);
         return res.status(200).json({
-          success: true,
-          message: pathExists 
-            ? "Local configuration path check: path exists." 
-            : "Local configuration path check: file does not exist yet (will be created automatically on editor load/save)."
+          success: check.writeable,
+          message: check.message
         });
       } else {
         const result = await prometheusService.testSSHConnection(profile);
@@ -249,16 +327,18 @@ export class PrometheusController {
       }
 
       if (target.mode === "local") {
-        const pathExists = fs.existsSync(target.path);
+        const check = this.checkLocalWriteable(target.path);
         return res.status(200).json({
           success: true,
-          isConnected: pathExists
+          isConnected: check.writeable,
+          message: check.message
         });
       } else {
         const result = await prometheusService.testSSHConnection(target);
         return res.status(200).json({
           success: true,
-          isConnected: result.success
+          isConnected: result.success,
+          message: result.message
         });
       }
     } catch (err: any) {

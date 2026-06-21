@@ -391,17 +391,17 @@ async function loadSettingsRegistry() {
               </div>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
               CHECKING...
             </span>
-            <button type="button" class="btn btn-secondary" onclick="viewDatasources('${c.id}', '${escapedName}', '${escapedHost}')" style="padding: 4px 8px; font-size: 11px; height: auto;">View DS</button>
-            <button type="button" class="btn btn-secondary" onclick="pingServer('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Ping Test</button>
-            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Activate</button>` : ''}
-            <button type="button" class="btn btn-secondary" onclick="editGrafanaConfigById('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+            <button type="button" class="btn btn-secondary" onclick="viewDatasources('${c.id}', '${escapedName}', '${escapedHost}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">View DS</button>
+            <button type="button" class="btn btn-secondary" onclick="pingServer('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
+            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Activate</button>` : ''}
+            <button type="button" class="btn btn-secondary" onclick="editGrafanaConfigById('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
-            <button type="button" class="btn btn-secondary" onclick="deleteGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15); display: inline-flex; align-items: center; justify-content: center;" title="Delete Config">
+            <button type="button" class="btn btn-secondary" onclick="deleteGrafanaConfig('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -434,16 +434,16 @@ async function loadSettingsRegistry() {
               </div>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
               CHECKING...
             </span>
-            <button type="button" class="btn btn-secondary" onclick="pingPrometheusServer('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Ping Test</button>
-            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activatePrometheusConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Activate</button>` : ''}
-            <button type="button" class="btn btn-secondary" onclick="editPrometheusConfigById('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+            <button type="button" class="btn btn-secondary" onclick="pingPrometheusServer('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
+            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activatePrometheusConfig('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Activate</button>` : ''}
+            <button type="button" class="btn btn-secondary" onclick="editPrometheusConfigById('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
-            <button type="button" class="btn btn-secondary" onclick="deletePrometheusConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15); display: inline-flex; align-items: center; justify-content: center;" title="Delete Config">
+            <button type="button" class="btn btn-secondary" onclick="deletePrometheusConfig('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
