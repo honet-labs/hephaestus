@@ -3372,7 +3372,7 @@ $version = (Invoke-RestMethod -Uri "https://api.github.com/repos/nginxinc/nginx-
 $version = $version -replace '^v', ''
 if (!$version) { $version = "1.1.0" }
 
-$url = "https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v$version/nginx-prometheus-exporter_$version`_windows_amd64.zip"
+$url = "https://github.com/nginxinc/nginx-prometheus-exporter/releases/download/v$version/nginx-prometheus-exporter_\${version}_windows_amd64.zip"
 $output = "$env:TEMP\\nginx_exporter.zip"
 $dest = "C:\\Program Files\\nginx_exporter"
 
