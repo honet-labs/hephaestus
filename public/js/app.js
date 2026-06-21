@@ -3,7 +3,7 @@ const API_SETTINGS_URL = '/api/v1/settings/grafana';
 const API_REPORT_URL = '/api/v1/report/cpu';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'telemetry', 'diagnostics'];
+const pages = ['overview', 'settings', 'telemetry', 'diagnostics', 'installer'];
 
 // DOM elements
 const activeModuleName = document.getElementById('active-module-name');
@@ -204,6 +204,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'System Diagnostics';
     pageDesc.textContent = 'Informasi endpoint API backend dan diagnostik kesehatan sistem.';
     diagTime.textContent = new Date().toLocaleString();
+  } else if (pageId === 'installer') {
+    pageTitle.textContent = 'Exporter Installer';
+    pageDesc.textContent = 'Panduan instalasi otomatis dan generate command setup service systemd Prometheus Exporters.';
+    initInstallerPage();
   }
 }
 
@@ -1985,4 +1989,717 @@ function previewPanel(panelId) {
 
 function closePreviewModal() {
   previewModal.classList.remove('active');
+}
+
+// ==========================================
+// EXPORTER INSTALLER FUNCTIONALITY
+// ==========================================
+let activeExporter = 'node';
+let activePlatform = 'linux-amd64';
+
+const installerData = {
+  node: {
+    name: "Node Exporter",
+    repo: "https://github.com/prometheus/node_exporter",
+    port: 9100,
+    job: `  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['localhost:9100']`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: Node Exporter (Linux AMD64)
+# Script ini mendownload versi terbaru dan mendaftarkannya ke Systemd
+
+# 1. Dapatkan versi release terbaru dari GitHub
+VERSION=$(curl -s https://api.github.com/repos/prometheus/node_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.8.1"
+fi
+
+# 2. Download archive
+ARCH="amd64"
+URL="https://github.com/prometheus/node_exporter/releases/download/v\${VERSION}/node_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Node Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+# 3. Ekstrak dan pindahkan binary
+tar -xvf node_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv node_exporter-\${VERSION}.linux-\${ARCH}/node_exporter /usr/local/bin/
+
+# 4. Buat user sistem (tanpa home & login shell)
+sudo useradd --no-create-home --shell /bin/false node_exporter || true
+
+# 5. Daftarkan Service ke Systemd
+cat <<EOF | sudo tee /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 6. Aktifkan dan jalankan Service
+sudo systemctl daemon-reload
+sudo systemctl enable node_exporter
+sudo systemctl start node_exporter
+
+# 7. Tampilkan status
+sudo systemctl status node_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan <strong>GitHub API</strong> untuk melacak versi rilis terbaru secara otomatis.</li>
+            <li>Mengunduh dan mengekstrak berkas <code>node_exporter</code> untuk arsitektur <strong>Linux AMD64</strong>.</li>
+            <li>Memindahkan binary ke <code>/usr/local/bin</code> dan mendaftarkan service <code>node_exporter.service</code> di systemd.</li>
+            <li>Membuat service user terisolasi untuk keamanan maksimum.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: Node Exporter (Linux ARM64)
+# Cocok untuk Raspberry Pi 3/4/5 atau AWS Graviton instance
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/node_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.8.1"
+fi
+
+ARCH="arm64"
+URL="https://github.com/prometheus/node_exporter/releases/download/v\${VERSION}/node_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Node Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+tar -xvf node_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv node_exporter-\${VERSION}.linux-\${ARCH}/node_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false node_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable node_exporter
+sudo systemctl start node_exporter
+sudo systemctl status node_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh binary versi ARM64 untuk arsitektur CPU 64-bit ARM.</li>
+            <li>Mendaftarkan service systemd dengan privilege non-root menggunakan user <code>node_exporter</code>.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: Node Exporter (Linux ARMv7)
+# Cocok untuk Raspberry Pi versi lama (OS 32-bit)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/node_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="1.8.1"
+fi
+
+ARCH="armv7"
+URL="https://github.com/prometheus/node_exporter/releases/download/v\${VERSION}/node_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Node Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+tar -xvf node_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv node_exporter-\${VERSION}.linux-\${ARCH}/node_exporter /usr/local/bin/
+
+sudo useradd --no-create-home --shell /bin/false node_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable node_exporter
+sudo systemctl start node_exporter
+sudo systemctl status node_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh binary versi ARMv7 untuk arsitektur CPU 32-bit ARM.</li>
+            <li>Mendaftarkan service systemd secara otomatis.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows PowerShell Script to Install windows_exporter (WMI)
+# Jalankan PowerShell sebagai Administrator dan paste script berikut:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/prometheus-community/windows_exporter/releases/latest").tag_name
+$version = $version -replace '^v', ''
+if (!$version) { $version = "0.27.2" }
+
+$url = "https://github.com/prometheus-community/windows_exporter/releases/download/v$version/windows_exporter-$version-amd64.msi"
+$output = "$env:TEMP\\windows_exporter.msi"
+
+Write-Host "Downloading windows_exporter v$version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Installing windows_exporter as a service..."
+Start-Process msiexec.exe -ArgumentList "/i $output /quiet /qn /norestart ENABLED_COLLECTORS=cpu,memory,net,logical_disk,os,system" -Wait
+
+Write-Host "Service installed and started successfully!"
+Get-Service -Name "windows_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>PowerShell script ini mengunduh installer <strong>MSI</strong> langsung dari rilis GitHub <code>prometheus-community/windows_exporter</code>.</li>
+            <li>Melakukan instalasi silent background (quiet install) dengan mendaftarkannya sebagai Windows Service otomatis.</li>
+            <li>Secara default mengaktifkan kolektor CPU, Memory, Network, Disk, OS, dan System.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+
+# 1. Install Node Exporter menggunakan Homebrew
+brew install node_exporter
+
+# 2. Daftarkan sebagai background service macOS (Launchd) dan langsung jalankan
+brew services start node_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan manajer paket Homebrew untuk instalasi terstandarisasi di macOS.</li>
+            <li><code>brew services start</code> mendaftarkan Launchd agent agar exporter otomatis berjalan saat booting.</li>
+          </ul>
+        `
+      }
+    }
+  },
+  blackbox: {
+    name: "Blackbox Exporter",
+    repo: "https://github.com/prometheus/blackbox_exporter",
+    port: 9115,
+    job: `  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://prometheus.io
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: Blackbox Exporter (Linux AMD64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/blackbox_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.25.0"
+fi
+
+ARCH="amd64"
+URL="https://github.com/prometheus/blackbox_exporter/releases/download/v\${VERSION}/blackbox_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Blackbox Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+tar -xvf blackbox_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv blackbox_exporter-\${VERSION}.linux-\${ARCH}/blackbox_exporter /usr/local/bin/
+
+# Buat direktori konfigurasi dan salin file bawaan
+sudo mkdir -p /etc/blackbox_exporter
+sudo mv blackbox_exporter-\${VERSION}.linux-\${ARCH}/blackbox.yml /etc/blackbox_exporter/
+
+sudo useradd --no-create-home --shell /bin/false blackbox_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/blackbox_exporter.service
+[Unit]
+Description=Blackbox Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=blackbox_exporter
+Group=blackbox_exporter
+Type=simple
+ExecStart=/usr/local/bin/blackbox_exporter --config.file=/etc/blackbox_exporter/blackbox.yml
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable blackbox_exporter
+sudo systemctl start blackbox_exporter
+sudo systemctl status blackbox_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis biner Blackbox Exporter terbaru untuk sistem Linux AMD64.</li>
+            <li>Memindahkan konfigurasi default <code>blackbox.yml</code> ke <code>/etc/blackbox_exporter/</code>.</li>
+            <li>Mendaftarkan service systemd dengan argumen file konfigurasi eksplisit.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: Blackbox Exporter (Linux ARM64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/blackbox_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.25.0"
+fi
+
+ARCH="arm64"
+URL="https://github.com/prometheus/blackbox_exporter/releases/download/v\${VERSION}/blackbox_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Blackbox Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+tar -xvf blackbox_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv blackbox_exporter-\${VERSION}.linux-\${ARCH}/blackbox_exporter /usr/local/bin/
+
+sudo mkdir -p /etc/blackbox_exporter
+sudo mv blackbox_exporter-\${VERSION}.linux-\${ARCH}/blackbox.yml /etc/blackbox_exporter/
+
+sudo useradd --no-create-home --shell /bin/false blackbox_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/blackbox_exporter.service
+[Unit]
+Description=Blackbox Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=blackbox_exporter
+Group=blackbox_exporter
+Type=simple
+ExecStart=/usr/local/bin/blackbox_exporter --config.file=/etc/blackbox_exporter/blackbox.yml
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable blackbox_exporter
+sudo systemctl start blackbox_exporter
+sudo systemctl status blackbox_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARM64 untuk platform 64-bit ARM.</li>
+            <li>Mendaftarkan konfigurasi dan systemd service.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: Blackbox Exporter (Linux ARMv7)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/blackbox_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.25.0"
+fi
+
+ARCH="armv7"
+URL="https://github.com/prometheus/blackbox_exporter/releases/download/v\${VERSION}/blackbox_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading Blackbox Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+tar -xvf blackbox_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv blackbox_exporter-\${VERSION}.linux-\${ARCH}/blackbox_exporter /usr/local/bin/
+
+sudo mkdir -p /etc/blackbox_exporter
+sudo mv blackbox_exporter-\${VERSION}.linux-\${ARCH}/blackbox.yml /etc/blackbox_exporter/
+
+sudo useradd --no-create-home --shell /bin/false blackbox_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/blackbox_exporter.service
+[Unit]
+Description=Blackbox Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=blackbox_exporter
+Group=blackbox_exporter
+Type=simple
+ExecStart=/usr/local/bin/blackbox_exporter --config.file=/etc/blackbox_exporter/blackbox.yml
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable blackbox_exporter
+sudo systemctl start blackbox_exporter
+sudo systemctl status blackbox_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARMv7 untuk platform 32-bit ARM.</li>
+            <li>Mendaftarkan service systemd.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows PowerShell Script to Install blackbox_exporter
+# Jalankan PowerShell sebagai Administrator:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/prometheus/blackbox_exporter/releases/latest").tag_name
+$version = $version -replace '^v', ''
+if (!$version) { $version = "0.25.0" }
+
+$url = "https://github.com/prometheus/blackbox_exporter/releases/download/v$version/blackbox_exporter-$version.windows-amd64.zip"
+$output = "$env:TEMP\\blackbox_exporter.zip"
+$dest = "C:\\Program Files\\blackbox_exporter"
+
+Write-Host "Downloading blackbox_exporter v$version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Extracting files..."
+Expand-Archive -Path $output -DestinationPath $dest -Force
+Move-Item -Path "$dest\\blackbox_exporter-$version.windows-amd64\\*" -Destination $dest -Force -ErrorAction SilentlyContinue
+
+Write-Host "Registering Service using PowerShell sc utility..."
+New-Service -Name "blackbox_exporter" -BinaryPathName "$dest\\blackbox_exporter.exe --config.file=\`"$dest\\blackbox.yml\`"" -DisplayName "Blackbox Exporter" -StartupType Automatic
+
+Write-Host "Starting service..."
+Start-Service -Name "blackbox_exporter"
+Get-Service -Name "blackbox_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>PowerShell script ini mengunduh berkas biner ZIP dari rilis resmi GitHub.</li>
+            <li>Mengekstrak file ke folder <code>C:\\Program Files\\blackbox_exporter</code>.</li>
+            <li>Menggunakan utility bawaan Windows <code>New-Service</code> untuk mendaftarkannya sebagai background Windows Service.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+
+brew install blackbox_exporter
+brew services start blackbox_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan Homebrew untuk manajemen lifecycle service otomatis di macOS.</li>
+          </ul>
+        `
+      }
+    }
+  },
+  snmp: {
+    name: "SNMP Exporter",
+    repo: "https://github.com/prometheus/snmp_exporter",
+    port: 9116,
+    job: `  - job_name: 'snmp'
+    static_configs:
+      - targets:
+        - 192.168.1.1 # Mikrotik/Device IP
+    metrics_path: /snmp
+    params:
+      module: [if_mib]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9116`,
+    platforms: {
+      "linux-amd64": {
+        script: `# Exporter: SNMP Exporter (Linux AMD64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/snmp_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.26.0"
+fi
+
+ARCH="amd64"
+URL="https://github.com/prometheus/snmp_exporter/releases/download/v\${VERSION}/snmp_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading SNMP Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+tar -xvf snmp_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv snmp_exporter-\${VERSION}.linux-\${ARCH}/snmp_exporter /usr/local/bin/
+
+sudo mkdir -p /etc/snmp_exporter
+sudo mv snmp_exporter-\${VERSION}.linux-\${ARCH}/snmp.yml /etc/snmp_exporter/
+
+sudo useradd --no-create-home --shell /bin/false snmp_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/snmp_exporter.service
+[Unit]
+Description=SNMP Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=snmp_exporter
+Group=snmp_exporter
+Type=simple
+ExecStart=/usr/local/bin/snmp_exporter --config.file=/etc/snmp_exporter/snmp.yml
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable snmp_exporter
+sudo systemctl start snmp_exporter
+sudo systemctl status snmp_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh biner SNMP Exporter terbaru untuk sistem Linux AMD64.</li>
+            <li>Memindahkan konfigurasi generator MIB default <code>snmp.yml</code> ke <code>/etc/snmp_exporter/</code>.</li>
+            <li>Mendaftarkan service systemd.</li>
+          </ul>
+        `
+      },
+      "linux-arm64": {
+        script: `# Exporter: SNMP Exporter (Linux ARM64)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/snmp_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.26.0"
+fi
+
+ARCH="arm64"
+URL="https://github.com/prometheus/snmp_exporter/releases/download/v\${VERSION}/snmp_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading SNMP Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+tar -xvf snmp_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv snmp_exporter-\${VERSION}.linux-\${ARCH}/snmp_exporter /usr/local/bin/
+
+sudo mkdir -p /etc/snmp_exporter
+sudo mv snmp_exporter-\${VERSION}.linux-\${ARCH}/snmp.yml /etc/snmp_exporter/
+
+sudo useradd --no-create-home --shell /bin/false snmp_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/snmp_exporter.service
+[Unit]
+Description=SNMP Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=snmp_exporter
+Group=snmp_exporter
+Type=simple
+ExecStart=/usr/local/bin/snmp_exporter --config.file=/etc/snmp_exporter/snmp.yml
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable snmp_exporter
+sudo systemctl start snmp_exporter
+sudo systemctl status snmp_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARM64 untuk platform 64-bit ARM.</li>
+            <li>Mendaftarkan konfigurasi dan systemd service.</li>
+          </ul>
+        `
+      },
+      "linux-armv7": {
+        script: `# Exporter: SNMP Exporter (Linux ARMv7)
+
+VERSION=$(curl -s https://api.github.com/repos/prometheus/snmp_exporter/releases/latest | grep -Po '"tag_name": "v\\K[^"]*')
+if [ -z "$VERSION" ]; then
+  VERSION="0.26.0"
+fi
+
+ARCH="armv7"
+URL="https://github.com/prometheus/snmp_exporter/releases/download/v\${VERSION}/snmp_exporter-\${VERSION}.linux-\${ARCH}.tar.gz"
+echo "Downloading SNMP Exporter v\${VERSION} (\${ARCH})..."
+curl -LO "\$URL"
+
+tar -xvf snmp_exporter-\${VERSION}.linux-\${ARCH}.tar.gz
+sudo mv snmp_exporter-\${VERSION}.linux-\${ARCH}/snmp_exporter /usr/local/bin/
+
+sudo mkdir -p /etc/snmp_exporter
+sudo mv snmp_exporter-\${VERSION}.linux-\${ARCH}/snmp.yml /etc/snmp_exporter/
+
+sudo useradd --no-create-home --shell /bin/false snmp_exporter || true
+
+cat <<EOF | sudo tee /etc/systemd/system/snmp_exporter.service
+[Unit]
+Description=SNMP Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=snmp_exporter
+Group=snmp_exporter
+Type=simple
+ExecStart=/usr/local/bin/snmp_exporter --config.file=/etc/snmp_exporter/snmp.yml
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable snmp_exporter
+sudo systemctl start snmp_exporter
+sudo systemctl status snmp_exporter --no-pager
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Mengunduh rilis ARMv7 untuk platform 32-bit ARM.</li>
+            <li>Mendaftarkan service systemd.</li>
+          </ul>
+        `
+      },
+      "windows-amd64": {
+        script: `# Windows PowerShell Script to Install snmp_exporter
+# Jalankan PowerShell sebagai Administrator:
+
+$version = (Invoke-RestMethod -Uri "https://api.github.com/repos/prometheus/snmp_exporter/releases/latest").tag_name
+$version = $version -replace '^v', ''
+if (!$version) { $version = "0.26.0" }
+
+$url = "https://github.com/prometheus/snmp_exporter/releases/download/v$version/snmp_exporter-$version.windows-amd64.zip"
+$output = "$env:TEMP\\snmp_exporter.zip"
+$dest = "C:\\Program Files\\snmp_exporter"
+
+Write-Host "Downloading snmp_exporter v$version..."
+Invoke-WebRequest -Uri $url -OutFile $output
+
+Write-Host "Extracting files..."
+Expand-Archive -Path $output -DestinationPath $dest -Force
+Move-Item -Path "$dest\\snmp_exporter-$version.windows-amd64\\*" -Destination $dest -Force -ErrorAction SilentlyContinue
+
+Write-Host "Registering Service..."
+New-Service -Name "snmp_exporter" -BinaryPathName "$dest\\snmp_exporter.exe --config.file=\`"$dest\\snmp.yml\`"" -DisplayName "SNMP Exporter" -StartupType Automatic
+
+Write-Host "Starting service..."
+Start-Service -Name "snmp_exporter"
+Get-Service -Name "snmp_exporter"
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>PowerShell script ini mengunduh SNMP Exporter ZIP biner, mengekstraknya ke <code>Program Files</code>, dan mendaftarkannya sebagai Windows Service otomatis.</li>
+          </ul>
+        `
+      },
+      "macos": {
+        script: `# macOS Installation via Homebrew
+
+brew install snmp_exporter
+brew services start snmp_exporter
+`,
+        explanation: `
+          <ul style="padding-left: 20px; font-size: 11.5px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px;">
+            <li>Menggunakan Homebrew untuk mengelola service SNMP Exporter di macOS.</li>
+          </ul>
+        `
+      }
+    }
+  }
+};
+
+function selectExporter(expType) {
+  activeExporter = expType;
+  
+  ['node', 'blackbox', 'snmp'].forEach(t => {
+    const el = document.getElementById(`card-exp-${t}`);
+    if (el) {
+      if (t === expType) {
+        el.style.border = '2px solid #1971c2';
+        el.style.background = 'rgba(25, 113, 194, 0.05)';
+      } else {
+        el.style.border = '1px solid var(--app-border)';
+        el.style.background = 'none';
+      }
+    }
+  });
+
+  renderInstallerContent();
+}
+
+function selectPlatform(platformId) {
+  activePlatform = platformId;
+
+  const platforms = ['linux-amd64', 'linux-arm64', 'linux-armv7', 'windows-amd64', 'macos'];
+  platforms.forEach(p => {
+    const el = document.getElementById(`btn-plat-${p}`);
+    if (el) {
+      if (p === platformId) {
+        el.className = 'btn btn-primary';
+        el.style.borderColor = '';
+      } else {
+        el.className = 'btn btn-secondary';
+        el.style.borderColor = 'var(--app-border)';
+      }
+    }
+  });
+
+  renderInstallerContent();
+}
+
+function renderInstallerContent() {
+  const exporter = installerData[activeExporter];
+  if (!exporter) return;
+
+  const data = exporter.platforms[activePlatform];
+  if (!data) return;
+
+  document.getElementById('installer-script-pre').textContent = data.script;
+  document.getElementById('installer-step-explanation').innerHTML = data.explanation;
+
+  document.getElementById('exporter-github-link').href = exporter.repo;
+  document.getElementById('exporter-github-link').textContent = exporter.repo;
+  document.getElementById('exporter-default-port').textContent = exporter.port;
+  document.getElementById('exporter-prometheus-snippet').textContent = exporter.job;
+}
+
+function copyInstallerScript() {
+  const text = document.getElementById('installer-script-pre').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    addLog('System', `Copied ${installerData[activeExporter].name} (${activePlatform}) installer script to clipboard`, 'SUCCESS');
+    alert("Script copied to clipboard!");
+  }).catch(err => {
+    console.error("Failed to copy script: ", err);
+  });
+}
+
+function initInstallerPage() {
+  selectExporter('node');
+  selectPlatform('linux-amd64');
 }
