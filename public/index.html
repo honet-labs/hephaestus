@@ -383,19 +383,55 @@
 
           <!-- 3.2: DASHBOARD DETAIL VIEW -->
           <div id="telemetry-detail-view" class="hidden">
-            <div class="header-action-group">
+            <div class="header-action-group" style="margin-bottom: 12px;">
               <div style="display: flex; align-items: center; gap: 12px;">
                 <button class="btn btn-secondary" onclick="exitDashboardDetail()" style="padding: 6px 12px; font-size: 11px; height: auto;">← Back to List Report</button>
                 <h2 id="active-dashboard-title" style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-white);">Report Name</h2>
               </div>
               <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" id="btn-refresh-report" onclick="refreshReportTelemetry()" style="padding: 6px 12px; font-size: 11px; height: auto; display: flex; align-items: center; gap: 6px; border-color: var(--app-border);">
+                  <span class="spinner hidden" id="spinner-refresh-report" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                  <span>🔄 Refresh Data</span>
+                </button>
+                <button class="btn btn-secondary" onclick="window.print()" style="padding: 6px 12px; font-size: 11px; height: auto; border-color: var(--app-border);">🖨️ Print / PDF</button>
+                <button class="btn btn-secondary" onclick="exportDashboardCSV()" style="padding: 6px 12px; font-size: 11px; height: auto; border-color: var(--app-border);">📥 Export CSV</button>
                 <button class="btn btn-primary" onclick="addNewPanel()">+ Add Report</button>
               </div>
             </div>
 
-            <!-- 2-Column Panels Grid -->
-            <div class="dashboard-panels-grid" id="telemetry-panels-container">
-              <!-- Injected by JS -->
+            <!-- Pandora FMS Style Report Cover/Summary Metadata Card -->
+            <div class="panel" id="report-metadata-cover" style="margin-bottom: 20px; padding: 20px; border-left: 4px solid var(--primary-color);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+                <div style="flex: 1; min-width: 280px;">
+                  <h3 id="cover-report-name" style="margin: 0 0 6px 0; font-size: 15px; color: var(--text-white); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Weekly Network Telemetry Report</h3>
+                  <p id="cover-report-desc" style="margin: 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">This section presents telemetry performance metrics, availability stats, and charts queried dynamically from active integrations.</p>
+                </div>
+                <div style="display: grid; grid-template-columns: auto auto; gap: 8px 16px; font-size: 11px; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 6px; border: 1px solid var(--app-border); min-width: 240px;">
+                  <span style="color: var(--text-muted);">Target Group:</span>
+                  <span id="cover-report-group" style="color: var(--text-white); font-weight: bold;">--</span>
+                  <span style="color: var(--text-muted);">Generated On:</span>
+                  <span id="cover-report-date" style="color: var(--text-white); font-weight: bold; font-family: monospace;">-</span>
+                  <span style="color: var(--text-muted);">Total Elements:</span>
+                  <span id="cover-report-elements" style="color: var(--text-white); font-weight: bold;">0 Items</span>
+                  <span style="color: var(--text-muted);">Status Badge:</span>
+                  <span class="status-badge status-configured" style="font-size: 9px; padding: 1px 4px; border-radius: 3px;">ACTIVE</span>
+                </div>
+              </div>
+              
+              <!-- Mode Toggles (Visual Report vs Config List) -->
+              <div style="display: flex; gap: 12px; margin-top: 16px; border-top: 1px solid var(--app-border); padding-top: 16px;">
+                <button type="button" id="toggle-view-report" class="btn btn-primary" onclick="setReportViewMode('report')" style="font-size: 11px; padding: 6px 12px; height: auto;">
+                  📊 Visual Report Mode
+                </button>
+                <button type="button" id="toggle-view-config" class="btn btn-secondary" onclick="setReportViewMode('config')" style="font-size: 11px; padding: 6px 12px; height: auto; border-color: var(--app-border);">
+                  ⚙️ Configuration Mode
+                </button>
+              </div>
+            </div>
+
+            <!-- Report Panels Grid/Container -->
+            <div id="telemetry-panels-container">
+              <!-- Injected by JS (either Report View or Config Table) -->
             </div>
           </div>
         </div>

@@ -705,7 +705,137 @@ function renderDashboardsList() {
   tbody.innerHTML = html;
 }
 
-function enterDashboardDetail(dbId) {
+let reportViewMode = 'report';
+const expandedInlineTables = new Set();
+
+function setReportViewMode(mode) {
+  reportViewMode = mode;
+  const btnReport = document.getElementById('toggle-view-report');
+  const btnConfig = document.getElementById('toggle-view-config');
+  
+  if (mode === 'report') {
+    if (btnReport) {
+      btnReport.className = 'btn btn-primary';
+    }
+    if (btnConfig) {
+      btnConfig.className = 'btn btn-secondary';
+      btnConfig.style.borderColor = 'var(--app-border)';
+    }
+  } else {
+    if (btnReport) {
+      btnReport.className = 'btn btn-secondary';
+      btnReport.style.borderColor = 'var(--app-border)';
+    }
+    if (btnConfig) {
+      btnConfig.className = 'btn btn-primary';
+    }
+  }
+  
+  renderDashboardPanels();
+}
+
+function calculatePanelStats(data) {
+  if (!data || data.length === 0) {
+    return { min: '0.000', max: '0.000', avg: '0.000', latest: '0.000' };
+  }
+  const values = data.map(item => {
+    if (Array.isArray(item)) return parseFloat(item[1]) || 0;
+    if (item && typeof item === 'object') return parseFloat(item.value) || 0;
+    return 0;
+  });
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
+  const latest = values[values.length - 1];
+  return {
+    min: min.toFixed(3),
+    max: max.toFixed(3),
+    avg: avg.toFixed(3),
+    latest: (typeof latest === 'number' ? latest : parseFloat(latest) || 0).toFixed(3)
+  };
+}
+
+function togglePanelTableInline(panelId) {
+  const el = document.getElementById(`table-inline-${panelId}`);
+  if (!el) return;
+  if (expandedInlineTables.has(panelId)) {
+    expandedInlineTables.delete(panelId);
+    el.classList.add('hidden');
+  } else {
+    expandedInlineTables.add(panelId);
+    el.classList.remove('hidden');
+  }
+  renderDashboardPanels();
+}
+
+async function refreshReportTelemetry() {
+  const db = dashboards.find(d => d.id === activeDashboardId);
+  if (!db) return;
+
+  const btn = document.getElementById('btn-refresh-report');
+  const spinner = document.getElementById('spinner-refresh-report');
+
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  addLog('Telemetry', `Refreshing telemetry for report "${db.name}"...`, 'INFO');
+
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+  try {
+    if (db.panels && db.panels.length > 0) {
+      const promises = db.panels.map(async (panel) => {
+        const fromVal = panel.fromDate || oneHourAgo.toISOString();
+        const toVal = panel.toDate || now.toISOString();
+        try {
+          const res = await fetch('/api/v1/report/cpu', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fromDate: fromVal,
+              toDate: toVal,
+              query: panel.query,
+              format: panel.format || 'time_series',
+              intervalMs: panel.intervalMs || 60000,
+              maxDataPoints: panel.maxDataPoints || 1000,
+              datasourceUid: panel.datasourceUid,
+              datasourceType: panel.datasourceType || 'prometheus',
+              grafanaConfigId: panel.grafanaConfigId
+            })
+          });
+
+          if (res.ok) {
+            const result = await res.json();
+            if (result.success) {
+              panel.data = result.data || [];
+            } else {
+              panel.data = [];
+            }
+          } else {
+            panel.data = [];
+          }
+        } catch (err) {
+          console.error(`Error loading telemetry for panel "${panel.title}":`, err);
+          panel.data = [];
+        }
+      });
+
+      await Promise.all(promises);
+      saveDashboardsToStorage();
+    }
+    
+    renderDashboardPanels();
+    addLog('Telemetry', `Telemetry refreshed successfully.`, 'SUCCESS');
+  } catch (error) {
+    console.error('Error refreshing telemetry:', error);
+    addLog('Telemetry', 'Failed to refresh telemetry data.', 'ERROR');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
+  }
+}
+
+async function enterDashboardDetail(dbId) {
   activeDashboardId = dbId;
   const db = dashboards.find(d => d.id === dbId);
   if (!db) return;
@@ -714,7 +844,19 @@ function enterDashboardDetail(dbId) {
   document.getElementById('telemetry-detail-view').classList.remove('hidden');
   document.getElementById('active-dashboard-title').textContent = db.name;
 
+  // Update cover metadata
+  const coverName = document.getElementById('cover-report-name');
+  const coverGroup = document.getElementById('cover-report-group');
+  const coverDate = document.getElementById('cover-report-date');
+  const coverElements = document.getElementById('cover-report-elements');
+
+  if (coverName) coverName.textContent = db.name;
+  if (coverGroup) coverGroup.textContent = db.targetGroup || 'General Group';
+  if (coverDate) coverDate.textContent = new Date().toLocaleString();
+  if (coverElements) coverElements.textContent = `${db.panels ? db.panels.length : 0} Items`;
+
   renderDashboardPanels();
+  await refreshReportTelemetry();
 }
 
 function exitDashboardDetail() {
@@ -865,69 +1007,215 @@ function renderDashboardPanels() {
 
   if (!db.panels || db.panels.length === 0) {
     container.innerHTML = `
-      <div style="grid-column: span 2; text-align: center; padding: 40px; color: var(--text-muted); border: 1px dashed var(--app-border); border-radius: 6px; background: var(--app-card-dark);">
+      <div style="text-align: center; padding: 40px; color: var(--text-muted); border: 1px dashed var(--app-border); border-radius: 6px; background: var(--app-card-dark); grid-column: span 2; width: 100%;">
         No reports configured in this section. Click "+ Add Report" to create one.
       </div>
     `;
     return;
   }
 
-  let html = `
-    <div style="grid-column: span 2; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; overflow: hidden; margin-top: 10px; width: 100%;">
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 600px;">
-          <thead>
-            <tr style="background: rgba(255, 255, 255, 0.02); border-bottom: 1px solid var(--app-border);">
-              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 25%;">Report Title</th>
-              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 40%;">PromQL Expression</th>
-              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 15%;">Format</th>
-              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 10%;">Interval</th>
-              <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; text-align: right; width: 10%;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-  `;
-
-  db.panels.forEach(panel => {
-    const formatLabel = panel.format ? panel.format.replace('_', ' ').toUpperCase() : 'LINE CHART';
-    const intervalStr = panel.intervalMs ? `${panel.intervalMs}ms` : '60000ms';
-    
-    html += `
-            <tr style="border-bottom: 1px solid var(--app-border); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.01)'" onmouseout="this.style.background='transparent'">
-              <td style="padding: 14px 16px; font-size: 12px; font-weight: 500; color: var(--text-white);">${panel.title}</td>
-              <td style="padding: 14px 16px; font-size: 11px; font-family: monospace; color: var(--text-muted); word-break: break-all;">${panel.query || '-'}</td>
-              <td style="padding: 14px 16px; font-size: 11px;">
-                <span style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 10px;">${formatLabel}</span>
-              </td>
-              <td style="padding: 14px 16px; font-size: 12px; color: var(--text-muted);">${intervalStr}</td>
-              <td style="padding: 14px 16px; text-align: right;">
-                <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                  <button class="btn btn-secondary" onclick="previewPanel('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;" title="Preview Report Data">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    Preview
-                  </button>
-                  <button class="btn btn-secondary" onclick="openEditPanelModal('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;" title="Edit Config">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                    Edit
-                  </button>
-                  <button class="btn btn-secondary" onclick="deletePanel('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px; color: #ff7b72;" title="Remove Report">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                    Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
+  if (reportViewMode === 'config') {
+    // Render the Configuration Mode table
+    let html = `
+      <div style="background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; overflow: hidden; width: 100%;">
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; min-width: 600px;">
+            <thead>
+              <tr style="background: rgba(255, 255, 255, 0.02); border-bottom: 1px solid var(--app-border);">
+                <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 25%;">Report Title</th>
+                <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 40%;">PromQL Expression</th>
+                <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 15%;">Format</th>
+                <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; width: 10%;">Interval</th>
+                <th style="padding: 12px 16px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; text-align: right; width: 10%;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
     `;
-  });
 
-  html += `
-          </tbody>
-        </table>
+    db.panels.forEach(panel => {
+      const formatLabel = panel.format ? panel.format.replace('_', ' ').toUpperCase() : 'LINE CHART';
+      const intervalStr = panel.intervalMs ? `${panel.intervalMs}ms` : '60000ms';
+      
+      html += `
+              <tr style="border-bottom: 1px solid var(--app-border); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.01)'" onmouseout="this.style.background='transparent'">
+                <td style="padding: 14px 16px; font-size: 12px; font-weight: 500; color: var(--text-white);">${panel.title}</td>
+                <td style="padding: 14px 16px; font-size: 11px; font-family: monospace; color: var(--text-muted); word-break: break-all;">${panel.query || '-'}</td>
+                <td style="padding: 14px 16px; font-size: 11px;">
+                  <span style="background: rgba(56, 189, 248, 0.1); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-size: 10px;">${formatLabel}</span>
+                </td>
+                <td style="padding: 14px 16px; font-size: 12px; color: var(--text-muted);">${intervalStr}</td>
+                <td style="padding: 14px 16px; text-align: right;">
+                  <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="previewPanel('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;" title="Preview Report Data">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                      Preview
+                    </button>
+                    <button class="btn btn-secondary" onclick="openEditPanelModal('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;" title="Edit Config">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                      Edit
+                    </button>
+                    <button class="btn btn-secondary" onclick="deletePanel('${panel.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px; color: #ff7b72;" title="Remove Report">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+      `;
+    });
+
+    html += `
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+    container.innerHTML = html;
+  } else {
+    // Render the Visual Report Mode (Pandora FMS style elements)
+    let html = '<div class="dashboard-panels-grid">';
+    
+    db.panels.forEach(panel => {
+      const stats = calculatePanelStats(panel.data);
+      const hasData = panel.data && panel.data.length > 0;
+      const format = panel.format || 'line_chart';
+      const dsType = panel.datasourceType || 'prometheus';
+      const formatLabel = format.replace('_', ' ').toUpperCase();
+      
+      // Generate Chart HTML
+      let chartHtml = '';
+      if (format !== 'table') {
+        if (!hasData) {
+          chartHtml = `
+            <div style="height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--app-border); border-radius: 4px; margin-top: 12px; color: var(--text-muted); background: rgba(0, 0, 0, 0.1);">
+              <span style="font-size: 10px;">No telemetry data loaded. Click "Refresh Data" to pull metrics.</span>
+            </div>
+          `;
+        } else {
+          if (format === 'line_chart') {
+            chartHtml = generateLineOrAreaChart(panel.data, false);
+          } else if (format === 'area_chart') {
+            chartHtml = generateLineOrAreaChart(panel.data, true);
+          } else if (format === 'bar_chart' || format === 'time_series') {
+            chartHtml = generateBarChart(panel.data);
+          } else if (format === 'pie_chart') {
+            chartHtml = generateDonutOrPieChart(panel.data, false);
+          } else if (format === 'donut_chart') {
+            chartHtml = generateDonutOrPieChart(panel.data, true);
+          }
+        }
+      }
 
-  container.innerHTML = html;
+      // Generate Data Table rows
+      let rowsHtml = '';
+      if (hasData) {
+        const isCpu = panel.query && panel.query.toLowerCase().includes('cpu');
+        const suffix = isCpu ? ' %' : '';
+        const sortedData = [...panel.data].reverse();
+        
+        sortedData.forEach(item => {
+          let timestamp, value;
+          if (Array.isArray(item)) {
+            timestamp = item[0];
+            value = item[1];
+          } else {
+            timestamp = item.timestamp;
+            value = item.value;
+          }
+          const timeStr = new Date(timestamp).toLocaleTimeString();
+          const dateStr = new Date(timestamp).toLocaleDateString();
+          rowsHtml += `
+            <tr style="border-bottom: 1px solid var(--app-border);">
+              <td class="font-mono" style="font-size: 10px; color: var(--text-muted); padding: 6px 10px;">${timestamp}</td>
+              <td style="font-size: 10px; padding: 6px 10px; color: var(--text-white);">${dateStr} ${timeStr}</td>
+              <td class="font-mono" style="font-size: 10px; color: #38bdf8; font-weight: bold; text-align: right; padding: 6px 10px;">
+                ${parseFloat(value).toFixed(3)}${suffix}
+              </td>
+            </tr>
+          `;
+        });
+      }
+
+      const isExpanded = expandedInlineTables.has(panel.id);
+      const displayClass = isExpanded ? '' : 'hidden';
+      const buttonText = isExpanded ? 'Hide Raw Data Table ▲' : 'Show Raw Data Table ▼';
+
+      html += `
+        <div class="panel" style="display: flex; flex-direction: column; gap: 12px; border-left: 4px solid #1971c2; position: relative;">
+          <!-- Card Header -->
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h4 style="margin: 0; font-size: 13px; color: var(--text-white); font-weight: bold;">${panel.title}</h4>
+              <span class="font-mono" style="font-size: 9px; color: var(--text-muted); display: block; margin-top: 4px; word-break: break-all;">
+                [${dsType.toUpperCase()}] ${panel.query || 'No query configured'}
+              </span>
+            </div>
+            <span style="background: rgba(25, 113, 194, 0.1); color: #1971c2; border: 1px solid rgba(25, 113, 194, 0.2); padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 9px; text-transform: uppercase;">
+              ${formatLabel}
+            </span>
+          </div>
+
+          <!-- Chart Area -->
+          ${chartHtml}
+
+          <!-- Stats Grid -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; border-top: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); padding: 8px 0; margin-top: 8px;">
+            <div style="text-align: center;">
+              <span style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; display: block;">Min</span>
+              <span class="font-mono" style="font-size: 11px; font-weight: bold; color: #ff7b72;">${stats.min}</span>
+            </div>
+            <div style="text-align: center;">
+              <span style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; display: block;">Max</span>
+              <span class="font-mono" style="font-size: 11px; font-weight: bold; color: #56d364;">${stats.max}</span>
+            </div>
+            <div style="text-align: center;">
+              <span style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; display: block;">Average</span>
+              <span class="font-mono" style="font-size: 11px; font-weight: bold; color: #38bdf8;">${stats.avg}</span>
+            </div>
+            <div style="text-align: center;">
+              <span style="font-size: 8px; color: var(--text-muted); text-transform: uppercase; display: block;">Latest</span>
+              <span class="font-mono" style="font-size: 11px; font-weight: bold; color: var(--text-white);">${stats.latest}</span>
+            </div>
+          </div>
+
+          <!-- Actions & Expansion -->
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button type="button" class="btn btn-secondary" onclick="togglePanelTableInline('${panel.id}')" style="flex: 1; font-size: 10px; padding: 4px 8px; height: auto; border-color: var(--app-border); text-align: center; justify-content: center;">
+              ${buttonText}
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="exportPanelCSV('${panel.id}')" style="font-size: 10px; padding: 4px 8px; height: auto; border-color: var(--app-border); display: inline-flex; align-items: center; justify-content: center;" title="Export CSV">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
+          </div>
+
+          <!-- Inline Raw Data Table -->
+          <div id="table-inline-${panel.id}" class="${displayClass}" style="margin-top: 8px; max-height: 180px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
+            ${hasData ? `
+              <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                  <tr style="background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--app-border);">
+                    <th style="font-size: 9px; padding: 6px 10px; color: var(--text-muted);">Epoch</th>
+                    <th style="font-size: 9px; padding: 6px 10px; color: var(--text-muted);">Time</th>
+                    <th style="font-size: 9px; padding: 6px 10px; text-align: right; color: var(--text-muted);">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            ` : `
+              <div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 10px;">
+                No historical records loaded.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+  }
 }
 
 // Dashboard Modals and CRUD

@@ -963,8 +963,8 @@ tr:hover td {
 
 @media print {
   body {
-    background: #0d1117 !important;
-    color: #c9d1d9 !important;
+    background: #ffffff !important;
+    color: #1f2328 !important;
   }
   .app-sidebar, .app-topbar, .btn, .dashboard-panel-actions, .header-action-group, #telemetry-list-view {
     display: none !important;
@@ -973,16 +973,39 @@ tr:hover td {
     display: block !important;
     padding: 0 !important;
   }
+  #report-metadata-cover {
+    background: #f6f8fa !important;
+    border: 1px solid #d0d7de !important;
+    border-left: 4px solid #1971c2 !important;
+    color: #1f2328 !important;
+    margin-bottom: 20px !important;
+  }
+  #report-metadata-cover h3, #report-metadata-cover p, #report-metadata-cover span {
+    color: #1f2328 !important;
+  }
+  #report-metadata-cover div[style*="border-top"] {
+    display: none !important;
+  }
   .dashboard-panels-grid {
     display: flex !important;
     flex-direction: column !important;
     gap: 20px !important;
   }
   .panel {
-    background: #161b22 !important;
-    border: 1px solid #30363d !important;
+    background: #ffffff !important;
+    border: 1px solid #d0d7de !important;
+    color: #1f2328 !important;
     box-shadow: none !important;
-    page-break-inside: avoid;
+    page-break-inside: avoid !important;
+  }
+  .panel h4, .panel span, .panel td, .panel th {
+    color: #1f2328 !important;
+  }
+  svg path {
+    stroke: #1971c2 !important;
+  }
+  svg line {
+    stroke: #d0d7de !important;
   }
 }
 
