@@ -22,6 +22,8 @@ export class SettingsController {
       res.status(200).json({
         success: true,
         data: {
+          id: activeConfig.id,
+          name: activeConfig.name,
           host: activeConfig.host,
           datasourceUid: activeConfig.datasourceUid,
           isConfigured: activeConfig.isConfigured,
@@ -45,7 +47,21 @@ export class SettingsController {
    */
   public async getGrafanaDatasources(req: Request, res: Response): Promise<void> {
     try {
-      const datasources = await grafanaService.getDatasources();
+      const configId = req.query.configId && typeof req.query.configId === "string" ? req.query.configId : undefined;
+      
+      let host: string | undefined;
+      let token: string | undefined;
+
+      if (configId) {
+        const list = grafanaService.getConfigsList();
+        const found = list.find(c => c.id === configId);
+        if (found) {
+          host = found.host;
+          token = found.token;
+        }
+      }
+
+      const datasources = await grafanaService.getDatasources(host, token);
       res.status(200).json({
         success: true,
         data: datasources
@@ -200,6 +216,253 @@ export class SettingsController {
         success: false,
         error: "Internal Server Error",
         message: error.message || "Failed to process Grafana settings action."
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/settings/grafana/configs
+   * List all saved configurations
+   */
+  public async getConfigsList(req: Request, res: Response): Promise<void> {
+    try {
+      const list = grafanaService.getConfigsList();
+      const sanitized = list.map(c => ({
+        id: c.id,
+        name: c.name,
+        host: c.host,
+        datasourceUid: c.datasourceUid,
+        isActive: c.isActive,
+        maskedToken: maskToken(c.token)
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: sanitized
+      });
+    } catch (error: any) {
+      console.error("[SettingsController] list configs error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message || "Failed to list configurations."
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/settings/grafana/configs
+   * Add or update a configuration
+   */
+  public async saveOrUpdateConfig(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, name, host, token, datasourceUid } = req.body;
+
+      if (!name || typeof name !== "string" || name.trim() === "") {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Name is required."
+        });
+        return;
+      }
+
+      if (!host || typeof host !== "string" || host.trim() === "") {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Grafana Host URL is required."
+        });
+        return;
+      }
+
+      const list = grafanaService.getConfigsList();
+      let targetToken = token;
+
+      if (id) {
+        const existing = list.find(c => c.id === id);
+        if (existing && (token.includes("******") || token.includes("************"))) {
+          targetToken = existing.token;
+        }
+      }
+
+      if (!targetToken || typeof targetToken !== "string" || targetToken.trim() === "") {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Grafana Service Account Token is required."
+        });
+        return;
+      }
+
+      // Test connection
+      try {
+        await grafanaService.testConnection(host, targetToken);
+      } catch (err: any) {
+        res.status(400).json({
+          success: false,
+          error: "Connection Test Failed",
+          message: `Connection failed: ${err.message}`
+        });
+        return;
+      }
+
+      // Resolve datasourceUid if empty
+      let finalDsUid = datasourceUid ? datasourceUid.trim() : "";
+      if (!finalDsUid) {
+        try {
+          const datasources = await grafanaService.getDatasources(host, targetToken);
+          const promoDs = datasources.find((ds: any) => ds.type === "prometheus");
+          if (promoDs) finalDsUid = promoDs.uid;
+          else if (datasources.length > 0) finalDsUid = datasources[0].uid;
+        } catch (e) {
+          console.error("Auto-detect failed:", e);
+        }
+      }
+      if (!finalDsUid) finalDsUid = "bf5jy3ppyomwwd";
+
+      if (id) {
+        const existing = list.find(c => c.id === id);
+        if (existing) {
+          existing.name = name.trim();
+          existing.host = host.trim();
+          existing.token = targetToken.trim();
+          existing.datasourceUid = finalDsUid;
+        }
+      } else {
+        const newItem = {
+          id: "cfg-" + Date.now(),
+          name: name.trim(),
+          host: host.trim(),
+          token: targetToken.trim(),
+          datasourceUid: finalDsUid,
+          isActive: list.length === 0
+        };
+        list.push(newItem);
+      }
+
+      grafanaService.saveConfigsList(list);
+
+      res.status(200).json({
+        success: true,
+        message: "Grafana configuration saved successfully."
+      });
+    } catch (error: any) {
+      console.error("[SettingsController] save/update config error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message || "Failed to save configuration."
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/v1/settings/grafana/configs/:id
+   * Delete a configuration
+   */
+  public async deleteConfig(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      let list = grafanaService.getConfigsList();
+      const itemToDelete = list.find(c => c.id === id);
+      
+      if (!itemToDelete) {
+        res.status(404).json({
+          success: false,
+          error: "Not Found",
+          message: "Configuration not found."
+        });
+        return;
+      }
+
+      list = list.filter(c => c.id !== id);
+      if (itemToDelete.isActive && list.length > 0) {
+        list[0].isActive = true;
+      }
+
+      grafanaService.saveConfigsList(list);
+
+      res.status(200).json({
+        success: true,
+        message: "Configuration deleted successfully."
+      });
+    } catch (error: any) {
+      console.error("[SettingsController] delete config error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message || "Failed to delete configuration."
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/settings/grafana/configs/:id/activate
+   * Set configuration as active
+   */
+  public async activateConfig(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const list = grafanaService.getConfigsList();
+      const target = list.find(c => c.id === id);
+
+      if (!target) {
+        res.status(404).json({
+          success: false,
+          error: "Not Found",
+          message: "Configuration not found."
+        });
+        return;
+      }
+
+      list.forEach(c => c.isActive = (c.id === id));
+      grafanaService.saveConfigsList(list);
+
+      res.status(200).json({
+        success: true,
+        message: `Activated configuration: ${target.name}`
+      });
+    } catch (error: any) {
+      console.error("[SettingsController] activate config error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message || "Failed to activate configuration."
+      });
+    }
+  }
+
+  /**
+   * POST /api/v1/settings/grafana/configs/:id/test
+   * Test connection of a registered server configuration
+   */
+  public async testConfigConnection(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const list = grafanaService.getConfigsList();
+      const target = list.find(c => c.id === id);
+
+      if (!target) {
+        res.status(404).json({
+          success: false,
+          error: "Not Found",
+          message: "Configuration not found."
+        });
+        return;
+      }
+
+      const success = await grafanaService.testConnection(target.host, target.token);
+      res.status(200).json({
+        success: true,
+        isConnected: success,
+        message: success ? "Connection successful!" : "Connection failed."
+      });
+    } catch (error: any) {
+      res.status(200).json({
+        success: false,
+        isConnected: false,
+        message: error.message || "Failed to connect to Grafana."
       });
     }
   }

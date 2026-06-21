@@ -16,6 +16,7 @@ export interface GrafanaQueryRequest {
   maxDataPoints?: number;
   datasourceUid?: string;
   datasourceType?: string;
+  grafanaConfigId?: string;
 }
 
 export class GrafanaService {
@@ -101,8 +102,24 @@ export class GrafanaService {
    */
   public async queryCpuLoad(params: GrafanaQueryRequest): Promise<Datapoint[]> {
     try {
-      const activeConfig = config.getGrafanaConfig();
-      if (!activeConfig.isConfigured || !activeConfig.token) {
+      let targetConfig;
+      if (params.grafanaConfigId) {
+        const list = this.getConfigsList();
+        const found = list.find(c => c.id === params.grafanaConfigId);
+        if (found) {
+          targetConfig = {
+            host: found.host.replace(/\/$/, ""),
+            token: found.token,
+            datasourceUid: found.datasourceUid,
+            isConfigured: true
+          };
+        }
+      }
+      if (!targetConfig) {
+        targetConfig = config.getGrafanaConfig();
+      }
+
+      if (!targetConfig.isConfigured || !targetConfig.token) {
         throw new Error("Grafana token is not configured. Please set the integration details in System Settings.");
       }
 
@@ -118,15 +135,15 @@ export class GrafanaService {
         params.format,
         params.intervalMs,
         params.maxDataPoints,
-        params.datasourceUid,
+        params.datasourceUid || targetConfig.datasourceUid,
         params.datasourceType
       );
-      const targetUrl = `${activeConfig.host}/api/ds/query`;
+      const targetUrl = `${targetConfig.host}/api/ds/query`;
 
       // 3. Setup authentication headers
       const headers = {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${activeConfig.token}`
+        "Authorization": `Bearer ${targetConfig.token}`
       };
 
       // 4. Send POST request to Grafana ds query endpoint
@@ -214,20 +231,91 @@ export class GrafanaService {
   }
 
   /**
-   * Saves the Grafana integration configuration to disk.
+   * Retrieves all saved Grafana configurations from the list file.
    */
-  public saveConfig(host: string, token: string, datasourceUid: string): void {
+  public getConfigsList(): any[] {
+    if (!fs.existsSync(config.grafanaConfigsFile)) {
+      // Migrate legacy config if it exists
+      if (fs.existsSync(config.grafanaConfigFile)) {
+        try {
+          const fileContent = fs.readFileSync(config.grafanaConfigFile, "utf-8");
+          const parsed = JSON.parse(fileContent);
+          if (parsed.host && parsed.token) {
+            const legacyItem = {
+              id: "cfg-legacy",
+              name: "Default Grafana Integration",
+              host: parsed.host.trim(),
+              token: parsed.token.trim(),
+              datasourceUid: (parsed.datasourceUid || "bf5jy3ppyomwwd").trim(),
+              isActive: true
+            };
+            this.saveConfigsList([legacyItem]);
+            return [legacyItem];
+          }
+        } catch (e) {
+          console.error("[GrafanaService] Error migrating legacy config:", e);
+        }
+      }
+      return [];
+    }
+
+    try {
+      const fileContent = fs.readFileSync(config.grafanaConfigsFile, "utf-8");
+      return JSON.parse(fileContent);
+    } catch (e) {
+      console.error("[GrafanaService] Error reading configs list:", e);
+      return [];
+    }
+  }
+
+  /**
+   * Writes the configurations list to disk.
+   */
+  public saveConfigsList(list: any[]): void {
     try {
       if (!fs.existsSync(config.dbDir)) {
         fs.mkdirSync(config.dbDir, { recursive: true });
       }
+      fs.writeFileSync(config.grafanaConfigsFile, JSON.stringify(list, null, 2), "utf-8");
+      console.log(`[GrafanaService] Successfully saved Grafana configs list file to ${config.grafanaConfigsFile}`);
+    } catch (error: any) {
+      throw new Error(`Gagal menulis file daftar konfigurasi Grafana: ${error.message}`);
+    }
+  }
 
+  /**
+   * Saves the Grafana integration configuration to disk.
+   */
+  public saveConfig(host: string, token: string, datasourceUid: string): void {
+    try {
+      const list = this.getConfigsList();
+      const activeItem = list.find(c => c.isActive);
+
+      if (activeItem) {
+        activeItem.host = host.trim();
+        activeItem.token = token.trim();
+        activeItem.datasourceUid = (datasourceUid || "bf5jy3ppyomwwd").trim();
+      } else {
+        const newItem = {
+          id: "cfg-" + Date.now(),
+          name: "Grafana Integration",
+          host: host.trim(),
+          token: token.trim(),
+          datasourceUid: (datasourceUid || "bf5jy3ppyomwwd").trim(),
+          isActive: true
+        };
+        list.forEach(c => c.isActive = false);
+        list.push(newItem);
+      }
+
+      this.saveConfigsList(list);
+
+      // Keep legacy file in sync
       const payload = {
         host: host.trim(),
         token: token.trim(),
         datasourceUid: (datasourceUid || "bf5jy3ppyomwwd").trim()
       };
-
       fs.writeFileSync(config.grafanaConfigFile, JSON.stringify(payload, null, 2), "utf-8");
       console.log(`[GrafanaService] Successfully saved Grafana config file to ${config.grafanaConfigFile}`);
     } catch (error: any) {
@@ -240,9 +328,13 @@ export class GrafanaService {
    */
   public resetConfig(): void {
     try {
+      if (fs.existsSync(config.grafanaConfigsFile)) {
+        fs.unlinkSync(config.grafanaConfigsFile);
+        console.log(`[GrafanaService] Configs list file deleted.`);
+      }
       if (fs.existsSync(config.grafanaConfigFile)) {
         fs.unlinkSync(config.grafanaConfigFile);
-        console.log(`[GrafanaService] Dynamic config file deleted. Reverting to environment variables.`);
+        console.log(`[GrafanaService] Legacy config file deleted.`);
       }
     } catch (error: any) {
       throw new Error(`Gagal mereset konfigurasi Grafana: ${error.message}`);

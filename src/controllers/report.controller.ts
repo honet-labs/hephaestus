@@ -54,7 +54,8 @@ export class ReportController {
         intervalMs: intervalMs,
         maxDataPoints: maxDataPoints,
         datasourceUid: req.body.datasourceUid && typeof req.body.datasourceUid === "string" ? req.body.datasourceUid : undefined,
-        datasourceType: req.body.datasourceType && typeof req.body.datasourceType === "string" ? req.body.datasourceType : undefined
+        datasourceType: req.body.datasourceType && typeof req.body.datasourceType === "string" ? req.body.datasourceType : undefined,
+        grafanaConfigId: req.body.grafanaConfigId && typeof req.body.grafanaConfigId === "string" ? req.body.grafanaConfigId : undefined
       });
 
       // 4. Return clean, formatted response

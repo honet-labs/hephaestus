@@ -267,122 +267,91 @@
             </div>
           </div>
         </div>
-
-
-        <!-- PAGE 2: SETTINGS -->
-        <div id="page-settings" class="main-grid hidden">
-          <!-- Left Column -->
+          <!-- PAGE 2: SETTINGS -->
+        <div id="page-settings" class="settings-grid hidden">
+          <!-- Left Column: Form -->
           <div style="display: flex; flex-direction: column; gap: 20px;">
             <div class="panel">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                  Grafana Core API Configuration
+              <div class="panel-header" style="border-bottom: none; margin-bottom: 24px; padding-bottom: 0;">
+                <h3 class="panel-title" style="text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--text-white);">
+                  + Register Service Endpoint
                 </h3>
               </div>
 
-              <form id="grafana-form" onsubmit="testGrafanaConnection(event)" style="display: flex; flex-direction: column; gap: 16px;">
-                <div class="form-group">
-                  <label for="grafana-host">Grafana Host URL</label>
-                  <input type="text" id="grafana-host" placeholder="e.g. http://192.168.10.15:3000" required>
-                  <span class="form-help">The primary base URL of your target Grafana server instance.</span>
-                </div>
+              <form id="grafana-form" onsubmit="saveGrafanaConfiguration(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                <input type="hidden" id="grafana-config-id" value="">
 
                 <div class="form-group">
-                  <label for="grafana-token">Bearer Service Account Token</label>
-                  <input type="password" id="grafana-token" placeholder="glsa_xxxxxxxxxxxxxxxxxxxxxxxx" required>
-                  <span class="form-help">Service Account Token created with Viewer or Editor permissions. Will be masked for security.</span>
+                  <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Connection Type</label>
+                  <select id="connection-type" class="form-control" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
+                    <option value="grafana">Grafana Core API</option>
+                  </select>
                 </div>
 
-                 <div class="form-group">
-                   <label for="grafana-datasource-uid">Prometheus Datasource UID (Optional)</label>
-                   <input type="text" id="grafana-datasource-uid" placeholder="e.g. bf5jy3ppyomwwd">
-                   <span class="form-help">The unique ID of the target Prometheus datasource mapped in your Grafana. Left blank to auto-detect.</span>
-                 </div>
-
-                <div class="btn-group">
-                  <button type="submit" id="btn-test-grafana" class="btn btn-secondary">
-                    <span class="spinner hidden" id="spinner-test"></span>
-                    <span>Test Connection</span>
-                  </button>
-                  <button type="button" id="btn-save-grafana" onclick="saveGrafanaConfiguration()" class="btn btn-primary">
-                    <span class="spinner hidden" id="spinner-save"></span>
-                    <span>Save & Apply Settings</span>
-                  </button>
+                <div class="form-group">
+                  <label for="grafana-name" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Service Alias Name</label>
+                  <input type="text" id="grafana-name" placeholder="e.g. Production Grafana" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px;">
                 </div>
+
+                <div class="form-group">
+                  <label for="grafana-host" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">API Endpoint URL</label>
+                  <input type="text" id="grafana-host" placeholder="e.g. http://172.18.29.120:3000" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group">
+                  <label for="grafana-token" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Bearer Service Account Token</label>
+                  <input type="password" id="grafana-token" placeholder="glsa_xxxxxxxxxxxxxxxxxxxxxxxx" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <div class="form-group">
+                  <label for="grafana-datasource-uid" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Prometheus Datasource UID (Optional)</label>
+                  <input type="text" id="grafana-datasource-uid" placeholder="e.g. bfo80enbiimf4f" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px;">
+                </div>
+
+                <button type="submit" id="btn-save-grafana" class="btn btn-primary" style="width: 100%; justify-content: center; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; padding: 10px 16px; margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+                  <span class="spinner hidden" id="spinner-save"></span>
+                  <span id="btn-save-text">+ Register Endpoint</span>
+                </button>
               </form>
 
-              <div id="grafana-feedback" class="alert hidden">
+              <div id="grafana-feedback" class="alert hidden" style="margin-top: 16px;">
                 <span class="alert-title" id="feedback-title"></span>
                 <span id="feedback-desc"></span>
               </div>
-            </div>
 
-            <!-- Available Datasources Panel -->
-            <div id="datasources-panel" class="panel hidden">
-              <div class="panel-header">
-                <h3 class="panel-title">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
-                  Available Grafana Datasources
-                </h3>
-                <button type="button" class="btn btn-secondary" onclick="fetchDatasources()" style="padding: 4px 8px; font-size: 10px; height: auto;">
-                  <span class="spinner hidden" id="spinner-sync-ds"></span>
-                  <span>Sync List</span>
-                </button>
+              <!-- Datasource Notes -->
+              <div style="border-top: 1px solid var(--app-border); margin-top: 20px; padding-top: 16px;">
+                <h4 style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  Datasource Notes
+                </h4>
+                <p style="font-size: 10.5px; color: var(--text-muted); line-height: 1.6;">
+                  Registered endpoints are queried asynchronously for dashboard stats and report telemetry widgets. Ensure Network Security Groups allow ingress queries from the Hephaestus portal IP gateway.
+                </p>
               </div>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>UID</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="datasources-tbody">
-                    <tr>
-                      <td colspan="4" class="text-center" style="padding: 20px; text-align: center; color: var(--text-muted);">
-                        Click "Sync List" to fetch datasources.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Revert Section -->
-            <div id="revert-box" class="panel hidden">
-              <div class="panel-header">
-                <h3 class="panel-title" style="color: #ff7b72;">Revert Custom Registry</h3>
-              </div>
-              <p class="form-help" style="margin-bottom: 12px;">Hapus konfigurasi penyimpanan kustom dan kembalikan ke nilai default lingkungan (.env).</p>
-              <button onclick="resetGrafanaConfiguration()" id="btn-reset-grafana" class="btn btn-danger">
-                <span class="spinner hidden" id="spinner-reset"></span>
-                <span>Reset to System Default</span>
-              </button>
             </div>
           </div>
 
-          <!-- Right Column -->
+          <!-- Right Column: Active Registry -->
           <div style="display: flex; flex-direction: column; gap: 20px;">
             <div class="panel">
-              <div class="panel-header">
-                <h3 class="panel-title">Integration Guideline</h3>
+              <div class="panel-header" style="border-bottom: none; margin-bottom: 24px; padding-bottom: 0;">
+                <h3 class="panel-title" id="registry-header-title" style="text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--text-white);">
+                  Active Registry (0)
+                </h3>
+                <button type="button" class="btn btn-secondary" onclick="clearGrafanaForm()" style="padding: 4px 8px; font-size: 10px; height: auto; text-transform: uppercase; font-weight: bold; border-color: var(--app-border);">
+                  <span>+ Add Server</span>
+                </button>
               </div>
-              <p class="form-help" style="color: #c9d1d9; margin-bottom: 8px;">
-                Hephaestus-tools query metrics target: <code class="font-mono">/api/ds/query</code>.
-              </p>
-              <p class="form-help" style="margin-bottom: 8px;">
-                This ensures data retrieved matches 100% with panels calculation.
-              </p>
-              <p class="form-help">
-                Persistent configuration is written to Docker Volume file storage <code class="font-mono">data/grafana_config.json</code> dynamically.
-              </p>
+
+              <div id="registry-cards-container" style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="text-align: center; padding: 24px; color: var(--text-muted);">
+                  Loading registry list...
+                </div>
+              </div>
             </div>
           </div>
         </div>
-
 
         <!-- PAGE 3: QUERY DATA -->
         <div id="page-telemetry" class="hidden">
@@ -544,6 +513,13 @@
           </div>
 
           <div class="form-group">
+            <label for="panel-config-select">Grafana Server Profile</label>
+            <select id="panel-config-select" onchange="onPanelConfigChange()">
+              <option value="">-- Loading Server Profiles... --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
             <label for="panel-datasource-select">Grafana Datasource</label>
             <select id="panel-datasource-select" onchange="onPanelDatasourceChange()">
               <option value="">-- Loading Datasources... --</option>
@@ -623,6 +599,42 @@
           Export CSV Report
         </button>
         <button class="btn btn-secondary" onclick="closePreviewModal()" style="padding: 6px 12px; font-size: 11px; height: auto;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Available Grafana Datasources Popup Modal -->
+  <div class="modal-overlay" id="datasources-modal">
+    <div class="modal-dialog" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="datasources-modal-title">Available Grafana Datasources</h3>
+        <button class="modal-close" onclick="closeDatasourcesModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px 20px;">
+        <div id="datasources-modal-server-info" style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; font-family: monospace;">
+          <!-- Server Host: ... -->
+        </div>
+        <div class="table-wrapper" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);">
+                <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Name</th>
+                <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Type</th>
+                <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">UID</th>
+              </tr>
+            </thead>
+            <tbody id="popup-datasources-tbody">
+              <tr>
+                <td colspan="3" class="text-center" style="padding: 20px; text-align: center; color: var(--text-muted);">
+                  Loading datasources...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px;">
+        <button class="btn btn-secondary" onclick="closeDatasourcesModal()" style="padding: 6px 12px; font-size: 11px; height: auto;">Close</button>
       </div>
     </div>
   </div>

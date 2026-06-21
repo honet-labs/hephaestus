@@ -7,25 +7,28 @@
 }
 
 :root {
-  --background: #090a0f;
+  --background: #242424;
   --foreground: #cbd5e1;
-  --app-sidebar: #0f111a;
-  --app-topbar: #0d0f15;
-  --app-card: #151824;
-  --app-card-dark: #0b0c13;
-  --app-border: #1f2335;
-  --prometheus-orange: #3b82f6;
-  --prometheus-orange-hover: #60a5fa;
-  --prometheus-orange-active: #2563eb;
-  --prometheus-orange-muted: rgba(59, 130, 246, 0.12);
+  --app-sidebar: rgb(65, 73, 81);
+  --app-topbar: #1e1e1e;
+  --app-card: #2e2e2e;
+  --app-card-dark: #1f1f1f;
+  --app-border: #3c3c3c;
+  --prometheus-orange: #a48181;
+  --prometheus-orange-hover: #bfa3a3;
+  --prometheus-orange-active: #8e6c6c;
+  --prometheus-orange-muted: rgba(164, 129, 129, 0.15);
   --success: #10b981;
   --success-border: rgba(16, 185, 129, 0.3);
   --error: #ef4444;
   --error-border: rgba(239, 68, 68, 0.3);
   --warning: #f59e0b;
   --warning-border: rgba(245, 158, 11, 0.3);
-  --text-white: #f8fafc;
-  --text-muted: #64748b;
+  --text-white: #ffffff;
+  --text-muted: #a0a0a0;
+  --btn-primary-bg: #1971c2;
+  --btn-primary-color: #ffffff;
+  --btn-primary-hover: #1864ab;
 }
 
 body {
@@ -447,6 +450,19 @@ code, pre, .font-mono {
   }
 }
 
+/* Settings Grid layout matching Image 2 */
+.settings-grid {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .header-action-group {
   display: flex;
   justify-content: space-between;
@@ -572,23 +588,23 @@ button.btn {
 }
 
 button.btn-primary {
-  background-color: var(--prometheus-orange);
-  color: white;
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
 }
 
 button.btn-primary:hover:not(:disabled) {
-  background-color: var(--prometheus-orange-hover);
+  background-color: var(--btn-primary-hover);
 }
 
 button.btn-secondary {
-  background-color: #161822;
+  background-color: var(--app-card-dark);
   border: 1px solid var(--app-border);
   color: var(--foreground);
 }
 
 button.btn-secondary:hover:not(:disabled) {
   color: white;
-  background-color: #212534;
+  background-color: #333333;
   border-color: var(--prometheus-orange);
 }
 
@@ -831,7 +847,7 @@ tr:hover td {
 }
 
 .modal-dialog {
-  background: var(--app-bg-dark);
+  background: var(--app-card);
   border: 1px solid var(--app-border);
   border-radius: 8px;
   width: 90%;

@@ -14,6 +14,9 @@ const pageDesc = document.getElementById('page-desc');
 const inputHost = document.getElementById('grafana-host');
 const inputToken = document.getElementById('grafana-token');
 const inputDatasource = document.getElementById('grafana-datasource-uid');
+const inputConfigId = document.getElementById('grafana-config-id');
+const inputName = document.getElementById('grafana-name');
+const registryCardsContainer = document.getElementById('registry-cards-container');
 
 const btnTest = document.getElementById('btn-test-grafana');
 const btnSave = document.getElementById('btn-save-grafana');
@@ -247,11 +250,11 @@ async function loadGrafanaSettings() {
     
     const result = await res.json();
     if (result.success && result.data) {
-      const { host, datasourceUid, isConfigured, maskedToken } = result.data;
+      const { id, name, host, datasourceUid, isConfigured, maskedToken } = result.data;
       defaultDatasourceUid = datasourceUid || 'bf5jy3ppyomwwd';
       
       // Update config views
-      activeHost.textContent = host || 'None (No active config)';
+      activeHost.textContent = name ? `${name} (${host})` : (host || 'None (No active config)');
       activeDatasource.textContent = datasourceUid || 'bf5jy3ppyomwwd';
       
       widgetDatasourceUid.textContent = datasourceUid || 'bf5jy3ppyomwwd';
@@ -260,29 +263,29 @@ async function loadGrafanaSettings() {
         // Status updates (configured)
         activeState.className = 'status-badge status-configured';
         activeState.innerHTML = '● Custom Config';
-        revertBox.classList.remove('hidden');
+        if (revertBox) revertBox.classList.remove('hidden');
         
         widgetGrafanaStatus.textContent = 'Connected';
         widgetGrafanaStatus.style.color = '#56d364';
-        widgetGrafanaSub.textContent = host;
+        widgetGrafanaSub.textContent = name || host;
         
         infraGrafanaDot.className = 'status-dot dot-green';
         
         // Fill form fields
+        if (inputConfigId) inputConfigId.value = id || '';
+        if (inputName) inputName.value = name || '';
         inputHost.value = host;
         inputDatasource.value = datasourceUid;
         inputToken.value = maskedToken || '****************';
         
         addLog('Configuration', 'Loaded custom Grafana configuration from local storage', 'OK');
         
-        // Show and fetch datasources
-        datasourcesPanel.classList.remove('hidden');
-        fetchDatasources();
+        if (datasourcesPanel) datasourcesPanel.classList.remove('hidden');
       } else {
         // Status updates (defaults)
         activeState.className = 'status-badge status-default';
         activeState.innerHTML = '● Default Env';
-        revertBox.classList.add('hidden');
+        if (revertBox) revertBox.classList.add('hidden');
         
         if (host) {
           widgetGrafanaStatus.textContent = 'Connected';
@@ -290,15 +293,15 @@ async function loadGrafanaSettings() {
           widgetGrafanaSub.textContent = 'Using .env configuration';
           infraGrafanaDot.className = 'status-dot dot-green';
           
+          if (inputConfigId) inputConfigId.value = id || '';
+          if (inputName) inputName.value = name || 'Environment Defaults';
           inputHost.value = host;
           inputDatasource.value = datasourceUid;
           inputToken.value = maskedToken || '';
           
           addLog('Configuration', 'Using static .env configuration defaults', 'INFO');
           
-          // Show and fetch datasources
-          datasourcesPanel.classList.remove('hidden');
-          fetchDatasources();
+          if (datasourcesPanel) datasourcesPanel.classList.remove('hidden');
         } else {
           widgetGrafanaStatus.textContent = 'Offline';
           widgetGrafanaStatus.style.color = '#ff7b72';
@@ -306,12 +309,228 @@ async function loadGrafanaSettings() {
           infraGrafanaDot.className = 'status-dot dot-yellow';
           
           addLog('Configuration', 'No environment or custom settings loaded. Please configure.', 'WARN');
-          datasourcesPanel.classList.add('hidden');
+          if (datasourcesPanel) datasourcesPanel.classList.add('hidden');
         }
       }
+      await loadGrafanaConfigsList();
     }
   } catch (error) {
     addLog('Configuration', 'Failed to fetch settings from server.', 'ERROR');
+  }
+}
+
+async function loadGrafanaConfigsList() {
+  if (!registryCardsContainer) return;
+
+  try {
+    const res = await fetch('/api/v1/settings/grafana/configs');
+    const result = await res.json();
+    if (res.ok && result.success && Array.isArray(result.data)) {
+      const list = result.data;
+      
+      // Update header count
+      const headerTitle = document.getElementById('registry-header-title');
+      if (headerTitle) {
+        headerTitle.textContent = `Active Registry (${list.length})`;
+      }
+
+      if (list.length === 0) {
+        registryCardsContainer.innerHTML = `
+          <div style="text-align: center; padding: 24px; color: var(--text-muted);">
+            No registered Grafana servers found.
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      list.forEach(c => {
+        const escapedName = c.name.replace(/'/g, "\\'");
+        const escapedHost = c.host.replace(/'/g, "\\'");
+        const escapedUid = (c.datasourceUid || '').replace(/'/g, "\\'");
+        const tokenVal = c.maskedToken || '****************';
+
+        html += `
+          <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
+            <!-- Left Side: Icon & Info -->
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+              <!-- Icon Container -->
+              <div style="width: 36px; height: 36px; background: rgba(25, 113, 194, 0.1); border: 1px solid rgba(25, 113, 194, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1971c2; flex-shrink: 0;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                  <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                  <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                </svg>
+              </div>
+              <!-- Details -->
+              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                  <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${c.name}</span>
+                  <span class="status-badge" style="background: rgba(25, 113, 194, 0.15); color: #38bdf8; border: 1px solid rgba(25, 113, 194, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">GRAFANA API</span>
+                  ${c.isActive ? '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">ACTIVE</span>' : ''}
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                  <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.host}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Right Side: Status & Actions -->
+            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+              <!-- Status Badge -->
+              <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px;">
+                CHECKING...
+              </span>
+              <!-- Actions -->
+              <button type="button" class="btn btn-secondary" onclick="viewDatasources('${c.id}', '${escapedName}', '${escapedHost}')" style="padding: 4px 8px; font-size: 11px; height: auto;">View DS</button>
+              <button type="button" class="btn btn-secondary" onclick="pingServer('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Ping Test</button>
+              ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Activate</button>` : ''}
+              <button type="button" class="btn btn-secondary" onclick="editGrafanaConfig('${c.id}', '${escapedName}', '${escapedHost}', '${escapedUid}', '${tokenVal}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="deleteGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15); display: inline-flex; align-items: center; justify-content: center;" title="Delete Config">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      registryCardsContainer.innerHTML = html;
+
+      // Trigger asynchronous connection checks
+      list.forEach(c => {
+        checkCardConnection(c.id);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading configurations list:', error);
+    registryCardsContainer.innerHTML = `
+      <div style="text-align: center; padding: 24px; color: #ef4444;">
+        Failed to load saved configurations.
+      </div>
+    `;
+  }
+}
+
+async function checkCardConnection(id) {
+  const badge = document.getElementById(`conn-status-${id}`);
+  if (!badge) return;
+
+  try {
+    const res = await fetch(`/api/v1/settings/grafana/configs/${id}/test`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success && result.isConnected) {
+      badge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+      badge.style.color = '#10b981';
+      badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      badge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        CONNECTED
+      `;
+    } else {
+      badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      badge.style.color = '#ef4444';
+      badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      badge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        OFFLINE
+      `;
+    }
+  } catch (error) {
+    badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+    badge.style.color = '#ef4444';
+    badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    badge.innerHTML = `
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      OFFLINE
+    `;
+  }
+}
+
+async function pingServer(id) {
+  const badge = document.getElementById(`conn-status-${id}`);
+  if (badge) {
+    badge.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+    badge.style.color = '#f59e0b';
+    badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+    badge.innerHTML = 'CHECKING...';
+  }
+  addLog('Configuration', `Initiating manual ping test to server...`, 'INFO');
+  await checkCardConnection(id);
+  
+  // Show notification feedback based on updated state
+  setTimeout(() => {
+    const updatedBadge = document.getElementById(`conn-status-${id}`);
+    if (updatedBadge && updatedBadge.textContent.includes('CONNECTED')) {
+      addLog('Configuration', `Ping test connection successful for configuration.`, 'SUCCESS');
+    } else {
+      addLog('Configuration', `Ping test connection failed. Server is offline or unreachable.`, 'ERROR');
+    }
+  }, 800);
+}
+
+function clearGrafanaForm() {
+  if (inputConfigId) inputConfigId.value = '';
+  if (inputName) inputName.value = '';
+  if (inputHost) inputHost.value = '';
+  if (inputToken) inputToken.value = '';
+  if (inputDatasource) inputDatasource.value = '';
+  const saveText = document.getElementById('btn-save-text');
+  if (saveText) saveText.textContent = '+ Register Endpoint';
+  hideFeedback();
+}
+
+function editGrafanaConfig(id, name, host, datasourceUid, maskedToken) {
+  if (inputConfigId) inputConfigId.value = id;
+  if (inputName) inputName.value = name;
+  if (inputHost) inputHost.value = host;
+  if (inputToken) inputToken.value = maskedToken || '****************';
+  if (inputDatasource) inputDatasource.value = datasourceUid;
+  const saveText = document.getElementById('btn-save-text');
+  if (saveText) saveText.textContent = 'Update Endpoint';
+  hideFeedback();
+}
+
+async function activateGrafanaConfig(id) {
+  addLog('Configuration', 'Activating configuration...', 'INFO');
+  try {
+    const res = await fetch(`/api/v1/settings/grafana/configs/${id}/activate`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Configuration', result.message || 'Configuration activated successfully.', 'SUCCESS');
+      await loadGrafanaSettings();
+    } else {
+      addLog('Configuration', `Activation failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (error) {
+    console.error('Error activating configuration:', error);
+    addLog('Configuration', 'Network error during configuration activation.', 'ERROR');
+  }
+}
+
+async function deleteGrafanaConfig(id) {
+  if (!confirm('Apakah Anda yakin ingin menghapus konfigurasi Grafana ini?')) return;
+  addLog('Configuration', 'Deleting configuration...', 'INFO');
+  try {
+    const res = await fetch(`/api/v1/settings/grafana/configs/${id}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Configuration', result.message || 'Configuration deleted successfully.', 'SUCCESS');
+      await loadGrafanaSettings();
+    } else {
+      addLog('Configuration', `Deletion failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (error) {
+    console.error('Error deleting configuration:', error);
+    addLog('Configuration', 'Network error during configuration deletion.', 'ERROR');
   }
 }
 
@@ -355,11 +574,18 @@ async function testGrafanaConnection(event) {
   }
 }
 
-// 4. Save configuration
-async function saveGrafanaConfiguration() {
+async function saveGrafanaConfiguration(event) {
+  if (event) event.preventDefault();
+  const id = inputConfigId ? inputConfigId.value : "";
+  const name = inputName ? inputName.value.trim() : "";
   const host = inputHost.value.trim();
   const token = inputToken.value.trim();
   const datasourceUid = inputDatasource.value.trim();
+
+  if (!name) {
+    showFeedback('danger', 'Form Error', 'Configuration Name/Alias is required.');
+    return;
+  }
 
   if (!host || !token) {
     showFeedback('danger', 'Form Error', 'Host URL and Service Token are required.');
@@ -368,19 +594,20 @@ async function saveGrafanaConfiguration() {
 
   setLoading(true, 'save');
   hideFeedback();
-  addLog('Configuration', 'Saving and applying settings...', 'INFO');
+  addLog('Configuration', 'Saving configuration...', 'INFO');
 
   try {
-    const res = await fetch(API_SETTINGS_URL, {
+    const res = await fetch('/api/v1/settings/grafana/configs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save', host, token, datasourceUid })
+      body: JSON.stringify({ id, name, host, token, datasourceUid })
     });
     
     const result = await res.json();
     if (res.ok && result.success) {
       showFeedback('success', 'Penyimpanan Berhasil', result.message || 'Konfigurasi berhasil disimpan!');
-      addLog('Configuration', `Endpoint updated dynamically to: ${host}`, 'SUCCESS');
+      addLog('Configuration', `Endpoint saved: ${name} (${host})`, 'SUCCESS');
+      clearGrafanaForm();
       await loadGrafanaSettings();
     } else {
       showFeedback('danger', 'Gagal Menyimpan', result.message || result.error || 'Gagal menyimpan.');
@@ -775,6 +1002,9 @@ function addNewPanel() {
     format: "time_series",
     intervalMs: 60000,
     maxDataPoints: 1000,
+    grafanaConfigId: "",
+    datasourceUid: "",
+    datasourceType: "prometheus",
     data: []
   };
 
@@ -794,14 +1024,54 @@ function deletePanel(panelId) {
   renderDashboardPanels();
 }
 
-async function loadDatasourcesDropdown(selectedUid) {
+async function loadConfigsDropdown(selectedConfigId) {
+  const selectEl = document.getElementById('panel-config-select');
+  if (!selectEl) return;
+
+  selectEl.innerHTML = '<option value="">-- Loading Server Profiles... --</option>';
+
+  try {
+    const res = await fetch('/api/v1/settings/grafana/configs');
+    const result = await res.json();
+    if (res.ok && result.success && Array.isArray(result.data)) {
+      const configs = result.data;
+      
+      let options = '<option value="">-- Use Active Configuration --</option>';
+      configs.forEach(c => {
+        const isSelected = c.id === selectedConfigId ? 'selected' : '';
+        options += `<option value="${c.id}" ${isSelected}>${c.name}</option>`;
+      });
+      selectEl.innerHTML = options;
+    } else {
+      selectEl.innerHTML = '<option value="">-- Use Active Configuration --</option>';
+    }
+  } catch (error) {
+    console.error('Error loading configs dropdown:', error);
+    selectEl.innerHTML = '<option value="">-- Use Active Configuration --</option>';
+  }
+}
+
+async function onPanelConfigChange() {
+  const selectEl = document.getElementById('panel-config-select');
+  if (!selectEl) return;
+  const configId = selectEl.value;
+  
+  // Reload datasources for this config
+  await loadDatasourcesDropdown(null, configId);
+  onPanelDatasourceChange();
+}
+
+async function loadDatasourcesDropdown(selectedUid, configId = "") {
   const selectEl = document.getElementById('panel-datasource-select');
   if (!selectEl) return;
 
   selectEl.innerHTML = '<option value="">-- Loading datasources... --</option>';
 
   try {
-    const res = await fetch('/api/v1/settings/grafana/datasources');
+    const url = configId 
+      ? `/api/v1/settings/grafana/datasources?configId=${configId}` 
+      : '/api/v1/settings/grafana/datasources';
+    const res = await fetch(url);
     const result = await res.json();
     if (res.ok && result.success && Array.isArray(result.data)) {
       const datasources = result.data;
@@ -876,7 +1146,8 @@ async function openEditPanelModal(panelId) {
 
   hidePanelQueryFeedback();
   
-  await loadDatasourcesDropdown(panel.datasourceUid);
+  await loadConfigsDropdown(panel.grafanaConfigId);
+  await loadDatasourcesDropdown(panel.datasourceUid, panel.grafanaConfigId);
   onPanelDatasourceChange();
 
   document.getElementById('query-modal').classList.add('active');
@@ -921,6 +1192,9 @@ async function applyPanelQuery(event) {
   const selectedOption = selectEl ? selectEl.options[selectEl.selectedIndex] : null;
   const datasourceType = selectedOption ? selectedOption.getAttribute('data-type') : "prometheus";
 
+  const configSelectEl = document.getElementById('panel-config-select');
+  const grafanaConfigId = configSelectEl ? configSelectEl.value : "";
+
   if (!query) {
     showPanelQueryFeedback('danger', 'Form Error', 'Query expression wajib diisi.');
     return;
@@ -953,7 +1227,8 @@ async function applyPanelQuery(event) {
         intervalMs: intervalMs,
         maxDataPoints: maxDataPoints,
         datasourceUid: datasourceUid,
-        datasourceType: datasourceType
+        datasourceType: datasourceType,
+        grafanaConfigId: grafanaConfigId
       })
     });
 
@@ -970,6 +1245,7 @@ async function applyPanelQuery(event) {
       panel.maxDataPoints = maxDataPoints;
       panel.datasourceUid = datasourceUid;
       panel.datasourceType = datasourceType;
+      panel.grafanaConfigId = grafanaConfigId;
       panel.data = data;
 
       saveDashboardsToStorage();
@@ -993,79 +1269,94 @@ async function applyPanelQuery(event) {
   }
 }
 
-// 7. Fetch all datasources from Grafana server
-async function fetchDatasources() {
-  const host = inputHost.value.trim();
-  const token = inputToken.value.trim();
-
-  if (!host) {
-    addLog('Grafana API', 'Cannot sync datasources: Host URL is empty.', 'WARN');
-    return;
-  }
-
-  spinnerSyncDs.classList.remove('hidden');
-  addLog('Grafana API', 'Syncing list of datasources from Grafana...', 'INFO');
-
+// 7. View datasources popup modal for a specific Grafana configuration
+async function viewDatasources(configId, configName, configHost) {
+  const modal = document.getElementById('datasources-modal');
+  const titleEl = document.getElementById('datasources-modal-title');
+  const infoEl = document.getElementById('datasources-modal-server-info');
+  const tbody = document.getElementById('popup-datasources-tbody');
+  
+  if (!modal || !tbody) return;
+  
+  titleEl.textContent = `Datasources: ${configName}`;
+  infoEl.textContent = `Host: ${configHost}`;
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="3" class="text-center" style="padding: 20px; text-align: center; color: var(--text-muted);">
+        <span class="spinner" style="display: inline-block; width: 12px; height: 12px; border: 2px solid var(--text-muted); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 6px; vertical-align: middle;"></span>
+        Fetching datasources list...
+      </td>
+    </tr>
+  `;
+  
+  modal.classList.add('active');
+  
   try {
-    const res = await fetch('/api/v1/settings/grafana/datasources');
+    const res = await fetch(`/api/v1/settings/grafana/datasources?configId=${configId}`);
     const result = await res.json();
-
-    if (res.ok && result.success) {
-      const data = result.data || [];
-      renderDatasourcesTable(data);
-      addLog('Grafana API', `Successfully retrieved ${data.length} datasources.`, 'SUCCESS');
+    if (res.ok && result.success && Array.isArray(result.data)) {
+      const list = result.data;
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" class="text-center" style="padding: 20px; text-align: center; color: var(--text-muted);">
+              No datasources found on this server.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      let html = '';
+      list.forEach(ds => {
+        const isPrometheus = ds.type === 'prometheus';
+        const highlightStyle = isPrometheus ? 'color: var(--prometheus-orange); font-weight: bold;' : 'color: var(--text-muted);';
+        
+        html += `
+          <tr style="border-bottom: 1px solid var(--app-border);">
+            <td style="padding: 8px 12px; font-weight: 600;">${ds.name}</td>
+            <td style="padding: 8px 12px; ${highlightStyle}">${ds.type}</td>
+            <td style="padding: 8px 12px;" class="font-mono text-muted">
+              <span>${ds.uid}</span>
+              <button type="button" class="btn btn-secondary" onclick="copyTextToClipboard('${ds.uid}')" style="padding: 2px 4px; font-size: 9px; height: auto; margin-left: 6px; display: inline-flex; align-items: center; justify-content: center;" title="Copy UID">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
     } else {
-      renderDatasourcesTable([]);
-      addLog('Grafana API', `Failed to sync datasources: ${result.message || 'Server error'}`, 'ERROR');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3" class="text-center" style="padding: 20px; text-align: center; color: #ff7b72;">
+            Failed to load datasources: ${result.message || 'Server error'}
+          </td>
+        </tr>
+      `;
     }
   } catch (error) {
-    renderDatasourcesTable([]);
-    addLog('Grafana API', `Error fetching datasources list: ${error.message}`, 'ERROR');
-  } finally {
-    spinnerSyncDs.classList.add('hidden');
-  }
-}
-
-function renderDatasourcesTable(datasources) {
-  if (datasources.length === 0) {
-    datasourcesTbody.innerHTML = `
+    tbody.innerHTML = `
       <tr>
-        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 15px;">
-          No datasources found. Make sure host and token are correct.
+        <td colspan="3" class="text-center" style="padding: 20px; text-align: center; color: #ff7b72;">
+          Failed to load datasources: Connection error
         </td>
       </tr>
     `;
-    return;
   }
-
-  let html = '';
-  datasources.forEach(ds => {
-    const isPrometheus = ds.type === 'prometheus';
-    const highlightStyle = isPrometheus ? 'color: var(--prometheus-orange); font-weight: bold;' : 'color: var(--text-muted);';
-    const actionBtn = isPrometheus 
-      ? `<button type="button" class="btn btn-primary" onclick="selectDatasource('${ds.uid}')" style="padding: 4px 8px; font-size: 10px; text-transform: none;">Select UID</button>`
-      : `<span style="font-size: 10px; color: var(--text-muted);">Non-Prometheus</span>`;
-
-    html += `
-      <tr>
-        <td style="font-weight: 600;">${ds.name}</td>
-        <td style="${highlightStyle}">${ds.type}</td>
-        <td class="font-mono" style="font-size: 11px;">${ds.uid}</td>
-        <td>${actionBtn}</td>
-      </tr>
-    `;
-  });
-  datasourcesTbody.innerHTML = html;
 }
 
-function selectDatasource(uid) {
-  inputDatasource.value = uid;
-  addLog('Configuration', `Automatically filled Prometheus UID field with: ${uid}`, 'INFO');
-  // Highlight the input temporarily to give visual feedback
-  inputDatasource.style.borderColor = 'var(--prometheus-orange)';
-  setTimeout(() => {
-    inputDatasource.style.borderColor = 'var(--app-border)';
-  }, 1500);
+function closeDatasourcesModal() {
+  const modal = document.getElementById('datasources-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function copyTextToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    addLog('System', `Copied to clipboard: ${text}`, 'INFO');
+  }).catch(err => {
+    console.error('Failed to copy: ', err);
+  });
 }
 
 // Helpers
@@ -1081,18 +1372,18 @@ function hideFeedback() {
 }
 
 function setLoading(loading, type = '') {
-  btnTest.disabled = loading;
-  btnSave.disabled = loading;
-  btnReset.disabled = loading;
+  if (btnTest) btnTest.disabled = loading;
+  if (btnSave) btnSave.disabled = loading;
+  if (btnReset) btnReset.disabled = loading;
   
   if (loading) {
-    if (type === 'test') spinnerTest.classList.remove('hidden');
-    if (type === 'save') spinnerSave.classList.remove('hidden');
-    if (type === 'reset') spinnerReset.classList.remove('hidden');
+    if (type === 'test' && spinnerTest) spinnerTest.classList.remove('hidden');
+    if (type === 'save' && spinnerSave) spinnerSave.classList.remove('hidden');
+    if (type === 'reset' && spinnerReset) spinnerReset.classList.remove('hidden');
   } else {
-    spinnerTest.classList.add('hidden');
-    spinnerSave.classList.add('hidden');
-    spinnerReset.classList.add('hidden');
+    if (spinnerTest) spinnerTest.classList.add('hidden');
+    if (spinnerSave) spinnerSave.classList.add('hidden');
+    if (spinnerReset) spinnerReset.classList.add('hidden');
   }
 }
 

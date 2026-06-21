@@ -24,4 +24,13 @@ router.get("/grafana/datasources", (req, res) => settingsController.getGrafanaDa
  */
 router.post("/grafana", (req, res) => settingsController.handleGrafanaSettingsAction(req, res));
 
+/**
+ * Multiple Grafana Configs management
+ */
+router.get("/grafana/configs", (req, res) => settingsController.getConfigsList(req, res));
+router.post("/grafana/configs", (req, res) => settingsController.saveOrUpdateConfig(req, res));
+router.delete("/grafana/configs/:id", (req, res) => settingsController.deleteConfig(req, res));
+router.post("/grafana/configs/:id/activate", (req, res) => settingsController.activateConfig(req, res));
+router.post("/grafana/configs/:id/test", (req, res) => settingsController.testConfigConnection(req, res));
+
 export default router;
