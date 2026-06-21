@@ -5,7 +5,7 @@ import { exec } from "child_process";
 import axios from "axios";
 import yaml from "js-yaml";
 import { Client } from "ssh2";
-import config from "../config/env";
+import config, { PrometheusConfigItem } from "../config/env";
 
 export class PrometheusService {
   /**
@@ -66,7 +66,7 @@ export class PrometheusService {
         if (err) return reject(err);
         let stdout = "";
         let stderr = "";
-        stream.on("close", (code) => {
+        stream.on("close", (code: number) => {
           if (code !== 0) {
             reject(new Error(stderr.trim() || stdout.trim() || `Exit code ${code}`));
           } else {
