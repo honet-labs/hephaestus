@@ -5,6 +5,10 @@ const API_REPORT_URL = '/api/v1/report/cpu';
 // Navigation pages
 const pages = ['overview', 'settings', 'telemetry', 'diagnostics', 'installer', 'prometheus'];
 
+// Global Connection registry caches
+let grafanaConfigs = [];
+let prometheusConfigs = [];
+
 // DOM elements
 const activeModuleName = document.getElementById('active-module-name');
 const pageTitle = document.getElementById('page-title');
@@ -325,26 +329,24 @@ async function loadSettingsRegistry() {
     }
 
     // 2. Fetch Grafana Configs List AND Prometheus Configs List
-    let grafanaList = [];
     try {
       const resG = await fetch('/api/v1/settings/grafana/configs');
       const rG = await resG.json();
       if (rG.success && Array.isArray(rG.data)) {
-        grafanaList = rG.data;
+        grafanaConfigs = rG.data;
       }
     } catch (_) {}
 
-    let prometheusList = [];
     try {
       const resP = await fetch('/api/v1/prometheus/configs');
       const rP = await resP.json();
       if (rP.success && Array.isArray(rP.configs)) {
-        prometheusList = rP.configs;
+        prometheusConfigs = rP.configs;
       }
     } catch (_) {}
 
     // 3. Render list in registry-cards-container
-    const totalCount = grafanaList.length + prometheusList.length;
+    const totalCount = grafanaConfigs.length + prometheusConfigs.length;
     const headerTitle = document.getElementById('registry-header-title');
     if (headerTitle) {
       headerTitle.textContent = `Active Registry (${totalCount})`;
@@ -362,11 +364,9 @@ async function loadSettingsRegistry() {
     let html = '';
 
     // Render Grafana connections
-    grafanaList.forEach(c => {
+    grafanaConfigs.forEach(c => {
       const escapedName = c.name.replace(/'/g, "\\'");
       const escapedHost = c.host.replace(/'/g, "\\'");
-      const escapedUid = (c.datasourceUid || '').replace(/'/g, "\\'");
-      const tokenVal = c.maskedToken || '****************';
 
       html += `
         <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
@@ -398,7 +398,7 @@ async function loadSettingsRegistry() {
             <button type="button" class="btn btn-secondary" onclick="viewDatasources('${c.id}', '${escapedName}', '${escapedHost}')" style="padding: 4px 8px; font-size: 11px; height: auto;">View DS</button>
             <button type="button" class="btn btn-secondary" onclick="pingServer('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Ping Test</button>
             ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Activate</button>` : ''}
-            <button type="button" class="btn btn-secondary" onclick="editGrafanaConfig('${c.id}', '${escapedName}', '${escapedHost}', '${escapedUid}', '${tokenVal}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+            <button type="button" class="btn btn-secondary" onclick="editGrafanaConfigById('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
             <button type="button" class="btn btn-secondary" onclick="deleteGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15); display: inline-flex; align-items: center; justify-content: center;" title="Delete Config">
@@ -410,16 +410,7 @@ async function loadSettingsRegistry() {
     });
 
     // Render Prometheus connections
-    prometheusList.forEach(c => {
-      const escapedName = c.name.replace(/'/g, "\\'");
-      const escapedPath = c.path.replace(/'/g, "\\'");
-      const escapedReload = c.reloadUrl.replace(/'/g, "\\'");
-      const escapedSshHost = (c.sshHost || '').replace(/'/g, "\\'");
-      const escapedSshUser = (c.sshUser || '').replace(/'/g, "\\'");
-      const escapedSshAuth = (c.sshAuth || 'password').replace(/'/g, "\\'");
-      const escapedSshKey = (c.sshKey || '').replace(/'/g, "\\'").replace(/\n/g, "\\n");
-      const hasPassword = c.sshPassword ? true : false;
-
+    prometheusConfigs.forEach(c => {
       html += `
         <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
           <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
@@ -449,7 +440,7 @@ async function loadSettingsRegistry() {
             </span>
             <button type="button" class="btn btn-secondary" onclick="pingPrometheusServer('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Ping Test</button>
             ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activatePrometheusConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Activate</button>` : ''}
-            <button type="button" class="btn btn-secondary" onclick="editPrometheusConfig('${c.id}', '${escapedName}', '${c.mode}', '${escapedPath}', '${escapedReload}', '${escapedSshHost}', ${c.sshPort || 22}, '${escapedSshUser}', '${escapedSshAuth}', ${hasPassword}, '${escapedSshKey}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+            <button type="button" class="btn btn-secondary" onclick="editPrometheusConfigById('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
             <button type="button" class="btn btn-secondary" onclick="deletePrometheusConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15); display: inline-flex; align-items: center; justify-content: center;" title="Delete Config">
@@ -463,11 +454,11 @@ async function loadSettingsRegistry() {
     registryCardsContainer.innerHTML = html;
 
     // Trigger asynchronous connection checks
-    grafanaList.forEach(c => {
+    grafanaConfigs.forEach(c => {
       checkCardConnection(c.id);
     });
 
-    prometheusList.forEach(c => {
+    prometheusConfigs.forEach(c => {
       checkPrometheusCardConnection(c.id);
     });
 
@@ -600,13 +591,19 @@ function clearGrafanaForm() {
   clearConnectionForm();
 }
 
-function editGrafanaConfig(id, name, host, datasourceUid, maskedToken) {
+function editGrafanaConfigById(id) {
+  if (!grafanaConfigs) return;
+  const c = grafanaConfigs.find(item => item.id === id);
+  if (!c) return;
+
   if (inputConnectionType) inputConnectionType.value = 'grafana';
-  if (inputConnectionId) inputConnectionId.value = id;
-  if (inputConnectionName) inputConnectionName.value = name;
-  if (inputHost) inputHost.value = host;
-  if (inputDatasource) inputDatasource.value = datasourceUid;
-  if (inputToken) inputToken.value = maskedToken === '****************' ? '' : maskedToken;
+  if (inputConnectionId) inputConnectionId.value = c.id;
+  if (inputConnectionName) inputConnectionName.value = c.name;
+  if (inputHost) inputHost.value = c.host;
+  if (inputDatasource) inputDatasource.value = c.datasourceUid || '';
+  
+  const tokenVal = c.maskedToken || '';
+  if (inputToken) inputToken.value = tokenVal === '****************' ? '' : tokenVal;
 
   toggleConnectionFields();
 
@@ -615,20 +612,24 @@ function editGrafanaConfig(id, name, host, datasourceUid, maskedToken) {
   hideFeedback();
 }
 
-function editPrometheusConfig(id, name, mode, path, reloadUrl, sshHost, sshPort, sshUser, sshAuth, hasPassword, sshKey) {
-  if (inputConnectionType) inputConnectionType.value = 'prometheus';
-  if (inputConnectionId) inputConnectionId.value = id;
-  if (inputConnectionName) inputConnectionName.value = name;
+function editPrometheusConfigById(id) {
+  if (!prometheusConfigs) return;
+  const c = prometheusConfigs.find(item => item.id === id);
+  if (!c) return;
 
-  if (inputPrometheusMode) inputPrometheusMode.value = mode;
-  if (inputPrometheusPath) inputPrometheusPath.value = path;
-  if (inputPrometheusReloadUrl) inputPrometheusReloadUrl.value = reloadUrl;
-  if (inputPrometheusSshHost) inputPrometheusSshHost.value = sshHost || '';
-  if (inputPrometheusSshPort) inputPrometheusSshPort.value = sshPort || '22';
-  if (inputPrometheusSshUser) inputPrometheusSshUser.value = sshUser || '';
-  if (inputPrometheusSshAuth) inputPrometheusSshAuth.value = sshAuth || 'password';
-  if (inputPrometheusSshPassword) inputPrometheusSshPassword.value = hasPassword ? '********' : '';
-  if (inputPrometheusSshKey) inputPrometheusSshKey.value = sshKey || '';
+  if (inputConnectionType) inputConnectionType.value = 'prometheus';
+  if (inputConnectionId) inputConnectionId.value = c.id;
+  if (inputConnectionName) inputConnectionName.value = c.name;
+
+  if (inputPrometheusMode) inputPrometheusMode.value = c.mode;
+  if (inputPrometheusPath) inputPrometheusPath.value = c.path;
+  if (inputPrometheusReloadUrl) inputPrometheusReloadUrl.value = c.reloadUrl;
+  if (inputPrometheusSshHost) inputPrometheusSshHost.value = c.sshHost || '';
+  if (inputPrometheusSshPort) inputPrometheusSshPort.value = c.sshPort || '22';
+  if (inputPrometheusSshUser) inputPrometheusSshUser.value = c.sshUser || '';
+  if (inputPrometheusSshAuth) inputPrometheusSshAuth.value = c.sshAuth || 'password';
+  if (inputPrometheusSshPassword) inputPrometheusSshPassword.value = c.sshPassword ? '********' : '';
+  if (inputPrometheusSshKey) inputPrometheusSshKey.value = c.sshKey || '';
 
   toggleConnectionFields();
   togglePrometheusModeFields();
