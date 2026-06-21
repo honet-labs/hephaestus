@@ -73,6 +73,15 @@
               <div class="menu-item-sub">Download & install exporter</div>
             </div>
           </a>
+          <a href="#prometheus" id="menu-prometheus" class="menu-item">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">Prometheus Config</div>
+              <div class="menu-item-sub">Configure prometheus.yml</div>
+            </div>
+          </a>
         </nav>
       </div>
 
@@ -569,6 +578,50 @@
                   <strong style="color: var(--text-white);">Prometheus Config Job snippet:</strong>
                   <pre id="exporter-prometheus-snippet" class="code font-mono" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; border: 1px solid var(--app-border); font-size: 11px; margin-top: 6px; color: var(--text-muted);"></pre>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE 6: PROMETHEUS CONFIG -->
+        <div id="page-prometheus" class="hidden">
+          <div class="panel" style="width: 100%; display: flex; flex-direction: column; gap: 15px; background: var(--app-bg-panel); border: 1px solid var(--app-border); border-radius: 8px; padding: 20px;">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 5px;">
+              <h3 class="panel-title" style="margin-bottom: 0;">Prometheus YAML Editor</h3>
+              <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">
+                File: <span id="prometheus-config-path" style="color: var(--text-white); font-weight: bold;">/etc/prometheus/prometheus.yml</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <span style="font-size: 12px; color: var(--text-muted);">Edit, check configuration, and trigger hot reload.</span>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn btn-secondary" onclick="insertExporterJob()" style="font-size: 11px; padding: 4px 10px; height: auto; border-color: var(--app-border);">
+                    + Insert Active Exporter Job
+                  </button>
+                </div>
+              </div>
+
+              <!-- Alerts -->
+              <div id="prometheus-alert" class="alert hidden" style="padding: 12px 16px; border-radius: 6px; font-size: 12px; border-left: 4px solid #f9826c; background: rgba(249, 130, 108, 0.1);">
+                <span class="alert-title" id="prometheus-alert-title" style="font-weight: bold; display: block; margin-bottom: 4px;"></span>
+                <span id="prometheus-alert-desc" style="white-space: pre-wrap; font-family: monospace; font-size: 11.5px; line-height: 1.5; color: var(--text-white);"></span>
+              </div>
+
+              <div style="position: relative;">
+                <textarea id="prometheus-yaml-textarea" class="code font-mono" style="width: 100%; height: 450px; background: rgba(0,0,0,0.35); padding: 15px; border-radius: 6px; border: 1px solid var(--app-border); font-size: 12.5px; line-height: 1.6; color: #58a6ff; font-family: 'Courier New', Courier, monospace; resize: vertical; outline: none; box-sizing: border-box;" spellcheck="false"></textarea>
+              </div>
+
+              <div style="display: flex; gap: 12px; margin-top: 10px;">
+                <button type="button" class="btn btn-secondary" id="btn-validate-prometheus" onclick="validatePrometheusConfig()" style="border-color: var(--app-border); display: inline-flex; align-items: center; gap: 6px;">
+                  <span class="spinner hidden" id="spinner-validate-prometheus"></span>
+                  <span>Check Config</span>
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-save-prometheus" onclick="savePrometheusConfig()" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <span class="spinner hidden" id="spinner-save-prometheus"></span>
+                  <span>Save & Reload</span>
+                </button>
               </div>
             </div>
           </div>

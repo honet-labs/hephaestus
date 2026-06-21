@@ -4,6 +4,7 @@ import path from "path";
 import config from "./config/env";
 import reportRoutes from "./routes/report.routes";
 import settingsRoutes from "./routes/settings.routes";
+import prometheusRoutes from "./routes/prometheus.routes";
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.get("/health", (req: Request, res: Response) => {
 // 4. API Routes registration
 app.use("/api/v1/report", reportRoutes);
 app.use("/api/v1/settings", settingsRoutes);
+app.use("/api/v1/prometheus", prometheusRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {

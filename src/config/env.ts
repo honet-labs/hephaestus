@@ -39,6 +39,8 @@ export const config = {
   dbDir: DB_DIR,
   grafanaConfigFile: GRAFANA_CONFIG_FILE,
   grafanaConfigsFile: GRAFANA_CONFIGS_FILE,
+  prometheusConfigPath: process.env.PROMETHEUS_CONFIG_PATH || (process.env.NODE_ENV === "production" ? "/app/data/prometheus.yml" : path.join(DB_DIR, "prometheus.yml")),
+  prometheusReloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
   
   /**
    * Retrieves active Grafana credentials.

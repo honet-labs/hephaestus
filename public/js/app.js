@@ -3,7 +3,7 @@ const API_SETTINGS_URL = '/api/v1/settings/grafana';
 const API_REPORT_URL = '/api/v1/report/cpu';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'telemetry', 'diagnostics', 'installer'];
+const pages = ['overview', 'settings', 'telemetry', 'diagnostics', 'installer', 'prometheus'];
 
 // DOM elements
 const activeModuleName = document.getElementById('active-module-name');
@@ -208,6 +208,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'Exporter Installer';
     pageDesc.textContent = 'Panduan instalasi otomatis dan generate command setup service systemd Prometheus Exporters.';
     initInstallerPage();
+  } else if (pageId === 'prometheus') {
+    pageTitle.textContent = 'Prometheus Config';
+    pageDesc.textContent = 'Kelola, validasi, dan muat ulang (hot reload) konfigurasi file prometheus.yml.';
+    initPrometheusPage();
   }
 }
 
@@ -3892,4 +3896,186 @@ function initInstallerPage() {
 
   selectExporter('node');
   selectPlatform('linux-amd64');
+}
+
+// PROMETHEUS CONFIGURATION MANAGER
+function initPrometheusPage() {
+  const alertEl = document.getElementById('prometheus-alert');
+  if (alertEl) alertEl.classList.add('hidden');
+  
+  const textarea = document.getElementById('prometheus-yaml-textarea');
+  if (textarea) {
+    textarea.value = 'Loading configuration...';
+    textarea.disabled = true;
+  }
+  
+  fetch('/api/v1/prometheus/config')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('prometheus-config-path').textContent = data.path;
+        textarea.value = data.content;
+        textarea.disabled = false;
+        addLog('System', `Successfully fetched Prometheus configuration from ${data.path}`, 'SUCCESS');
+      } else {
+        showPrometheusAlert('error', 'Error Fetching Configuration', data.message || 'Failed to read prometheus.yml');
+        textarea.value = '';
+        addLog('System', `Failed to fetch Prometheus configuration: ${data.message}`, 'ERROR');
+      }
+    })
+    .catch(err => {
+      showPrometheusAlert('error', 'Network Error', err.message || 'Failed to communicate with API server.');
+      textarea.value = '';
+      addLog('System', `Network error while fetching Prometheus configuration: ${err.message}`, 'ERROR');
+    });
+}
+
+function showPrometheusAlert(type, title, desc) {
+  const alertEl = document.getElementById('prometheus-alert');
+  const titleEl = document.getElementById('prometheus-alert-title');
+  const descEl = document.getElementById('prometheus-alert-desc');
+  
+  if (!alertEl || !titleEl || !descEl) return;
+  
+  alertEl.className = 'alert'; // Reset classes
+  alertEl.classList.remove('hidden');
+  
+  if (type === 'success') {
+    alertEl.style.borderLeft = '4px solid #56d364';
+    alertEl.style.background = 'rgba(86, 211, 100, 0.1)';
+    titleEl.style.color = '#56d364';
+  } else {
+    alertEl.style.borderLeft = '4px solid #f9826c';
+    alertEl.style.background = 'rgba(249, 130, 108, 0.1)';
+    titleEl.style.color = '#f9826c';
+  }
+  
+  titleEl.textContent = title;
+  descEl.textContent = desc;
+}
+
+function validatePrometheusConfig() {
+  const textarea = document.getElementById('prometheus-yaml-textarea');
+  if (!textarea) return;
+  
+  const content = textarea.value;
+  const btnValidate = document.getElementById('btn-validate-prometheus');
+  const btnSave = document.getElementById('btn-save-prometheus');
+  const spinner = document.getElementById('spinner-validate-prometheus');
+  
+  if (btnValidate) btnValidate.disabled = true;
+  if (btnSave) btnSave.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  
+  fetch('/api/v1/prometheus/config/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  })
+    .then(response => response.json().then(data => ({ status: response.status, data })))
+    .then(({ status, data }) => {
+      if (status === 200 && data.success) {
+        showPrometheusAlert('success', 'Configuration Check Passed', 'Success! The Prometheus configuration is syntactically and semantically valid.');
+        addLog('System', 'Prometheus configuration syntax check passed', 'SUCCESS');
+      } else {
+        showPrometheusAlert('error', 'Configuration Check Failed', data.message || 'The configuration contains errors.');
+        addLog('System', `Prometheus configuration check failed: ${data.message}`, 'ERROR');
+      }
+    })
+    .catch(err => {
+      showPrometheusAlert('error', 'Validation Error', err.message || 'Failed to perform validation check.');
+      addLog('System', `Error validating Prometheus configuration: ${err.message}`, 'ERROR');
+    })
+    .finally(() => {
+      if (btnValidate) btnValidate.disabled = false;
+      if (btnSave) btnSave.disabled = false;
+      if (spinner) spinner.classList.add('hidden');
+    });
+}
+
+function savePrometheusConfig() {
+  const textarea = document.getElementById('prometheus-yaml-textarea');
+  if (!textarea) return;
+  
+  const content = textarea.value;
+  const btnValidate = document.getElementById('btn-validate-prometheus');
+  const btnSave = document.getElementById('btn-save-prometheus');
+  const spinner = document.getElementById('spinner-save-prometheus');
+  
+  if (btnValidate) btnValidate.disabled = true;
+  if (btnSave) btnSave.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  
+  fetch('/api/v1/prometheus/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  })
+    .then(response => response.json().then(data => ({ status: response.status, data })))
+    .then(({ status, data }) => {
+      if (status === 200 && data.success) {
+        showPrometheusAlert('success', 'Configuration Saved', data.message);
+        addLog('System', 'Saved new Prometheus configuration and triggered hot-reload', 'SUCCESS');
+      } else {
+        showPrometheusAlert('error', 'Save Failed', data.message || 'Could not save configuration file.');
+        addLog('System', `Failed to save Prometheus configuration: ${data.message}`, 'ERROR');
+      }
+    })
+    .catch(err => {
+      showPrometheusAlert('error', 'Save Error', err.message || 'Failed to submit configuration save request.');
+      addLog('System', `Error saving Prometheus configuration: ${err.message}`, 'ERROR');
+    })
+    .finally(() => {
+      if (btnValidate) btnValidate.disabled = false;
+      if (btnSave) btnSave.disabled = false;
+      if (spinner) spinner.classList.add('hidden');
+    });
+}
+
+function insertExporterJob() {
+  const textarea = document.getElementById('prometheus-yaml-textarea');
+  if (!textarea) return;
+
+  const exporterKey = activeExporter || 'node';
+  const exporter = installerData[exporterKey];
+  if (!exporter || !exporter.job) {
+    alert("Please select a valid exporter first on the Exporter Installer page.");
+    return;
+  }
+
+  const jobText = "\n" + exporter.job.trimEnd() + "\n";
+  const currentText = textarea.value;
+
+  // Check if job name already exists in configuration to avoid duplicates
+  const jobNameMatch = exporter.job.match(/job_name:\s*['"]?([^'"]+)['"]?/);
+  if (jobNameMatch && jobNameMatch[1]) {
+    const jobName = jobNameMatch[1];
+    const regex = new RegExp(`job_name:\\s*['"]?${jobName}['"]?`);
+    if (regex.test(currentText)) {
+      if (!confirm(`Scrape job for '${jobName}' is already defined in the configuration. Do you still want to insert another copy?`)) {
+        return;
+      }
+    }
+  }
+
+  // Find 'scrape_configs:' to insert it under
+  const scrapeConfigsIndex = currentText.indexOf('scrape_configs:');
+  if (scrapeConfigsIndex !== -1) {
+    // Insert after 'scrape_configs:'
+    const insertPosition = scrapeConfigsIndex + 'scrape_configs:'.length;
+    const before = currentText.substring(0, insertPosition);
+    const after = currentText.substring(insertPosition);
+    textarea.value = before + jobText + after;
+    addLog('System', `Inserted ${exporter.name} scrape job under scrape_configs`, 'SUCCESS');
+  } else {
+    // Append to the end
+    textarea.value = currentText.trimEnd() + "\n\nscrape_configs:" + jobText;
+    addLog('System', `Appended scrape_configs and ${exporter.name} scrape job to configuration`, 'SUCCESS');
+  }
+
+  // Highlight textarea and focus
+  textarea.focus();
+  
+  // Show a notice in the alert box
+  showPrometheusAlert('success', 'Job Snippet Inserted', `Successfully inserted scrape job snippet for ${exporter.name}. Click 'Check Config' to validate or 'Save & Reload' to apply changes.`);
 }
