@@ -42,8 +42,8 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             </span>
             <div>
-              <div class="menu-item-title">Grafana Settings</div>
-              <div class="menu-item-sub">Integration & tokens setup</div>
+              <div class="menu-item-title">Connections</div>
+              <div class="menu-item-sub">API & server endpoints</div>
             </div>
           </a>
           <a href="#telemetry" id="menu-telemetry" class="menu-item">
@@ -296,40 +296,108 @@
                 </h3>
               </div>
 
-              <form id="grafana-form" onsubmit="saveGrafanaConfiguration(event)" style="display: flex; flex-direction: column; gap: 16px;">
-                <input type="hidden" id="grafana-config-id" value="">
+              <form id="connection-form" onsubmit="saveConnectionConfiguration(event)" style="display: flex; flex-direction: column; gap: 16px;">
+                <input type="hidden" id="connection-id" value="">
 
                 <div class="form-group">
                   <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Connection Type</label>
-                  <select id="connection-type" class="form-control" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
+                  <select id="connection-type" class="form-control" onchange="toggleConnectionFields()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
                     <option value="grafana">Grafana Core API</option>
+                    <option value="prometheus">Prometheus Server (SSH / Local File)</option>
                   </select>
                 </div>
 
                 <div class="form-group">
-                  <label for="grafana-name" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Service Alias Name</label>
-                  <input type="text" id="grafana-name" placeholder="e.g. Production Grafana" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px;">
+                  <label for="connection-name" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Connection Name</label>
+                  <input type="text" id="connection-name" placeholder="e.g. Production Grafana" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
                 </div>
 
-                <div class="form-group">
-                  <label for="grafana-host" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">API Endpoint URL</label>
-                  <input type="text" id="grafana-host" placeholder="e.g. http://172.18.29.120:3000" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px;">
+                <!-- Grafana-specific fields -->
+                <div id="grafana-fields" style="display: flex; flex-direction: column; gap: 16px;">
+                  <div class="form-group">
+                    <label for="grafana-host" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">API Endpoint URL</label>
+                    <input type="text" id="grafana-host" placeholder="e.g. http://172.18.29.120:3000" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="grafana-token" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Bearer Service Account Token</label>
+                    <input type="password" id="grafana-token" placeholder="glsa_xxxxxxxxxxxxxxxxxxxxxxxx" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="grafana-datasource-uid" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Prometheus Datasource UID (Optional)</label>
+                    <input type="text" id="grafana-datasource-uid" placeholder="e.g. bfo80enbiimf4f" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="grafana-token" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Bearer Service Account Token</label>
-                  <input type="password" id="grafana-token" placeholder="glsa_xxxxxxxxxxxxxxxxxxxxxxxx" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px;">
+                <!-- Prometheus-specific fields -->
+                <div id="prometheus-fields" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
+                  <div class="form-group">
+                    <label for="prometheus-mode" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">File Access Mode</label>
+                    <select id="prometheus-mode" class="form-control" onchange="togglePrometheusModeFields()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
+                      <option value="local">Local File Path (Same Server / Mount)</option>
+                      <option value="ssh">Remote Server via SSH / SFTP</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="prometheus-path" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">prometheus.yml File Path</label>
+                    <input type="text" id="prometheus-path" value="/etc/prometheus/prometheus.yml" placeholder="e.g. /etc/prometheus/prometheus.yml" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="prometheus-reload-url" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Prometheus Reload URL</label>
+                    <input type="text" id="prometheus-reload-url" value="http://localhost:9090/-/reload" placeholder="e.g. http://localhost:9090/-/reload" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+
+                  <!-- SSH Host & Auth Section -->
+                  <div id="prometheus-ssh-fields" class="hidden" style="display: flex; flex-direction: column; gap: 16px; border-top: 1px dashed var(--app-border); padding-top: 16px;">
+                    <div class="form-group">
+                      <label for="prometheus-ssh-host" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">SSH Host Address</label>
+                      <input type="text" id="prometheus-ssh-host" placeholder="e.g. 192.168.1.50" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                    </div>
+
+                    <div style="display: flex; gap: 12px; width: 100%;">
+                      <div class="form-group" style="flex: 1;">
+                        <label for="prometheus-ssh-port" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">SSH Port</label>
+                        <input type="number" id="prometheus-ssh-port" value="22" placeholder="22" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                      </div>
+                      <div class="form-group" style="flex: 2;">
+                        <label for="prometheus-ssh-user" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">SSH Username</label>
+                        <input type="text" id="prometheus-ssh-user" placeholder="e.g. root" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="prometheus-ssh-auth" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">SSH Authentication</label>
+                      <select id="prometheus-ssh-auth" onchange="toggleSSHAuthFields()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
+                        <option value="password">Password</option>
+                        <option value="key">Private Key</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group" id="ssh-password-group">
+                      <label for="prometheus-ssh-password" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">SSH Password</label>
+                      <input type="password" id="prometheus-ssh-password" placeholder="••••••••" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                    </div>
+
+                    <div class="form-group hidden" id="ssh-key-group">
+                      <label for="prometheus-ssh-key" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">SSH Private Key</label>
+                      <textarea id="prometheus-ssh-key" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..." style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 11px; width: 100%; height: 100px; font-family: monospace; resize: vertical; box-sizing: border-box;"></textarea>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label for="grafana-datasource-uid" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Prometheus Datasource UID (Optional)</label>
-                  <input type="text" id="grafana-datasource-uid" placeholder="e.g. bfo80enbiimf4f" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px;">
+                <div style="display: flex; gap: 12px; margin-top: 8px;">
+                  <button type="button" id="btn-test-connection" onclick="testConnectionConfig()" class="btn btn-secondary" style="flex: 1; justify-content: center; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; padding: 10px 16px; border-color: var(--app-border); display: inline-flex; align-items: center; gap: 8px;">
+                    <span class="spinner hidden" id="spinner-test" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                    <span>Test Connection</span>
+                  </button>
+                  <button type="submit" id="btn-save-connection" class="btn btn-primary" style="flex: 1; justify-content: center; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; padding: 10px 16px; display: inline-flex; align-items: center; gap: 8px;">
+                    <span class="spinner hidden" id="spinner-save" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                    <span id="btn-save-text">+ Register Endpoint</span>
+                  </button>
                 </div>
-
-                <button type="submit" id="btn-save-grafana" class="btn btn-primary" style="width: 100%; justify-content: center; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; padding: 10px 16px; margin-top: 8px; display: flex; align-items: center; gap: 8px;">
-                  <span class="spinner hidden" id="spinner-save"></span>
-                  <span id="btn-save-text">+ Register Endpoint</span>
-                </button>
               </form>
 
               <div id="grafana-feedback" class="alert hidden" style="margin-top: 16px;">

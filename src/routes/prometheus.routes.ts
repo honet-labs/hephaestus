@@ -24,4 +24,12 @@ router.post("/config/validate", (req, res) => prometheusController.validateConfi
  */
 router.post("/config", (req, res) => prometheusController.saveConfig(req, res));
 
+// Config profile management
+router.get("/configs", (req, res) => prometheusController.getConfigsList(req, res));
+router.post("/configs", (req, res) => prometheusController.saveConfigProfile(req, res));
+router.delete("/configs/:id", (req, res) => prometheusController.deleteConfigProfile(req, res));
+router.post("/configs/:id/activate", (req, res) => prometheusController.activateConfigProfile(req, res));
+router.post("/configs/:id/test", (req, res) => prometheusController.testConnectionById(req, res));
+router.post("/configs/test", (req, res) => prometheusController.testConnection(req, res));
+
 export default router;

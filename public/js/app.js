@@ -18,6 +18,28 @@ const inputConfigId = document.getElementById('grafana-config-id');
 const inputName = document.getElementById('grafana-name');
 const registryCardsContainer = document.getElementById('registry-cards-container');
 
+// Unified Connection form inputs
+const inputConnectionType = document.getElementById('connection-type');
+const inputConnectionId = document.getElementById('connection-id');
+const inputConnectionName = document.getElementById('connection-name');
+
+const grafanaFields = document.getElementById('grafana-fields');
+const prometheusFields = document.getElementById('prometheus-fields');
+
+const inputPrometheusMode = document.getElementById('prometheus-mode');
+const inputPrometheusPath = document.getElementById('prometheus-path');
+const inputPrometheusReloadUrl = document.getElementById('prometheus-reload-url');
+const prometheusSshFields = document.getElementById('prometheus-ssh-fields');
+const inputPrometheusSshHost = document.getElementById('prometheus-ssh-host');
+const inputPrometheusSshPort = document.getElementById('prometheus-ssh-port');
+const inputPrometheusSshUser = document.getElementById('prometheus-ssh-user');
+const inputPrometheusSshAuth = document.getElementById('prometheus-ssh-auth');
+const inputPrometheusSshPassword = document.getElementById('prometheus-ssh-password');
+const inputPrometheusSshKey = document.getElementById('prometheus-ssh-key');
+
+const sshPasswordGroup = document.getElementById('ssh-password-group');
+const sshKeyGroup = document.getElementById('ssh-key-group');
+
 const btnTest = document.getElementById('btn-test-grafana');
 const btnSave = document.getElementById('btn-save-grafana');
 const btnReset = document.getElementById('btn-reset-grafana');
@@ -154,6 +176,11 @@ window.addEventListener('DOMContentLoaded', () => {
   handleHashNavigation();
   window.addEventListener('hashchange', handleHashNavigation);
 
+  // Initialize unified connection fields visibility
+  toggleConnectionFields();
+  togglePrometheusModeFields();
+  toggleSSHAuthFields();
+
   // Load configuration
   loadGrafanaSettings();
 });
@@ -252,173 +279,200 @@ function renderLogs() {
 
 // 2. Load active configurations
 async function loadGrafanaSettings() {
-  try {
-    const res = await fetch(API_SETTINGS_URL);
-    if (!res.ok) throw new Error('API fetch failed');
-    
-    const result = await res.json();
-    if (result.success && result.data) {
-      const { id, name, host, datasourceUid, isConfigured, maskedToken } = result.data;
-      defaultDatasourceUid = datasourceUid || 'bf5jy3ppyomwwd';
-      
-      // Update config views
-      activeHost.textContent = name ? `${name} (${host})` : (host || 'None (No active config)');
-      activeDatasource.textContent = datasourceUid || 'bf5jy3ppyomwwd';
-      
-      widgetDatasourceUid.textContent = datasourceUid || 'bf5jy3ppyomwwd';
-      
-      if (isConfigured) {
-        // Status updates (configured)
-        activeState.className = 'status-badge status-configured';
-        activeState.innerHTML = '● Custom Config';
-        if (revertBox) revertBox.classList.remove('hidden');
-        
-        widgetGrafanaStatus.textContent = 'Connected';
-        widgetGrafanaStatus.style.color = '#56d364';
-        widgetGrafanaSub.textContent = name || host;
-        
-        infraGrafanaDot.className = 'status-dot dot-green';
-        
-        // Fill form fields
-        if (inputConfigId) inputConfigId.value = id || '';
-        if (inputName) inputName.value = name || '';
-        inputHost.value = host;
-        inputDatasource.value = datasourceUid;
-        inputToken.value = maskedToken || '****************';
-        
-        addLog('Configuration', 'Loaded custom Grafana configuration from local storage', 'OK');
-        
-        if (datasourcesPanel) datasourcesPanel.classList.remove('hidden');
-      } else {
-        // Status updates (defaults)
-        activeState.className = 'status-badge status-default';
-        activeState.innerHTML = '● Default Env';
-        if (revertBox) revertBox.classList.add('hidden');
-        
-        if (host) {
-          widgetGrafanaStatus.textContent = 'Connected';
-          widgetGrafanaStatus.style.color = '#e3b341';
-          widgetGrafanaSub.textContent = 'Using .env configuration';
-          infraGrafanaDot.className = 'status-dot dot-green';
-          
-          if (inputConfigId) inputConfigId.value = id || '';
-          if (inputName) inputName.value = name || 'Environment Defaults';
-          inputHost.value = host;
-          inputDatasource.value = datasourceUid;
-          inputToken.value = maskedToken || '';
-          
-          addLog('Configuration', 'Using static .env configuration defaults', 'INFO');
-          
-          if (datasourcesPanel) datasourcesPanel.classList.remove('hidden');
-        } else {
-          widgetGrafanaStatus.textContent = 'Offline';
-          widgetGrafanaStatus.style.color = '#ff7b72';
-          widgetGrafanaSub.textContent = 'Configuration required';
-          infraGrafanaDot.className = 'status-dot dot-yellow';
-          
-          addLog('Configuration', 'No environment or custom settings loaded. Please configure.', 'WARN');
-          if (datasourcesPanel) datasourcesPanel.classList.add('hidden');
-        }
-      }
-      await loadGrafanaConfigsList();
-    }
-  } catch (error) {
-    addLog('Configuration', 'Failed to fetch settings from server.', 'ERROR');
-  }
+  await loadSettingsRegistry();
 }
 
 async function loadGrafanaConfigsList() {
-  if (!registryCardsContainer) return;
+  await loadSettingsRegistry();
+}
 
+async function loadSettingsRegistry() {
   try {
-    const res = await fetch('/api/v1/settings/grafana/configs');
-    const result = await res.json();
-    if (res.ok && result.success && Array.isArray(result.data)) {
-      const list = result.data;
-      
-      // Update header count
-      const headerTitle = document.getElementById('registry-header-title');
-      if (headerTitle) {
-        headerTitle.textContent = `Active Registry (${list.length})`;
+    // 1. Fetch Grafana Active Setting to update Top Overview / Info panel
+    const resGrafana = await fetch(API_SETTINGS_URL);
+    if (resGrafana.ok) {
+      const result = await resGrafana.json();
+      if (result.success && result.data) {
+        const { id, name, host, datasourceUid, isConfigured, maskedToken } = result.data;
+        defaultDatasourceUid = datasourceUid || 'bf5jy3ppyomwwd';
+        activeHost.textContent = name ? `${name} (${host})` : (host || 'None (No active config)');
+        activeDatasource.textContent = datasourceUid || 'bf5jy3ppyomwwd';
+        widgetDatasourceUid.textContent = datasourceUid || 'bf5jy3ppyomwwd';
+        
+        if (isConfigured) {
+          activeState.className = 'status-badge status-configured';
+          activeState.innerHTML = '● Custom Config';
+          widgetGrafanaStatus.textContent = 'Connected';
+          widgetGrafanaStatus.style.color = '#56d364';
+          widgetGrafanaSub.textContent = name || host;
+          infraGrafanaDot.className = 'status-dot dot-green';
+        } else {
+          activeState.className = 'status-badge status-default';
+          activeState.innerHTML = '● Default Env';
+          if (host) {
+            widgetGrafanaStatus.textContent = 'Connected';
+            widgetGrafanaStatus.style.color = '#e3b341';
+            widgetGrafanaSub.textContent = 'Using .env configuration';
+            infraGrafanaDot.className = 'status-dot dot-green';
+          } else {
+            widgetGrafanaStatus.textContent = 'Offline';
+            widgetGrafanaStatus.style.color = '#ff7b72';
+            widgetGrafanaSub.textContent = 'Configuration required';
+            infraGrafanaDot.className = 'status-dot dot-yellow';
+          }
+        }
       }
-
-      if (list.length === 0) {
-        registryCardsContainer.innerHTML = `
-          <div style="text-align: center; padding: 24px; color: var(--text-muted);">
-            No registered Grafana servers found.
-          </div>
-        `;
-        return;
-      }
-
-      let html = '';
-      list.forEach(c => {
-        const escapedName = c.name.replace(/'/g, "\\'");
-        const escapedHost = c.host.replace(/'/g, "\\'");
-        const escapedUid = (c.datasourceUid || '').replace(/'/g, "\\'");
-        const tokenVal = c.maskedToken || '****************';
-
-        html += `
-          <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
-            <!-- Left Side: Icon & Info -->
-            <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
-              <!-- Icon Container -->
-              <div style="width: 36px; height: 36px; background: rgba(25, 113, 194, 0.1); border: 1px solid rgba(25, 113, 194, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1971c2; flex-shrink: 0;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-                  <line x1="6" y1="6" x2="6.01" y2="6"></line>
-                  <line x1="6" y1="18" x2="6.01" y2="18"></line>
-                </svg>
-              </div>
-              <!-- Details -->
-              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                  <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${c.name}</span>
-                  <span class="status-badge" style="background: rgba(25, 113, 194, 0.15); color: #38bdf8; border: 1px solid rgba(25, 113, 194, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">GRAFANA API</span>
-                  ${c.isActive ? '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">ACTIVE</span>' : ''}
-                </div>
-                <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                  <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.host}</span>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Right Side: Status & Actions -->
-            <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-              <!-- Status Badge -->
-              <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px;">
-                CHECKING...
-              </span>
-              <!-- Actions -->
-              <button type="button" class="btn btn-secondary" onclick="viewDatasources('${c.id}', '${escapedName}', '${escapedHost}')" style="padding: 4px 8px; font-size: 11px; height: auto;">View DS</button>
-              <button type="button" class="btn btn-secondary" onclick="pingServer('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Ping Test</button>
-              ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Activate</button>` : ''}
-              <button type="button" class="btn btn-secondary" onclick="editGrafanaConfig('${c.id}', '${escapedName}', '${escapedHost}', '${escapedUid}', '${tokenVal}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-              </button>
-              <button type="button" class="btn btn-secondary" onclick="deleteGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15); display: inline-flex; align-items: center; justify-content: center;" title="Delete Config">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              </button>
-            </div>
-          </div>
-        `;
-      });
-      registryCardsContainer.innerHTML = html;
-
-      // Trigger asynchronous connection checks
-      list.forEach(c => {
-        checkCardConnection(c.id);
-      });
     }
+
+    // 2. Fetch Grafana Configs List AND Prometheus Configs List
+    let grafanaList = [];
+    try {
+      const resG = await fetch('/api/v1/settings/grafana/configs');
+      const rG = await resG.json();
+      if (rG.success && Array.isArray(rG.data)) {
+        grafanaList = rG.data;
+      }
+    } catch (_) {}
+
+    let prometheusList = [];
+    try {
+      const resP = await fetch('/api/v1/prometheus/configs');
+      const rP = await resP.json();
+      if (rP.success && Array.isArray(rP.configs)) {
+        prometheusList = rP.configs;
+      }
+    } catch (_) {}
+
+    // 3. Render list in registry-cards-container
+    const totalCount = grafanaList.length + prometheusList.length;
+    const headerTitle = document.getElementById('registry-header-title');
+    if (headerTitle) {
+      headerTitle.textContent = `Active Registry (${totalCount})`;
+    }
+
+    if (totalCount === 0) {
+      registryCardsContainer.innerHTML = `
+        <div style="text-align: center; padding: 24px; color: var(--text-muted);">
+          No registered connections found.
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+
+    // Render Grafana connections
+    grafanaList.forEach(c => {
+      const escapedName = c.name.replace(/'/g, "\\'");
+      const escapedHost = c.host.replace(/'/g, "\\'");
+      const escapedUid = (c.datasourceUid || '').replace(/'/g, "\\'");
+      const tokenVal = c.maskedToken || '****************';
+
+      html += `
+        <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+            <div style="width: 36px; height: 36px; background: rgba(25, 113, 194, 0.1); border: 1px solid rgba(25, 113, 194, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #1971c2; flex-shrink: 0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                <line x1="6" y1="18" x2="6.01" y2="18"></line>
+              </svg>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${c.name}</span>
+                <span class="status-badge" style="background: rgba(25, 113, 194, 0.15); color: #38bdf8; border: 1px solid rgba(25, 113, 194, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">GRAFANA API</span>
+                ${c.isActive ? '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">ACTIVE</span>' : ''}
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.host}</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px;">
+              CHECKING...
+            </span>
+            <button type="button" class="btn btn-secondary" onclick="viewDatasources('${c.id}', '${escapedName}', '${escapedHost}')" style="padding: 4px 8px; font-size: 11px; height: auto;">View DS</button>
+            <button type="button" class="btn btn-secondary" onclick="pingServer('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Ping Test</button>
+            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Activate</button>` : ''}
+            <button type="button" class="btn btn-secondary" onclick="editGrafanaConfig('${c.id}', '${escapedName}', '${escapedHost}', '${escapedUid}', '${tokenVal}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="deleteGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15); display: inline-flex; align-items: center; justify-content: center;" title="Delete Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    // Render Prometheus connections
+    prometheusList.forEach(c => {
+      const escapedName = c.name.replace(/'/g, "\\'");
+      const escapedPath = c.path.replace(/'/g, "\\'");
+      const escapedReload = c.reloadUrl.replace(/'/g, "\\'");
+      const escapedSshHost = (c.sshHost || '').replace(/'/g, "\\'");
+      const escapedSshUser = (c.sshUser || '').replace(/'/g, "\\'");
+      const escapedSshAuth = (c.sshAuth || 'password').replace(/'/g, "\\'");
+      const escapedSshKey = (c.sshKey || '').replace(/'/g, "\\'").replace(/\n/g, "\\n");
+      const hasPassword = c.sshPassword ? true : false;
+
+      html += `
+        <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+            <div style="width: 36px; height: 36px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #f59e0b; flex-shrink: 0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path>
+              </svg>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${c.name}</span>
+                <span class="status-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">PROMETHEUS</span>
+                <span class="status-badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid var(--app-border); font-size: 9px; padding: 1px 4px; line-height: 1;">${c.mode.toUpperCase()}</span>
+                ${c.isActive ? '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">ACTIVE</span>' : ''}
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.path} ${c.mode === 'ssh' ? `(${c.sshHost})` : ''}</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px;">
+              CHECKING...
+            </span>
+            <button type="button" class="btn btn-secondary" onclick="pingPrometheusServer('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Ping Test</button>
+            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activatePrometheusConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto;">Activate</button>` : ''}
+            <button type="button" class="btn btn-secondary" onclick="editPrometheusConfig('${c.id}', '${escapedName}', '${c.mode}', '${escapedPath}', '${escapedReload}', '${escapedSshHost}', ${c.sshPort || 22}, '${escapedSshUser}', '${escapedSshAuth}', ${hasPassword}, '${escapedSshKey}')" style="padding: 4px 8px; font-size: 11px; height: auto; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="deletePrometheusConfig('${c.id}')" style="padding: 4px 8px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15); display: inline-flex; align-items: center; justify-content: center;" title="Delete Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    registryCardsContainer.innerHTML = html;
+
+    // Trigger asynchronous connection checks
+    grafanaList.forEach(c => {
+      checkCardConnection(c.id);
+    });
+
+    prometheusList.forEach(c => {
+      checkPrometheusCardConnection(c.id);
+    });
+
   } catch (error) {
-    console.error('Error loading configurations list:', error);
-    registryCardsContainer.innerHTML = `
-      <div style="text-align: center; padding: 24px; color: #ef4444;">
-        Failed to load saved configurations.
-      </div>
-    `;
+    console.error('Error rendering registry:', error);
   }
 }
 
@@ -470,7 +524,6 @@ async function pingServer(id) {
   addLog('Configuration', `Initiating manual ping test to server...`, 'INFO');
   await checkCardConnection(id);
   
-  // Show notification feedback based on updated state
   setTimeout(() => {
     const updatedBadge = document.getElementById(`conn-status-${id}`);
     if (updatedBadge && updatedBadge.textContent.includes('CONNECTED')) {
@@ -481,30 +534,113 @@ async function pingServer(id) {
   }, 800);
 }
 
-function clearGrafanaForm() {
-  if (inputConfigId) inputConfigId.value = '';
-  if (inputName) inputName.value = '';
+function toggleConnectionFields() {
+  if (!inputConnectionType || !grafanaFields || !prometheusFields) return;
+  const type = inputConnectionType.value;
+  if (type === 'grafana') {
+    grafanaFields.classList.remove('hidden');
+    prometheusFields.classList.add('hidden');
+    if (inputConnectionName) inputConnectionName.placeholder = 'e.g. Production Grafana';
+  } else {
+    grafanaFields.classList.add('hidden');
+    prometheusFields.classList.remove('hidden');
+    if (inputConnectionName) inputConnectionName.placeholder = 'e.g. Remote Prometheus';
+  }
+}
+
+function togglePrometheusModeFields() {
+  if (!inputPrometheusMode || !prometheusSshFields) return;
+  const mode = inputPrometheusMode.value;
+  if (mode === 'local') {
+    prometheusSshFields.classList.add('hidden');
+  } else {
+    prometheusSshFields.classList.remove('hidden');
+  }
+}
+
+function toggleSSHAuthFields() {
+  if (!inputPrometheusSshAuth || !sshPasswordGroup || !sshKeyGroup) return;
+  const auth = inputPrometheusSshAuth.value;
+  if (auth === 'password') {
+    sshPasswordGroup.classList.remove('hidden');
+    sshKeyGroup.classList.add('hidden');
+  } else {
+    sshPasswordGroup.classList.add('hidden');
+    sshKeyGroup.classList.remove('hidden');
+  }
+}
+
+function clearConnectionForm() {
+  if (inputConnectionId) inputConnectionId.value = '';
+  if (inputConnectionName) inputConnectionName.value = '';
   if (inputHost) inputHost.value = '';
   if (inputToken) inputToken.value = '';
   if (inputDatasource) inputDatasource.value = '';
+  
+  if (inputPrometheusMode) inputPrometheusMode.value = 'local';
+  if (inputPrometheusPath) inputPrometheusPath.value = '/etc/prometheus/prometheus.yml';
+  if (inputPrometheusReloadUrl) inputPrometheusReloadUrl.value = 'http://localhost:9090/-/reload';
+  if (inputPrometheusSshHost) inputPrometheusSshHost.value = '';
+  if (inputPrometheusSshPort) inputPrometheusSshPort.value = '22';
+  if (inputPrometheusSshUser) inputPrometheusSshUser.value = '';
+  if (inputPrometheusSshAuth) inputPrometheusSshAuth.value = 'password';
+  if (inputPrometheusSshPassword) inputPrometheusSshPassword.value = '';
+  if (inputPrometheusSshKey) inputPrometheusSshKey.value = '';
+
+  toggleConnectionFields();
+  togglePrometheusModeFields();
+  toggleSSHAuthFields();
+
   const saveText = document.getElementById('btn-save-text');
   if (saveText) saveText.textContent = '+ Register Endpoint';
   hideFeedback();
 }
 
+function clearGrafanaForm() {
+  clearConnectionForm();
+}
+
 function editGrafanaConfig(id, name, host, datasourceUid, maskedToken) {
-  if (inputConfigId) inputConfigId.value = id;
-  if (inputName) inputName.value = name;
+  if (inputConnectionType) inputConnectionType.value = 'grafana';
+  if (inputConnectionId) inputConnectionId.value = id;
+  if (inputConnectionName) inputConnectionName.value = name;
   if (inputHost) inputHost.value = host;
-  if (inputToken) inputToken.value = maskedToken || '****************';
   if (inputDatasource) inputDatasource.value = datasourceUid;
+  if (inputToken) inputToken.value = maskedToken === '****************' ? '' : maskedToken;
+
+  toggleConnectionFields();
+
   const saveText = document.getElementById('btn-save-text');
-  if (saveText) saveText.textContent = 'Update Endpoint';
+  if (saveText) saveText.textContent = 'Update Connection';
+  hideFeedback();
+}
+
+function editPrometheusConfig(id, name, mode, path, reloadUrl, sshHost, sshPort, sshUser, sshAuth, hasPassword, sshKey) {
+  if (inputConnectionType) inputConnectionType.value = 'prometheus';
+  if (inputConnectionId) inputConnectionId.value = id;
+  if (inputConnectionName) inputConnectionName.value = name;
+
+  if (inputPrometheusMode) inputPrometheusMode.value = mode;
+  if (inputPrometheusPath) inputPrometheusPath.value = path;
+  if (inputPrometheusReloadUrl) inputPrometheusReloadUrl.value = reloadUrl;
+  if (inputPrometheusSshHost) inputPrometheusSshHost.value = sshHost || '';
+  if (inputPrometheusSshPort) inputPrometheusSshPort.value = sshPort || '22';
+  if (inputPrometheusSshUser) inputPrometheusSshUser.value = sshUser || '';
+  if (inputPrometheusSshAuth) inputPrometheusSshAuth.value = sshAuth || 'password';
+  if (inputPrometheusSshPassword) inputPrometheusSshPassword.value = hasPassword ? '********' : '';
+  if (inputPrometheusSshKey) inputPrometheusSshKey.value = sshKey || '';
+
+  toggleConnectionFields();
+  togglePrometheusModeFields();
+  toggleSSHAuthFields();
+
+  const saveText = document.getElementById('btn-save-text');
+  if (saveText) saveText.textContent = 'Update Connection';
   hideFeedback();
 }
 
 async function activateGrafanaConfig(id) {
-  addLog('Configuration', 'Activating configuration...', 'INFO');
+  addLog('Configuration', 'Activating Grafana configuration...', 'INFO');
   try {
     const res = await fetch(`/api/v1/settings/grafana/configs/${id}/activate`, {
       method: 'POST'
@@ -512,7 +648,7 @@ async function activateGrafanaConfig(id) {
     const result = await res.json();
     if (res.ok && result.success) {
       addLog('Configuration', result.message || 'Configuration activated successfully.', 'SUCCESS');
-      await loadGrafanaSettings();
+      await loadSettingsRegistry();
     } else {
       addLog('Configuration', `Activation failed: ${result.message || 'Unknown error'}`, 'ERROR');
     }
@@ -532,7 +668,7 @@ async function deleteGrafanaConfig(id) {
     const result = await res.json();
     if (res.ok && result.success) {
       addLog('Configuration', result.message || 'Configuration deleted successfully.', 'SUCCESS');
-      await loadGrafanaSettings();
+      await loadSettingsRegistry();
     } else {
       addLog('Configuration', `Deletion failed: ${result.message || 'Unknown error'}`, 'ERROR');
     }
@@ -542,90 +678,283 @@ async function deleteGrafanaConfig(id) {
   }
 }
 
-// 3. Test Connection
-async function testGrafanaConnection(event) {
-  event.preventDefault();
-  
-  const host = inputHost.value.trim();
-  const token = inputToken.value.trim();
-  const datasourceUid = inputDatasource.value.trim();
-
-  if (!host || !token) {
-    showFeedback('danger', 'Form Error', 'Host URL and Service Token are required.');
-    return;
-  }
-
-  setLoading(true, 'test');
-  hideFeedback();
-  addLog('Grafana API', `Initiating connection test to ${host}...`, 'INFO');
-
+async function activatePrometheusConfig(id) {
+  addLog('Configuration', 'Activating Prometheus configuration...', 'INFO');
   try {
-    const res = await fetch(API_SETTINGS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'test', host, token, datasourceUid })
+    const res = await fetch(`/api/v1/prometheus/configs/${id}/activate`, {
+      method: 'POST'
     });
-    
     const result = await res.json();
     if (res.ok && result.success) {
-      showFeedback('success', 'Uji Koneksi Berhasil', result.message || 'Berhasil terhubung ke Grafana server!');
-      addLog('Grafana API', 'Connectivity check passed successfully.', 'SUCCESS');
+      addLog('Configuration', result.message || 'Prometheus configuration activated successfully.', 'SUCCESS');
+      
+      // If we are currently on the prometheus page, reload the editor configuration
+      const currentHash = window.location.hash;
+      if (currentHash === '#prometheus') {
+        if (typeof initPrometheusPage === 'function') {
+          initPrometheusPage();
+        }
+      }
+      
+      await loadSettingsRegistry();
     } else {
-      showFeedback('danger', 'Koneksi Gagal', result.message || result.error || 'Gagal terhubung.');
-      addLog('Grafana API', `Connectivity check failed: ${result.message || 'Unknown error'}`, 'ERROR');
+      addLog('Configuration', `Activation failed: ${result.message || 'Unknown error'}`, 'ERROR');
     }
   } catch (error) {
-    showFeedback('danger', 'API Error', error.message || 'Gagal menghubungi server backend.');
-    addLog('Grafana API', 'Communication timeout or CORS issue with backend endpoint.', 'ERROR');
-  } finally {
-    setLoading(false);
+    console.error('Error activating configuration:', error);
+    addLog('Configuration', 'Network error during configuration activation.', 'ERROR');
   }
 }
 
-async function saveGrafanaConfiguration(event) {
+async function deletePrometheusConfig(id) {
+  if (!confirm('Apakah Anda yakin ingin menghapus konfigurasi Prometheus ini?')) return;
+  addLog('Configuration', 'Deleting Prometheus configuration...', 'INFO');
+  try {
+    const res = await fetch(`/api/v1/prometheus/configs/${id}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Configuration', result.message || 'Prometheus configuration deleted successfully.', 'SUCCESS');
+      await loadSettingsRegistry();
+    } else {
+      addLog('Configuration', `Deletion failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (error) {
+    console.error('Error deleting configuration:', error);
+    addLog('Configuration', 'Network error during configuration deletion.', 'ERROR');
+  }
+}
+
+async function checkPrometheusCardConnection(id) {
+  const badge = document.getElementById(`conn-status-${id}`);
+  if (!badge) return;
+
+  try {
+    const res = await fetch(`/api/v1/prometheus/configs/${id}/test`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success && result.isConnected) {
+      badge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+      badge.style.color = '#10b981';
+      badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      badge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        CONNECTED
+      `;
+    } else {
+      badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      badge.style.color = '#ef4444';
+      badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      badge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        OFFLINE
+      `;
+    }
+  } catch (error) {
+    badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+    badge.style.color = '#ef4444';
+    badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    badge.innerHTML = 'ERROR';
+  }
+}
+
+async function pingPrometheusServer(id) {
+  addLog('Prometheus', `Initiating manual ping to connection ID ${id}...`, 'INFO');
+  try {
+    const res = await fetch(`/api/v1/prometheus/configs/${id}/test`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success && result.isConnected) {
+      alert('Koneksi Prometheus Sukses!');
+      addLog('Prometheus', 'Manual connection check succeeded.', 'SUCCESS');
+    } else {
+      alert('Koneksi Prometheus Gagal: ' + (result.message || 'Server offline.'));
+      addLog('Prometheus', `Manual connection check failed: ${result.message || 'Offline'}`, 'ERROR');
+    }
+  } catch (err) {
+    alert('API Error: ' + err.message);
+  }
+}
+
+async function saveConnectionConfiguration(event) {
   if (event) event.preventDefault();
-  const id = inputConfigId ? inputConfigId.value : "";
-  const name = inputName ? inputName.value.trim() : "";
-  const host = inputHost.value.trim();
-  const token = inputToken.value.trim();
-  const datasourceUid = inputDatasource.value.trim();
+
+  const type = inputConnectionType.value;
+  const id = inputConnectionId.value;
+  const name = inputConnectionName.value.trim();
 
   if (!name) {
-    showFeedback('danger', 'Form Error', 'Configuration Name/Alias is required.');
-    return;
-  }
-
-  if (!host || !token) {
-    showFeedback('danger', 'Form Error', 'Host URL and Service Token are required.');
+    showFeedback('danger', 'Form Error', 'Connection name/alias is required.');
     return;
   }
 
   setLoading(true, 'save');
   hideFeedback();
-  addLog('Configuration', 'Saving configuration...', 'INFO');
+  addLog('Configuration', `Saving ${type} connection...`, 'INFO');
 
   try {
-    const res = await fetch('/api/v1/settings/grafana/configs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, name, host, token, datasourceUid })
-    });
-    
-    const result = await res.json();
-    if (res.ok && result.success) {
-      showFeedback('success', 'Penyimpanan Berhasil', result.message || 'Konfigurasi berhasil disimpan!');
-      addLog('Configuration', `Endpoint saved: ${name} (${host})`, 'SUCCESS');
-      clearGrafanaForm();
-      await loadGrafanaSettings();
+    if (type === 'grafana') {
+      const host = inputHost.value.trim();
+      const token = inputToken.value.trim();
+      const datasourceUid = inputDatasource.value.trim();
+
+      if (!host || !token) {
+        showFeedback('danger', 'Form Error', 'Host URL and Token are required.');
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/v1/settings/grafana/configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, host, token, datasourceUid })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Saved Successfully', result.message || 'Grafana configuration saved.');
+        addLog('Configuration', `Grafana connection saved: ${name}`, 'SUCCESS');
+        clearConnectionForm();
+        await loadSettingsRegistry();
+      } else {
+        showFeedback('danger', 'Save Failed', result.message || result.error || 'Failed to save.');
+        addLog('Configuration', `Grafana save failed: ${result.message}`, 'ERROR');
+      }
     } else {
-      showFeedback('danger', 'Gagal Menyimpan', result.message || result.error || 'Gagal menyimpan.');
-      addLog('Configuration', `Save settings failed: ${result.message}`, 'ERROR');
+      const mode = inputPrometheusMode.value;
+      const path = inputPrometheusPath.value.trim();
+      const reloadUrl = inputPrometheusReloadUrl.value.trim();
+      const sshHost = inputPrometheusSshHost.value.trim();
+      const sshPort = parseInt(inputPrometheusSshPort.value.trim() || '22', 10);
+      const sshUser = inputPrometheusSshUser.value.trim();
+      const sshAuth = inputPrometheusSshAuth.value;
+      let sshPassword = inputPrometheusSshPassword.value;
+      const sshKey = inputPrometheusSshKey.value;
+
+      if (!path) {
+        showFeedback('danger', 'Form Error', 'Config file path is required.');
+        setLoading(false);
+        return;
+      }
+
+      if (mode === 'ssh' && (!sshHost || !sshUser)) {
+        showFeedback('danger', 'Form Error', 'SSH host and user are required.');
+        setLoading(false);
+        return;
+      }
+
+      if (sshPassword === '********') {
+        sshPassword = undefined;
+      }
+
+      const res = await fetch('/api/v1/prometheus/configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, mode, path, reloadUrl, sshHost, sshPort, sshUser, sshAuth, sshPassword, sshKey })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Saved Successfully', result.message || 'Prometheus connection saved.');
+        addLog('Configuration', `Prometheus connection saved: ${name}`, 'SUCCESS');
+        clearConnectionForm();
+        await loadSettingsRegistry();
+      } else {
+        showFeedback('danger', 'Save Failed', result.message || result.error || 'Failed to save.');
+        addLog('Configuration', `Prometheus save failed: ${result.message}`, 'ERROR');
+      }
     }
   } catch (error) {
-    showFeedback('danger', 'API Error', error.message || 'Gagal menghubungi server.');
-    addLog('Configuration', 'Request failed to commit settings storage.', 'ERROR');
+    showFeedback('danger', 'API Error', error.message || 'Failed to communicate with server.');
   } finally {
     setLoading(false);
+  }
+}
+
+async function testConnectionConfig() {
+  const type = inputConnectionType.value;
+  hideFeedback();
+
+  if (type === 'grafana') {
+    const host = inputHost.value.trim();
+    const token = inputToken.value.trim();
+    const datasourceUid = inputDatasource.value.trim();
+
+    if (!host || !token) {
+      showFeedback('danger', 'Form Error', 'Host URL and Token are required.');
+      return;
+    }
+
+    setLoading(true, 'test');
+    addLog('Grafana API', `Testing connection to ${host}...`, 'INFO');
+
+    try {
+      const res = await fetch(API_SETTINGS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'test', host, token, datasourceUid })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Test Successful', result.message || 'Connected to Grafana.');
+        addLog('Grafana API', 'Connectivity test successful.', 'SUCCESS');
+      } else {
+        showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
+        addLog('Grafana API', `Connectivity test failed: ${result.message || 'Unknown error'}`, 'ERROR');
+      }
+    } catch (error) {
+      showFeedback('danger', 'API Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  } else {
+    const mode = inputPrometheusMode.value;
+    const path = inputPrometheusPath.value.trim();
+    const reloadUrl = inputPrometheusReloadUrl.value.trim();
+    const sshHost = inputPrometheusSshHost.value.trim();
+    const sshPort = parseInt(inputPrometheusSshPort.value.trim() || '22', 10);
+    const sshUser = inputPrometheusSshUser.value.trim();
+    const sshAuth = inputPrometheusSshAuth.value;
+    let sshPassword = inputPrometheusSshPassword.value;
+    const sshKey = inputPrometheusSshKey.value;
+
+    if (!path) {
+      showFeedback('danger', 'Form Error', 'Config file path is required.');
+      return;
+    }
+
+    if (mode === 'ssh' && (!sshHost || !sshUser)) {
+      showFeedback('danger', 'Form Error', 'SSH host and user are required.');
+      return;
+    }
+
+    if (sshPassword === '********') {
+      sshPassword = undefined;
+    }
+
+    setLoading(true, 'test');
+    addLog('Prometheus', `Testing Prometheus connection...`, 'INFO');
+
+    try {
+      const res = await fetch('/api/v1/prometheus/configs/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, path, reloadUrl, sshHost, sshPort, sshUser, sshAuth, sshPassword, sshKey })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Test Successful', result.message || 'Connection test succeeded.');
+        addLog('Prometheus', 'Connection test succeeded.', 'SUCCESS');
+      } else {
+        showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
+        addLog('Prometheus', `Connection test failed: ${result.message}`, 'ERROR');
+      }
+    } catch (error) {
+      showFeedback('danger', 'API Error', error.message);
+    } finally {
+      setLoading(false);
+    }
   }
 }
 
@@ -648,7 +977,7 @@ async function resetGrafanaConfiguration() {
     if (res.ok && result.success) {
       showFeedback('success', 'Reset Berhasil', result.message || 'Menggunakan setting default (.env).');
       addLog('Configuration', 'Dynamic registry cleared. Fallback to system default activated.', 'SUCCESS');
-      await loadGrafanaSettings();
+      await loadSettingsRegistry();
     } else {
       showFeedback('danger', 'Gagal Reset', result.message || result.error || 'Gagal reset.');
       addLog('Configuration', 'Clear registry storage failed.', 'ERROR');

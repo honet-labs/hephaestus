@@ -11,6 +11,22 @@ if (fs.existsSync(envPath)) {
 const DB_DIR = process.env.DB_DIR || (process.env.NODE_ENV === "production" ? "/app/data" : path.join(process.cwd(), "data"));
 const GRAFANA_CONFIG_FILE = path.join(DB_DIR, "grafana_config.json");
 const GRAFANA_CONFIGS_FILE = path.join(DB_DIR, "grafana_configs.json");
+const PROMETHEUS_CONFIGS_FILE = path.join(DB_DIR, "prometheus_configs.json");
+
+export interface PrometheusConfigItem {
+  id: string;
+  name: string;
+  mode: "local" | "ssh";
+  path: string;
+  reloadUrl: string;
+  sshHost?: string;
+  sshPort?: number;
+  sshUser?: string;
+  sshAuth?: "password" | "key";
+  sshPassword?: string;
+  sshKey?: string;
+  isActive: boolean;
+}
 
 export interface GrafanaConfig {
   id?: string;
@@ -39,6 +55,7 @@ export const config = {
   dbDir: DB_DIR,
   grafanaConfigFile: GRAFANA_CONFIG_FILE,
   grafanaConfigsFile: GRAFANA_CONFIGS_FILE,
+  prometheusConfigsFile: PROMETHEUS_CONFIGS_FILE,
   prometheusConfigPath: process.env.PROMETHEUS_CONFIG_PATH || (process.env.NODE_ENV === "production" ? "/app/data/prometheus.yml" : path.join(DB_DIR, "prometheus.yml")),
   prometheusReloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
   
@@ -98,6 +115,34 @@ export const config = {
       token: envToken,
       datasourceUid: envUid,
       isConfigured: !!(envHost && envToken)
+    };
+  },
+
+  /**
+   * Retrieves active Prometheus credentials/modes.
+   */
+  getActivePrometheusConfig(): PrometheusConfigItem {
+    if (fs.existsSync(PROMETHEUS_CONFIGS_FILE)) {
+      try {
+        const fileContent = fs.readFileSync(PROMETHEUS_CONFIGS_FILE, "utf-8");
+        const list: PrometheusConfigItem[] = JSON.parse(fileContent);
+        const active = list.find(c => c.isActive);
+        if (active) {
+          return active;
+        }
+      } catch (e) {
+        console.error("[Config] Error reading dynamic prometheus_configs.json:", e);
+      }
+    }
+    
+    // Fallback to environment variables or defaults
+    return {
+      id: "prom-cfg-env",
+      name: "Environment Defaults",
+      mode: "local",
+      path: process.env.PROMETHEUS_CONFIG_PATH || "/etc/prometheus/prometheus.yml",
+      reloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
+      isActive: true
     };
   }
 };
