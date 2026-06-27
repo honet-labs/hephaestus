@@ -1,6 +1,6 @@
 # Hephaestus DevOps Portal
 
-Hephaestus is a lightweight, self-hosted DevOps portal designed to manage Grafana integrations, query Prometheus metrics, configure scrape targets, and auto-install exporters across multi-server environments.
+Hephaestus is a lightweight, self-hosted DevOps portal designed to manage Grafana integrations, configure scrape targets, and auto-install exporters across multi-server environments.
 
 ---
 
@@ -86,7 +86,7 @@ To keep the codebase maintainable and support collaborative open-source developm
 ### 1. Separation of Concerns
 *   **Controllers** (`src/controllers/`): Strictly handle incoming request validation, parameters, and HTTP responses. Do not write business/IO logic here.
 *   **Services** (`src/services/`): Contain all the business logic, API requests, SSH tunnels, and disk operations.
-*   **Frontend** (`public/js/app.js`): Organized with clean, well-commented modular blocks (Navigation, Forms, Metrics Queries, Exporter commands).
+*   **Frontend** (`public/js/app.js`): Organized with clean, well-commented modular blocks (Navigation, Forms, Exporter commands).
 
 ### 2. Error Safety
 *   Always wrap async functions in try/catch blocks.

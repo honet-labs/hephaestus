@@ -2,7 +2,6 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import path from "path";
 import config from "./config/env";
-import reportRoutes from "./routes/report.routes";
 import settingsRoutes from "./routes/settings.routes";
 import prometheusRoutes from "./routes/prometheus.routes";
 
@@ -49,7 +48,6 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 // 4. API Routes registration
-app.use("/api/v1/report", reportRoutes);
 app.use("/api/v1/settings", settingsRoutes);
 app.use("/api/v1/prometheus", prometheusRoutes);
 

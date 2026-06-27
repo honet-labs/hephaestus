@@ -46,15 +46,6 @@
               <div class="menu-item-sub">API & server endpoints</div>
             </div>
           </a>
-          <a href="#telemetry" id="menu-telemetry" class="menu-item">
-            <span class="menu-item-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            </span>
-            <div>
-              <div class="menu-item-title">Query Data</div>
-              <div class="menu-item-sub">Custom metric reporting</div>
-            </div>
-          </a>
           <a href="#diagnostics" id="menu-diagnostics" class="menu-item">
             <span class="menu-item-icon">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
@@ -279,7 +270,6 @@
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                   <button class="btn btn-primary" onclick="navigate('settings')" style="width: 100%; justify-content: center;">Configure Grafana</button>
-                  <button class="btn btn-secondary" onclick="navigate('telemetry')" style="width: 100%; justify-content: center;">Query Telemetry</button>
                 </div>
               </div>
             </div>
@@ -439,90 +429,6 @@
           </div>
         </div>
 
-        <!-- PAGE 3: QUERY DATA -->
-        <div id="page-telemetry" class="hidden">
-          <!-- 3.1: DASHBOARD LIST VIEW -->
-          <div id="telemetry-list-view">
-            <div class="header-action-group">
-              <h2 style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-white);">Query Data</h2>
-              <button class="btn btn-primary" onclick="openCreateDashboardModal()">+ Create Report</button>
-            </div>
-
-            <div class="panel">
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Report Name</th>
-                      <th>Target Group</th>
-                      <th>Total Metrics</th>
-                      <th style="text-align: right; padding-right: 20px;">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="telemetry-dashboards-tbody">
-                    <!-- Injected by JS -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3.2: DASHBOARD DETAIL VIEW -->
-          <div id="telemetry-detail-view" class="hidden">
-            <div class="header-action-group" style="margin-bottom: 12px;">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <button class="btn btn-secondary" onclick="exitDashboardDetail()" style="padding: 6px 12px; font-size: 11px; height: auto;">← Back to List</button>
-                <h2 id="active-dashboard-title" style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-white);">Report Name</h2>
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <button class="btn btn-secondary" id="btn-refresh-report" onclick="refreshReportTelemetry()" style="padding: 6px 12px; font-size: 11px; height: auto; display: flex; align-items: center; gap: 6px; border-color: var(--app-border);">
-                  <span class="spinner hidden" id="spinner-refresh-report" style="width: 10px; height: 10px; border-width: 2px;"></span>
-                  <span>Refresh Data</span>
-                </button>
-                <button class="btn btn-secondary" onclick="window.print()" style="padding: 6px 12px; font-size: 11px; height: auto; border-color: var(--app-border);">Print / PDF</button>
-                <button class="btn btn-secondary" onclick="exportDashboardCSV()" style="padding: 6px 12px; font-size: 11px; height: auto; border-color: var(--app-border);">Export CSV</button>
-                <button class="btn btn-primary" onclick="addNewPanel()">+ Add Metric</button>
-              </div>
-            </div>
-
-            <!-- Pandora FMS Style Report Cover/Summary Metadata Card -->
-            <div class="panel" id="report-metadata-cover" style="margin-bottom: 20px; padding: 20px; border-left: 4px solid var(--primary-color);">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
-                <div style="flex: 1; min-width: 280px;">
-                  <h3 id="cover-report-name" style="margin: 0 0 6px 0; font-size: 15px; color: var(--text-white); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Weekly Network Telemetry Report</h3>
-                  <p id="cover-report-desc" style="margin: 0; font-size: 11.5px; color: var(--text-muted); line-height: 1.5;">This section presents telemetry performance metrics, availability stats, and charts queried dynamically from active integrations.</p>
-                </div>
-                <div style="display: grid; grid-template-columns: auto auto; gap: 8px 16px; font-size: 11px; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 6px; border: 1px solid var(--app-border); min-width: 240px;">
-                  <span style="color: var(--text-muted);">Target Group:</span>
-                  <span id="cover-report-group" style="color: var(--text-white); font-weight: bold;">--</span>
-                  <span style="color: var(--text-muted);">Generated On:</span>
-                  <span id="cover-report-date" style="color: var(--text-white); font-weight: bold; font-family: monospace;">-</span>
-                  <span style="color: var(--text-muted);">Total Elements:</span>
-                  <span id="cover-report-elements" style="color: var(--text-white); font-weight: bold;">0 Items</span>
-                  <span style="color: var(--text-muted);">Status Badge:</span>
-                  <span class="status-badge status-configured" style="font-size: 9px; padding: 1px 4px; border-radius: 3px;">ACTIVE</span>
-                </div>
-              </div>
-              
-              <!-- Mode Toggles (Visual Report vs Config List) -->
-              <div style="display: flex; gap: 12px; margin-top: 16px; border-top: 1px solid var(--app-border); padding-top: 16px;">
-                <button type="button" id="toggle-view-report" class="btn btn-primary" onclick="setReportViewMode('report')" style="font-size: 11px; padding: 6px 12px; height: auto;">
-                  Visual Report Mode
-                </button>
-                <button type="button" id="toggle-view-config" class="btn btn-secondary" onclick="setReportViewMode('config')" style="font-size: 11px; padding: 6px 12px; height: auto; border-color: var(--app-border);">
-                  Configuration Mode
-                </button>
-              </div>
-            </div>
-
-            <!-- Report Panels Grid/Container -->
-            <div id="telemetry-panels-container">
-              <!-- Injected by JS (either Report View or Config Table) -->
-            </div>
-          </div>
-        </div>
-
-
         <!-- PAGE 4: DIAGNOSTICS -->
         <div id="page-diagnostics" class="main-grid hidden">
           <!-- Left Column -->
@@ -550,7 +456,6 @@
                     <span class="info-val code font-mono"><strong style="color: #56d364;">GET</strong> /health - Health diagnostics check</span>
                     <span class="info-val code font-mono"><strong style="color: #56d364;">GET</strong> /api/v1/settings/grafana - Read active settings</span>
                     <span class="info-val code font-mono"><strong style="color: #ff7b72;">POST</strong> /api/v1/settings/grafana - Test/save settings</span>
-                    <span class="info-val code font-mono"><strong style="color: #ff7b72;">POST</strong> /api/v1/report/cpu - Query metric report</span>
                   </div>
                 </div>
               </div>
@@ -701,175 +606,6 @@
   </div>
 
   <!-- MODALS -->
-  
-  <!-- Dashboard Creator / Editor Modal -->
-  <div id="dashboard-modal" class="modal-overlay">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 class="modal-title" id="dashboard-modal-title">Create Report</h3>
-        <button class="modal-close" onclick="closeDashboardModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <form id="dashboard-form" onsubmit="saveDashboard(event)" style="display: flex; flex-direction: column; gap: 16px;">
-          <input type="hidden" id="dashboard-id-input">
-          <div class="form-group">
-            <label for="dashboard-name-input">Report Name</label>
-            <input type="text" id="dashboard-name-input" placeholder="e.g. Report Agent Overview - Linux" required>
-          </div>
-          <div class="form-group">
-            <label for="dashboard-group-input">Target Group</label>
-            <input type="text" id="dashboard-group-input" placeholder="e.g. -- Semua Group (All Groups) --" required>
-          </div>
-          <div class="modal-footer" style="padding: 10px 0 0 0; border: none; margin-top: 10px;">
-            <button type="button" class="btn btn-secondary" onclick="closeDashboardModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save Report</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Panel Query Editor Modal -->
-  <div id="query-modal" class="modal-overlay">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 class="modal-title">Configure Report Metric</h3>
-        <button class="modal-close" onclick="closeQueryModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <form id="query-panel-form" onsubmit="applyPanelQuery(event)" style="display: flex; flex-direction: column; gap: 16px;">
-          <input type="hidden" id="query-panel-id">
-          
-          <div class="form-group">
-            <label for="panel-preset-select">Metric Template (Preset)</label>
-            <select id="panel-preset-select" onchange="onMetricPresetChange()">
-              <option value="custom" selected>-- Custom PromQL Expression --</option>
-              <option value="mikrotik_cpu">Mikrotik Router CPU Load</option>
-              <option value="node_cpu">Node Exporter CPU Utilization (%)</option>
-              <option value="node_memory">Node Exporter Memory Usage (%)</option>
-              <option value="node_disk">Node Exporter Disk Utilization (%)</option>
-              <option value="prometheus_uptime">Prometheus Instance Uptime</option>
-            </select>
-            <span class="form-help" style="color: var(--text-muted); font-size: 11px;">Pilih preset template untuk mengisi form secara otomatis.</span>
-          </div>
-
-          <div class="form-group">
-            <label for="panel-title-input">Metric Title</label>
-            <input type="text" id="panel-title-input" placeholder="e.g. CPU Utilization" required>
-          </div>
-
-          <div class="form-group">
-            <label for="panel-time-preset-select">Time Range</label>
-            <select id="panel-time-preset-select" onchange="onTimePresetChange()">
-              <option value="1h" selected>Last 1 Hour</option>
-              <option value="6h">Last 6 Hours</option>
-              <option value="24h">Last 24 Hours</option>
-              <option value="7d">Last 7 Days</option>
-              <option value="custom">Custom Date Range</option>
-            </select>
-          </div>
-
-          <div class="form-row hidden" id="custom-date-row">
-            <div class="form-group">
-              <label for="panel-from-input">Start Date</label>
-              <input type="datetime-local" id="panel-from-input">
-            </div>
-            <div class="form-group">
-              <label for="panel-to-input">End Date</label>
-              <input type="datetime-local" id="panel-to-input">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="panel-config-select">Grafana Server Profile</label>
-            <select id="panel-config-select" onchange="onPanelConfigChange()">
-              <option value="">-- Loading Server Profiles... --</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="panel-datasource-select">Grafana Datasource</label>
-            <select id="panel-datasource-select" onchange="onPanelDatasourceChange()">
-              <option value="">-- Loading Datasources... --</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="panel-query-input" id="panel-query-label">PromQL Query Expression (expr)</label>
-            <input type="text" id="panel-query-input" placeholder='e.g. mktxp_system_cpu_load{routerboard_name="RC_HONET"}' required>
-            <span class="form-help" id="panel-query-help" style="color: var(--text-muted); font-size: 11px;">Masukkan PromQL expression lengkap (seperti parameter 'expr' di Postman).</span>
-          </div>
-
-          <div class="form-row-3">
-            <div class="form-group">
-              <label for="panel-format-select">Format</label>
-              <select id="panel-format-select">
-                <option value="table" selected>Table</option>
-                <option value="line_chart">Line Chart</option>
-                <option value="area_chart">Area Chart</option>
-                <option value="bar_chart">Bar Chart</option>
-                <option value="pie_chart">Pie Chart</option>
-                <option value="donut_chart">Donut Chart</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="panel-interval-input">Interval (ms)</label>
-              <input type="number" id="panel-interval-input" value="60000" min="1000" step="1000" required>
-            </div>
-            <div class="form-group">
-              <label for="panel-max-datapoints-input">Max Data Points</label>
-              <input type="number" id="panel-max-datapoints-input" value="1000" min="1" step="10" required>
-            </div>
-          </div>
-
-          <div id="panel-query-feedback" class="alert hidden">
-            <span class="alert-title" id="panel-query-feedback-title"></span>
-            <span id="panel-query-feedback-desc"></span>
-          </div>
-
-          <div class="modal-footer" style="padding: 10px 0 0 0; border: none; margin-top: 10px;">
-            <button type="button" class="btn btn-secondary" onclick="closeQueryModal()">Cancel</button>
-            <button type="submit" id="btn-apply-query" class="btn btn-primary">
-              <span class="spinner hidden" id="spinner-apply-query"></span>
-              <span>Execute & Save Report</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal 3: Preview Panel Data Modal -->
-  <div class="modal-overlay" id="preview-modal">
-    <div class="modal" style="max-width: 800px; width: 95%; background: var(--app-bg-dark); border: 1px solid var(--app-border);">
-      <div class="modal-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-        <h3 class="modal-title" id="preview-title" style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-white);">Report Preview</h3>
-        <button class="modal-close" onclick="closePreviewModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; line-height: 1;">&times;</button>
-      </div>
-      <div class="modal-body" style="max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 16px 0;">
-        <div style="font-size: 11px; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 4px; font-family: monospace; word-break: break-all;" id="preview-query">
-          <!-- Injected PromQL query -->
-        </div>
-        
-        <!-- Chart container -->
-        <div id="preview-chart-container" style="min-height: 120px;">
-          <!-- Injected Chart -->
-        </div>
-
-        <!-- Table container -->
-        <div id="preview-table-container">
-          <!-- Injected Table -->
-        </div>
-      </div>
-      <div class="modal-footer" style="border-top: 1px solid var(--app-border); padding-top: 12px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-        <button class="btn btn-secondary" id="btn-preview-export" style="font-size: 11px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; height: auto;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-          Export CSV Report
-        </button>
-        <button class="btn btn-secondary" onclick="closePreviewModal()" style="padding: 6px 12px; font-size: 11px; height: auto;">Close</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Modal 4: Available Grafana Datasources Popup Modal -->
   <div class="modal-overlay" id="datasources-modal">
