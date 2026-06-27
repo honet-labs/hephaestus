@@ -3321,6 +3321,11 @@ function setPlayerMode(mode) {
   }
 }
 
+function openFullscreenSlideshow() {
+  if (!activeMonitoringView) return;
+  window.open(`fullscreen.html#${activeMonitoringView.id}`, '_blank');
+}
+
 function renderPlayer() {
   const renderArea = document.getElementById('monitoring-render-area');
   renderArea.innerHTML = '';
@@ -3350,10 +3355,6 @@ function renderPlayer() {
       panelDiv.innerHTML = `
         <div style="background: var(--app-sidebar); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--app-border);">
           <span style="font-size: 11px; font-weight: bold; color: var(--text-white);">Panel ${index + 1}</span>
-          <a href="${escapeHtml(url)}" target="_blank" style="font-size: 10px; color: #58a6ff; text-decoration: none; display: flex; align-items: center; gap: 4px;">
-            <span>Open Link</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-          </a>
         </div>
         <iframe src="${cleanedUrl}" style="border: none; width: 100%; flex-grow: 1;" allowfullscreen></iframe>
       `;
@@ -3380,10 +3381,6 @@ function renderPlayer() {
     panelDiv.innerHTML = `
       <div style="background: var(--app-sidebar); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--app-border);">
         <span style="font-size: 11px; font-weight: bold; color: var(--text-white);">Active Panel: ${currentSlideIndex + 1} of ${activeMonitoringView.urls.length}</span>
-        <a href="${escapeHtml(url)}" target="_blank" style="font-size: 10px; color: #58a6ff; text-decoration: none; display: flex; align-items: center; gap: 4px;">
-          <span>Open Link</span>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        </a>
       </div>
       <iframe src="${cleanedUrl}" style="border: none; width: 100%; flex-grow: 1;" allowfullscreen></iframe>
     `;

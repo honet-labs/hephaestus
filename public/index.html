@@ -488,6 +488,11 @@
               
               <!-- Player Settings & Mode Toggle -->
               <div style="display: flex; align-items: center; gap: 12px;">
+                <!-- Fullscreen Play Button -->
+                <button class="btn btn-primary" onclick="openFullscreenSlideshow()" style="padding: 6px 12px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 6px;">
+                  <span>📺 Fullscreen</span>
+                </button>
+
                 <!-- View Mode Buttons -->
                 <div style="display: flex; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 4px; padding: 2px;">
                   <button class="btn btn-secondary active" id="btn-player-grid" onclick="setPlayerMode('grid')" style="padding: 4px 10px; font-size: 11px; height: auto; border: none;">Grid View</button>

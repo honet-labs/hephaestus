@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring View - Fullscreen Slideshow</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #121212;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    #player-frame-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #1a1a1a;
+    }
+    
+    /* Top thin progress bar */
+    #progress-bar-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 1000;
+    }
+    
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #a48181; /* matches --prometheus-orange */
+      transition: width 0.1s linear;
+      box-shadow: 0 0 8px #a48181;
+    }
+    
+    /* Floating controls */
+    #floating-controls {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 30, 30, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 40px;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      opacity: 1;
+    }
+    
+    #floating-controls:hover {
+      opacity: 1 !important;
+    }
+    
+    .control-info {
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 150px;
+    }
+    
+    .control-title {
+      font-size: 12px;
+      font-weight: 700;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+    
+    .control-status {
+      font-size: 10px;
+      color: #a0a0a0;
+      margin-top: 2px;
+    }
+    
+    .control-buttons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .btn-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+    
+    .btn-circle:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #a48181;
+      transform: scale(1.05);
+    }
+    
+    .btn-play {
+      background: #a48181;
+      border-color: #a48181;
+      color: #ffffff;
+    }
+    
+    .btn-play:hover {
+      background: #bfa3a3;
+      border-color: #bfa3a3;
+    }
+    
+    /* Error display overlay */
+    #error-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      z-index: 999;
+      gap: 16px;
+    }
+    
+    .error-card {
+      background: #242424;
+      border: 1px solid #3c3c3c;
+      border-radius: 8px;
+      padding: 30px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Thin Top Progress Bar -->
+  <div id="progress-bar-wrapper">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- Main Iframe Container -->
+  <div id="player-frame-container">
+    <iframe id="slideshow-iframe" allowfullscreen></iframe>
+  </div>
+
+  <!-- Floating Controls -->
+  <div id="floating-controls">
+    <div class="control-info">
+      <div class="control-title" id="lbl-title">Loading View...</div>
+      <div class="control-status" id="lbl-status">-</div>
+    </div>
+    
+    <div class="control-buttons">
+      <button class="btn-circle" onclick="prevSlide()" title="Previous Panel">⏮️</button>
+      <button class="btn-circle btn-play" id="btn-play" onclick="togglePlay()" title="Play/Pause">⏸️</button>
+      <button class="btn-circle" onclick="nextSlide()" title="Next Panel">⏭️</button>
+    </div>
+    
+    <div style="height: 24px; border-left: 1px solid rgba(255,255,255,0.15);"></div>
+    
+    <button class="btn-circle" onclick="closeFullscreen()" title="Close Slideshow" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #ff7b72;">❌</button>
+  </div>
+
+  <!-- Error Overlay (Hidden by default) -->
+  <div id="error-overlay" class="hidden">
+    <div class="error-card">
+      <span style="font-size: 48px;">⚠️</span>
+      <h2 style="margin: 16px 0 8px 0; color: #ff7b72;">Failed to Load View</h2>
+      <p id="error-message" style="color: #a0a0a0; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">Could not retrieve the requested monitoring view.</p>
+      <button class="btn btn-secondary" onclick="window.close()" style="padding: 8px 16px;">Close Tab</button>
+    </div>
+  </div>
+
+  <script>
+    let viewData = null;
+    let currentSlideIndex = 0;
+    let slideshowActive = true;
+    let slideshowTimer = null;
+    let slideshowDurationSetting = 10; // default
+    let slideshowRemainingTime = 0;
+    
+    // Auto-hide controls timeout
+    let controlHideTimeout;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initPlayer();
+      setupAutoHideControls();
+    });
+
+    async function initPlayer() {
+      const hashId = window.location.hash.replace('#', '');
+      if (!hashId) {
+        showError('No monitoring view ID provided in URL hash.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/v1/monitoring-views`);
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          const list = result.data || [];
+          viewData = list.find(v => v.id === hashId);
+          
+          if (!viewData) {
+            showError('The requested monitoring view could not be found.');
+            return;
+          }
+          
+          if (!viewData.urls || viewData.urls.length === 0) {
+            showError('No panel URLs configured in this monitoring view.');
+            return;
+          }
+          
+          slideshowDurationSetting = viewData.slideDuration || 10;
+          renderCurrentSlide();
+          startSlideshowTimer();
+        } else {
+          showError(result.message || 'Failed to fetch monitoring views from server.');
+        }
+      } catch (error) {
+        showError('Connection error: ' + error.message);
+      }
+    }
+
+    function renderCurrentSlide() {
+      if (!viewData) return;
+      
+      const iframe = document.getElementById('slideshow-iframe');
+      const lblTitle = document.getElementById('lbl-title');
+      const lblStatus = document.getElementById('lbl-status');
+      
+      const url = viewData.urls[currentSlideIndex];
+      const cleanedUrl = getEmbedUrl(url);
+      
+      iframe.src = cleanedUrl;
+      lblTitle.textContent = viewData.title;
+      lblStatus.textContent = `Panel ${currentSlideIndex + 1} of ${viewData.urls.length}`;
+    }
+
+    function startSlideshowTimer() {
+      stopSlideshowTimer();
+      slideshowRemainingTime = slideshowDurationSetting;
+      updateProgressBar();
+      
+      slideshowTimer = setInterval(() => {
+        slideshowRemainingTime--;
+        if (slideshowRemainingTime <= 0) {
+          nextSlide();
+        } else {
+          updateProgressBar();
+        }
+      }, 1000);
+    }
+
+    function stopSlideshowTimer() {
+      if (slideshowTimer) {
+        clearInterval(slideshowTimer);
+        slideshowTimer = null;
+      }
+    }
+
+    function updateProgressBar() {
+      const progressBar = document.getElementById('progress-bar');
+      const percent = ((slideshowDurationSetting - slideshowRemainingTime) / slideshowDurationSetting) * 100;
+      progressBar.style.width = `${percent}%`;
+    }
+
+    function togglePlay() {
+      slideshowActive = !slideshowActive;
+      const btnPlay = document.getElementById('btn-play');
+      
+      if (slideshowActive) {
+        btnPlay.textContent = '⏸️';
+        startSlideshowTimer();
+      } else {
+        btnPlay.textContent = '▶️';
+        stopSlideshowTimer();
+      }
+    }
+
+    function nextSlide() {
+      if (!viewData || viewData.urls.length <= 1) return;
+      currentSlideIndex = (currentSlideIndex + 1) % viewData.urls.length;
+      renderCurrentSlide();
+      if (slideshowActive) {
+        startSlideshowTimer();
+      } else {
+        updateProgressBar();
+      }
+    }
+
+    function prevSlide() {
+      if (!viewData || viewData.urls.length <= 1) return;
+      currentSlideIndex = (currentSlideIndex - 1 + viewData.urls.length) % viewData.urls.length;
+      renderCurrentSlide();
+      if (slideshowActive) {
+        startSlideshowTimer();
+      } else {
+        updateProgressBar();
+      }
+    }
+
+    function closeFullscreen() {
+      window.close();
+    }
+
+    function showError(msg) {
+      document.getElementById('error-message').textContent = msg;
+      document.getElementById('error-overlay').classList.remove('hidden');
+    }
+
+    function getEmbedUrl(url) {
+      try {
+        let u = new URL(url);
+        if (u.searchParams.has('embed')) {
+          return url;
+        }
+        u.searchParams.set('embed', 'true');
+        return u.toString();
+      } catch (e) {
+        if (url.includes('?')) {
+          return url.includes('embed=') ? url : `${url}&embed=true`;
+        }
+        return `${url}?embed=true`;
+      }
+    }
+
+    // Auto-hide toolbar logic
+    function setupAutoHideControls() {
+      const controls = document.getElementById('floating-controls');
+      
+      document.addEventListener('mousemove', () => {
+        controls.style.opacity = '1';
+        controls.style.transform = 'translateX(-50%) translateY(0)';
+        
+        clearTimeout(controlHideTimeout);
+        
+        // Hide after 3 seconds of inactivity, unless paused
+        if (slideshowActive) {
+          controlHideTimeout = setTimeout(() => {
+            controls.style.opacity = '0';
+            controls.style.transform = 'translateX(-50%) translateY(20px)';
+          }, 3000);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
