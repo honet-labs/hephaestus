@@ -2,7 +2,7 @@
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -152,6 +152,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'Prometheus Config';
     pageDesc.textContent = 'Kelola, validasi, dan muat ulang (hot reload) konfigurasi file prometheus.yml.';
     initPrometheusPage();
+  } else if (pageId === 'monitoring') {
+    pageTitle.textContent = 'Monitoring View';
+    pageDesc.textContent = 'Slideshow rotasi monitoring dashboard Grafana ter-embed.';
+    initMonitoringPage();
   }
 }
 
@@ -3003,4 +3007,512 @@ function insertExporterJob() {
   // Show a notice in the alert box
   showPrometheusAlert('success', 'Job Snippet Inserted', `Successfully inserted scrape job snippet for ${exporter.name}. Click 'Check Config' to validate or 'Save & Reload' to apply changes.`);
 }
+
+// ==========================================
+// MONITORING VIEW MODULE FUNCTIONALITY
+// ==========================================
+let monitoringViews = [];
+let activeMonitoringView = null;
+let playerMode = 'grid'; // 'grid' | 'slideshow'
+let slideshowActive = false;
+let slideshowTimer = null;
+let currentSlideIndex = 0;
+let slideshowRemainingTime = 0;
+let slideshowDurationSetting = 10;
+
+function initMonitoringPage() {
+  stopSlideshowTimer();
+  slideshowActive = false;
+  activeMonitoringView = null;
+  
+  // Reset elements
+  document.getElementById('monitoring-player-container').classList.add('hidden');
+  document.getElementById('monitoring-list-container').classList.remove('hidden');
+  
+  loadMonitoringViews();
+}
+
+async function loadMonitoringViews() {
+  try {
+    const res = await fetch('/api/v1/monitoring-views');
+    const result = await res.json();
+    if (res.ok && result.success) {
+      monitoringViews = result.data || [];
+      renderMonitoringViews(monitoringViews);
+    } else {
+      addLog('Monitoring', 'Failed to load monitoring views: ' + (result.message || 'Unknown error'), 'ERROR');
+    }
+  } catch (error) {
+    addLog('Monitoring', 'API connection error while loading views: ' + error.message, 'ERROR');
+  }
+}
+
+function renderMonitoringViews(views) {
+  const grid = document.getElementById('monitoring-views-grid');
+  const emptyState = document.getElementById('monitoring-empty-state');
+  
+  if (views.length === 0) {
+    grid.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    return;
+  }
+  
+  emptyState.classList.add('hidden');
+  grid.classList.remove('hidden');
+  
+  let html = '';
+  views.forEach(view => {
+    html += `
+      <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 14px; color: var(--text-white);">${escapeHtml(view.title)}</h3>
+            <span class="status-badge status-configured" style="font-size: 9px; font-weight: normal; padding: 2px 6px;">
+              ${view.urls.length} Panel${view.urls.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">
+            ${escapeHtml(view.description || 'No description provided.')}
+          </p>
+          <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+            <span>⏱️ Slideshow Interval:</span>
+            <strong style="color: var(--text-white);">${view.slideDuration}s</strong>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; border-top: 1px solid var(--app-border); padding-top: 12px; margin-top: auto;">
+          <button class="btn btn-primary" onclick="startMonitoringPlayer('${view.id}')" style="flex-grow: 1; padding: 6px 12px; font-size: 11px; height: auto; justify-content: center;">
+            View / Play
+          </button>
+          <button class="btn btn-secondary" onclick="openEditMonitoringViewModal('${view.id}')" style="padding: 6px 10px; font-size: 11px; height: auto;" title="Edit View">
+            ✏️
+          </button>
+          <button class="btn btn-danger" onclick="deleteMonitoringView('${view.id}')" style="padding: 6px 10px; font-size: 11px; height: auto;" title="Delete View">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  grid.innerHTML = html;
+}
+
+// Modal management
+function openAddMonitoringViewModal() {
+  document.getElementById('monitoring-modal-title').textContent = 'Add Monitoring View';
+  document.getElementById('monitoring-view-id').value = '';
+  document.getElementById('monitoring-title').value = '';
+  document.getElementById('monitoring-description').value = '';
+  document.getElementById('monitoring-duration').value = '10';
+  
+  const list = document.getElementById('monitoring-urls-list');
+  list.innerHTML = '';
+  addMonitoringUrlInput('');
+  
+  const modal = document.getElementById('modal-monitoring-view');
+  modal.classList.add('active');
+}
+
+function openEditMonitoringViewModal(id) {
+  const view = monitoringViews.find(v => v.id === id);
+  if (!view) return;
+  
+  document.getElementById('monitoring-modal-title').textContent = 'Edit Monitoring View';
+  document.getElementById('monitoring-view-id').value = view.id;
+  document.getElementById('monitoring-title').value = view.title;
+  document.getElementById('monitoring-description').value = view.description || '';
+  document.getElementById('monitoring-duration').value = view.slideDuration || '10';
+  
+  const list = document.getElementById('monitoring-urls-list');
+  list.innerHTML = '';
+  
+  if (view.urls && view.urls.length > 0) {
+    view.urls.forEach(url => addMonitoringUrlInput(url));
+  } else {
+    addMonitoringUrlInput('');
+  }
+  
+  const modal = document.getElementById('modal-monitoring-view');
+  modal.classList.add('active');
+}
+
+function closeMonitoringViewModal() {
+  const modal = document.getElementById('modal-monitoring-view');
+  modal.classList.remove('active');
+}
+
+function addMonitoringUrlInput(urlVal = '') {
+  const list = document.getElementById('monitoring-urls-list');
+  const div = document.createElement('div');
+  div.className = 'monitoring-url-row';
+  div.style.display = 'flex';
+  div.style.gap = '8px';
+  div.style.width = '100%';
+  
+  div.innerHTML = `
+    <input type="text" class="monitoring-url-input" value="${escapeHtml(urlVal)}" placeholder="http://localhost:3000/d-solo/..." style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; flex-grow: 1; box-sizing: border-box;">
+    <button class="btn btn-danger" onclick="this.parentNode.remove()" style="padding: 8px 12px; height: auto;" title="Remove URL">
+      &times;
+    </button>
+  `;
+  list.appendChild(div);
+}
+
+async function saveMonitoringView() {
+  const id = document.getElementById('monitoring-view-id').value;
+  const title = document.getElementById('monitoring-title').value.trim();
+  const description = document.getElementById('monitoring-description').value.trim();
+  const duration = parseInt(document.getElementById('monitoring-duration').value, 10) || 10;
+  
+  const urlInputs = document.querySelectorAll('.monitoring-url-input');
+  const urls = [];
+  urlInputs.forEach(input => {
+    const val = input.value.trim();
+    if (val) urls.push(val);
+  });
+  
+  if (!title) {
+    alert('Judul monitoring view wajib diisi.');
+    return;
+  }
+  
+  if (urls.length === 0) {
+    alert('Minimal masukkan satu share URL dashboard Grafana.');
+    return;
+  }
+  
+  const payload = {
+    title,
+    description,
+    slideDuration: duration,
+    urls
+  };
+  
+  try {
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/v1/monitoring-views/${id}` : '/api/v1/monitoring-views';
+    
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Monitoring', `Monitoring view "${title}" saved successfully.`, 'SUCCESS');
+      closeMonitoringViewModal();
+      loadMonitoringViews();
+    } else {
+      alert('Gagal menyimpan: ' + (result.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Koneksi API Error: ' + error.message);
+  }
+}
+
+async function deleteMonitoringView(id) {
+  if (!confirm('Apakah Anda yakin ingin menghapus monitoring view ini?')) {
+    return;
+  }
+  
+  try {
+    const res = await fetch(`/api/v1/monitoring-views/${id}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Monitoring', 'Monitoring view deleted successfully.', 'SUCCESS');
+      loadMonitoringViews();
+    } else {
+      alert('Gagal menghapus: ' + (result.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Koneksi API Error: ' + error.message);
+  }
+}
+
+// Player / Detail View Functions
+function startMonitoringPlayer(id) {
+  const view = monitoringViews.find(v => v.id === id);
+  if (!view) return;
+  
+  activeMonitoringView = view;
+  
+  // Set elements
+  document.getElementById('player-view-title').textContent = view.title;
+  document.getElementById('player-view-desc').textContent = view.description || 'No description';
+  
+  // Switch visible sections
+  document.getElementById('monitoring-list-container').classList.add('hidden');
+  document.getElementById('monitoring-player-container').classList.remove('hidden');
+  
+  // Setup interval dropdown selector
+  slideshowDurationSetting = view.slideDuration || 10;
+  const selectInterval = document.getElementById('player-interval-select');
+  if (selectInterval) {
+    selectInterval.value = slideshowDurationSetting.toString();
+  }
+  
+  // Reset slideshow state
+  currentSlideIndex = 0;
+  slideshowActive = false;
+  
+  // Set default mode to Grid View
+  setPlayerMode('grid');
+}
+
+function exitMonitoringPlayer() {
+  stopSlideshowTimer();
+  slideshowActive = false;
+  activeMonitoringView = null;
+  
+  document.getElementById('monitoring-player-container').classList.add('hidden');
+  document.getElementById('monitoring-list-container').classList.remove('hidden');
+  
+  // Refresh views list
+  loadMonitoringViews();
+}
+
+function setPlayerMode(mode) {
+  stopSlideshowTimer();
+  playerMode = mode;
+  
+  const btnGrid = document.getElementById('btn-player-grid');
+  const btnSlideshow = document.getElementById('btn-player-slideshow');
+  const slideshowControls = document.getElementById('player-slideshow-controls');
+  const progressBarWrapper = document.getElementById('slideshow-progress-bar-wrapper');
+  const indicator = document.getElementById('slideshow-indicator');
+  
+  if (mode === 'grid') {
+    btnGrid.classList.add('active');
+    btnGrid.style.background = 'var(--prometheus-orange)';
+    btnGrid.style.color = '#fff';
+    
+    btnSlideshow.classList.remove('active');
+    btnSlideshow.style.background = 'transparent';
+    btnSlideshow.style.color = 'var(--foreground)';
+    
+    slideshowControls.classList.add('hidden');
+    progressBarWrapper.classList.add('hidden');
+    indicator.classList.add('hidden');
+    slideshowActive = false;
+    
+    renderPlayer();
+  } else {
+    btnSlideshow.classList.add('active');
+    btnSlideshow.style.background = 'var(--prometheus-orange)';
+    btnSlideshow.style.color = '#fff';
+    
+    btnGrid.classList.remove('active');
+    btnGrid.style.background = 'transparent';
+    btnGrid.style.color = 'var(--foreground)';
+    
+    slideshowControls.classList.remove('hidden');
+    progressBarWrapper.classList.remove('hidden');
+    indicator.classList.remove('hidden');
+    
+    // Auto play when switching to slideshow mode
+    slideshowActive = true;
+    updatePlayPauseButton();
+    renderPlayer();
+    startSlideshowTimer();
+  }
+}
+
+function renderPlayer() {
+  const renderArea = document.getElementById('monitoring-render-area');
+  renderArea.innerHTML = '';
+  
+  if (!activeMonitoringView || !activeMonitoringView.urls || activeMonitoringView.urls.length === 0) {
+    renderArea.innerHTML = '<div class="empty-state">No URLs configured for this monitoring view.</div>';
+    return;
+  }
+  
+  if (playerMode === 'grid') {
+    // Render in a grid
+    const gridDiv = document.createElement('div');
+    gridDiv.className = 'dashboard-panels-grid'; // Matches 2-column style from style.css
+    
+    activeMonitoringView.urls.forEach((url, index) => {
+      const cleanedUrl = getEmbedUrl(url);
+      
+      const panelDiv = document.createElement('div');
+      panelDiv.className = 'panel';
+      panelDiv.style.padding = '0';
+      panelDiv.style.overflow = 'hidden';
+      panelDiv.style.height = '350px';
+      panelDiv.style.display = 'flex';
+      panelDiv.style.flexDirection = 'column';
+      panelDiv.style.marginBottom = '0';
+      
+      panelDiv.innerHTML = `
+        <div style="background: var(--app-sidebar); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--app-border);">
+          <span style="font-size: 11px; font-weight: bold; color: var(--text-white);">Panel ${index + 1}</span>
+          <a href="${escapeHtml(url)}" target="_blank" style="font-size: 10px; color: #58a6ff; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+            <span>Open Link</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </a>
+        </div>
+        <iframe src="${cleanedUrl}" style="border: none; width: 100%; flex-grow: 1;" allowfullscreen></iframe>
+      `;
+      gridDiv.appendChild(panelDiv);
+    });
+    renderArea.appendChild(gridDiv);
+  } else {
+    // Render single slide (slideshow mode)
+    if (currentSlideIndex >= activeMonitoringView.urls.length) {
+      currentSlideIndex = 0;
+    }
+    
+    const url = activeMonitoringView.urls[currentSlideIndex];
+    const cleanedUrl = getEmbedUrl(url);
+    
+    const panelDiv = document.createElement('div');
+    panelDiv.className = 'panel';
+    panelDiv.style.padding = '0';
+    panelDiv.style.overflow = 'hidden';
+    panelDiv.style.height = '500px';
+    panelDiv.style.display = 'flex';
+    panelDiv.style.flexDirection = 'column';
+    
+    panelDiv.innerHTML = `
+      <div style="background: var(--app-sidebar); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--app-border);">
+        <span style="font-size: 11px; font-weight: bold; color: var(--text-white);">Active Panel: ${currentSlideIndex + 1} of ${activeMonitoringView.urls.length}</span>
+        <a href="${escapeHtml(url)}" target="_blank" style="font-size: 10px; color: #58a6ff; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+          <span>Open Link</span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        </a>
+      </div>
+      <iframe src="${cleanedUrl}" style="border: none; width: 100%; flex-grow: 1;" allowfullscreen></iframe>
+    `;
+    renderArea.appendChild(panelDiv);
+    updateSlideshowUI();
+  }
+}
+
+// Slideshow playback logic
+function startSlideshowTimer() {
+  stopSlideshowTimer();
+  slideshowRemainingTime = slideshowDurationSetting;
+  updateSlideshowUI();
+  
+  slideshowTimer = setInterval(() => {
+    slideshowRemainingTime--;
+    if (slideshowRemainingTime <= 0) {
+      nextSlide();
+    } else {
+      updateSlideshowUI();
+    }
+  }, 1000);
+}
+
+function stopSlideshowTimer() {
+  if (slideshowTimer) {
+    clearInterval(slideshowTimer);
+    slideshowTimer = null;
+  }
+}
+
+function updateSlideshowUI() {
+  const progressBar = document.getElementById('slideshow-progress-bar');
+  const timerText = document.getElementById('slideshow-indicator-timer');
+  const indicatorText = document.getElementById('slideshow-indicator-text');
+  
+  if (progressBar) {
+    const percent = ((slideshowDurationSetting - slideshowRemainingTime) / slideshowDurationSetting) * 100;
+    progressBar.style.width = `${percent}%`;
+  }
+  
+  if (timerText) {
+    timerText.textContent = `Next switch in: ${slideshowRemainingTime}s`;
+  }
+  
+  if (indicatorText && activeMonitoringView) {
+    indicatorText.textContent = `Panel ${currentSlideIndex + 1} of ${activeMonitoringView.urls.length}`;
+  }
+}
+
+function toggleSlideshowPlay() {
+  slideshowActive = !slideshowActive;
+  updatePlayPauseButton();
+  
+  if (slideshowActive) {
+    startSlideshowTimer();
+  } else {
+    stopSlideshowTimer();
+  }
+}
+
+function updatePlayPauseButton() {
+  const icon = document.getElementById('btn-slideshow-play-icon');
+  const text = document.getElementById('btn-slideshow-play-text');
+  
+  if (slideshowActive) {
+    icon.textContent = '⏸️';
+    text.textContent = 'Pause';
+  } else {
+    icon.textContent = '▶️';
+    text.textContent = 'Play';
+  }
+}
+
+function nextSlide() {
+  if (!activeMonitoringView || activeMonitoringView.urls.length <= 1) return;
+  currentSlideIndex = (currentSlideIndex + 1) % activeMonitoringView.urls.length;
+  renderPlayer();
+  if (slideshowActive) {
+    startSlideshowTimer();
+  }
+}
+
+function prevSlide() {
+  if (!activeMonitoringView || activeMonitoringView.urls.length <= 1) return;
+  currentSlideIndex = (currentSlideIndex - 1 + activeMonitoringView.urls.length) % activeMonitoringView.urls.length;
+  renderPlayer();
+  if (slideshowActive) {
+    startSlideshowTimer();
+  }
+}
+
+function adjustPlayerInterval() {
+  const select = document.getElementById('player-interval-select');
+  if (select) {
+    slideshowDurationSetting = parseInt(select.value, 10) || 10;
+    if (slideshowActive) {
+      startSlideshowTimer();
+    } else {
+      updateSlideshowUI();
+    }
+  }
+}
+
+// Helpers
+function getEmbedUrl(url) {
+  try {
+    let u = new URL(url);
+    if (u.searchParams.has('embed')) {
+      return url;
+    }
+    u.searchParams.set('embed', 'true');
+    return u.toString();
+  } catch (e) {
+    if (url.includes('?')) {
+      return url.includes('embed=') ? url : `${url}&embed=true`;
+    }
+    return `${url}?embed=true`;
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 

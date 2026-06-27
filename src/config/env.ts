@@ -12,6 +12,7 @@ const DB_DIR = process.env.DB_DIR || (process.env.NODE_ENV === "production" ? "/
 const GRAFANA_CONFIG_FILE = path.join(DB_DIR, "grafana_config.json");
 const GRAFANA_CONFIGS_FILE = path.join(DB_DIR, "grafana_configs.json");
 const PROMETHEUS_CONFIGS_FILE = path.join(DB_DIR, "prometheus_configs.json");
+const MONITORING_VIEWS_FILE = path.join(DB_DIR, "monitoring_views.json");
 
 export interface PrometheusConfigItem {
   id: string;
@@ -56,6 +57,7 @@ export const config = {
   grafanaConfigFile: GRAFANA_CONFIG_FILE,
   grafanaConfigsFile: GRAFANA_CONFIGS_FILE,
   prometheusConfigsFile: PROMETHEUS_CONFIGS_FILE,
+  monitoringViewsFile: MONITORING_VIEWS_FILE,
   prometheusConfigPath: process.env.PROMETHEUS_CONFIG_PATH || (process.env.NODE_ENV === "production" ? "/app/data/prometheus.yml" : path.join(DB_DIR, "prometheus.yml")),
   prometheusReloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
   

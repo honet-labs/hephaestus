@@ -73,6 +73,15 @@
               <div class="menu-item-sub">Configure prometheus.yml</div>
             </div>
           </a>
+          <a href="#monitoring" id="menu-monitoring" class="menu-item">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">Monitoring View</div>
+              <div class="menu-item-sub">Multi-dashboard slideshow</div>
+            </div>
+          </a>
         </nav>
       </div>
 
@@ -270,6 +279,7 @@
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                   <button class="btn btn-primary" onclick="navigate('settings')" style="width: 100%; justify-content: center;">Configure Grafana</button>
+                  <button class="btn btn-secondary" onclick="navigate('monitoring')" style="width: 100%; justify-content: center;">Monitoring View</button>
                 </div>
               </div>
             </div>
@@ -425,6 +435,109 @@
                   Loading registry list...
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE 3: MONITORING VIEW -->
+        <div id="page-monitoring" class="hidden">
+          
+          <!-- STATE A: LIST VIEW -->
+          <div id="monitoring-list-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--app-border); padding-bottom: 16px;">
+              <div>
+                <h2 style="margin: 0; font-size: 18px; color: var(--text-white);">Dashboard Monitoring Views</h2>
+                <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">View multiple Grafana dashboards in standard grids or play them sequentially in a slideshow.</p>
+              </div>
+              <button class="btn btn-primary" onclick="openAddMonitoringViewModal()" style="display: flex; align-items: center; gap: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Add Monitoring View</span>
+              </button>
+            </div>
+
+            <!-- Empty State -->
+            <div id="monitoring-empty-state" class="panel hidden" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border: 1px dashed var(--app-border); background: rgba(255,255,255,0.01);">
+              <span style="font-size: 48px; filter: grayscale(0.2);">🖥️</span>
+              <div>
+                <h3 style="margin: 0; font-size: 15px; color: var(--text-white);">No Monitoring Views Found</h3>
+                <p style="margin: 6px 0 0 0; font-size: 12px; color: var(--text-muted); max-width: 400px;">Create a monitoring view to combine multiple Grafana panel shares or dashboards into a unified rotated slideshow interface.</p>
+              </div>
+              <button class="btn btn-primary" onclick="openAddMonitoringViewModal()">Create First View</button>
+            </div>
+
+            <!-- Grid List of Views -->
+            <div id="monitoring-views-grid" class="dashboard-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+              <!-- Dynamically populated cards -->
+            </div>
+          </div>
+
+          <!-- STATE B: DETAIL / PLAYER VIEW -->
+          <div id="monitoring-player-container" class="hidden">
+            <!-- Player Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--app-border); padding-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="btn btn-secondary" onclick="exitMonitoringPlayer()" style="padding: 6px 12px; height: auto; display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                  <span>Back</span>
+                </button>
+                <div>
+                  <h2 id="player-view-title" style="margin: 0; font-size: 18px; color: var(--text-white);">View Title</h2>
+                  <p id="player-view-desc" style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-muted);">View Description</p>
+                </div>
+              </div>
+              
+              <!-- Player Settings & Mode Toggle -->
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <!-- View Mode Buttons -->
+                <div style="display: flex; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 4px; padding: 2px;">
+                  <button class="btn btn-secondary active" id="btn-player-grid" onclick="setPlayerMode('grid')" style="padding: 4px 10px; font-size: 11px; height: auto; border: none;">Grid View</button>
+                  <button class="btn btn-secondary" id="btn-player-slideshow" onclick="setPlayerMode('slideshow')" style="padding: 4px 10px; font-size: 11px; height: auto; border: none;">Slideshow</button>
+                </div>
+
+                <!-- Slideshow Controls (Visible in slideshow mode) -->
+                <div id="player-slideshow-controls" style="display: flex; align-items: center; gap: 8px;" class="hidden">
+                  <button class="btn btn-secondary" onclick="prevSlide()" style="padding: 4px 8px; height: auto;" title="Previous Panel">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+                  </button>
+                  <button class="btn btn-primary" id="btn-slideshow-play" onclick="toggleSlideshowPlay()" style="padding: 4px 12px; height: auto; display: inline-flex; align-items: center; gap: 6px;">
+                    <span id="btn-slideshow-play-icon">⏸️</span>
+                    <span id="btn-slideshow-play-text">Pause</span>
+                  </button>
+                  <button class="btn btn-secondary" onclick="nextSlide()" style="padding: 4px 8px; height: auto;" title="Next Panel">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                  </button>
+                  
+                  <div style="height: 16px; border-left: 1px solid var(--app-border); margin: 0 4px;"></div>
+                  
+                  <!-- Live Duration Adjuster -->
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Interval:</span>
+                    <select id="player-interval-select" onchange="adjustPlayerInterval()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: #fff; border-radius: 4px; padding: 4px 6px; font-size: 11px;">
+                      <option value="5">5s</option>
+                      <option value="10" selected>10s</option>
+                      <option value="15">15s</option>
+                      <option value="30">30s</option>
+                      <option value="60">1m</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Slideshow Progress bar container -->
+            <div id="slideshow-progress-bar-wrapper" class="hidden" style="width: 100%; height: 3px; background: rgba(255,255,255,0.05); margin-bottom: 12px; border-radius: 2px; overflow: hidden; position: relative;">
+              <div id="slideshow-progress-bar" style="width: 0%; height: 100%; background: var(--prometheus-orange); transition: width 0.1s linear;"></div>
+            </div>
+
+            <!-- Active slide indicator (Slideshow mode) -->
+            <div id="slideshow-indicator" class="hidden" style="margin-bottom: 8px; font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+              <span id="slideshow-indicator-text">Panel 1 of X</span>
+              <span id="slideshow-indicator-timer" class="font-mono">Next switch in: --s</span>
+            </div>
+
+            <!-- Main Render Area -->
+            <div id="monitoring-render-area" style="min-height: 500px; display: flex; flex-direction: column; gap: 20px;">
+              <!-- Embedded frames dynamically rendered here -->
             </div>
           </div>
         </div>
@@ -639,6 +752,53 @@
       </div>
       <div class="modal-footer" style="padding: 12px 20px;">
         <button class="btn btn-secondary" onclick="closeDatasourcesModal()" style="padding: 6px 12px; font-size: 11px; height: auto;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT MONITORING VIEW -->
+  <div id="modal-monitoring-view" class="modal-overlay">
+    <div class="modal-dialog" style="max-width: 600px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="monitoring-modal-title">Add Monitoring View</h3>
+        <button class="modal-close" onclick="closeMonitoringViewModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <input type="hidden" id="monitoring-view-id">
+        
+        <!-- Title -->
+        <div class="form-group">
+          <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Title / Judul</label>
+          <input type="text" id="monitoring-title" placeholder="e.g. Server Performance Monitor" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Description / Deskripsi</label>
+          <textarea id="monitoring-description" placeholder="Short description of this monitoring view..." style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; height: 60px; box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+        </div>
+
+        <!-- Slide Show Duration -->
+        <div class="form-group">
+          <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Slideshow Interval / Waktu Slide Show (detik)</label>
+          <input type="number" id="monitoring-duration" value="10" min="2" max="3600" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+        </div>
+
+        <!-- Multiple URLs Section -->
+        <div class="form-group">
+          <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Grafana Embed / Share Dashboard URLs</label>
+          <div id="monitoring-urls-list" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- URL inputs dynamically added here -->
+          </div>
+          <button class="btn btn-secondary" onclick="addMonitoringUrlInput('')" style="margin-top: 10px; padding: 6px 12px; font-size: 11px; height: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Add Share URL</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-secondary" onclick="closeMonitoringViewModal()" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
+        <button class="btn btn-primary" onclick="saveMonitoringView()" style="padding: 8px 16px; font-size: 12px; height: auto;">Save Monitoring View</button>
       </div>
     </div>
   </div>
