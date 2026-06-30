@@ -3,23 +3,75 @@ import fs from "fs";
 import path from "path";
 import config, { updateActiveGrafanaCache, updateActivePrometheusCache } from "./env";
 
-// Read database environment variables or fallback to defaults
-const pool = new Pool({
-  host: process.env.PGHOST || "localhost",
-  port: parseInt(process.env.PGPORT || "5432", 10),
-  user: process.env.PGUSER || "postgres",
-  password: process.env.PGPASSWORD || "postgres",
-  database: process.env.PGDATABASE || "hephaestus",
-  ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
-  max: 20, // Connection pool tuning
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+export let isDbConnected = false;
+export let dbConnectionError: string | null = null;
+let activePool: Pool;
+
+export function loadDbConfig() {
+  if (fs.existsSync(config.dbConfigFile)) {
+    try {
+      const content = fs.readFileSync(config.dbConfigFile, "utf-8");
+      const parsed = JSON.parse(content);
+      return {
+        host: parsed.host || process.env.PGHOST || "localhost",
+        port: parseInt(parsed.port || process.env.PGPORT || "5432", 10),
+        user: parsed.user || process.env.PGUSER || "postgres",
+        password: parsed.password || process.env.PGPASSWORD || "postgres",
+        database: parsed.database || process.env.PGDATABASE || "hephaestus",
+        ssl: parsed.ssl === "true" || parsed.ssl === true || process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
+      };
+    } catch (e) {
+      console.error("[DB] Error reading db_config.json:", e);
+    }
+  }
+  return {
+    host: process.env.PGHOST || "localhost",
+    port: parseInt(process.env.PGPORT || "5432", 10),
+    user: process.env.PGUSER || "postgres",
+    password: process.env.PGPASSWORD || "postgres",
+    database: process.env.PGDATABASE || "hephaestus",
+    ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
+  };
+}
+
+export function setupPool(dbConfig: any) {
+  if (activePool) {
+    activePool.end().catch(err => console.error("[DB] Error ending old pool:", err));
+  }
+  activePool = new Pool({
+    ...dbConfig,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 3000,
+  });
+}
+
+// Initial setup
+setupPool(loadDbConfig());
+
+// Export the proxy pool
+const poolProxy = new Proxy({} as Pool, {
+  get(target, prop) {
+    if (!activePool) {
+      throw new Error("Database pool is not initialized.");
+    }
+    const val = Reflect.get(activePool, prop);
+    if (typeof val === "function") {
+      return val.bind(activePool);
+    }
+    return val;
+  }
 });
+
+export default poolProxy;
 
 export async function query(text: string, params?: any[]) {
   const start = Date.now();
   try {
-    const res = await pool.query(text, params);
+    if (!activePool) {
+      throw new Error("Database is not connected.");
+    }
+    const res = await activePool.query(text, params);
     const duration = Date.now() - start;
     if (duration > 100) {
       console.warn(`[DB] Slow query detected: ${text} took ${duration}ms`);
@@ -33,6 +85,17 @@ export async function query(text: string, params?: any[]) {
 
 export async function initDb() {
   console.log("⚙️  [DB] Initializing PostgreSQL connection pool and tables...");
+  isDbConnected = false;
+  dbConnectionError = null;
+
+  try {
+    await activePool.query("SELECT version()");
+    isDbConnected = true;
+  } catch (err: any) {
+    dbConnectionError = err.message || String(err);
+    console.warn("⚠️  [DB] PostgreSQL connection failed. Server will run in Setup Mode:", dbConnectionError);
+    return;
+  }
   
   // Create tables with proper schemas and relationships
   const schemaQueries = [

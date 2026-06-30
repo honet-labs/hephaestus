@@ -49,6 +49,11 @@ fi
 echo -e "${YELLOW}[5/6] Starting updated container with persistent volume...${NC}"
 docker volume create hephaestus-backend-data || true
 
+if [ ! -f .env ] && [ -f .env.example ]; then
+    echo -e "${YELLOW}Creating default .env from .env.example...${NC}"
+    cp .env.example .env
+fi
+
 ENV_FLAG=""
 if [ -f .env ]; then
     echo -e "${GREEN}Found .env file. Passing environment variables to container.${NC}"

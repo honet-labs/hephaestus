@@ -91,6 +91,15 @@
               <div class="menu-item-sub">Scan & browse OID/MIBs</div>
             </div>
           </a>
+          <a href="#database" id="menu-database" class="menu-item">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-2.239 10-5V5c0-2.761-4.477-5-10-5S2 2.239 2 5v12c0 2.739 4.477 5 10 5z"></path><path d="M2 5c0 2.761 4.477 5 10 5s10-2.239 10-5"></path><path d="M2 11c0 2.761 4.477 5 10 5s10-2.239 10-5"></path></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">System Settings</div>
+              <div class="menu-item-sub">Database configuration</div>
+            </div>
+          </a>
         </nav>
       </div>
 
@@ -104,7 +113,7 @@
           </div>
           <div class="status-row">
             <span>Storage Engine</span>
-            <span class="status-text-blue">JSON</span>
+            <span id="infra-storage-engine" class="status-text-blue">PostgreSQL</span>
           </div>
           <div class="status-row">
             <span>Security Mode</span>
@@ -915,6 +924,60 @@
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <!-- PAGE 8: SYSTEM SETTINGS / DATABASE SETUP -->
+        <div id="page-database" class="hidden">
+          <div class="panel" style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px;">
+            <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 5px;">
+              <h3 class="panel-title" style="margin-bottom: 0;">PostgreSQL Configuration</h3>
+            </div>
+            
+            <form id="db-setup-form" onsubmit="saveDbConfiguration(event)" style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Host Address</label>
+                <input type="text" id="db-host" placeholder="e.g. host.docker.internal or 192.168.201.18" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Port</label>
+                <input type="number" id="db-port" placeholder="5432" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Username</label>
+                <input type="text" id="db-user" placeholder="postgres" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Password</label>
+                <input type="password" id="db-password" placeholder="••••••••" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Database Name</label>
+                <input type="text" id="db-name" placeholder="hephaestus" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">SSL Mode</label>
+                <select id="db-ssl" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  <option value="false">Disabled</option>
+                  <option value="true">Enabled (rejectUnauthorized: false)</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-primary" id="btn-save-db" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 35px; margin-top: 10px;">
+                <span class="spinner hidden" id="spinner-save-db"></span>
+                <span>Apply & Save Config</span>
+              </button>
+            </form>
+
+            <div id="db-feedback" class="alert hidden" style="margin-top: 10px;">
+              <span class="alert-title" id="db-feedback-title"></span>
+              <span id="db-feedback-desc"></span>
+            </div>
           </div>
         </div>
 

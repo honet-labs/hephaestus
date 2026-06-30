@@ -2,7 +2,7 @@
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp', 'database'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -100,6 +100,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Load configuration
   loadGrafanaSettings();
+  checkDatabaseConnectionOnLoad();
 });
 
 // Helper: Format Date object to YYYY-MM-DDTHH:mm
@@ -160,6 +161,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'SNMP Explorer';
     pageDesc.textContent = 'Browse OID MIB trees, import ASN.1 MIB definitions, and perform real-time SNMP GET/WALK queries.';
     initSnmpPage();
+  } else if (pageId === 'database') {
+    pageTitle.textContent = 'System Settings';
+    pageDesc.textContent = 'Konfigurasi koneksi PostgreSQL Database dan tuning performa.';
+    initDatabasePage();
   }
 }
 
@@ -3869,6 +3874,139 @@ async function runSnmpQuery(event) {
     console.error(error);
     addLog('SNMP', `Query failed: ${error.message}`, 'ERROR');
     alert(`SNMP Query Error: ${error.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
+  }
+}
+
+async function checkDatabaseConnectionOnLoad() {
+  try {
+    const res = await fetch('/api/v1/system/db-config');
+    if (res.ok) {
+      const data = await res.json();
+      const storageEngine = document.getElementById('infra-storage-engine');
+      if (storageEngine) {
+        if (data.isConnected) {
+          storageEngine.className = 'status-text-green';
+          storageEngine.textContent = 'PostgreSQL (Connected)';
+          addLog('Database', 'Connected to PostgreSQL database successfully.', 'SUCCESS');
+        } else {
+          storageEngine.className = 'status-text-red';
+          storageEngine.textContent = 'PostgreSQL (Offline)';
+          addLog('Database', `PostgreSQL connection offline: ${data.error || 'Unknown error'}`, 'ERROR');
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error checking DB connection:', err);
+  }
+}
+
+async function initDatabasePage() {
+  const hostInput = document.getElementById('db-host');
+  const portInput = document.getElementById('db-port');
+  const userInput = document.getElementById('db-user');
+  const passwordInput = document.getElementById('db-password');
+  const nameInput = document.getElementById('db-name');
+  const sslInput = document.getElementById('db-ssl');
+  
+  const feedback = document.getElementById('db-feedback');
+  if (feedback) feedback.classList.add('hidden');
+  
+  try {
+    const res = await fetch('/api/v1/system/db-config');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.config) {
+        if (hostInput) hostInput.value = data.config.host || '';
+        if (portInput) portInput.value = data.config.port || 5432;
+        if (userInput) userInput.value = data.config.user || '';
+        if (passwordInput) passwordInput.value = data.config.maskedPassword || '';
+        if (nameInput) nameInput.value = data.config.database || '';
+        if (sslInput) sslInput.value = data.config.ssl ? 'true' : 'false';
+
+        if (!data.isConnected && feedback) {
+          const title = document.getElementById('db-feedback-title');
+          const desc = document.getElementById('db-feedback-desc');
+          feedback.className = 'alert alert-danger';
+          if (title) title.textContent = 'Database Offline / Error';
+          if (desc) desc.textContent = data.error || 'Server cannot connect to PostgreSQL with the current credentials.';
+          feedback.classList.remove('hidden');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load database config:', error);
+    addLog('Database', `Failed to load DB config: ${error.message}`, 'ERROR');
+  }
+}
+
+async function saveDbConfiguration(event) {
+  if (event) event.preventDefault();
+  
+  const host = document.getElementById('db-host').value.trim();
+  const port = document.getElementById('db-port').value.trim();
+  const user = document.getElementById('db-user').value.trim();
+  const password = document.getElementById('db-password').value;
+  const database = document.getElementById('db-name').value.trim();
+  const ssl = document.getElementById('db-ssl').value === 'true';
+  
+  const btn = document.getElementById('btn-save-db');
+  const spinner = document.getElementById('spinner-save-db');
+  const feedback = document.getElementById('db-feedback');
+  const title = document.getElementById('db-feedback-title');
+  const desc = document.getElementById('db-feedback-desc');
+  
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  if (feedback) feedback.classList.add('hidden');
+  
+  try {
+    const response = await fetch('/api/v1/system/db-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host, port, user, password, database, ssl })
+    });
+    
+    const data = await response.json();
+    if (feedback && title && desc) {
+      if (response.ok && data.success) {
+        feedback.className = 'alert alert-success';
+        title.textContent = 'Success';
+        desc.textContent = data.message || 'Database settings updated successfully!';
+        addLog('Database', 'Configuration updated and pool reloaded successfully.', 'SUCCESS');
+        
+        const storageEngine = document.getElementById('infra-storage-engine');
+        if (storageEngine) {
+          storageEngine.className = 'status-text-green';
+          storageEngine.textContent = 'PostgreSQL (Connected)';
+        }
+        
+        loadGrafanaSettings();
+      } else {
+        feedback.className = 'alert alert-danger';
+        title.textContent = 'Error';
+        desc.textContent = data.message || 'Failed to apply configuration.';
+        addLog('Database', `Update failed: ${data.message}`, 'ERROR');
+        
+        const storageEngine = document.getElementById('infra-storage-engine');
+        if (storageEngine) {
+          storageEngine.className = 'status-text-red';
+          storageEngine.textContent = 'PostgreSQL (Offline)';
+        }
+      }
+      feedback.classList.remove('hidden');
+    }
+  } catch (error) {
+    console.error(error);
+    if (feedback && title && desc) {
+      feedback.className = 'alert alert-danger';
+      title.textContent = 'Error';
+      desc.textContent = error.message;
+      feedback.classList.remove('hidden');
+    }
+    addLog('Database', `Error: ${error.message}`, 'ERROR');
   } finally {
     if (btn) btn.disabled = false;
     if (spinner) spinner.classList.add('hidden');

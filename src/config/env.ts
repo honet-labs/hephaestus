@@ -58,6 +58,7 @@ export const config = {
   grafanaConfigsFile: GRAFANA_CONFIGS_FILE,
   prometheusConfigsFile: PROMETHEUS_CONFIGS_FILE,
   monitoringViewsFile: MONITORING_VIEWS_FILE,
+  dbConfigFile: path.join(DB_DIR, "db_config.json"),
   prometheusConfigPath: process.env.PROMETHEUS_CONFIG_PATH || (process.env.NODE_ENV === "production" ? "/app/data/prometheus.yml" : path.join(DB_DIR, "prometheus.yml")),
   prometheusReloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
   
