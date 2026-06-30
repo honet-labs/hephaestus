@@ -77,6 +77,15 @@ npm run build
 npm start
 ```
 
+### Docker Compose Deployment (Recommended)
+To run Hephaestus alongside a dedicated PostgreSQL database container:
+```bash
+docker compose up -d
+```
+This will automatically launch:
+*   `hephaestus-backend`: Node.js server container listening on port `5000`.
+*   `hephaestus-postgres`: Dedicated PostgreSQL database container listening on host port `5435`.
+
 ---
 
 ## Development Guidelines (Clean Code Standards)

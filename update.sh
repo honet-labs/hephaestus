@@ -32,52 +32,41 @@ else
     echo -e "${YELLOW}Warning: 'local-ci.sh' not found. Skipping gatekeeper checks.${NC}"
 fi
 
-# 3. Rebuild the Docker image
-echo -e "${YELLOW}[3/6] Rebuilding Docker image...${NC}"
-docker build -t hephaestus-backend:latest .
-
-# 4. Stop and remove active container
-echo -e "${YELLOW}[4/6] Stopping and removing running container...${NC}"
-if docker ps -a --format '{{.Names}}' | grep -Eq "^hephaestus-backend$"; then
-    docker stop hephaestus-backend || true
-    docker rm hephaestus-backend || true
-else
-    echo -e "${BLUE}No active container named 'hephaestus-backend' found. Proceeding with clean run.${NC}"
-fi
-
-# 5. Start updated container with persistent volume
-echo -e "${YELLOW}[5/6] Starting updated container with persistent volume...${NC}"
-docker volume create hephaestus-backend-data || true
-
+# 3. Create .env if not exists
 if [ ! -f .env ] && [ -f .env.example ]; then
     echo -e "${YELLOW}Creating default .env from .env.example...${NC}"
     cp .env.example .env
 fi
 
-ENV_FLAG=""
-if [ -f .env ]; then
-    echo -e "${GREEN}Found .env file. Passing environment variables to container.${NC}"
-    ENV_FLAG="--env-file .env"
-else
-    echo -e "${YELLOW}Warning: No .env file found. Running with default configurations.${NC}"
+# 4. Stop and remove legacy standalone container if it exists
+echo -e "${YELLOW}[3/6] Cleaning up legacy standalone containers...${NC}"
+if docker ps -a --format '{{.Names}}' | grep -Eq "^hephaestus-backend$"; then
+    docker stop hephaestus-backend || true
+    docker rm hephaestus-backend || true
 fi
 
-docker run -d \
-    --name hephaestus-backend \
-    --add-host=host.docker.internal:host-gateway \
-    -p 5000:5000 \
-    $ENV_FLAG \
-    -v hephaestus-backend-data:/app/data \
-    --restart unless-stopped \
-    hephaestus-backend:latest
+# 5. Build and start services using Docker Compose
+echo -e "${YELLOW}[4/6] Starting services using Docker Compose...${NC}"
+COMPOSE_CMD="docker compose"
+if ! docker compose version &>/dev/null; then
+    if command -v docker-compose &>/dev/null; then
+        COMPOSE_CMD="docker-compose"
+    else
+        echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' command was found.${NC}"
+        exit 1
+    fi
+fi
+
+$COMPOSE_CMD down || true
+$COMPOSE_CMD up -d --build
 
 # 6. Clean up dangling images
-echo -e "${YELLOW}[6/6] Cleaning up unused Docker images to save space...${NC}"
+echo -e "${YELLOW}[5/6] Cleaning up unused Docker images to save space...${NC}"
 docker image prune -f
 
 # 7. Verify and output access details
 echo -e "${GREEN}====================================================${NC}"
-echo -e "${GREEN} SUCCESS: Backend updated and container restarted!  ${NC}"
+echo -e "${GREEN} SUCCESS: Services updated and restarted via Compose! ${NC}"
 IP_ADDR=$(hostname -I | awk '{print $1}' || echo "localhost")
 if [ -z "$IP_ADDR" ]; then IP_ADDR="localhost"; fi
 echo -e "${GREEN} Backend API is accessible at: http://${IP_ADDR}:5000 ${NC}"

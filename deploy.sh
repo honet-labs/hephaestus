@@ -32,52 +32,47 @@ else
     echo -e "${YELLOW}Warning: 'local-ci.sh' not found. Skipping gatekeeper checks.${NC}"
 fi
 
-# 3. Build production Docker image
-echo -e "${YELLOW}[1/4] Building production Docker image...${NC}"
-docker build -t hephaestus-backend:latest .
+# 3. Create .env if not exists
+if [ ! -f .env ] && [ -f .env.example ]; then
+    echo -e "${YELLOW}Creating default .env from .env.example...${NC}"
+    cp .env.example .env
+fi
 
-# 4. Check and clean up existing container
-echo -e "${YELLOW}[2/4] Checking for existing containers...${NC}"
+# 4. Stop and remove legacy standalone container if it exists
+echo -e "${YELLOW}[1/4] Cleaning up legacy standalone containers...${NC}"
 if docker ps -a --format '{{.Names}}' | grep -Eq "^hephaestus-backend$"; then
-    echo -e "${BLUE}Stopping and removing existing 'hephaestus-backend' container...${NC}"
     docker stop hephaestus-backend || true
     docker rm hephaestus-backend || true
 fi
 
-# 5. Handle persistence and environment variables
-echo -e "${YELLOW}[3/4] Initializing docker volume and variables...${NC}"
-docker volume create hephaestus-backend-data || true
-
-ENV_FLAG=""
-if [ -f .env ]; then
-    echo -e "${GREEN}Found .env file. Passing environment variables to container.${NC}"
-    ENV_FLAG="--env-file .env"
-else
-    echo -e "${YELLOW}Warning: No .env file found. Running with default configurations.${NC}"
+# 5. Build and start services using Docker Compose
+echo -e "${YELLOW}[2/4] Starting services using Docker Compose...${NC}"
+COMPOSE_CMD="docker compose"
+if ! docker compose version &>/dev/null; then
+    if command -v docker-compose &>/dev/null; then
+        COMPOSE_CMD="docker-compose"
+    else
+        echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' command was found.${NC}"
+        exit 1
+    fi
 fi
 
-# Run the container (binding port 5000, setting restart policy, and mounting volume for storage)
-docker run -d \
-    --name hephaestus-backend \
-    -p 5000:5000 \
-    $ENV_FLAG \
-    -v hephaestus-backend-data:/app/data \
-    --restart unless-stopped \
-    hephaestus-backend:latest
+$COMPOSE_CMD down || true
+$COMPOSE_CMD up -d --build
 
 # 6. Verify deployment status
-echo -e "${YELLOW}[4/4] Verifying backend deployment status...${NC}"
-sleep 3
+echo -e "${YELLOW}[3/4] Verifying backend deployment status...${NC}"
+sleep 5
 
-if [ "$(docker inspect -f '{{.State.Running}}' hephaestus-backend)" = "true" ]; then
+if [ "$($COMPOSE_CMD ps -q hephaestus-backend | wc -l)" -gt 0 ]; then
     IP_ADDR=$(hostname -I | awk '{print $1}' || echo "localhost")
     if [ -z "$IP_ADDR" ]; then IP_ADDR="localhost"; fi
     echo -e "${GREEN}====================================================${NC}"
-    echo -e "${GREEN} SUCCESS: hephaestus-backend is up and running!${NC}"
+    echo -e "${GREEN} SUCCESS: hephaestus services are up and running!${NC}"
     echo -e "${GREEN} Backend API is accessible at: http://${IP_ADDR}:5000 ${NC}"
     echo -e "${GREEN} Health endpoint: http://${IP_ADDR}:5000/health ${NC}"
     echo -e "${GREEN}====================================================${NC}"
 else
-    echo -e "${RED}Error: Container failed to start. Run 'docker logs hephaestus-backend' for details.${NC}"
+    echo -e "${RED}Error: Services failed to start. Run 'docker compose logs' for details.${NC}"
     exit 1
 fi
