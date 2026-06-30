@@ -99,7 +99,7 @@ export class MonitoringViewController {
       }
 
       const check = await query("SELECT 1 FROM monitoring_views WHERE id = $1", [id]);
-      if (check.rowCount === 0) {
+      if (check.rows.length === 0) {
         res.status(404).json({ success: false, error: "Not Found", message: "Monitoring view tidak ditemukan." });
         return;
       }
@@ -136,7 +136,7 @@ export class MonitoringViewController {
       const { id } = req.params;
 
       const check = await query("SELECT 1 FROM monitoring_views WHERE id = $1", [id]);
-      if (check.rowCount === 0) {
+      if (check.rows.length === 0) {
         res.status(404).json({ success: false, error: "Not Found", message: "Monitoring view tidak ditemukan." });
         return;
       }

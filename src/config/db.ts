@@ -127,7 +127,7 @@ export async function populateMemoryCaches() {
        WHERE is_active = true 
        LIMIT 1`
     );
-    if (grafanaRes.rowCount > 0) {
+    if (grafanaRes.rows.length > 0) {
       const active = grafanaRes.rows[0];
       updateActiveGrafanaCache({
         id: active.id,
@@ -147,7 +147,7 @@ export async function populateMemoryCaches() {
        WHERE is_active = true 
        LIMIT 1`
     );
-    if (prometheusRes.rowCount > 0) {
+    if (prometheusRes.rows.length > 0) {
       updateActivePrometheusCache(prometheusRes.rows[0]);
     }
     console.log("⚡ [DB] Memory caches for active configurations synchronized successfully.");

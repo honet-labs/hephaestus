@@ -129,7 +129,7 @@ export class SnmpService {
            LIMIT 1`,
           [cleanOid]
         );
-        if (res.rowCount > 0) {
+        if (res.rows.length > 0) {
           const info = res.rows[0];
           const suffix = cleanOid.substring(info.oid.length);
           let displayName = info.name;
