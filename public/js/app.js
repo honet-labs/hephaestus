@@ -2,7 +2,7 @@
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -156,6 +156,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'Monitoring View';
     pageDesc.textContent = 'Slideshow rotasi monitoring dashboard Grafana ter-embed.';
     initMonitoringPage();
+  } else if (pageId === 'snmp') {
+    pageTitle.textContent = 'SNMP Explorer';
+    pageDesc.textContent = 'Browse OID MIB trees, import ASN.1 MIB definitions, and perform real-time SNMP GET/WALK queries.';
+    initSnmpPage();
   }
 }
 
@@ -3511,5 +3515,365 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// ==========================================
+// SNMP EXPLORER FRONTEND IMPLEMENTATION
+// ==========================================
+
+let snmpOidRegistry = {};
+let snmpImportedMibs = [];
+
+async function initSnmpPage() {
+  const presetsContainer = document.getElementById('presets-container');
+  if (!presetsContainer) return;
+  
+  if (presetsContainer.children.length === 0) {
+    try {
+      const res = await fetch('/api/v1/snmp/presets');
+      const data = await res.json();
+      if (data.success) {
+        renderPresetMibs(data.presets);
+      }
+    } catch (err) {
+      console.error('Failed to load MIB presets:', err);
+    }
+  }
+
+  await loadSnmpMibsAndRegistry();
+}
+
+async function loadSnmpMibsAndRegistry() {
+  try {
+    const mibsRes = await fetch('/api/v1/snmp/mibs');
+    const mibsData = await mibsRes.json();
+    if (mibsData.success) {
+      snmpImportedMibs = mibsData.mibs;
+      renderImportedMibs(mibsData.mibs);
+    }
+
+    const regRes = await fetch('/api/v1/snmp/registry');
+    const regData = await regRes.json();
+    if (regData.success) {
+      renderOidRegistry(regData.registry);
+    }
+  } catch (err) {
+    console.error('Failed to load SNMP MIBs / Registry:', err);
+  }
+}
+
+function renderPresetMibs(presets) {
+  const container = document.getElementById('presets-container');
+  if (!container) return;
+  container.innerHTML = presets.map(p => `
+    <button type="button" class="btn btn-secondary" onclick="importMibPreset('${p.name}')" id="btn-preset-${p.name}" style="padding: 4px 8px; font-size: 11px; height: auto; border-color: var(--app-border); margin: 2px;">
+      <span>${p.name}</span>
+    </button>
+  `).join('');
+}
+
+async function importMibPreset(name) {
+  const btn = document.getElementById(`btn-preset-${name}`);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner" style="margin-right: 4px;"></span><span>Installing...</span>`;
+  }
+
+  const url = `https://raw.githubusercontent.com/librenms/librenms/master/mibs/${name}`;
+
+  try {
+    const response = await fetch('/api/v1/snmp/mibs/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mibName: name, sourceUrl: url })
+    });
+    const data = await response.json();
+
+    if (!data.success) throw new Error(data.message);
+
+    addLog('SNMP', `Successfully imported preset MIB: ${name}`, 'SUCCESS');
+    await loadSnmpMibsAndRegistry();
+
+  } catch (error) {
+    console.error(error);
+    addLog('SNMP', `Failed to import preset ${name}: ${error.message}`, 'ERROR');
+    alert(`Import Failed: ${error.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<span>${name}</span>`;
+    }
+  }
+}
+
+function toggleImportMethodFields() {
+  const method = document.getElementById('import-method').value;
+  const urlGroup = document.getElementById('import-url-group');
+  const textGroup = document.getElementById('import-text-group');
+
+  if (method === 'url') {
+    urlGroup.classList.remove('hidden');
+    textGroup.classList.add('hidden');
+  } else {
+    urlGroup.classList.add('hidden');
+    textGroup.classList.remove('hidden');
+  }
+}
+
+async function importCustomMib(event) {
+  if (event) event.preventDefault();
+
+  const name = document.getElementById('import-mib-name').value.trim();
+  const method = document.getElementById('import-method').value;
+  const url = document.getElementById('import-mib-url').value.trim();
+  const text = document.getElementById('import-mib-text').value.trim();
+
+  const btn = document.getElementById('btn-import-mib');
+  const spinner = document.getElementById('spinner-import-mib');
+
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+
+  const body = { mibName: name };
+  if (method === 'url') {
+    body.sourceUrl = url;
+  } else {
+    body.mibText = text;
+  }
+
+  try {
+    const response = await fetch('/api/v1/snmp/mibs/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await response.json();
+
+    if (!data.success) throw new Error(data.message);
+
+    addLog('SNMP', `Successfully imported MIB: ${name}`, 'SUCCESS');
+    
+    document.getElementById('import-mib-name').value = '';
+    if (document.getElementById('import-mib-url')) document.getElementById('import-mib-url').value = '';
+    if (document.getElementById('import-mib-text')) document.getElementById('import-mib-text').value = '';
+
+    await loadSnmpMibsAndRegistry();
+
+  } catch (error) {
+    console.error(error);
+    addLog('SNMP', `Failed to import ${name}: ${error.message}`, 'ERROR');
+    alert(`Import Failed: ${error.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
+  }
+}
+
+function renderImportedMibs(mibs) {
+  const tbody = document.getElementById('imported-mibs-tbody');
+  if (!tbody) return;
+
+  if (mibs.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 15px; font-size: 11px;">
+          No custom MIBs imported yet.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = mibs.map(m => `
+    <tr>
+      <td style="padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--text-white);">${escapeHtml(m.name)}</td>
+      <td style="padding: 8px 10px; font-size: 11px; font-family: monospace;">${m.nodeCount}</td>
+      <td style="padding: 8px 10px; font-size: 11px; text-align: center;">
+        <button class="btn btn-secondary" onclick="deleteImportedMib('${m.name}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: #ff7b72; color: #ff7b72;">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function deleteImportedMib(name) {
+  if (!confirm(`Are you sure you want to delete MIB module '${name}'? This will remove all associated OID dictionary definitions.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/v1/snmp/mibs/${name}`, {
+      method: 'DELETE'
+    });
+    const data = await response.json();
+
+    if (!data.success) throw new Error(data.message);
+
+    addLog('SNMP', `Deleted MIB module: ${name}`, 'SUCCESS');
+    await loadSnmpMibsAndRegistry();
+
+  } catch (error) {
+    console.error(error);
+    addLog('SNMP', `Failed to delete MIB ${name}: ${error.message}`, 'ERROR');
+    alert(`Delete Failed: ${error.message}`);
+  }
+}
+
+function renderOidRegistry(registry) {
+  snmpOidRegistry = registry;
+  filterOidRegistry();
+}
+
+function filterOidRegistry() {
+  const query = document.getElementById('search-registry-input').value.toLowerCase().trim();
+  const tbody = document.getElementById('oid-registry-tbody');
+  if (!tbody) return;
+
+  let html = '';
+  let count = 0;
+  
+  const sortedOids = Object.keys(snmpOidRegistry).sort((a, b) => {
+    const aParts = a.split('.').map(Number);
+    const bParts = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+      if (aParts[i] === undefined) return -1;
+      if (bParts[i] === undefined) return 1;
+      if (aParts[i] !== bParts[i]) return aParts[i] - bParts[i];
+    }
+    return 0;
+  });
+
+  for (const oid of sortedOids) {
+    const info = snmpOidRegistry[oid];
+    const nameMatch = info.name.toLowerCase().includes(query);
+    const oidMatch = oid.toLowerCase().includes(query);
+    const mibMatch = info.mib.toLowerCase().includes(query);
+
+    if (!query || nameMatch || oidMatch || mibMatch) {
+      count++;
+      html += `
+        <tr style="cursor: pointer;" onclick="inspectOid('${oid}')">
+          <td style="padding: 8px 10px; font-size: 11px;">
+            <div style="font-weight: 600; color: var(--text-white);">${escapeHtml(info.name)}</div>
+            <div style="font-family: monospace; font-size: 9.5px; color: var(--text-muted);">${oid}</div>
+          </td>
+          <td style="padding: 8px 10px; font-size: 11px; vertical-align: middle;">
+            <span class="status-badge" style="font-size: 9px; padding: 1px 4px; background: rgba(88,166,255,0.05); color: #58a6ff; border: 1px solid rgba(88,166,255,0.1);">${escapeHtml(info.mib)}</span>
+          </td>
+          <td style="padding: 8px 10px; font-size: 11px; text-align: center; vertical-align: middle;">
+            <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); selectOidForQuery('${oid}', '${info.name}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: var(--app-border);">Select</button>
+          </td>
+        </tr>
+      `;
+    }
+    if (count >= 100) {
+      html += `
+        <tr>
+          <td colspan="3" style="text-align: center; color: var(--text-muted); font-size: 10.5px; padding: 10px;">
+            Showing first 100 results. Refine search query for more.
+          </td>
+        </tr>
+      `;
+      break;
+    }
+  }
+
+  if (count === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 11px;">
+          No matching OIDs found in registry.
+        </td>
+      </tr>
+    `;
+  } else {
+    tbody.innerHTML = html;
+  }
+}
+
+function selectOidForQuery(oid, name) {
+  const inputOid = document.getElementById('snmp-oid');
+  if (inputOid) {
+    inputOid.value = oid;
+    inputOid.focus();
+    inputOid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  inspectOid(oid);
+}
+
+function inspectOid(oid) {
+  const info = snmpOidRegistry[oid];
+  const inspector = document.getElementById('oid-detail-inspector');
+  if (!info || !inspector) return;
+
+  inspector.classList.remove('hidden');
+  document.getElementById('inspect-name').textContent = info.name;
+  document.getElementById('inspect-oid').textContent = oid;
+  document.getElementById('inspect-syntax').textContent = info.syntax || 'N/A';
+  document.getElementById('inspect-access').textContent = info.access || 'N/A';
+  document.getElementById('inspect-mib').textContent = info.mib;
+  document.getElementById('inspect-desc').textContent = info.description || 'No description provided for this object.';
+}
+
+async function runSnmpQuery(event) {
+  if (event) event.preventDefault();
+
+  const host = document.getElementById('snmp-host').value.trim();
+  const port = document.getElementById('snmp-port').value.trim();
+  const version = document.getElementById('snmp-version').value;
+  const community = document.getElementById('snmp-community').value.trim();
+  const oid = document.getElementById('snmp-oid').value.trim();
+  const operation = document.getElementById('snmp-operation').value;
+
+  const btn = document.getElementById('btn-run-snmp');
+  const spinner = document.getElementById('spinner-run-snmp');
+  const resultsPanel = document.getElementById('snmp-results-panel');
+  const tbody = document.getElementById('snmp-results-tbody');
+
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  if (resultsPanel) resultsPanel.classList.add('hidden');
+
+  try {
+    const response = await fetch('/api/v1/snmp/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host, port, version, community, oid, operation })
+    });
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'SNMP Query returned failure.');
+    }
+
+    let html = '';
+    data.results.forEach(res => {
+      html += `
+        <tr>
+          <td class="font-mono" style="padding: 8px 10px; font-size: 11px; color: var(--text-muted);">${escapeHtml(res.oid)}</td>
+          <td style="padding: 8px 10px; font-size: 11px; font-weight: 600; color: #58a6ff;">${escapeHtml(res.name)}</td>
+          <td style="padding: 8px 10px; font-size: 11px; font-family: monospace;">${escapeHtml(res.type)}</td>
+          <td class="font-mono" style="padding: 8px 10px; font-size: 11.5px; color: #56d364; word-break: break-all;">${escapeHtml(res.value)}</td>
+        </tr>
+      `;
+    });
+
+    if (data.results.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">No values returned.</td></tr>`;
+    } else {
+      tbody.innerHTML = html;
+    }
+
+    if (resultsPanel) resultsPanel.classList.remove('hidden');
+    addLog('SNMP', `Successfully executed ${operation.toUpperCase()} on OID: ${oid}`, 'SUCCESS');
+
+  } catch (error) {
+    console.error(error);
+    addLog('SNMP', `Query failed: ${error.message}`, 'ERROR');
+    alert(`SNMP Query Error: ${error.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
+  }
+}
+
 
 

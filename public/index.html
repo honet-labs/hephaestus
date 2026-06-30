@@ -82,6 +82,15 @@
               <div class="menu-item-sub">Multi-dashboard slideshow</div>
             </div>
           </a>
+          <a href="#snmp" id="menu-snmp" class="menu-item">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line><circle cx="12" cy="12" r="4"></circle></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">SNMP Explorer</div>
+              <div class="menu-item-sub">Scan & browse OID/MIBs</div>
+            </div>
+          </a>
         </nav>
       </div>
 
@@ -715,6 +724,197 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- PAGE 7: SNMP BROWSER EXPLORER -->
+        <div id="page-snmp" class="hidden">
+          <div class="dashboard-grid" style="grid-template-columns: 1fr; gap: 20px;">
+            
+            <!-- Row 1: SNMP Query Panel -->
+            <div class="panel">
+              <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 16px;">
+                <h3 class="panel-title" style="margin-bottom: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">SNMP Query Console</h3>
+              </div>
+              <form id="form-snmp-query" onsubmit="runSnmpQuery(event)">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                  <div class="form-group">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Target Agent Host</label>
+                    <input type="text" id="snmp-host" placeholder="e.g. 192.168.1.1 or 127.0.0.1" value="127.0.0.1" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Port</label>
+                    <input type="number" id="snmp-port" placeholder="161" value="161" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">SNMP Version</label>
+                    <select id="snmp-version" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                      <option value="v2c" selected>v2c (Recommended)</option>
+                      <option value="v1">v1</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Community String</label>
+                    <input type="text" id="snmp-community" placeholder="public" value="public" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; align-items: flex-end; margin-bottom: 16px;">
+                  <div class="form-group">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">OID / Object Name to Query</label>
+                    <input type="text" id="snmp-oid" placeholder="e.g. 1.3.6.1.2.1.1.1.0 or sysDescr.0" value="1.3.6.1.2.1.1.1.0" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Operation</label>
+                    <select id="snmp-operation" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                      <option value="get" selected>SNMP GET (Single value)</option>
+                      <option value="walk">SNMP WALK (Subtree scan)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <button type="submit" class="btn btn-primary" id="btn-run-snmp" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 35px;">
+                      <span class="spinner hidden" id="spinner-run-snmp"></span>
+                      <span>Run Query</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <!-- SNMP Results Table -->
+              <div id="snmp-results-panel" class="hidden" style="margin-top: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: var(--text-white); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Query Results</h4>
+                <div class="table-wrapper" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
+                  <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                      <tr style="background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);">
+                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 220px;">OID</th>
+                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 220px;">Translated Name</th>
+                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 100px;">Type</th>
+                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody id="snmp-results-tbody">
+                      <!-- Results populated here -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 2: MIB Registry Management (2 Columns) -->
+            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;">
+              
+              <!-- Column A: MIB Downloader & Import -->
+              <div class="panel">
+                <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 16px;">
+                  <h3 class="panel-title" style="margin-bottom: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">MIB Importer</h3>
+                </div>
+                
+                <!-- LibreNMS presets quick click -->
+                <div style="margin-bottom: 16px;">
+                  <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">LibreNMS Preset MIBs (Quick Install)</label>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="presets-container">
+                    <!-- Presets added here -->
+                  </div>
+                </div>
+
+                <div style="height: 1px; background: var(--app-border); margin: 16px 0;"></div>
+
+                <!-- Custom MIB Import -->
+                <form id="form-import-mib" onsubmit="importCustomMib(event)">
+                  <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">MIB Module Name (e.g. IF-MIB)</label>
+                    <input type="text" id="import-mib-name" placeholder="e.g. HOST-RESOURCES-MIB" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Import Method</label>
+                    <select id="import-method" onchange="toggleImportMethodFields()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                      <option value="url" selected>Download from URL</option>
+                      <option value="text">Paste MIB Content</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" id="import-url-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Source URL</label>
+                    <input type="url" id="import-mib-url" placeholder="https://raw.githubusercontent.com/librenms/librenms/master/mibs/IF-MIB" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                    <span style="font-size: 10px; color: var(--text-muted); margin-top: 4px; display: block;">
+                      Tips: default source can be pulled from LibreNMS github repository.
+                    </span>
+                  </div>
+
+                  <div class="form-group hidden" id="import-text-group" style="margin-bottom: 16px;">
+                    <label class="form-label" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Paste ASN.1 MIB Content</label>
+                    <textarea id="import-mib-text" placeholder="-- MIB definition text here..." style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 11px; width: 100%; height: 150px; box-sizing: border-box; resize: vertical; font-family: monospace;"></textarea>
+                  </div>
+
+                  <button type="submit" class="btn btn-primary" id="btn-import-mib" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 35px;">
+                    <span class="spinner hidden" id="spinner-import-mib"></span>
+                    <span>Import & Compile MIB</span>
+                  </button>
+                </form>
+
+                <!-- Imported MIBs List -->
+                <div style="margin-top: 24px;">
+                  <h4 style="margin: 0 0 10px 0; color: var(--text-white); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Imported Modules</h4>
+                  <div class="table-wrapper" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                      <thead>
+                        <tr style="background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);">
+                          <th style="font-size: 10px; padding: 8px 10px; color: var(--text-muted); font-weight: 600;">Module Name</th>
+                          <th style="font-size: 10px; padding: 8px 10px; color: var(--text-muted); font-weight: 600; width: 70px;">OIDs</th>
+                          <th style="font-size: 10px; padding: 8px 10px; color: var(--text-muted); font-weight: 600; width: 60px;">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="imported-mibs-tbody">
+                        <!-- Loaded list -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Column B: Global OID Tree & Database Browser -->
+              <div class="panel">
+                <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                  <h3 class="panel-title" style="margin-bottom: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">OID Dictionary Registry</h3>
+                  <input type="text" id="search-registry-input" onkeyup="filterOidRegistry()" placeholder="Search OIDs or names..." style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 180px;">
+                </div>
+
+                <div class="table-wrapper" style="height: 380px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
+                  <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                      <tr style="background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);">
+                        <th style="font-size: 10px; padding: 8px 10px; color: var(--text-muted); font-weight: 600;">OID / Name</th>
+                        <th style="font-size: 10px; padding: 8px 10px; color: var(--text-muted); font-weight: 600; width: 100px;">Source MIB</th>
+                        <th style="font-size: 10px; padding: 8px 10px; color: var(--text-muted); font-weight: 600; width: 60px;">Select</th>
+                      </tr>
+                    </thead>
+                    <tbody id="oid-registry-tbody">
+                      <!-- OIDs list -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Selected OID Detail Inspector -->
+                <div id="oid-detail-inspector" class="info-box hidden" style="margin-top: 16px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--app-border); border-radius: 4px; display: flex; flex-direction: column; gap: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                      <div style="font-weight: bold; color: var(--text-white); font-size: 13px;" id="inspect-name">sysDescr</div>
+                      <div style="font-family: monospace; font-size: 11px; color: #58a6ff; margin-top: 2px;" id="inspect-oid">1.3.6.1.2.1.1.1</div>
+                    </div>
+                    <span id="inspect-mib" class="status-badge" style="font-size: 9px; padding: 2px 6px; background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2);">SNMPv2-MIB</span>
+                  </div>
+                  <div style="display: flex; gap: 16px; font-size: 11px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                    <div><span style="color: var(--text-muted);">Syntax:</span> <strong id="inspect-syntax" class="font-mono" style="color: var(--text-white);">DisplayString</strong></div>
+                    <div><span style="color: var(--text-muted);">Access:</span> <strong id="inspect-access" class="font-mono" style="color: var(--text-white);">read-only</strong></div>
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5;" id="inspect-desc">
+                    A textual description of the entity.
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 

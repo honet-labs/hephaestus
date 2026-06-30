@@ -5,6 +5,7 @@ import config from "./config/env";
 import settingsRoutes from "./routes/settings.routes";
 import prometheusRoutes from "./routes/prometheus.routes";
 import monitoringViewRoutes from "./routes/monitoring-view.routes";
+import snmpRoutes from "./routes/snmp.routes";
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.get("/health", (req: Request, res: Response) => {
 app.use("/api/v1/settings", settingsRoutes);
 app.use("/api/v1/prometheus", prometheusRoutes);
 app.use("/api/v1/monitoring-views", monitoringViewRoutes);
+app.use("/api/v1/snmp", snmpRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
