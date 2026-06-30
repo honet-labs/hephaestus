@@ -3907,7 +3907,9 @@ async function runSnmpQuery(event) {
     }
 
     if (resultsPanel) resultsPanel.classList.remove('hidden');
-    addLog('SNMP', `Successfully executed ${operation.toUpperCase()} on OID: ${oid}`, 'SUCCESS');
+    const displayOid = data.queriedOid || oid || '1.3.6.1';
+    const displayOp = data.queriedOperation || operation;
+    addLog('SNMP', `Successfully executed ${displayOp.toUpperCase()} on OID: ${displayOid}`, 'SUCCESS');
 
   } catch (error) {
     console.error(error);

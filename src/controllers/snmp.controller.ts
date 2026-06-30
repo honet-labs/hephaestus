@@ -71,15 +71,24 @@ export class SnmpController {
   public static async querySnmp(req: Request, res: Response) {
     const { host, port, version, community, oid, operation } = req.body;
 
-    if (!host || !oid || !operation) {
+    if (!host || !operation) {
       return res.status(400).json({ 
         success: false, 
         error: "Bad Request", 
-        message: "Parameters host, oid, and operation are required." 
+        message: "Parameters host and operation are required." 
       });
     }
 
-    if (operation !== "get" && operation !== "walk") {
+    let targetOid = oid ? oid.trim() : "";
+    let targetOperation = operation;
+
+    // If OID is empty, default to "1.3.6.1" and perform a WALK operation to get everything
+    if (!targetOid) {
+      targetOid = "1.3.6.1";
+      targetOperation = "walk";
+    }
+
+    if (targetOperation !== "get" && targetOperation !== "walk") {
       return res.status(400).json({ 
         success: false, 
         error: "Bad Request", 
@@ -93,10 +102,15 @@ export class SnmpController {
         port: port ? parseInt(port, 10) : 161,
         version: version || "v2c",
         community: community || "public",
-        oid,
-        operation
+        oid: targetOid,
+        operation: targetOperation
       });
-      res.status(200).json({ success: true, results });
+      res.status(200).json({ 
+        success: true, 
+        results,
+        queriedOid: targetOid,
+        queriedOperation: targetOperation
+      });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "SNMP Query Failed", message: error.message });
     }
