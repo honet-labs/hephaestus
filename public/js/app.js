@@ -156,6 +156,28 @@ function navigate(pageId) {
   window.location.hash = pageId;
 }
 
+function toggleSnmpSubmenu() {
+  const submenu = document.getElementById('snmp-submenu');
+  const arrow = document.getElementById('menu-snmp-arrow');
+  if (submenu) {
+    const isHidden = submenu.classList.contains('hidden') || submenu.style.display === 'none';
+    if (isHidden) {
+      submenu.classList.remove('hidden');
+      submenu.style.display = 'flex';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+      // Navigate to snmp-query if not already on an SNMP page
+      const hash = window.location.hash.replace('#', '') || 'overview';
+      if (!['snmp-query', 'mib-importer', 'oid-library'].includes(hash)) {
+        navigate('snmp-query');
+      }
+    } else {
+      submenu.classList.add('hidden');
+      submenu.style.display = 'none';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
 function showPage(pageId) {
   pages.forEach(p => {
     const pageEl = document.getElementById(`page-${p}`);
@@ -169,6 +191,28 @@ function showPage(pageId) {
       if (menuEl) menuEl.classList.remove('active');
     }
   });
+
+  const snmpPages = ['snmp-query', 'mib-importer', 'oid-library'];
+  const isSnmpPage = snmpPages.includes(pageId);
+  const submenu = document.getElementById('snmp-submenu');
+  const parentMenu = document.getElementById('menu-snmp-parent');
+  const arrow = document.getElementById('menu-snmp-arrow');
+
+  if (isSnmpPage) {
+    if (submenu) {
+      submenu.classList.remove('hidden');
+      submenu.style.display = 'flex';
+    }
+    if (parentMenu) parentMenu.classList.add('active');
+    if (arrow) arrow.style.transform = 'rotate(180deg)';
+  } else {
+    if (submenu) {
+      submenu.classList.add('hidden');
+      submenu.style.display = 'none';
+    }
+    if (parentMenu) parentMenu.classList.remove('active');
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+  }
 
   // Update header descriptions
   activeModuleName.textContent = pageId.toUpperCase();

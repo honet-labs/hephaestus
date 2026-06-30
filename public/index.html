@@ -82,33 +82,41 @@
               <div class="menu-item-sub">Multi-dashboard slideshow</div>
             </div>
           </a>
-          <a href="#snmp-query" id="menu-snmp-query" class="menu-item">
-            <span class="menu-item-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line><circle cx="12" cy="12" r="4"></circle></svg>
-            </span>
-            <div>
-              <div class="menu-item-title">SNMP Query Console</div>
-              <div class="menu-item-sub">Run SNMP GET/WALK queries</div>
+          <!-- SNMP Explorer Parent Menu -->
+          <div class="menu-item-group" style="display: flex; flex-direction: column;">
+            <a href="javascript:void(0)" id="menu-snmp-parent" class="menu-item" onclick="toggleSnmpSubmenu()" style="cursor: pointer;">
+              <span class="menu-item-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line><circle cx="12" cy="12" r="4"></circle></svg>
+              </span>
+              <div style="flex-grow: 1;">
+                <div class="menu-item-title">SNMP Explorer</div>
+                <div class="menu-item-sub">Scan & browse OID/MIBs</div>
+              </div>
+              <span class="menu-arrow" id="menu-snmp-arrow" style="transition: transform 0.2s; display: flex; align-items: center; color: var(--text-muted);">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </a>
+            <div id="snmp-submenu" class="submenu-list hidden" style="padding-left: 20px; display: none; flex-direction: column; gap: 2px; margin-top: 2px;">
+              <a href="#snmp-query" id="menu-snmp-query" class="menu-item" style="padding: 6px 16px; border-radius: 4px;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">SNMP Query Console</div>
+                </div>
+              </a>
+              <a href="#mib-importer" id="menu-mib-importer" class="menu-item" style="padding: 6px 16px; border-radius: 4px;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">MIB Importer</div>
+                </div>
+              </a>
+              <a href="#oid-library" id="menu-oid-library" class="menu-item" style="padding: 6px 16px; border-radius: 4px;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Library MIB/OID SNMP</div>
+                </div>
+              </a>
             </div>
-          </a>
-          <a href="#mib-importer" id="menu-mib-importer" class="menu-item">
-            <span class="menu-item-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-            </span>
-            <div>
-              <div class="menu-item-title">MIB Importer</div>
-              <div class="menu-item-sub">Import & compile ASN.1 MIBs</div>
-            </div>
-          </a>
-          <a href="#oid-library" id="menu-oid-library" class="menu-item">
-            <span class="menu-item-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            </span>
-            <div>
-              <div class="menu-item-title">Library MIB/OID SNMP</div>
-              <div class="menu-item-sub">Browse registered OID dictionary</div>
-            </div>
-          </a>
+          </div>
           <a href="#database" id="menu-database" class="menu-item">
             <span class="menu-item-icon">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-2.239 10-5V5c0-2.761-4.477-5-10-5S2 2.239 2 5v12c0 2.739 4.477 5 10 5z"></path><path d="M2 5c0 2.761 4.477 5 10 5s10-2.239 10-5"></path><path d="M2 11c0 2.761 4.477 5 10 5s10-2.239 10-5"></path></svg>

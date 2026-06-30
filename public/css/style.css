@@ -1027,3 +1027,26 @@ tr:hover td {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* Sidebar Submenu Styles */
+#menu-snmp-parent.active {
+  background-color: transparent !important;
+  border-left: none !important;
+  color: var(--text-white) !important;
+}
+
+#menu-snmp-parent.active .menu-item-icon {
+  color: var(--prometheus-orange) !important;
+}
+
+.submenu-list .menu-item {
+  margin-left: 4px;
+}
+
+.submenu-list .menu-item.active {
+  background-color: var(--prometheus-orange-muted) !important;
+  border-left: 2px solid var(--prometheus-orange) !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
