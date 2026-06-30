@@ -3492,6 +3492,11 @@ function renderPlayer() {
 // Slideshow playback logic
 function startSlideshowTimer() {
   stopSlideshowTimer();
+  if (!activeMonitoringView || activeMonitoringView.urls.length <= 1) {
+    slideshowRemainingTime = 0;
+    updateSlideshowUI();
+    return;
+  }
   slideshowRemainingTime = slideshowDurationSetting;
   updateSlideshowUI();
   
@@ -3517,13 +3522,23 @@ function updateSlideshowUI() {
   const timerText = document.getElementById('slideshow-indicator-timer');
   const indicatorText = document.getElementById('slideshow-indicator-text');
   
+  const hasMultiple = (activeMonitoringView && activeMonitoringView.urls.length > 1);
+
   if (progressBar) {
-    const percent = ((slideshowDurationSetting - slideshowRemainingTime) / slideshowDurationSetting) * 100;
-    progressBar.style.width = `${percent}%`;
+    if (!hasMultiple) {
+      progressBar.style.width = '100%';
+    } else {
+      const percent = ((slideshowDurationSetting - slideshowRemainingTime) / slideshowDurationSetting) * 100;
+      progressBar.style.width = `${percent}%`;
+    }
   }
   
   if (timerText) {
-    timerText.textContent = `Next switch in: ${slideshowRemainingTime}s`;
+    if (!hasMultiple) {
+      timerText.textContent = 'Rotation inactive (1 panel)';
+    } else {
+      timerText.textContent = `Next switch in: ${slideshowRemainingTime}s`;
+    }
   }
   
   if (indicatorText && activeMonitoringView) {

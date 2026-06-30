@@ -275,11 +275,22 @@
       
       iframe.src = cleanedUrl;
       lblTitle.textContent = viewData.title;
-      lblStatus.textContent = `Panel ${currentSlideIndex + 1} of ${viewData.urls.length}`;
+      
+      if (viewData.urls.length <= 1) {
+        lblStatus.textContent = '1 Panel (Rotation Inactive)';
+      } else {
+        lblStatus.textContent = `Panel ${currentSlideIndex + 1} of ${viewData.urls.length}`;
+      }
     }
 
     function startSlideshowTimer() {
       stopSlideshowTimer();
+      if (!viewData || viewData.urls.length <= 1) {
+        slideshowRemainingTime = 0;
+        const progressBar = document.getElementById('progress-bar');
+        if (progressBar) progressBar.style.width = '100%';
+        return;
+      }
       slideshowRemainingTime = slideshowDurationSetting;
       updateProgressBar();
       
@@ -302,8 +313,14 @@
 
     function updateProgressBar() {
       const progressBar = document.getElementById('progress-bar');
-      const percent = ((slideshowDurationSetting - slideshowRemainingTime) / slideshowDurationSetting) * 100;
-      progressBar.style.width = `${percent}%`;
+      if (progressBar) {
+        if (!viewData || viewData.urls.length <= 1) {
+          progressBar.style.width = '100%';
+        } else {
+          const percent = ((slideshowDurationSetting - slideshowRemainingTime) / slideshowDurationSetting) * 100;
+          progressBar.style.width = `${percent}%`;
+        }
+      }
     }
 
     function togglePlay() {
