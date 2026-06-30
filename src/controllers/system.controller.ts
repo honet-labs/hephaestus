@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import config from "../config/env";
-import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists, updateEnvFile } from "../config/db";
+import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists, updateEnvFile, saveDbConfigToFile } from "../config/db";
 
 function maskPassword(pwd: string): string {
   if (!pwd) return "";
@@ -91,15 +91,9 @@ export class SystemController {
         return;
       }
 
-      // 2. Connection success! Save configuration to .env file
+      // 2. Connection success! Save configuration to persistent JSON file and .env file
+      saveDbConfigToFile(newConfig);
       updateEnvFile(newConfig);
-
-      // Clean up legacy db_config.json if it exists
-      if (fs.existsSync(config.dbConfigFile)) {
-        try {
-          fs.unlinkSync(config.dbConfigFile);
-        } catch (_) {}
-      }
 
       res.status(200).json({
         success: true,

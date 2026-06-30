@@ -194,7 +194,9 @@
                 <span id="widget-grafana-status" class="stat-card-value" style="color: #ff7b72;">Disconnected</span>
                 <span id="widget-grafana-sub" class="stat-card-sub">No active custom configuration</span>
               </div>
-              <span class="stat-card-icon">⚡</span>
+              <span class="stat-card-icon" style="color: var(--prometheus-orange); display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              </span>
             </div>
 
             <div class="stat-card">
@@ -203,7 +205,9 @@
                 <span id="widget-datasource-uid" class="stat-card-value">-</span>
                 <span class="stat-card-sub">Prometheus UID Target</span>
               </div>
-              <span class="stat-card-icon">🗄️</span>
+              <span class="stat-card-icon" style="color: #58a6ff; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path></svg>
+              </span>
             </div>
 
             <div class="stat-card">
@@ -212,7 +216,9 @@
                 <span id="widget-scrapes" class="stat-card-value">0</span>
                 <span class="stat-card-sub">Total reports processed</span>
               </div>
-              <span class="stat-card-icon">📊</span>
+              <span class="stat-card-icon" style="color: #56d364; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+              </span>
             </div>
 
             <div class="stat-card">
@@ -221,7 +227,9 @@
                 <span class="stat-card-value" style="color: #58a6ff;">Fallback</span>
                 <span class="stat-card-sub">data/grafana_config.json</span>
               </div>
-              <span class="stat-card-icon">💾</span>
+              <span class="stat-card-icon" style="color: #a371f7; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              </span>
             </div>
           </div>
 
@@ -501,7 +509,9 @@
 
             <!-- Empty State -->
             <div id="monitoring-empty-state" class="panel hidden" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border: 1px dashed var(--app-border); background: rgba(255,255,255,0.01);">
-              <span style="font-size: 48px; filter: grayscale(0.2);">🖥️</span>
+              <div style="color: var(--text-muted); display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              </div>
               <div>
                 <h3 style="margin: 0; font-size: 15px; color: var(--text-white);">No Monitoring Views Found</h3>
                 <p style="margin: 6px 0 0 0; font-size: 12px; color: var(--text-muted); max-width: 400px;">Create a monitoring view to combine multiple Grafana panel shares or dashboards into a unified rotated slideshow interface.</p>

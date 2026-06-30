@@ -9,14 +9,49 @@ let activePool: Pool;
 let activeDbConfig: any;
 
 export function loadDbConfig() {
+  const dbConfigPath = path.join(config.dbDir, "db_config.json");
+  if (fs.existsSync(dbConfigPath)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(dbConfigPath, "utf-8"));
+      return {
+        host: saved.host || process.env.PGHOST || "localhost",
+        port: parseInt(saved.port || process.env.PGPORT || "5432", 10),
+        user: saved.user || process.env.PGUSER || "postgres",
+        password: saved.password || process.env.PGPASSWORD || "postgres",
+        database: saved.database || process.env.PGDATABASE || "hephaestus",
+        ssl: saved.ssl ? { rejectUnauthorized: false } : undefined
+      };
+    } catch (err) {
+      console.error("[DB] Failed to parse db_config.json, falling back to process.env", err);
+    }
+  }
+
   return {
     host: process.env.PGHOST || "localhost",
     port: parseInt(process.env.PGPORT || "5432", 10),
     user: process.env.PGUSER || "postgres",
     password: process.env.PGPASSWORD || "postgres",
     database: process.env.PGDATABASE || "hephaestus",
-    ssl: process.env.PGSSL === "true" || process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
+    ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
   };
+}
+
+export function saveDbConfigToFile(newConfig: any) {
+  const dbConfigPath = path.join(config.dbDir, "db_config.json");
+  try {
+    fs.mkdirSync(config.dbDir, { recursive: true });
+    fs.writeFileSync(dbConfigPath, JSON.stringify({
+      host: newConfig.host,
+      port: newConfig.port,
+      user: newConfig.user,
+      password: newConfig.password,
+      database: newConfig.database,
+      ssl: !!newConfig.ssl
+    }, null, 2), "utf-8");
+    console.log(`[DB] Saved database configuration to persistent storage: ${dbConfigPath}`);
+  } catch (err: any) {
+    console.error("[DB] Failed to save database configuration to file:", err.message);
+  }
 }
 
 export function updateEnvFile(newConfig: any) {
