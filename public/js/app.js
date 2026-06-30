@@ -3446,7 +3446,7 @@ function renderPlayer() {
       panelDiv.className = 'panel';
       panelDiv.style.padding = '0';
       panelDiv.style.overflow = 'hidden';
-      panelDiv.style.height = '350px';
+      panelDiv.style.height = '450px';
       panelDiv.style.display = 'flex';
       panelDiv.style.flexDirection = 'column';
       panelDiv.style.marginBottom = '0';
@@ -3455,7 +3455,9 @@ function renderPlayer() {
         <div style="background: var(--app-sidebar); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--app-border);">
           <span style="font-size: 11px; font-weight: bold; color: var(--text-white);">Panel ${index + 1}</span>
         </div>
-        <iframe src="${cleanedUrl}" style="border: none; width: 100%; flex-grow: 1;" allowfullscreen></iframe>
+        <div style="width: 100%; flex-grow: 1; overflow: hidden; position: relative;">
+          <iframe src="${cleanedUrl}" style="border: none; width: 125%; height: 125%; transform: scale(0.8); transform-origin: 0 0; position: absolute; top: 0; left: 0;" allowfullscreen></iframe>
+        </div>
       `;
       gridDiv.appendChild(panelDiv);
     });
@@ -3473,7 +3475,7 @@ function renderPlayer() {
     panelDiv.className = 'panel';
     panelDiv.style.padding = '0';
     panelDiv.style.overflow = 'hidden';
-    panelDiv.style.height = '500px';
+    panelDiv.style.height = '600px';
     panelDiv.style.display = 'flex';
     panelDiv.style.flexDirection = 'column';
     
@@ -3481,7 +3483,9 @@ function renderPlayer() {
       <div style="background: var(--app-sidebar); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--app-border);">
         <span style="font-size: 11px; font-weight: bold; color: var(--text-white);">Active Panel: ${currentSlideIndex + 1} of ${activeMonitoringView.urls.length}</span>
       </div>
-      <iframe src="${cleanedUrl}" style="border: none; width: 100%; flex-grow: 1;" allowfullscreen></iframe>
+      <div style="width: 100%; flex-grow: 1; overflow: hidden; position: relative;">
+        <iframe src="${cleanedUrl}" style="border: none; width: 111%; height: 111%; transform: scale(0.9); transform-origin: 0 0; position: absolute; top: 0; left: 0;" allowfullscreen></iframe>
+      </div>
     `;
     renderArea.appendChild(panelDiv);
     updateSlideshowUI();
@@ -3599,20 +3603,28 @@ function adjustPlayerInterval() {
   }
 }
 
-// Helpers
 function getEmbedUrl(url) {
   try {
     let u = new URL(url);
-    if (u.searchParams.has('embed')) {
-      return url;
+    if (!u.searchParams.has('embed')) {
+      u.searchParams.set('embed', 'true');
     }
-    u.searchParams.set('embed', 'true');
+    // Automatically apply kiosk mode to full Grafana dashboards to hide the top/left navigation bars
+    if (u.pathname.includes('/d/') && !u.pathname.includes('/d-solo/')) {
+      if (!u.searchParams.has('kiosk')) {
+        u.searchParams.set('kiosk', 'true');
+      }
+    }
     return u.toString();
   } catch (e) {
-    if (url.includes('?')) {
-      return url.includes('embed=') ? url : `${url}&embed=true`;
+    let result = url;
+    if (!result.includes('embed=')) {
+      result += (result.includes('?') ? '&' : '?') + 'embed=true';
     }
-    return `${url}?embed=true`;
+    if (result.includes('/d/') && !result.includes('/d-solo/') && !result.includes('kiosk=')) {
+      result += '&kiosk=true';
+    }
+    return result;
   }
 }
 

@@ -395,16 +395,25 @@
     function getEmbedUrl(url) {
       try {
         let u = new URL(url);
-        if (u.searchParams.has('embed')) {
-          return url;
+        if (!u.searchParams.has('embed')) {
+          u.searchParams.set('embed', 'true');
         }
-        u.searchParams.set('embed', 'true');
+        // Automatically apply kiosk mode to full Grafana dashboards to hide the top/left navigation bars
+        if (u.pathname.includes('/d/') && !u.pathname.includes('/d-solo/')) {
+          if (!u.searchParams.has('kiosk')) {
+            u.searchParams.set('kiosk', 'true');
+          }
+        }
         return u.toString();
       } catch (e) {
-        if (url.includes('?')) {
-          return url.includes('embed=') ? url : `${url}&embed=true`;
+        let result = url;
+        if (!result.includes('embed=')) {
+          result += (result.includes('?') ? '&' : '?') + 'embed=true';
         }
-        return `${url}?embed=true`;
+        if (result.includes('/d/') && !result.includes('/d-solo/') && !result.includes('kiosk=')) {
+          result += '&kiosk=true';
+        }
+        return result;
       }
     }
 
