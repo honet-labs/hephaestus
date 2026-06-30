@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, Client } from "pg";
 import fs from "fs";
 import path from "path";
 import config, { updateActiveGrafanaCache, updateActivePrometheusCache } from "./env";
@@ -6,6 +6,7 @@ import config, { updateActiveGrafanaCache, updateActivePrometheusCache } from ".
 export let isDbConnected = false;
 export let dbConnectionError: string | null = null;
 let activePool: Pool;
+let activeDbConfig: any;
 
 export function loadDbConfig() {
   if (fs.existsSync(config.dbConfigFile)) {
@@ -34,7 +35,50 @@ export function loadDbConfig() {
   };
 }
 
+async function ensureDatabaseExists(dbConfig: any) {
+  const targetDb = dbConfig.database || "hephaestus";
+  const tempPool = new Pool({
+    ...dbConfig,
+    max: 1,
+    connectionTimeoutMillis: 3000,
+  });
+
+  try {
+    const client = await tempPool.connect();
+    client.release();
+    await tempPool.end();
+  } catch (err: any) {
+    await tempPool.end().catch(() => {});
+    if (err.code === "3D000" || (err.message && err.message.includes("does not exist"))) {
+      console.log(`[DB] Database "${targetDb}" does not exist. Attempting to create it automatically...`);
+      const adminClient = new Client({
+        host: dbConfig.host,
+        port: dbConfig.port,
+        user: dbConfig.user,
+        password: dbConfig.password,
+        database: "postgres",
+        ssl: dbConfig.ssl,
+      });
+
+      try {
+        await adminClient.connect();
+        const safeDbName = targetDb.replace(/[^a-zA-Z0-9_]/g, "");
+        await adminClient.query(`CREATE DATABASE ${safeDbName}`);
+        console.log(`[DB] Database "${safeDbName}" created successfully!`);
+      } catch (createErr: any) {
+        console.error(`[DB] Failed to create database "${targetDb}":`, createErr.message);
+        throw createErr;
+      } finally {
+        await adminClient.end().catch(() => {});
+      }
+    } else {
+      throw err;
+    }
+  }
+}
+
 export function setupPool(dbConfig: any) {
+  activeDbConfig = dbConfig;
   if (activePool) {
     activePool.end().catch(err => console.error("[DB] Error ending old pool:", err));
   }
@@ -89,6 +133,10 @@ export async function initDb() {
   dbConnectionError = null;
 
   try {
+    // 1. Automatically create database if it doesn't exist yet
+    await ensureDatabaseExists(activeDbConfig);
+    
+    // 2. Test connection
     await activePool.query("SELECT version()");
     isDbConnected = true;
   } catch (err: any) {
