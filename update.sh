@@ -59,6 +59,7 @@ fi
 
 docker run -d \
     --name hephaestus-backend \
+    --add-host=host.docker.internal:host-gateway \
     -p 5000:5000 \
     $ENV_FLAG \
     -v hephaestus-backend-data:/app/data \
