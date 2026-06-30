@@ -176,6 +176,9 @@
     <iframe id="slideshow-iframe" allowfullscreen></iframe>
   </div>
 
+  <!-- Hover trigger zone at the bottom of the screen to reveal controls -->
+  <div id="controls-hover-trigger" style="position: fixed; bottom: 0; left: 0; width: 100%; height: 20px; z-index: 998; background: transparent;"></div>
+
   <div id="floating-controls">
     <div class="control-info">
       <div class="control-title" id="lbl-title">Loading View...</div>
@@ -408,21 +411,35 @@
     // Auto-hide toolbar logic
     function setupAutoHideControls() {
       const controls = document.getElementById('floating-controls');
+      const trigger = document.getElementById('controls-hover-trigger');
       
-      document.addEventListener('mousemove', () => {
+      function showControls() {
         controls.style.opacity = '1';
         controls.style.transform = 'translateX(-50%) translateY(0)';
+        controls.style.pointerEvents = 'auto';
         
         clearTimeout(controlHideTimeout);
         
-        // Hide after 3 seconds of inactivity, unless paused
         if (slideshowActive) {
           controlHideTimeout = setTimeout(() => {
             controls.style.opacity = '0';
-            controls.style.transform = 'translateX(-50%) translateY(20px)';
+            controls.style.transform = 'translateX(-50%) translateY(30px)';
+            controls.style.pointerEvents = 'none';
           }, 3000);
         }
-      });
+      }
+      
+      // Start the timer immediately on load
+      showControls();
+      
+      // Listen to events on parent document
+      document.addEventListener('mousemove', showControls);
+      document.addEventListener('click', showControls);
+      
+      // Listen to events on the bottom trigger zone
+      if (trigger) {
+        trigger.addEventListener('mousemove', showControls);
+      }
     }
   </script>
 </body>
