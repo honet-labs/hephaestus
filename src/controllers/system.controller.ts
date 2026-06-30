@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import config from "../config/env";
-import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists } from "../config/db";
+import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists, updateEnvFile } from "../config/db";
 
 function maskPassword(pwd: string): string {
   if (!pwd) return "";
@@ -13,22 +13,23 @@ function maskPassword(pwd: string): string {
 export class SystemController {
   /**
    * GET /api/v1/system/db-config
-   * Retrieves the current database configuration status and credentials (masked).
+   * Retrieve current active database connection configurations
    */
   public getDbConfig = async (req: Request, res: Response): Promise<void> => {
     try {
-      const dbConfig = loadDbConfig();
+      const activeConfig = loadDbConfig();
       res.status(200).json({
         success: true,
         isConnected: isDbConnected,
         error: dbConnectionError,
         config: {
-          host: dbConfig.host,
-          port: dbConfig.port,
-          user: dbConfig.user,
-          database: dbConfig.database,
-          ssl: !!dbConfig.ssl,
-          maskedPassword: maskPassword(dbConfig.password || "")
+          host: activeConfig.host,
+          port: activeConfig.port,
+          user: activeConfig.user,
+          database: activeConfig.database,
+          ssl: !!activeConfig.ssl,
+          // Mask database password for UI rendering
+          maskedPassword: activeConfig.password ? maskPassword(activeConfig.password) : ""
         }
       });
     } catch (err: any) {
@@ -42,7 +43,7 @@ export class SystemController {
 
   /**
    * POST /api/v1/system/db-config
-   * Tests and saves a new database configuration, then hot-reloads the connection pool.
+   * Save and apply database configuration settings
    */
   public saveDbConfig = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -90,11 +91,15 @@ export class SystemController {
         return;
       }
 
-      // 2. Connection success! Save configuration to data/db_config.json
-      if (!fs.existsSync(config.dbDir)) {
-        fs.mkdirSync(config.dbDir, { recursive: true });
+      // 2. Connection success! Save configuration to .env file
+      updateEnvFile(newConfig);
+
+      // Clean up legacy db_config.json if it exists
+      if (fs.existsSync(config.dbConfigFile)) {
+        try {
+          fs.unlinkSync(config.dbConfigFile);
+        } catch (_) {}
       }
-      fs.writeFileSync(config.dbConfigFile, JSON.stringify(newConfig, null, 2), "utf-8");
 
       res.status(200).json({
         success: true,

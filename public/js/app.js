@@ -113,6 +113,44 @@ function formatDateTimeForInput(date) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+// Helper: UI Feedbacks & Loading Spinners
+function showFeedback(type, title, desc) {
+  if (!feedbackAlert || !feedbackTitle || !feedbackDesc) return;
+  feedbackAlert.className = `alert alert-${type}`;
+  feedbackTitle.textContent = title;
+  feedbackDesc.textContent = desc;
+  feedbackAlert.classList.remove('hidden');
+}
+
+function hideFeedback() {
+  if (feedbackAlert) {
+    feedbackAlert.classList.add('hidden');
+  }
+}
+
+function setLoading(isLoading, action = '') {
+  const buttons = [btnTest, btnSave, btnReset];
+  const spinners = {
+    test: spinnerTest,
+    save: spinnerSave,
+    reset: spinnerReset
+  };
+
+  buttons.forEach(btn => {
+    if (btn) btn.disabled = isLoading;
+  });
+
+  // Hide all spinners first
+  Object.values(spinners).forEach(sp => {
+    if (sp) sp.classList.add('hidden');
+  });
+
+  // Show target spinner if loading
+  if (isLoading && action && spinners[action]) {
+    spinners[action].classList.remove('hidden');
+  }
+}
+
 // 1. Navigation routing
 function navigate(pageId) {
   window.location.hash = pageId;

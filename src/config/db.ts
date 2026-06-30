@@ -9,30 +9,68 @@ let activePool: Pool;
 let activeDbConfig: any;
 
 export function loadDbConfig() {
-  if (fs.existsSync(config.dbConfigFile)) {
-    try {
-      const content = fs.readFileSync(config.dbConfigFile, "utf-8");
-      const parsed = JSON.parse(content);
-      return {
-        host: parsed.host || process.env.PGHOST || "localhost",
-        port: parseInt(parsed.port || process.env.PGPORT || "5432", 10),
-        user: parsed.user || process.env.PGUSER || "postgres",
-        password: parsed.password || process.env.PGPASSWORD || "postgres",
-        database: parsed.database || process.env.PGDATABASE || "hephaestus",
-        ssl: parsed.ssl === "true" || parsed.ssl === true || process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
-      };
-    } catch (e) {
-      console.error("[DB] Error reading db_config.json:", e);
-    }
-  }
   return {
     host: process.env.PGHOST || "localhost",
     port: parseInt(process.env.PGPORT || "5432", 10),
     user: process.env.PGUSER || "postgres",
     password: process.env.PGPASSWORD || "postgres",
     database: process.env.PGDATABASE || "hephaestus",
-    ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
+    ssl: process.env.PGSSL === "true" || process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
   };
+}
+
+export function updateEnvFile(newConfig: any) {
+  const envFilePath = path.resolve(__dirname, "../../.env");
+  let content = "";
+  if (fs.existsSync(envFilePath)) {
+    content = fs.readFileSync(envFilePath, "utf-8");
+  }
+
+  const lines = content.split(/\r?\n/);
+  const keysToUpdate = {
+    PGHOST: newConfig.host,
+    PGPORT: newConfig.port.toString(),
+    PGUSER: newConfig.user,
+    PGPASSWORD: newConfig.password || "",
+    PGDATABASE: newConfig.database,
+    PGSSL: newConfig.ssl ? "true" : "false"
+  };
+
+  const updatedKeys = new Set<string>();
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line && !line.startsWith("#")) {
+      const parts = line.split("=");
+      if (parts.length >= 2) {
+        const key = parts[0].trim();
+        if (key in keysToUpdate) {
+          lines[i] = `${key}=${keysToUpdate[key as keyof typeof keysToUpdate]}`;
+          updatedKeys.add(key);
+        }
+      }
+    }
+  }
+
+  // Append any keys that weren't already in the file
+  for (const [key, value] of Object.entries(keysToUpdate)) {
+    if (!updatedKeys.has(key)) {
+      if (lines.length > 0 && lines[lines.length - 1] !== "") {
+        lines.push("");
+      }
+      lines.push(`${key}=${value}`);
+    }
+  }
+
+  fs.writeFileSync(envFilePath, lines.join("\n"), "utf-8");
+
+  // Also update process.env immediately!
+  process.env.PGHOST = newConfig.host;
+  process.env.PGPORT = newConfig.port.toString();
+  process.env.PGUSER = newConfig.user;
+  process.env.PGPASSWORD = newConfig.password || "";
+  process.env.PGDATABASE = newConfig.database;
+  process.env.PGSSL = newConfig.ssl ? "true" : "false";
 }
 
 export async function ensureDatabaseExists(dbConfig: any) {
