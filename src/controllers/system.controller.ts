@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import config from "../config/env";
-import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig } from "../config/db";
+import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists } from "../config/db";
 
 function maskPassword(pwd: string): string {
   if (!pwd) return "";
@@ -101,6 +101,73 @@ export class SystemController {
         message: "Konfigurasi database berhasil disimpan dan diterapkan!",
         isConnected: isDbConnected
       });
+    } catch (err: any) {
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: err.message
+      });
+    }
+  };
+
+  /**
+   * POST /api/v1/system/db-config/test
+   * Tests a proposed database configuration without modifying the persistent config or active pool.
+   */
+  public testDbConfig = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { host, port, user, password, database, ssl } = req.body;
+
+      if (!host || !port || !user || !database) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Fields 'host', 'port', 'user', and 'database' are required."
+        });
+        return;
+      }
+
+      const existing = loadDbConfig();
+      let targetPassword = password;
+      if (password && (password.includes("******") || password.includes("****"))) {
+        targetPassword = existing.password;
+      }
+
+      const testConfig = {
+        host: host.trim(),
+        port: parseInt(port, 10),
+        user: user.trim(),
+        password: targetPassword,
+        database: database.trim(),
+        ssl: ssl === true || ssl === "true" ? { rejectUnauthorized: false } : undefined
+      };
+
+      const { Pool } = require("pg");
+      const tempPool = new Pool({
+        ...testConfig,
+        max: 1,
+        connectionTimeoutMillis: 3000,
+      });
+
+      try {
+        await ensureDatabaseExists(testConfig);
+        const tempClient = await tempPool.connect();
+        await tempClient.query("SELECT version()");
+        tempClient.release();
+        await tempPool.end();
+
+        res.status(200).json({
+          success: true,
+          message: "Koneksi ke database berhasil! Konfigurasi valid."
+        });
+      } catch (err: any) {
+        await tempPool.end().catch(() => {});
+        res.status(400).json({
+          success: false,
+          error: "Connection Failed",
+          message: `Gagal terhubung ke database: ${err.message || String(err)}`
+        });
+      }
     } catch (err: any) {
       res.status(500).json({
         success: false,

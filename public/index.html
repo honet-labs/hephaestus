@@ -968,10 +968,16 @@
                 </select>
               </div>
 
-              <button type="submit" class="btn btn-primary" id="btn-save-db" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 35px; margin-top: 10px;">
-                <span class="spinner hidden" id="spinner-save-db"></span>
-                <span>Apply & Save Config</span>
-              </button>
+              <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button type="button" class="btn btn-secondary" id="btn-test-db" onclick="testDbConfiguration(event)" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 35px;">
+                  <span class="spinner hidden" id="spinner-test-db"></span>
+                  <span>Test Connection</span>
+                </button>
+                <button type="submit" class="btn btn-primary" id="btn-save-db" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 35px;">
+                  <span class="spinner hidden" id="spinner-save-db"></span>
+                  <span>Apply & Save Config</span>
+                </button>
+              </div>
             </form>
 
             <div id="db-feedback" class="alert hidden" style="margin-top: 10px;">

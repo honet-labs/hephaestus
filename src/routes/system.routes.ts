@@ -5,5 +5,6 @@ const router = Router();
 
 router.get("/db-config", systemController.getDbConfig);
 router.post("/db-config", systemController.saveDbConfig);
+router.post("/db-config/test", systemController.testDbConfig);
 
 export default router;

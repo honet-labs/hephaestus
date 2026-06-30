@@ -35,7 +35,7 @@ export function loadDbConfig() {
   };
 }
 
-async function ensureDatabaseExists(dbConfig: any) {
+export async function ensureDatabaseExists(dbConfig: any) {
   const targetDb = dbConfig.database || "hephaestus";
   const tempPool = new Pool({
     ...dbConfig,

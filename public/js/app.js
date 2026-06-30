@@ -4013,5 +4013,62 @@ async function saveDbConfiguration(event) {
   }
 }
 
+async function testDbConfiguration(event) {
+  if (event) event.preventDefault();
+
+  const host = document.getElementById('db-host').value.trim();
+  const port = document.getElementById('db-port').value.trim();
+  const user = document.getElementById('db-user').value.trim();
+  const password = document.getElementById('db-password').value;
+  const database = document.getElementById('db-name').value.trim();
+  const ssl = document.getElementById('db-ssl').value === 'true';
+
+  const btn = document.getElementById('btn-test-db');
+  const spinner = document.getElementById('spinner-test-db');
+  const feedback = document.getElementById('db-feedback');
+  const title = document.getElementById('db-feedback-title');
+  const desc = document.getElementById('db-feedback-desc');
+
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  if (feedback) feedback.classList.add('hidden');
+
+  try {
+    const response = await fetch('/api/v1/system/db-config/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host, port, user, password, database, ssl })
+    });
+
+    const data = await response.json();
+    if (feedback && title && desc) {
+      if (response.ok && data.success) {
+        feedback.className = 'alert alert-success';
+        title.textContent = 'Success';
+        desc.textContent = data.message || 'Koneksi ke database berhasil! Konfigurasi valid.';
+        addLog('Database', 'Test connection succeeded.', 'SUCCESS');
+      } else {
+        feedback.className = 'alert alert-danger';
+        title.textContent = 'Connection Error';
+        desc.textContent = data.message || 'Gagal terhubung ke database dengan konfigurasi tersebut.';
+        addLog('Database', `Test connection failed: ${data.message || data.error}`, 'ERROR');
+      }
+      feedback.classList.remove('hidden');
+    }
+  } catch (error) {
+    console.error(error);
+    if (feedback && title && desc) {
+      feedback.className = 'alert alert-danger';
+      title.textContent = 'Error';
+      desc.textContent = error.message;
+      feedback.classList.remove('hidden');
+    }
+    addLog('Database', `Test connection error: ${error.message}`, 'ERROR');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
+  }
+}
+
 
 
