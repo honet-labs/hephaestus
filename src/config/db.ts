@@ -50,7 +50,7 @@ export function setupPool(dbConfig: any) {
 setupPool(loadDbConfig());
 
 // Export the proxy pool
-const poolProxy = new Proxy({} as Pool, {
+const pool = new Proxy({} as Pool, {
   get(target, prop) {
     if (!activePool) {
       throw new Error("Database pool is not initialized.");
@@ -63,7 +63,7 @@ const poolProxy = new Proxy({} as Pool, {
   }
 });
 
-export default poolProxy;
+export default pool;
 
 export async function query(text: string, params?: any[]) {
   const start = Date.now();
@@ -363,5 +363,3 @@ async function migrateLocalDataToPg() {
     client.release();
   }
 }
-
-export default pool;
