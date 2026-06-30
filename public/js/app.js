@@ -2,7 +2,7 @@
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp', 'database'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -195,10 +195,18 @@ function showPage(pageId) {
     pageTitle.textContent = 'Monitoring View';
     pageDesc.textContent = 'Slideshow rotasi monitoring dashboard Grafana ter-embed.';
     initMonitoringPage();
-  } else if (pageId === 'snmp') {
-    pageTitle.textContent = 'SNMP Explorer';
-    pageDesc.textContent = 'Browse OID MIB trees, import ASN.1 MIB definitions, and perform real-time SNMP GET/WALK queries.';
-    initSnmpPage();
+  } else if (pageId === 'snmp-query') {
+    pageTitle.textContent = 'SNMP Query Console';
+    pageDesc.textContent = 'Perform real-time SNMP GET and WALK queries against target network agents and devices.';
+    initSnmpQueryPage();
+  } else if (pageId === 'mib-importer') {
+    pageTitle.textContent = 'MIB Importer';
+    pageDesc.textContent = 'Download preset MIBs or import custom ASN.1 definitions to compile into the database.';
+    initMibImporterPage();
+  } else if (pageId === 'oid-library') {
+    pageTitle.textContent = 'Library MIB/OID SNMP';
+    pageDesc.textContent = 'Browse the registered OID Dictionary Registry database to inspect metrics and select OIDs for queries.';
+    initOidLibraryPage();
   } else if (pageId === 'database') {
     pageTitle.textContent = 'System Settings';
     pageDesc.textContent = 'Konfigurasi koneksi PostgreSQL Database dan tuning performa.';
@@ -3567,7 +3575,11 @@ function escapeHtml(str) {
 let snmpOidRegistry = {};
 let snmpImportedMibs = [];
 
-async function initSnmpPage() {
+async function initSnmpQueryPage() {
+  // Ready to perform queries
+}
+
+async function initMibImporterPage() {
   const presetsContainer = document.getElementById('presets-container');
   if (!presetsContainer) return;
   
@@ -3583,7 +3595,29 @@ async function initSnmpPage() {
     }
   }
 
-  await loadSnmpMibsAndRegistry();
+  try {
+    const mibsRes = await fetch('/api/v1/snmp/mibs');
+    const mibsData = await mibsRes.json();
+    if (mibsData.success) {
+      snmpImportedMibs = mibsData.mibs;
+      renderImportedMibs(mibsData.mibs);
+    }
+  } catch (err) {
+    console.error('Failed to load SNMP MIBs:', err);
+  }
+}
+
+async function initOidLibraryPage() {
+  try {
+    const regRes = await fetch('/api/v1/snmp/registry');
+    const regData = await regRes.json();
+    if (regData.success) {
+      snmpOidRegistry = regData.registry;
+      renderOidRegistry(regData.registry);
+    }
+  } catch (err) {
+    console.error('Failed to load SNMP Registry:', err);
+  }
 }
 
 async function loadSnmpMibsAndRegistry() {
@@ -3594,14 +3628,19 @@ async function loadSnmpMibsAndRegistry() {
       snmpImportedMibs = mibsData.mibs;
       renderImportedMibs(mibsData.mibs);
     }
+  } catch (err) {
+    console.error('Failed to reload MIBs:', err);
+  }
 
+  try {
     const regRes = await fetch('/api/v1/snmp/registry');
     const regData = await regRes.json();
     if (regData.success) {
+      snmpOidRegistry = regData.registry;
       renderOidRegistry(regData.registry);
     }
   } catch (err) {
-    console.error('Failed to load SNMP MIBs / Registry:', err);
+    console.error('Failed to reload SNMP Registry:', err);
   }
 }
 
@@ -3834,13 +3873,15 @@ function filterOidRegistry() {
 }
 
 function selectOidForQuery(oid, name) {
-  const inputOid = document.getElementById('snmp-oid');
-  if (inputOid) {
-    inputOid.value = oid;
-    inputOid.focus();
-    inputOid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  inspectOid(oid);
+  navigate('snmp-query');
+  setTimeout(() => {
+    const inputOid = document.getElementById('snmp-oid');
+    if (inputOid) {
+      inputOid.value = oid;
+      inputOid.focus();
+      inputOid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 100);
 }
 
 function inspectOid(oid) {
