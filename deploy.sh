@@ -32,6 +32,26 @@ else
     echo -e "${YELLOW}Warning: 'local-ci.sh' not found. Skipping gatekeeper checks.${NC}"
 fi
 
+# 2b. Check and Install Host Dependencies (snmpwalk, nmap)
+if command -v apt-get &> /dev/null; then
+    echo -e "${YELLOW}Checking host system dependencies (snmpwalk, nmap)...${NC}"
+    DEPS_TO_INSTALL=()
+    if ! command -v snmpwalk &> /dev/null; then
+        DEPS_TO_INSTALL+=("snmp")
+    fi
+    if ! command -v nmap &> /dev/null; then
+        DEPS_TO_INSTALL+=("nmap")
+    fi
+
+    if [ ${#DEPS_TO_INSTALL[@]} -gt 0 ]; then
+        echo -e "${YELLOW}Installing missing dependencies on host: ${DEPS_TO_INSTALL[*]}...${NC}"
+        sudo apt-get update -y
+        sudo apt-get install -y "${DEPS_TO_INSTALL[@]}"
+    else
+        echo -e "${GREEN}All host system dependencies (snmpwalk, nmap) are already installed.${NC}"
+    fi
+fi
+
 # 3. Create .env if not exists
 if [ ! -f .env ] && [ -f .env.example ]; then
     echo -e "${YELLOW}Creating default .env from .env.example...${NC}"

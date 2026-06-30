@@ -19,6 +19,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Install system dependencies (snmpwalk and nmap)
+RUN apk add --no-cache net-snmp-tools nmap
+
 # Copy package descriptors and install production-only dependencies
 COPY package*.json ./
 RUN npm install --omit=dev

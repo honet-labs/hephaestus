@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import axios from "axios";
 import snmp from "net-snmp";
+import { exec } from "child_process";
 import { config } from "../config/env";
 import { query } from "../config/db";
 
@@ -463,96 +464,59 @@ export class SnmpService {
       const host = options.host;
       const port = options.port || 161;
       const community = options.community || "public";
-      const versionStr = options.version || "v2c";
+      const versionStr = options.version === "v1" ? "1" : "2c";
       const startOid = options.oid.trim();
       const operation = options.operation;
 
-      let snmpVersion = snmp.Version2c;
-      if (versionStr === "v1") {
-        snmpVersion = snmp.Version1;
-      }
+      const binary = operation === "get" ? "snmpget" : "snmpwalk";
+      const cmd = `${binary} -v ${versionStr} -c "${community}" -On -t 4 -r 1 "${host}:${port}" "${startOid}"`;
 
-      // Create session
-      let session: any;
-      try {
-        session = snmp.createSession(host, community, {
-          port: port,
-          version: snmpVersion,
-          timeout: 4000,
-          retries: 1
-        });
-      } catch (err: any) {
-        return reject(new Error(`Failed to create SNMP session: ${err.message}`));
-      }
+      exec(cmd, async (error, stdout, stderr) => {
+        if (error && !stdout) {
+          return reject(new Error(stderr || error.message));
+        }
 
-      if (operation === "get") {
-        session.get([startOid], async (error: any, varbinds: any[]) => {
-          if (error) {
-            session.close();
-            return reject(error);
-          }
-          const results: SnmpQueryResult[] = [];
-          for (const vb of varbinds) {
-            if (snmp.isVarbindError(vb)) {
-              results.push({
-                oid: vb.oid,
-                name: "Error",
-                value: snmp.varbindError(vb),
-                type: "Error"
-              });
-            } else {
-              const translation = await this.translateOid(vb.oid);
-              results.push({
-                oid: vb.oid,
-                name: translation.name,
-                value: this.formatVarbindValue(vb.type, vb.value),
-                type: this.getTypeName(vb.type)
-              });
-            }
-          }
-          session.close();
-          resolve(results);
-        });
-      } else {
-        // WALK operation
+        const lines = stdout.split(/\r?\n/);
         const results: SnmpQueryResult[] = [];
-        session.walk(
-          startOid,
-          20, // maxRepetitions for bulk
-          async (varbinds: any[]) => {
-            for (const vb of varbinds) {
-              if (snmp.isVarbindError(vb)) {
-                results.push({
-                  oid: vb.oid,
-                  name: "Error",
-                  value: snmp.varbindError(vb),
-                  type: "Error"
-                });
-              } else {
-                const translation = await this.translateOid(vb.oid);
-                results.push({
-                  oid: vb.oid,
-                  name: translation.name,
-                  value: this.formatVarbindValue(vb.type, vb.value),
-                  type: this.getTypeName(vb.type)
-                });
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const match = line.match(/^(\.?[0-9\.]+)\s*=\s*(.*?)$/);
+          if (match) {
+            const rawOid = match[1];
+            const rest = match[2];
+            let type = "Unknown";
+            let value = rest;
+
+            const colonIndex = rest.indexOf(":");
+            if (colonIndex !== -1) {
+              const possibleType = rest.substring(0, colonIndex).trim();
+              const commonTypes = ["STRING", "Hex-STRING", "OID", "IpAddress", "Counter32", "Gauge32", "Timeticks", "Counter64", "INTEGER"];
+              if (commonTypes.includes(possibleType) || possibleType.toLowerCase().includes("string") || possibleType.toLowerCase().includes("int")) {
+                type = possibleType;
+                value = rest.substring(colonIndex + 1).trim();
               }
             }
-          },
-          (error: any) => {
-            session.close();
-            if (error) {
-              if (results.length > 0) {
-                resolve(results);
-              } else {
-                reject(error);
-              }
-            } else {
-              resolve(results);
+
+            if (value.startsWith('"') && value.endsWith('"')) {
+              value = value.substring(1, value.length - 1);
             }
+
+            let cleanOid = rawOid;
+            if (cleanOid.startsWith(".")) cleanOid = cleanOid.substring(1);
+
+            const translation = await this.translateOid(cleanOid);
+            results.push({
+              oid: cleanOid,
+              name: translation.name,
+              value: value,
+              type: type
+            });
           }
-        );
-      }
+        }
+
+        resolve(results);
+      });
     });
   }
 }
