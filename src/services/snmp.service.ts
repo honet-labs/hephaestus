@@ -206,6 +206,15 @@ export class SnmpService {
 
     const resolvedNodes = this.resolveOids(nodes, nameToOidMap);
 
+    // Deduplicate resolvedNodes by OID to prevent ON CONFLICT DO UPDATE database errors
+    const uniqueNodesMap = new Map<string, typeof resolvedNodes[0]>();
+    for (const node of resolvedNodes) {
+      if (node.oid) {
+        uniqueNodesMap.set(node.oid, node);
+      }
+    }
+    const uniqueResolvedNodes = Array.from(uniqueNodesMap.values());
+
     // Save MIB module definition
     await query(
       `INSERT INTO imported_mibs (name, node_count, imported_at) 
@@ -213,7 +222,7 @@ export class SnmpService {
        ON CONFLICT (name) DO UPDATE SET 
          node_count = EXCLUDED.node_count, 
          imported_at = NOW()`,
-      [safeName, resolvedNodes.length]
+      [safeName, uniqueResolvedNodes.length]
     );
 
     // Clear old OIDs for this MIB
@@ -221,8 +230,8 @@ export class SnmpService {
 
     // Bulk insert new OIDs in chunks
     const batchSize = 100;
-    for (let i = 0; i < resolvedNodes.length; i += batchSize) {
-      const chunk = resolvedNodes.slice(i, i + batchSize);
+    for (let i = 0; i < uniqueResolvedNodes.length; i += batchSize) {
+      const chunk = uniqueResolvedNodes.slice(i, i + batchSize);
       
       const valuePlaceholders = chunk.map((_, idx) => 
         `($${idx * 6 + 1}, $${idx * 6 + 2}, $${idx * 6 + 3}, $${idx * 6 + 4}, $${idx * 6 + 5}, $${idx * 6 + 6})`
@@ -253,6 +262,39 @@ export class SnmpService {
     };
 
     return mibRecord;
+  }
+
+  // Automatically scan the MIBs directory and synchronize files with the database
+  public async syncMibsFromDisk(): Promise<void> {
+    this.ensureMibDirectories();
+    try {
+      const files = fs.readdirSync(MIBS_DIR);
+      const mibFiles = files.filter(f => f.endsWith(".mib"));
+      if (mibFiles.length === 0) return;
+
+      // Get list of already imported MIBs from DB
+      const dbMibs = await this.getImportedMibs();
+      const dbMibNames = new Set(dbMibs.map(m => m.name));
+
+      const mibsToSync = mibFiles.map(f => path.basename(f, ".mib")).filter(name => !dbMibNames.has(name));
+      if (mibsToSync.length === 0) return;
+
+      console.log(`[SnmpService] Found ${mibsToSync.length} MIBs on disk that are not in the database. Syncing...`);
+
+      for (const mibName of mibsToSync) {
+        console.log(`[SnmpService] Auto-syncing MIB "${mibName}"...`);
+        const mibFilePath = path.join(MIBS_DIR, `${mibName}.mib`);
+        const content = fs.readFileSync(mibFilePath, "utf-8");
+        try {
+          await this.importMib(mibName, { text: content });
+          console.log(`[SnmpService] Successfully auto-synced MIB "${mibName}"`);
+        } catch (err: any) {
+          console.error(`[SnmpService] Failed to auto-sync MIB "${mibName}":`, err.message);
+        }
+      }
+    } catch (err) {
+      console.error("[SnmpService] Error syncing MIBs from disk:", err);
+    }
   }
 
   // Delete an imported MIB (PostgreSQL cascade takes care of registry nodes automatically)

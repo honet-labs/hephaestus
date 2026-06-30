@@ -3618,6 +3618,8 @@ function escapeHtml(str) {
 
 let snmpOidRegistry = {};
 let snmpImportedMibs = [];
+let oidLibraryPage = 1;
+const oidLibraryPageSize = 50;
 
 async function initSnmpQueryPage() {
   // Ready to perform queries
@@ -3846,6 +3848,7 @@ async function deleteImportedMib(name) {
 
 function renderOidRegistry(registry) {
   snmpOidRegistry = registry;
+  oidLibraryPage = 1;
   filterOidRegistry();
 }
 
@@ -3854,9 +3857,6 @@ function filterOidRegistry() {
   const tbody = document.getElementById('oid-registry-tbody');
   if (!tbody) return;
 
-  let html = '';
-  let count = 0;
-  
   const sortedOids = Object.keys(snmpOidRegistry).sort((a, b) => {
     const aParts = a.split('.').map(Number);
     const bParts = b.split('.').map(Number);
@@ -3868,42 +3868,48 @@ function filterOidRegistry() {
     return 0;
   });
 
-  for (const oid of sortedOids) {
+  const filteredOids = sortedOids.filter(oid => {
     const info = snmpOidRegistry[oid];
     const nameMatch = info.name.toLowerCase().includes(query);
     const oidMatch = oid.toLowerCase().includes(query);
     const mibMatch = info.mib.toLowerCase().includes(query);
+    return !query || nameMatch || oidMatch || mibMatch;
+  });
 
-    if (!query || nameMatch || oidMatch || mibMatch) {
-      count++;
-      html += `
-        <tr style="cursor: pointer;" onclick="inspectOid('${oid}')">
-          <td style="padding: 8px 10px; font-size: 11px;">
-            <div style="font-weight: 600; color: var(--text-white);">${escapeHtml(info.name)}</div>
-            <div style="font-family: monospace; font-size: 9.5px; color: var(--text-muted);">${oid}</div>
-          </td>
-          <td style="padding: 8px 10px; font-size: 11px; vertical-align: middle;">
-            <span class="status-badge" style="font-size: 9px; padding: 1px 4px; background: rgba(88,166,255,0.05); color: #58a6ff; border: 1px solid rgba(88,166,255,0.1);">${escapeHtml(info.mib)}</span>
-          </td>
-          <td style="padding: 8px 10px; font-size: 11px; text-align: center; vertical-align: middle;">
-            <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); selectOidForQuery('${oid}', '${info.name}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: var(--app-border);">Select</button>
-          </td>
-        </tr>
-      `;
-    }
-    if (count >= 100) {
-      html += `
-        <tr>
-          <td colspan="3" style="text-align: center; color: var(--text-muted); font-size: 10.5px; padding: 10px;">
-            Showing first 100 results. Refine search query for more.
-          </td>
-        </tr>
-      `;
-      break;
-    }
+  const totalItems = filteredOids.length;
+  const totalPages = Math.ceil(totalItems / oidLibraryPageSize) || 1;
+
+  if (oidLibraryPage > totalPages) {
+    oidLibraryPage = totalPages;
+  }
+  if (oidLibraryPage < 1) {
+    oidLibraryPage = 1;
   }
 
-  if (count === 0) {
+  const startIndex = (oidLibraryPage - 1) * oidLibraryPageSize;
+  const endIndex = Math.min(startIndex + oidLibraryPageSize, totalItems);
+  const pageOids = filteredOids.slice(startIndex, endIndex);
+
+  let html = '';
+  pageOids.forEach(oid => {
+    const info = snmpOidRegistry[oid];
+    html += `
+      <tr style="cursor: pointer;" onclick="inspectOid('${oid}')">
+        <td style="padding: 8px 10px; font-size: 11px;">
+          <div style="font-weight: 600; color: var(--text-white);">${escapeHtml(info.name)}</div>
+          <div style="font-family: monospace; font-size: 9.5px; color: var(--text-muted);">${oid}</div>
+        </td>
+        <td style="padding: 8px 10px; font-size: 11px; vertical-align: middle;">
+          <span class="status-badge" style="font-size: 9px; padding: 1px 4px; background: rgba(88,166,255,0.05); color: #58a6ff; border: 1px solid rgba(88,166,255,0.1);">${escapeHtml(info.mib)}</span>
+        </td>
+        <td style="padding: 8px 10px; font-size: 11px; text-align: center; vertical-align: middle;">
+          <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); selectOidForQuery('${oid}', '${info.name}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: var(--app-border);">Select</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  if (totalItems === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 11px;">
@@ -3914,6 +3920,30 @@ function filterOidRegistry() {
   } else {
     tbody.innerHTML = html;
   }
+
+  const infoEl = document.getElementById('oid-pagination-info');
+  const btnPrev = document.getElementById('btn-oid-prev');
+  const btnNext = document.getElementById('btn-oid-next');
+
+  if (infoEl) {
+    if (totalItems === 0) {
+      infoEl.textContent = 'Showing 0-0 of 0 items';
+    } else {
+      infoEl.textContent = `Showing ${startIndex + 1}-${endIndex} of ${totalItems} items (Page ${oidLibraryPage} of ${totalPages})`;
+    }
+  }
+
+  if (btnPrev) {
+    btnPrev.disabled = (oidLibraryPage <= 1);
+  }
+  if (btnNext) {
+    btnNext.disabled = (oidLibraryPage >= totalPages);
+  }
+}
+
+function changeOidPage(direction) {
+  oidLibraryPage += direction;
+  filterOidRegistry();
 }
 
 function selectOidForQuery(oid, name) {
@@ -4194,6 +4224,86 @@ async function testDbConfiguration(event) {
     if (btn) btn.disabled = false;
     if (spinner) spinner.classList.add('hidden');
   }
+}
+
+async function viewDatasources(configId, configName, configHost) {
+  const modal = document.getElementById('datasources-modal');
+  const title = document.getElementById('datasources-modal-title');
+  const serverInfo = document.getElementById('datasources-modal-server-info');
+  const tbody = document.getElementById('popup-datasources-tbody');
+
+  if (!modal || !tbody) return;
+
+  if (title) title.textContent = `Datasources for "${configName}"`;
+  if (serverInfo) serverInfo.textContent = `Server Host: ${configHost}`;
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">
+        <span class="spinner" style="margin-right: 8px;"></span> Loading datasources...
+      </td>
+    </tr>
+  `;
+
+  modal.classList.add('active');
+
+  try {
+    const res = await fetch(`/api/v1/settings/grafana/datasources?configId=${configId}`);
+    const data = await res.json();
+
+    if (data.success && data.data) {
+      if (data.data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">
+              No datasources found on this Grafana server.
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = data.data.map(ds => `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding: 10px 12px; font-size: 11px; font-weight: 600; color: var(--text-white);">${escapeHtml(ds.name)}</td>
+            <td style="padding: 10px 12px; font-size: 11px; vertical-align: middle;">
+              <span class="status-badge" style="font-size: 9px; padding: 1px 4px; background: rgba(245,158,11,0.05); color: #f59e0b; border: 1px solid rgba(245,158,11,0.1);">${escapeHtml(ds.type)}</span>
+            </td>
+            <td style="padding: 10px 12px; font-size: 11px; font-family: monospace; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <span>${ds.uid}</span>
+              <button type="button" class="btn btn-secondary" onclick="copyTextToClipboard('${ds.uid}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: var(--app-border);">Copy</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3" style="text-align: center; color: #ff7b72; padding: 20px;">
+            Failed to load datasources: ${data.message || data.error}
+          </td>
+        </tr>
+      `;
+    }
+  } catch (error) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; color: #ff7b72; padding: 20px;">
+          Failed to fetch from backend: ${error.message}
+        </td>
+      </tr>
+    `;
+  }
+}
+
+function closeDatasourcesModal() {
+  const modal = document.getElementById('datasources-modal');
+  if (modal) modal.classList.remove('active');
+}
+
+function copyTextToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert('UID copied to clipboard: ' + text);
+  }).catch(err => {
+    console.error('Failed to copy text: ', err);
+  });
 }
 
 

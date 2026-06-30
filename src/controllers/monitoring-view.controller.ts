@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { query } from "../config/db";
+import fs from "fs";
+import config from "../config/env";
 
 export interface MonitoringViewItem {
   id: string;
@@ -29,6 +31,23 @@ export class MonitoringViewController {
     } catch (error) {
       console.error("[MonitoringViewController] Error reading views list from database:", error);
       return [];
+    }
+  }
+
+  private async writeViewsToDisk(): Promise<void> {
+    try {
+      const views = await this.getViewsList();
+      const legacyFormat = views.map(v => ({
+        id: v.id,
+        title: v.title,
+        description: v.description,
+        urls: v.urls,
+        slideDuration: v.slideDuration
+      }));
+      fs.writeFileSync(config.monitoringViewsFile, JSON.stringify(legacyFormat, null, 2), "utf-8");
+      console.log(`[MonitoringViewController] Synchronized monitoring views to disk: ${config.monitoringViewsFile}`);
+    } catch (error: any) {
+      console.error("[MonitoringViewController] Failed to write views to disk:", error.message);
     }
   }
 
@@ -76,6 +95,8 @@ export class MonitoringViewController {
         slideDuration: finalDuration,
         createdAt: new Date().toISOString()
       };
+
+      await this.writeViewsToDisk();
 
       res.status(201).json({ success: true, data: newItem });
     } catch (error: any) {
@@ -125,6 +146,8 @@ export class MonitoringViewController {
         createdAt: new Date().toISOString()
       };
 
+      await this.writeViewsToDisk();
+
       res.status(200).json({ success: true, data: updatedItem });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
@@ -142,6 +165,8 @@ export class MonitoringViewController {
       }
 
       await query("DELETE FROM monitoring_views WHERE id = $1", [id]);
+
+      await this.writeViewsToDisk();
 
       res.status(200).json({ success: true, message: "Monitoring view berhasil dihapus." });
     } catch (error: any) {

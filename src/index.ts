@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import path from "path";
 import config from "./config/env";
-import { initDb } from "./config/db";
+import { initDb, isDbConnected } from "./config/db";
 import settingsRoutes from "./routes/settings.routes";
 import prometheusRoutes from "./routes/prometheus.routes";
 import monitoringViewRoutes from "./routes/monitoring-view.routes";
@@ -81,6 +81,20 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // Start listening
 let server: any;
 initDb()
+  .then(async () => {
+    if (isDbConnected) {
+      try {
+        const { SnmpService } = require("./services/snmp.service");
+        const snmpService = new SnmpService();
+        console.log("⚙️  [SNMP] Synchronizing MIB files from persistent storage...");
+        await snmpService.syncMibsFromDisk();
+      } catch (err: any) {
+        console.error("⚠️  [SNMP] Error during MIB auto-sync:", err.message);
+      }
+    } else {
+      console.warn("⚠️  [SNMP] Database is not connected. Skipping MIB auto-sync.");
+    }
+  })
   .catch((err) => {
     console.error("⚠️ [DB] Warning: Database schema initialization threw an error:", err);
   })

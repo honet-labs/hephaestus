@@ -114,6 +114,14 @@ export class GrafanaService {
         );
       }
       await client.query("COMMIT");
+      
+      // Also write back to JSON file for physical persistence redundancy
+      try {
+        fs.writeFileSync(config.grafanaConfigsFile, JSON.stringify(list, null, 2), "utf-8");
+        console.log(`[GrafanaService] Synchronized configurations to disk: ${config.grafanaConfigsFile}`);
+      } catch (err: any) {
+        console.error("[GrafanaService] Failed to write configurations to JSON file:", err.message);
+      }
 
       // Update memory cache for the active configuration
       const active = list.find(c => c.isActive);

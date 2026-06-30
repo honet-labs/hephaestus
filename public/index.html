@@ -830,13 +830,19 @@
               <!-- SNMP Results Table -->
               <div id="snmp-results-panel" class="hidden" style="margin-top: 20px;">
                 <h4 style="margin: 0 0 10px 0; color: var(--text-white); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Query Results</h4>
-                <div class="table-wrapper" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
-                  <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <div class="table-wrapper" style="max-height: 600px; overflow-y: auto; overflow-x: auto; border: 1px solid var(--app-border); border-radius: 4px;">
+                  <table style="width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed;">
+                    <colgroup>
+                      <col style="width: 22%;">
+                      <col style="width: 18%;">
+                      <col style="width: 8%;">
+                      <col style="width: 52%;">
+                    </colgroup>
                     <thead>
                       <tr style="background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);">
-                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 160px;">OID</th>
-                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 160px;">Translated Name</th>
-                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 80px;">Type</th>
+                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">OID</th>
+                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Translated Name</th>
+                        <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Type</th>
                         <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Value</th>
                       </tr>
                     </thead>
@@ -932,7 +938,7 @@
             <div class="panel">
               <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 class="panel-title" style="margin-bottom: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">OID Dictionary Registry</h3>
-                <input type="text" id="search-registry-input" onkeyup="filterOidRegistry()" placeholder="Search OIDs or names..." style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 180px;">
+                <input type="text" id="search-registry-input" onkeyup="oidLibraryPage = 1; filterOidRegistry()" placeholder="Search OIDs or names..." style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 180px;">
               </div>
 
               <div class="table-wrapper" style="height: 380px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
@@ -948,6 +954,15 @@
                     <!-- OIDs list -->
                   </tbody>
                 </table>
+              </div>
+
+              <!-- Pagination controls -->
+              <div id="oid-pagination-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 11px; color: var(--text-muted);">
+                <div id="oid-pagination-info">Showing 0-0 of 0 items</div>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="btn btn-secondary" id="btn-oid-prev" onclick="changeOidPage(-1)" style="padding: 4px 10px; font-size: 11px; height: auto;">Prev</button>
+                  <button type="button" class="btn btn-secondary" id="btn-oid-next" onclick="changeOidPage(1)" style="padding: 4px 10px; font-size: 11px; height: auto;">Next</button>
+                </div>
               </div>
 
               <!-- Selected OID Detail Inspector -->
