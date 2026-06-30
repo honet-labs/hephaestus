@@ -3,6 +3,7 @@ import path from "path";
 import axios from "axios";
 import snmp from "net-snmp";
 import { config } from "../config/env";
+import { query } from "../config/db";
 
 export interface MibNode {
   name: string;
@@ -39,8 +40,6 @@ export interface SnmpQueryResult {
 }
 
 const MIBS_DIR = path.join(config.dbDir, "mibs");
-const IMPORTED_MIBS_FILE = path.join(MIBS_DIR, "imported_mibs.json");
-const OID_REGISTRY_FILE = path.join(MIBS_DIR, "oid_registry.json");
 
 export class SnmpService {
   constructor() {
@@ -53,12 +52,6 @@ export class SnmpService {
     }
     if (!fs.existsSync(MIBS_DIR)) {
       fs.mkdirSync(MIBS_DIR, { recursive: true });
-    }
-    if (!fs.existsSync(IMPORTED_MIBS_FILE)) {
-      fs.writeFileSync(IMPORTED_MIBS_FILE, JSON.stringify([], null, 2));
-    }
-    if (!fs.existsSync(OID_REGISTRY_FILE)) {
-      fs.writeFileSync(OID_REGISTRY_FILE, JSON.stringify({}, null, 2));
     }
   }
 
@@ -78,44 +71,84 @@ export class SnmpService {
     ];
   }
 
-  public getImportedMibs(): ImportedMib[] {
-    this.ensureMibDirectories();
-    try {
-      const data = fs.readFileSync(IMPORTED_MIBS_FILE, "utf-8");
-      return JSON.parse(data);
-    } catch (e) {
-      return [];
-    }
+  public async getImportedMibs(): Promise<ImportedMib[]> {
+    const res = await query(
+      `SELECT name, node_count AS "nodeCount", imported_at AS "importedAt" 
+       FROM imported_mibs 
+       ORDER BY name ASC`
+    );
+    return res.rows;
   }
 
-  public getOidRegistry(): Record<string, OidInfo> {
-    this.ensureMibDirectories();
-    try {
-      const data = fs.readFileSync(OID_REGISTRY_FILE, "utf-8");
-      return JSON.parse(data);
-    } catch (e) {
-      return {};
+  public async getOidRegistry(): Promise<Record<string, OidInfo>> {
+    const res = await query(
+      `SELECT oid, name, mib_name AS mib, syntax, access, description 
+       FROM oid_registry 
+       ORDER BY oid ASC`
+    );
+    const registry: Record<string, OidInfo> = {};
+    for (const row of res.rows) {
+      registry[row.oid] = {
+        name: row.name,
+        mib: row.mib,
+        syntax: row.syntax || undefined,
+        access: row.access || undefined,
+        description: row.description || undefined
+      };
     }
+    return registry;
   }
 
   // Translate a numeric OID into human readable string using longest prefix match
-  public translateOid(numericOid: string, registry?: Record<string, OidInfo>): { name: string; info?: OidInfo } {
-    const reg = registry || this.getOidRegistry();
-    
+  public async translateOid(numericOid: string, registry?: Record<string, OidInfo>): Promise<{ name: string; info?: OidInfo }> {
     // Normalize OID: remove leading/trailing dots
     let cleanOid = numericOid;
     if (cleanOid.startsWith(".")) cleanOid = cleanOid.substring(1);
     if (cleanOid.endsWith(".")) cleanOid = cleanOid.substring(0, cleanOid.length - 1);
 
-    // Longest prefix match lookup
-    const parts = cleanOid.split(".");
-    for (let i = parts.length; i > 0; i--) {
-      const prefix = parts.slice(0, i).join(".");
-      if (reg[prefix]) {
-        const info = reg[prefix];
-        const suffix = parts.slice(i).join(".");
-        const name = suffix ? `${info.name}.${suffix}` : info.name;
-        return { name, info };
+    // If registry is provided, use memory lookup (fallback)
+    if (registry) {
+      const parts = cleanOid.split(".");
+      for (let i = parts.length; i > 0; i--) {
+        const prefix = parts.slice(0, i).join(".");
+        if (registry[prefix]) {
+          const info = registry[prefix];
+          const suffix = parts.slice(i).join(".");
+          const name = suffix ? `${info.name}.${suffix}` : info.name;
+          return { name, info };
+        }
+      }
+    } else {
+      // Database optimized lookup using index prefix matching
+      try {
+        const res = await query(
+          `SELECT oid, name, mib_name AS mib, syntax, access, description 
+           FROM oid_registry 
+           WHERE $1 LIKE oid || '%' 
+           ORDER BY length(oid) DESC 
+           LIMIT 1`,
+          [cleanOid]
+        );
+        if (res.rowCount > 0) {
+          const info = res.rows[0];
+          const suffix = cleanOid.substring(info.oid.length);
+          let displayName = info.name;
+          if (suffix) {
+            displayName = suffix.startsWith(".") ? `${info.name}${suffix}` : `${info.name}.${suffix}`;
+          }
+          return {
+            name: displayName,
+            info: {
+              name: info.name,
+              mib: info.mib,
+              syntax: info.syntax || undefined,
+              access: info.access || undefined,
+              description: info.description || undefined
+            }
+          };
+        }
+      } catch (err) {
+        console.error("[SnmpService] translateOid DB lookup error:", err);
       }
     }
 
@@ -163,111 +196,85 @@ export class SnmpService {
     // Parse the MIB
     const nodes = this.parseMibText(content);
     
-    // Resolve OIDs recursively
-    const registry = this.getOidRegistry();
-    
-    // Build name -> OID map from existing registry to resolve cross-MIB dependencies
+    // Build name -> OID map from existing registry in DB to resolve cross-MIB dependencies
     const nameToOidMap: Record<string, string> = {};
-    for (const [oid, info] of Object.entries(registry)) {
-      nameToOidMap[info.name] = oid;
+    const regRes = await query("SELECT oid, name FROM oid_registry");
+    for (const row of regRes.rows) {
+      nameToOidMap[row.name] = row.oid;
     }
 
     const resolvedNodes = this.resolveOids(nodes, nameToOidMap);
 
-    // Merge into OID registry
-    for (const node of resolvedNodes) {
-      registry[node.oid] = {
-        name: node.name,
-        mib: safeName,
-        syntax: node.syntax,
-        access: node.access,
-        description: node.description
-      };
-    }
-    fs.writeFileSync(OID_REGISTRY_FILE, JSON.stringify(registry, null, 2), "utf-8");
+    // Save MIB module definition
+    await query(
+      `INSERT INTO imported_mibs (name, node_count, imported_at) 
+       VALUES ($1, $2, NOW()) 
+       ON CONFLICT (name) DO UPDATE SET 
+         node_count = EXCLUDED.node_count, 
+         imported_at = NOW()`,
+      [safeName, resolvedNodes.length]
+    );
 
-    // Update imported list
-    const imported = this.getImportedMibs();
-    const existingIndex = imported.findIndex(m => m.name === safeName);
+    // Clear old OIDs for this MIB
+    await query("DELETE FROM oid_registry WHERE mib_name = $1", [safeName]);
+
+    // Bulk insert new OIDs in chunks
+    const batchSize = 100;
+    for (let i = 0; i < resolvedNodes.length; i += batchSize) {
+      const chunk = resolvedNodes.slice(i, i + batchSize);
+      
+      const valuePlaceholders = chunk.map((_, idx) => 
+        `($${idx * 6 + 1}, $${idx * 6 + 2}, $${idx * 6 + 3}, $${idx * 6 + 4}, $${idx * 6 + 5}, $${idx * 6 + 6})`
+      ).join(", ");
+      
+      const values: any[] = [];
+      chunk.forEach(node => {
+        values.push(node.oid, node.name, safeName, node.syntax || null, node.access || null, node.description || null);
+      });
+      
+      await query(
+        `INSERT INTO oid_registry (oid, name, mib_name, syntax, access, description) 
+         VALUES ${valuePlaceholders} 
+         ON CONFLICT (oid) DO UPDATE SET 
+           name = EXCLUDED.name, 
+           mib_name = EXCLUDED.mib_name, 
+           syntax = EXCLUDED.syntax, 
+           access = EXCLUDED.access, 
+           description = EXCLUDED.description`,
+         values
+       );
+    }
+
     const mibRecord: ImportedMib = {
       name: safeName,
       importedAt: new Date().toISOString(),
-      nodeCount: resolvedNodes.length,
-      sourceUrl: source.url
+      nodeCount: resolvedNodes.length
     };
-
-    if (existingIndex >= 0) {
-      imported[existingIndex] = mibRecord;
-    } else {
-      imported.push(mibRecord);
-    }
-    fs.writeFileSync(IMPORTED_MIBS_FILE, JSON.stringify(imported, null, 2), "utf-8");
 
     return mibRecord;
   }
 
-  // Delete an imported MIB
-  public deleteMib(name: string): boolean {
+  // Delete an imported MIB (PostgreSQL cascade takes care of registry nodes automatically)
+  public async deleteMib(name: string): Promise<boolean> {
     this.ensureMibDirectories();
-    const imported = this.getImportedMibs();
-    const index = imported.findIndex(m => m.name === name);
-    if (index === -1) {
-      return false;
-    }
-
-    // Remove file
-    const mibFilePath = path.join(MIBS_DIR, `${name}.mib`);
+    
+    // Remove file from disk
+    const safeName = name.replace(/[^a-zA-Z0-9_\-]/g, "");
+    const mibFilePath = path.join(MIBS_DIR, `${safeName}.mib`);
     if (fs.existsSync(mibFilePath)) {
       fs.unlinkSync(mibFilePath);
     }
 
-    // Remove from imported list
-    imported.splice(index, 1);
-    fs.writeFileSync(IMPORTED_MIBS_FILE, JSON.stringify(imported, null, 2), "utf-8");
-
-    // Rebuild OID registry from remaining MIBs
-    const newRegistry: Record<string, OidInfo> = {};
-    fs.writeFileSync(OID_REGISTRY_FILE, JSON.stringify(newRegistry, null, 2), "utf-8");
-
-    // Re-import remaining MIBs to rebuild registry correctly
-    for (const mib of imported) {
-      const pathMib = path.join(MIBS_DIR, `${mib.name}.mib`);
-      if (fs.existsSync(pathMib)) {
-        try {
-          const content = fs.readFileSync(pathMib, "utf-8");
-          const nodes = this.parseMibText(content);
-          
-          const nameToOidMap: Record<string, string> = {};
-          for (const [oid, info] of Object.entries(newRegistry)) {
-            nameToOidMap[info.name] = oid;
-          }
-          
-          const resolved = this.resolveOids(nodes, nameToOidMap);
-          for (const node of resolved) {
-            newRegistry[node.oid] = {
-              name: node.name,
-              mib: mib.name,
-              syntax: node.syntax,
-              access: node.access,
-              description: node.description
-            };
-          }
-        } catch (_) {}
-      }
-    }
-    fs.writeFileSync(OID_REGISTRY_FILE, JSON.stringify(newRegistry, null, 2), "utf-8");
-    return true;
+    // Delete from PostgreSQL (ON DELETE CASCADE handles cleaning up the oid_registry records)
+    const res = await query("DELETE FROM imported_mibs WHERE name = $1", [name]);
+    return (res.rowCount || 0) > 0;
   }
 
   // Regex-based MIB parser
   private parseMibText(mibText: string): MibNode[] {
-    // Strip comments
     const cleanText = mibText.replace(/--.*$/gm, "");
-
     const nodes: MibNode[] = [];
     
-    // Match standard ASN.1 SNMP structure definitions:
-    // name OBJECT-TYPE | OBJECT IDENTIFIER | MODULE-IDENTITY ... ::= { parent index }
     const regex = /(\w+)\s+(OBJECT-TYPE|OBJECT\s+IDENTIFIER|MODULE-IDENTITY|NOTIFICATION-TYPE|TRAP-TYPE)\s+(.*?)::=\s*\{\s*([\w\-]+)\s+(\d+|\w+\(\d+\))\s*\}/gs;
     
     let match;
@@ -452,7 +459,7 @@ export class SnmpService {
     oid: string;
     operation: "get" | "walk";
   }): Promise<SnmpQueryResult[]> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const host = options.host;
       const port = options.port || 161;
       const community = options.community || "public";
@@ -478,10 +485,8 @@ export class SnmpService {
         return reject(new Error(`Failed to create SNMP session: ${err.message}`));
       }
 
-      const registry = this.getOidRegistry();
-
       if (operation === "get") {
-        session.get([startOid], (error: any, varbinds: any[]) => {
+        session.get([startOid], async (error: any, varbinds: any[]) => {
           if (error) {
             session.close();
             return reject(error);
@@ -496,7 +501,7 @@ export class SnmpService {
                 type: "Error"
               });
             } else {
-              const translation = this.translateOid(vb.oid, registry);
+              const translation = await this.translateOid(vb.oid);
               results.push({
                 oid: vb.oid,
                 name: translation.name,
@@ -514,7 +519,7 @@ export class SnmpService {
         session.walk(
           startOid,
           20, // maxRepetitions for bulk
-          (varbinds: any[]) => {
+          async (varbinds: any[]) => {
             for (const vb of varbinds) {
               if (snmp.isVarbindError(vb)) {
                 results.push({
@@ -524,7 +529,7 @@ export class SnmpService {
                   type: "Error"
                 });
               } else {
-                const translation = this.translateOid(vb.oid, registry);
+                const translation = await this.translateOid(vb.oid);
                 results.push({
                   oid: vb.oid,
                   name: translation.name,
@@ -537,7 +542,6 @@ export class SnmpService {
           (error: any) => {
             session.close();
             if (error) {
-              // Return results gathered so far even if we hit end of MIB or error
               if (results.length > 0) {
                 resolve(results);
               } else {

@@ -62,91 +62,44 @@ export const config = {
   prometheusReloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
   
   /**
-   * Retrieves active Grafana credentials.
-   * Priority: 1. dynamic JSON file configs list, 2. legacy config file, 3. environment variables, 4. empty defaults.
+   * Retrieves active Grafana credentials from memory cache.
    */
   getGrafanaConfig(): GrafanaConfig {
-    if (fs.existsSync(GRAFANA_CONFIGS_FILE)) {
-      try {
-        const fileContent = fs.readFileSync(GRAFANA_CONFIGS_FILE, "utf-8");
-        const list: GrafanaConfigItem[] = JSON.parse(fileContent);
-        const active = list.find(c => c.isActive);
-        if (active) {
-          return {
-            id: active.id,
-            name: active.name,
-            host: active.host.replace(/\/$/, ""),
-            token: active.token,
-            datasourceUid: active.datasourceUid || "bf5jy3ppyomwwd",
-            isConfigured: true
-          };
-        }
-      } catch (e) {
-        console.error("[Config] Error reading dynamic grafana_configs.json:", e);
-      }
-    }
-
-    if (fs.existsSync(GRAFANA_CONFIG_FILE)) {
-      try {
-        const fileContent = fs.readFileSync(GRAFANA_CONFIG_FILE, "utf-8");
-        const parsed = JSON.parse(fileContent);
-        if (parsed.host && parsed.token) {
-          return {
-            id: "cfg-legacy",
-            name: "Default Grafana Integration",
-            host: parsed.host.replace(/\/$/, ""),
-            token: parsed.token,
-            datasourceUid: parsed.datasourceUid || "bf5jy3ppyomwwd",
-            isConfigured: true
-          };
-        }
-      } catch (e) {
-        console.error("[Config] Error reading dynamic grafana_config.json:", e);
-      }
-    }
-    
-    // Fallback to environment variables or empty placeholders
-    const envHost = process.env.GRAFANA_HOST || "";
-    const envToken = process.env.GRAFANA_TOKEN || "";
-    const envUid = process.env.GRAFANA_DATASOURCE_UID || "bf5jy3ppyomwwd";
-    
-    return {
-      id: "cfg-env",
-      name: "Environment Defaults",
-      host: envHost ? envHost.replace(/\/$/, "") : "",
-      token: envToken,
-      datasourceUid: envUid,
-      isConfigured: !!(envHost && envToken)
-    };
+    return activeGrafanaCache;
   },
 
   /**
-   * Retrieves active Prometheus credentials/modes.
+   * Retrieves active Prometheus credentials/modes from memory cache.
    */
   getActivePrometheusConfig(): PrometheusConfigItem {
-    if (fs.existsSync(PROMETHEUS_CONFIGS_FILE)) {
-      try {
-        const fileContent = fs.readFileSync(PROMETHEUS_CONFIGS_FILE, "utf-8");
-        const list: PrometheusConfigItem[] = JSON.parse(fileContent);
-        const active = list.find(c => c.isActive);
-        if (active) {
-          return active;
-        }
-      } catch (e) {
-        console.error("[Config] Error reading dynamic prometheus_configs.json:", e);
-      }
-    }
-    
-    // Fallback to environment variables or defaults
-    return {
-      id: "prom-cfg-env",
-      name: "Environment Defaults",
-      mode: "local",
-      path: process.env.PROMETHEUS_CONFIG_PATH || "/etc/prometheus/prometheus.yml",
-      reloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
-      isActive: true
-    };
+    return activePrometheusCache;
   }
 };
+
+export let activeGrafanaCache: GrafanaConfig = {
+  id: "cfg-env",
+  name: "Environment Defaults",
+  host: (process.env.GRAFANA_HOST || "").replace(/\/$/, ""),
+  token: process.env.GRAFANA_TOKEN || "",
+  datasourceUid: process.env.GRAFANA_DATASOURCE_UID || "bf5jy3ppyomwwd",
+  isConfigured: !!(process.env.GRAFANA_HOST && process.env.GRAFANA_TOKEN)
+};
+
+export let activePrometheusCache: PrometheusConfigItem = {
+  id: "prom-cfg-env",
+  name: "Environment Defaults",
+  mode: "local",
+  path: process.env.PROMETHEUS_CONFIG_PATH || "/etc/prometheus/prometheus.yml",
+  reloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
+  isActive: true
+};
+
+export function updateActiveGrafanaCache(newConfig: GrafanaConfig) {
+  activeGrafanaCache = newConfig;
+}
+
+export function updateActivePrometheusCache(newConfig: PrometheusConfigItem) {
+  activePrometheusCache = newConfig;
+}
 
 export default config;

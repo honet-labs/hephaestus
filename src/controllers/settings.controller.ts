@@ -53,7 +53,7 @@ export class SettingsController {
       let token: string | undefined;
 
       if (configId) {
-        const list = grafanaService.getConfigsList();
+        const list = await grafanaService.getConfigsList();
         const found = list.find(c => c.id === configId);
         if (found) {
           host = found.host;
@@ -95,7 +95,7 @@ export class SettingsController {
 
       // Handle Reset
       if (action === "reset") {
-        grafanaService.resetConfig();
+        await grafanaService.resetConfig();
         res.status(200).json({
           success: true,
           message: "Grafana integration settings reset successfully. Reverted to default settings."
@@ -196,7 +196,7 @@ export class SettingsController {
         }
 
         // Save
-        grafanaService.saveConfig(host, targetToken, finalDatasourceUid);
+        await grafanaService.saveConfig(host, targetToken, finalDatasourceUid);
         
         let successMessage = "Konfigurasi Grafana berhasil disimpan dan diterapkan!";
         if (autoDetectedName) {
@@ -226,7 +226,7 @@ export class SettingsController {
    */
   public async getConfigsList(req: Request, res: Response): Promise<void> {
     try {
-      const list = grafanaService.getConfigsList();
+      const list = await grafanaService.getConfigsList();
       const sanitized = list.map(c => ({
         id: c.id,
         name: c.name,
@@ -276,7 +276,7 @@ export class SettingsController {
         return;
       }
 
-      const list = grafanaService.getConfigsList();
+      const list = await grafanaService.getConfigsList();
       let targetToken = token;
 
       if (id) {
@@ -341,7 +341,7 @@ export class SettingsController {
         list.push(newItem);
       }
 
-      grafanaService.saveConfigsList(list);
+      await grafanaService.saveConfigsList(list);
 
       res.status(200).json({
         success: true,
@@ -364,7 +364,7 @@ export class SettingsController {
   public async deleteConfig(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      let list = grafanaService.getConfigsList();
+      let list = await grafanaService.getConfigsList();
       const itemToDelete = list.find(c => c.id === id);
       
       if (!itemToDelete) {
@@ -381,7 +381,7 @@ export class SettingsController {
         list[0].isActive = true;
       }
 
-      grafanaService.saveConfigsList(list);
+      await grafanaService.saveConfigsList(list);
 
       res.status(200).json({
         success: true,
@@ -404,7 +404,7 @@ export class SettingsController {
   public async activateConfig(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const list = grafanaService.getConfigsList();
+      const list = await grafanaService.getConfigsList();
       const target = list.find(c => c.id === id);
 
       if (!target) {
@@ -417,7 +417,7 @@ export class SettingsController {
       }
 
       list.forEach(c => c.isActive = (c.id === id));
-      grafanaService.saveConfigsList(list);
+      await grafanaService.saveConfigsList(list);
 
       res.status(200).json({
         success: true,
@@ -440,7 +440,7 @@ export class SettingsController {
   public async testConfigConnection(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const list = grafanaService.getConfigsList();
+      const list = await grafanaService.getConfigsList();
       const target = list.find(c => c.id === id);
 
       if (!target) {

@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import path from "path";
 import config from "./config/env";
+import { initDb } from "./config/db";
 import settingsRoutes from "./routes/settings.routes";
 import prometheusRoutes from "./routes/prometheus.routes";
 import monitoringViewRoutes from "./routes/monitoring-view.routes";
@@ -76,12 +77,20 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Start listening
-const server = app.listen(config.port, () => {
-  const activeGrafana = config.getGrafanaConfig();
-  console.log(`🚀 Hephaestus backend service version 2.0.0 started successfully.`);
-  console.log(`📡 Listening on http://localhost:${config.port}`);
-  console.log(`🔒 Allowed CORS origins: ${config.allowedOrigins.join(", ")}`);
-  console.log(`📊 Target Grafana: ${activeGrafana.host}`);
-});
+let server: any;
+initDb()
+  .then(() => {
+    server = app.listen(config.port, () => {
+      const activeGrafana = config.getGrafanaConfig();
+      console.log(`🚀 Hephaestus backend service version 2.0.0 started successfully.`);
+      console.log(`📡 Listening on http://localhost:${config.port}`);
+      console.log(`🔒 Allowed CORS origins: ${config.allowedOrigins.join(", ")}`);
+      console.log(`📊 Target Grafana: ${activeGrafana.host}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ Fatal: Failed to initialize PostgreSQL database:", err);
+    process.exit(1);
+  });
 
 export default server;

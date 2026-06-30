@@ -5,7 +5,8 @@ import { exec } from "child_process";
 import axios from "axios";
 import yaml from "js-yaml";
 import { Client } from "ssh2";
-import config, { PrometheusConfigItem } from "../config/env";
+import config, { PrometheusConfigItem, updateActivePrometheusCache } from "../config/env";
+import pool, { query } from "../config/db";
 
 export class PrometheusService {
   /**
@@ -320,50 +321,74 @@ scrape_configs:
   /**
    * Retrieves all saved Prometheus configurations.
    */
-  public getConfigsList(): PrometheusConfigItem[] {
-    if (!fs.existsSync(config.prometheusConfigsFile)) {
-      // Create default active environment profile
-      const defaultItem: PrometheusConfigItem = {
-        id: "prom-cfg-env",
-        name: "Local Prometheus (Default)",
-        mode: "local",
-        path: process.env.PROMETHEUS_CONFIG_PATH || "/etc/prometheus/prometheus.yml",
-        reloadUrl: process.env.PROMETHEUS_RELOAD_URL || "http://localhost:9090/-/reload",
-        isActive: true
-      };
-      this.saveConfigsList([defaultItem]);
-      return [defaultItem];
-    }
-
-    try {
-      const fileContent = fs.readFileSync(config.prometheusConfigsFile, "utf-8");
-      return JSON.parse(fileContent);
-    } catch (e) {
-      console.error("[PrometheusService] Error reading configs list:", e);
-      return [];
-    }
+  public async getConfigsList(): Promise<PrometheusConfigItem[]> {
+    const res = await query(
+      `SELECT id, name, mode, path, reload_url AS "reloadUrl", ssh_host AS "sshHost", ssh_port AS "sshPort", 
+              ssh_user AS "sshUser", ssh_auth AS "sshAuth", ssh_password AS "sshPassword", ssh_key AS "sshKey", is_active AS "isActive"
+       FROM prometheus_configs
+       ORDER BY name ASC`
+    );
+    return res.rows;
   }
 
   /**
-   * Writes the configurations list to disk.
+   * Writes the configurations list to database.
    */
-  public saveConfigsList(list: PrometheusConfigItem[]): void {
+  public async saveConfigsList(list: PrometheusConfigItem[]): Promise<void> {
+    const client = await pool.connect();
     try {
-      const dir = path.dirname(config.prometheusConfigsFile);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+      await client.query("BEGIN");
+      const incomingIds = list.map(item => item.id);
+      if (incomingIds.length > 0) {
+        await client.query("DELETE FROM prometheus_configs WHERE id NOT IN (" + incomingIds.map((_, i) => `$${i + 1}`).join(", ") + ")", incomingIds);
+      } else {
+        await client.query("DELETE FROM prometheus_configs");
       }
-      fs.writeFileSync(config.prometheusConfigsFile, JSON.stringify(list, null, 2), "utf-8");
-    } catch (error: any) {
-      throw new Error(`Failed to write Prometheus configs file: ${error.message}`);
+      for (const item of list) {
+        await client.query(
+          `INSERT INTO prometheus_configs (
+             id, name, mode, path, reload_url, ssh_host, ssh_port, ssh_user, ssh_auth, ssh_password, ssh_key, is_active
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             mode = EXCLUDED.mode,
+             path = EXCLUDED.path,
+             reload_url = EXCLUDED.reload_url,
+             ssh_host = EXCLUDED.ssh_host,
+             ssh_port = EXCLUDED.ssh_port,
+             ssh_user = EXCLUDED.ssh_user,
+             ssh_auth = EXCLUDED.ssh_auth,
+             ssh_password = EXCLUDED.ssh_password,
+             ssh_key = EXCLUDED.ssh_key,
+             is_active = EXCLUDED.is_active`,
+          [
+            item.id, item.name, item.mode, item.path, item.reloadUrl,
+            item.sshHost || null, item.sshPort || null, item.sshUser || null,
+            item.sshAuth || null, item.sshPassword || null, item.sshKey || null,
+            !!item.isActive
+          ]
+        );
+      }
+      await client.query("COMMIT");
+
+      // Update memory cache for active profile
+      const active = list.find(c => c.isActive);
+      if (active) {
+        updateActivePrometheusCache(active);
+      }
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
     }
   }
 
   /**
    * Saves or updates a Prometheus configuration profile.
    */
-  public saveConfigProfile(profile: Partial<PrometheusConfigItem>): PrometheusConfigItem {
-    const list = this.getConfigsList();
+  public async saveConfigProfile(profile: Partial<PrometheusConfigItem>): Promise<PrometheusConfigItem> {
+    const list = await this.getConfigsList();
     let item: PrometheusConfigItem;
 
     if (profile.id) {
@@ -406,29 +431,29 @@ scrape_configs:
       list.push(item);
     }
 
-    this.saveConfigsList(list);
+    await this.saveConfigsList(list);
     return item;
   }
 
   /**
    * Activates a configuration profile.
    */
-  public activateConfigProfile(id: string): void {
-    const list = this.getConfigsList();
+  public async activateConfigProfile(id: string): Promise<void> {
+    const list = await this.getConfigsList();
     const target = list.find(c => c.id === id);
     if (!target) {
       throw new Error(`Profile with id ${id} not found.`);
     }
 
     list.forEach(c => c.isActive = (c.id === id));
-    this.saveConfigsList(list);
+    await this.saveConfigsList(list);
   }
 
   /**
    * Deletes a configuration profile.
    */
-  public deleteConfigProfile(id: string): void {
-    const list = this.getConfigsList();
+  public async deleteConfigProfile(id: string): Promise<void> {
+    const list = await this.getConfigsList();
     const index = list.findIndex(c => c.id === id);
     if (index === -1) {
       throw new Error(`Profile with id ${id} not found.`);
@@ -442,7 +467,7 @@ scrape_configs:
       list[0].isActive = true;
     }
 
-    this.saveConfigsList(list);
+    await this.saveConfigsList(list);
   }
 }
 

@@ -1,6 +1,7 @@
 import axios from "axios";
 import fs from "fs";
-import config from "../config/env";
+import config, { updateActiveGrafanaCache } from "../config/env";
+import pool, { query } from "../config/db";
 
 export class GrafanaService {
   /**
@@ -74,64 +75,82 @@ export class GrafanaService {
   }
 
   /**
-   * Retrieves all saved Grafana configurations from the list file.
+   * Retrieves all saved Grafana configurations.
    */
-  public getConfigsList(): any[] {
-    if (!fs.existsSync(config.grafanaConfigsFile)) {
-      // Migrate legacy config if it exists
-      if (fs.existsSync(config.grafanaConfigFile)) {
-        try {
-          const fileContent = fs.readFileSync(config.grafanaConfigFile, "utf-8");
-          const parsed = JSON.parse(fileContent);
-          if (parsed.host && parsed.token) {
-            const legacyItem = {
-              id: "cfg-legacy",
-              name: "Default Grafana Integration",
-              host: parsed.host.trim(),
-              token: parsed.token.trim(),
-              datasourceUid: (parsed.datasourceUid || "bf5jy3ppyomwwd").trim(),
-              isActive: true
-            };
-            this.saveConfigsList([legacyItem]);
-            return [legacyItem];
-          }
-        } catch (e) {
-          console.error("[GrafanaService] Error migrating legacy config:", e);
-        }
-      }
-      return [];
-    }
+  public async getConfigsList(): Promise<any[]> {
+    const res = await query(
+      `SELECT id, name, host, token, datasource_uid AS "datasourceUid", is_active AS "isActive" 
+       FROM grafana_configs 
+       ORDER BY name ASC`
+    );
+    return res.rows;
+  }
 
+  /**
+   * Writes the configurations list to database.
+   */
+  public async saveConfigsList(list: any[]): Promise<void> {
+    const client = await pool.connect();
     try {
-      const fileContent = fs.readFileSync(config.grafanaConfigsFile, "utf-8");
-      return JSON.parse(fileContent);
-    } catch (e) {
-      console.error("[GrafanaService] Error reading configs list:", e);
-      return [];
+      await client.query("BEGIN");
+      // Keep ids of incoming items
+      const incomingIds = list.map(item => item.id);
+      if (incomingIds.length > 0) {
+        await client.query("DELETE FROM grafana_configs WHERE id NOT IN (" + incomingIds.map((_, i) => `$${i + 1}`).join(", ") + ")", incomingIds);
+      } else {
+        await client.query("DELETE FROM grafana_configs");
+      }
+      for (const item of list) {
+        await client.query(
+          `INSERT INTO grafana_configs (id, name, host, token, datasource_uid, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name,
+             host = EXCLUDED.host,
+             token = EXCLUDED.token,
+             datasource_uid = EXCLUDED.datasource_uid,
+             is_active = EXCLUDED.is_active`,
+          [item.id, item.name, item.host, item.token, item.datasourceUid, !!item.isActive]
+        );
+      }
+      await client.query("COMMIT");
+
+      // Update memory cache for the active configuration
+      const active = list.find(c => c.isActive);
+      if (active) {
+        updateActiveGrafanaCache({
+          id: active.id,
+          name: active.name,
+          host: active.host.replace(/\/$/, ""),
+          token: active.token,
+          datasourceUid: active.datasourceUid || "bf5jy3ppyomwwd",
+          isConfigured: true
+        });
+      } else {
+        // Fallback to env defaults
+        updateActiveGrafanaCache({
+          id: "cfg-env",
+          name: "Environment Defaults",
+          host: (process.env.GRAFANA_HOST || "").replace(/\/$/, ""),
+          token: process.env.GRAFANA_TOKEN || "",
+          datasourceUid: process.env.GRAFANA_DATASOURCE_UID || "bf5jy3ppyomwwd",
+          isConfigured: !!(process.env.GRAFANA_HOST && process.env.GRAFANA_TOKEN)
+        });
+      }
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
     }
   }
 
   /**
-   * Writes the configurations list to disk.
+   * Saves the Grafana integration configuration to database.
    */
-  public saveConfigsList(list: any[]): void {
+  public async saveConfig(host: string, token: string, datasourceUid: string): Promise<void> {
     try {
-      if (!fs.existsSync(config.dbDir)) {
-        fs.mkdirSync(config.dbDir, { recursive: true });
-      }
-      fs.writeFileSync(config.grafanaConfigsFile, JSON.stringify(list, null, 2), "utf-8");
-      console.log(`[GrafanaService] Successfully saved Grafana configs list file to ${config.grafanaConfigsFile}`);
-    } catch (error: any) {
-      throw new Error(`Gagal menulis file daftar konfigurasi Grafana: ${error.message}`);
-    }
-  }
-
-  /**
-   * Saves the Grafana integration configuration to disk.
-   */
-  public saveConfig(host: string, token: string, datasourceUid: string): void {
-    try {
-      const list = this.getConfigsList();
+      const list = await this.getConfigsList();
       const activeItem = list.find(c => c.isActive);
 
       if (activeItem) {
@@ -151,34 +170,26 @@ export class GrafanaService {
         list.push(newItem);
       }
 
-      this.saveConfigsList(list);
-
-      // Keep legacy file in sync
-      const payload = {
-        host: host.trim(),
-        token: token.trim(),
-        datasourceUid: (datasourceUid || "bf5jy3ppyomwwd").trim()
-      };
-      fs.writeFileSync(config.grafanaConfigFile, JSON.stringify(payload, null, 2), "utf-8");
-      console.log(`[GrafanaService] Successfully saved Grafana config file to ${config.grafanaConfigFile}`);
+      await this.saveConfigsList(list);
     } catch (error: any) {
-      throw new Error(`Gagal menulis file konfigurasi Grafana: ${error.message}`);
+      throw new Error(`Gagal menyimpan konfigurasi Grafana: ${error.message}`);
     }
   }
 
   /**
    * Resets the dynamic Grafana configuration (reverts to env variables).
    */
-  public resetConfig(): void {
+  public async resetConfig(): Promise<void> {
     try {
-      if (fs.existsSync(config.grafanaConfigsFile)) {
-        fs.unlinkSync(config.grafanaConfigsFile);
-        console.log(`[GrafanaService] Configs list file deleted.`);
-      }
-      if (fs.existsSync(config.grafanaConfigFile)) {
-        fs.unlinkSync(config.grafanaConfigFile);
-        console.log(`[GrafanaService] Legacy config file deleted.`);
-      }
+      await query("DELETE FROM grafana_configs");
+      updateActiveGrafanaCache({
+        id: "cfg-env",
+        name: "Environment Defaults",
+        host: (process.env.GRAFANA_HOST || "").replace(/\/$/, ""),
+        token: process.env.GRAFANA_TOKEN || "",
+        datasourceUid: process.env.GRAFANA_DATASOURCE_UID || "bf5jy3ppyomwwd",
+        isConfigured: !!(process.env.GRAFANA_HOST && process.env.GRAFANA_TOKEN)
+      });
     } catch (error: any) {
       throw new Error(`Gagal mereset konfigurasi Grafana: ${error.message}`);
     }

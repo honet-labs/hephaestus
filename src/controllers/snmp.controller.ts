@@ -14,9 +14,9 @@ export class SnmpController {
     }
   }
 
-  public static getImportedMibs(req: Request, res: Response) {
+  public static async getImportedMibs(req: Request, res: Response) {
     try {
-      const mibs = snmpService.getImportedMibs();
+      const mibs = await snmpService.getImportedMibs();
       res.status(200).json({ success: true, mibs });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
@@ -45,10 +45,10 @@ export class SnmpController {
     }
   }
 
-  public static deleteMib(req: Request, res: Response) {
+  public static async deleteMib(req: Request, res: Response) {
     const { name } = req.params;
     try {
-      const success = snmpService.deleteMib(name);
+      const success = await snmpService.deleteMib(name);
       if (success) {
         res.status(200).json({ success: true, message: `MIB '${name}' deleted successfully.` });
       } else {
@@ -59,9 +59,9 @@ export class SnmpController {
     }
   }
 
-  public static getRegistry(req: Request, res: Response) {
+  public static async getRegistry(req: Request, res: Response) {
     try {
-      const registry = snmpService.getOidRegistry();
+      const registry = await snmpService.getOidRegistry();
       res.status(200).json({ success: true, registry });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });

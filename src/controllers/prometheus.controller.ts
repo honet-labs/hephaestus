@@ -101,7 +101,7 @@ export class PrometheusController {
    */
   public async getConfigsList(req: Request, res: Response) {
     try {
-      const list = prometheusService.getConfigsList();
+      const list = await prometheusService.getConfigsList();
       return res.status(200).json({
         success: true,
         configs: list
@@ -131,7 +131,7 @@ export class PrometheusController {
         });
       }
 
-      const item = prometheusService.saveConfigProfile(profile);
+      const item = await prometheusService.saveConfigProfile(profile);
       return res.status(200).json({
         success: true,
         message: "Prometheus connection profile saved successfully.",
@@ -154,7 +154,7 @@ export class PrometheusController {
   public async deleteConfigProfile(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      prometheusService.deleteConfigProfile(id);
+      await prometheusService.deleteConfigProfile(id);
       return res.status(200).json({
         success: true,
         message: "Prometheus connection profile deleted successfully."
@@ -176,7 +176,7 @@ export class PrometheusController {
   public async activateConfigProfile(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      prometheusService.activateConfigProfile(id);
+      await prometheusService.activateConfigProfile(id);
       return res.status(200).json({
         success: true,
         message: "Prometheus connection profile activated successfully."
@@ -316,7 +316,7 @@ export class PrometheusController {
   public async testConnectionById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const list = prometheusService.getConfigsList();
+      const list = await prometheusService.getConfigsList();
       const target = list.find(c => c.id === id);
       if (!target) {
         return res.status(404).json({

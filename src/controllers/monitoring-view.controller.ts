@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import fs from "fs";
-import { config } from "../config/env";
+import { query } from "../config/db";
 
 export interface MonitoringViewItem {
   id: string;
@@ -12,40 +11,37 @@ export interface MonitoringViewItem {
 }
 
 export class MonitoringViewController {
-  private getViewsList(): MonitoringViewItem[] {
-    if (!fs.existsSync(config.monitoringViewsFile)) {
-      return [];
-    }
+  private async getViewsList(): Promise<MonitoringViewItem[]> {
     try {
-      const content = fs.readFileSync(config.monitoringViewsFile, "utf-8");
-      return JSON.parse(content);
+      const res = await query(
+        `SELECT id, name AS title, description, interval AS "slideDuration", panels AS urls 
+         FROM monitoring_views
+         ORDER BY id DESC`
+      );
+      return res.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        description: row.description || "",
+        urls: Array.isArray(row.urls) ? row.urls : (typeof row.urls === "string" ? JSON.parse(row.urls) : []),
+        slideDuration: row.slideDuration || 10,
+        createdAt: new Date().toISOString()
+      }));
     } catch (error) {
-      console.error("[MonitoringViewController] Error reading views list file:", error);
+      console.error("[MonitoringViewController] Error reading views list from database:", error);
       return [];
     }
   }
 
-  private saveViewsList(list: MonitoringViewItem[]): void {
+  public getViews = async (req: Request, res: Response): Promise<void> => {
     try {
-      if (!fs.existsSync(config.dbDir)) {
-        fs.mkdirSync(config.dbDir, { recursive: true });
-      }
-      fs.writeFileSync(config.monitoringViewsFile, JSON.stringify(list, null, 2), "utf-8");
-    } catch (error: any) {
-      throw new Error(`Gagal menyimpan data monitoring view: ${error.message}`);
-    }
-  }
-
-  public getViews = (req: Request, res: Response): void => {
-    try {
-      const views = this.getViewsList();
+      const views = await this.getViewsList();
       res.status(200).json({ success: true, data: views });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
     }
   };
 
-  public createView = (req: Request, res: Response): void => {
+  public createView = async (req: Request, res: Response): Promise<void> => {
     try {
       const { title, description, urls, slideDuration } = req.body;
 
@@ -59,21 +55,27 @@ export class MonitoringViewController {
         return;
       }
 
-      // Filter empty urls
       const cleanedUrls = urls.map(u => typeof u === "string" ? u.trim() : "").filter(u => u !== "");
 
+      const id = `view-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const finalTitle = title.trim();
+      const finalDesc = (description || "").trim();
+      const finalDuration = typeof slideDuration === "number" && slideDuration > 0 ? slideDuration : 10;
+
+      await query(
+        `INSERT INTO monitoring_views (id, name, description, interval, mode, panels)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, finalTitle, finalDesc, finalDuration, "slideshow", JSON.stringify(cleanedUrls)]
+      );
+
       const newItem: MonitoringViewItem = {
-        id: `view-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        title: title.trim(),
-        description: (description || "").trim(),
+        id,
+        title: finalTitle,
+        description: finalDesc,
         urls: cleanedUrls,
-        slideDuration: typeof slideDuration === "number" && slideDuration > 0 ? slideDuration : 10,
+        slideDuration: finalDuration,
         createdAt: new Date().toISOString()
       };
-
-      const list = this.getViewsList();
-      list.push(newItem);
-      this.saveViewsList(list);
 
       res.status(201).json({ success: true, data: newItem });
     } catch (error: any) {
@@ -81,7 +83,7 @@ export class MonitoringViewController {
     }
   };
 
-  public updateView = (req: Request, res: Response): void => {
+  public updateView = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const { title, description, urls, slideDuration } = req.body;
@@ -96,44 +98,50 @@ export class MonitoringViewController {
         return;
       }
 
-      const list = this.getViewsList();
-      const index = list.findIndex(v => v.id === id);
-
-      if (index === -1) {
+      const check = await query("SELECT 1 FROM monitoring_views WHERE id = $1", [id]);
+      if (check.rowCount === 0) {
         res.status(404).json({ success: false, error: "Not Found", message: "Monitoring view tidak ditemukan." });
         return;
       }
 
       const cleanedUrls = urls.map(u => typeof u === "string" ? u.trim() : "").filter(u => u !== "");
+      const finalTitle = title.trim();
+      const finalDesc = (description || "").trim();
+      const finalDuration = typeof slideDuration === "number" && slideDuration > 0 ? slideDuration : 10;
 
-      list[index] = {
-        ...list[index],
-        title: title.trim(),
-        description: (description || "").trim(),
+      await query(
+        `UPDATE monitoring_views
+         SET name = $1, description = $2, interval = $3, panels = $4
+         WHERE id = $5`,
+        [finalTitle, finalDesc, finalDuration, JSON.stringify(cleanedUrls), id]
+      );
+
+      const updatedItem: MonitoringViewItem = {
+        id,
+        title: finalTitle,
+        description: finalDesc,
         urls: cleanedUrls,
-        slideDuration: typeof slideDuration === "number" && slideDuration > 0 ? slideDuration : 10
+        slideDuration: finalDuration,
+        createdAt: new Date().toISOString()
       };
 
-      this.saveViewsList(list);
-      res.status(200).json({ success: true, data: list[index] });
+      res.status(200).json({ success: true, data: updatedItem });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
     }
   };
 
-  public deleteView = (req: Request, res: Response): void => {
+  public deleteView = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const list = this.getViewsList();
-      const index = list.findIndex(v => v.id === id);
 
-      if (index === -1) {
+      const check = await query("SELECT 1 FROM monitoring_views WHERE id = $1", [id]);
+      if (check.rowCount === 0) {
         res.status(404).json({ success: false, error: "Not Found", message: "Monitoring view tidak ditemukan." });
         return;
       }
 
-      list.splice(index, 1);
-      this.saveViewsList(list);
+      await query("DELETE FROM monitoring_views WHERE id = $1", [id]);
 
       res.status(200).json({ success: true, message: "Monitoring view berhasil dihapus." });
     } catch (error: any) {
