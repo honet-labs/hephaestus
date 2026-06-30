@@ -4320,5 +4320,79 @@ function copyTextToClipboard(text) {
   });
 }
 
+function openAddPanelUrlModal() {
+  const modal = document.getElementById('modal-add-panel-url');
+  const input = document.getElementById('quick-add-url-input');
+  if (input) input.value = '';
+  if (modal) modal.classList.add('active');
+}
+
+function closeAddPanelUrlModal() {
+  const modal = document.getElementById('modal-add-panel-url');
+  if (modal) modal.classList.remove('active');
+}
+
+async function submitQuickAddPanelUrl() {
+  if (!activeMonitoringView) return;
+  const input = document.getElementById('quick-add-url-input');
+  const newUrl = input ? input.value.trim() : '';
+  if (!newUrl) {
+    alert('Silakan masukkan URL panel Grafana.');
+    return;
+  }
+
+  // Add the new URL to the active monitoring view urls list
+  const updatedUrls = [...activeMonitoringView.urls, newUrl];
+  
+  const payload = {
+    title: activeMonitoringView.title,
+    description: activeMonitoringView.description,
+    slideDuration: activeMonitoringView.slideDuration,
+    urls: updatedUrls
+  };
+
+  try {
+    const res = await fetch(`/api/v1/monitoring-views/${activeMonitoringView.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Monitoring', `Successfully added panel URL to view "${activeMonitoringView.title}".`, 'SUCCESS');
+      
+      // Update local state
+      activeMonitoringView.urls = updatedUrls;
+      
+      // Also update in the global monitoringViews list
+      const localViewIndex = monitoringViews.findIndex(v => v.id === activeMonitoringView.id);
+      if (localViewIndex !== -1) {
+        monitoringViews[localViewIndex].urls = updatedUrls;
+      }
+      
+      // Close the modal
+      closeAddPanelUrlModal();
+      
+      // Refresh the player
+      renderPlayer();
+      
+      // If we are currently in slideshow mode, let's restart the timer with updated length
+      if (playerMode === 'slideshow') {
+        // Reset to the last added slide so they see what they just added!
+        currentSlideIndex = activeMonitoringView.urls.length - 1;
+        renderPlayer();
+        startSlideshowTimer();
+      }
+    } else {
+      alert('Gagal menambahkan panel: ' + (result.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Koneksi API Error: ' + error.message);
+  }
+}
+
 
 
