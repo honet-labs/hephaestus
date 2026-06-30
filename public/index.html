@@ -55,15 +55,6 @@
               <div class="menu-item-sub">API endpoints & health</div>
             </div>
           </a>
-          <a href="#installer" id="menu-installer" class="menu-item">
-            <span class="menu-item-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            </span>
-            <div>
-              <div class="menu-item-title">Exporter Installer</div>
-              <div class="menu-item-sub">Download & install exporter</div>
-            </div>
-          </a>
           <a href="#prometheus" id="menu-prometheus" class="menu-item">
             <span class="menu-item-icon">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
@@ -653,84 +644,6 @@
           </div>
         </div>
 
-        <!-- PAGE 5: EXPORTER INSTALLER -->
-        <div id="page-installer" class="main-grid hidden">
-          <!-- Left Column: Settings and Platform Selection -->
-          <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="panel">
-              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--app-border); padding-bottom: 10px;">
-                <h3 class="panel-title" style="margin-bottom: 0;">Choose Exporter Type</h3>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                  <select id="exporter-category-filter" onchange="filterExporters()" style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px;">
-                    <option value="all">All Categories</option>
-                    <option value="system">Systems & Hardware</option>
-                    <option value="database">Databases</option>
-                    <option value="webserver">Web Servers / Proxies</option>
-                    <option value="network">Network & Probing</option>
-                  </select>
-                  <input type="text" id="exporter-search-input" onkeyup="filterExporters()" placeholder="Search..." style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 120px;">
-                </div>
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; max-height: 250px; overflow-y: auto; padding-right: 4px;" id="exporter-cards-list">
-                <!-- Dynamically populated via JavaScript -->
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header">
-                <h3 class="panel-title">Select Target Platform</h3>
-              </div>
-              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;" id="platform-selectors-container">
-                <button type="button" class="btn btn-primary" id="btn-plat-linux-amd64" onclick="selectPlatform('linux-amd64')">Linux (AMD64)</button>
-                <button type="button" class="btn btn-secondary" id="btn-plat-linux-arm64" onclick="selectPlatform('linux-arm64')" style="border-color: var(--app-border);">Linux (ARM64)</button>
-                <button type="button" class="btn btn-secondary" id="btn-plat-linux-armv7" onclick="selectPlatform('linux-armv7')" style="border-color: var(--app-border);">Linux (ARMv7)</button>
-                <button type="button" class="btn btn-secondary" id="btn-plat-windows-amd64" onclick="selectPlatform('windows-amd64')" style="border-color: var(--app-border);">Windows (AMD64)</button>
-                <button type="button" class="btn btn-secondary" id="btn-plat-macos" onclick="selectPlatform('macos')" style="border-color: var(--app-border);">macOS (Homebrew)</button>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 class="panel-title">Installation Command / Script</h3>
-                <button class="btn btn-secondary" onclick="copyInstallerScript()" style="font-size: 11px; padding: 4px 10px; height: auto; border-color: var(--app-border);">Copy Command</button>
-              </div>
-              
-              <div style="position: relative; margin-top: 10px;">
-                <pre id="installer-script-pre" class="code font-mono" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px; border: 1px solid var(--app-border); overflow-x: auto; max-height: 400px; font-size: 11.5px; line-height: 1.6; color: #58a6ff; white-space: pre-wrap; word-break: break-all;"></pre>
-              </div>
-
-              <div style="margin-top: 15px;" id="installer-step-explanation">
-                <!-- Explanatory bullets will be populated by JS -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Right Column: Exporter Info & GitHub Links -->
-          <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="panel">
-              <div class="panel-header">
-                <h3 class="panel-title">Exporter Metadata</h3>
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px; font-size: 12px;">
-                <div>
-                  <strong style="color: var(--text-white);">GitHub Repository:</strong>
-                  <div style="margin-top: 4px;">
-                    <a id="exporter-github-link" href="https://github.com/prometheus/node_exporter" target="_blank" class="docs-link" style="font-family: monospace; font-size: 11px;">https://github.com/prometheus/node_exporter</a>
-                  </div>
-                </div>
-                <div>
-                  <strong style="color: var(--text-white);">Default Port:</strong>
-                  <span id="exporter-default-port" class="font-mono" style="margin-left: 8px; color: #56d364; font-weight: bold;">9100</span>
-                </div>
-                <div>
-                  <strong style="color: var(--text-white);">Prometheus Config Job snippet:</strong>
-                  <pre id="exporter-prometheus-snippet" class="code font-mono" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; border: 1px solid var(--app-border); font-size: 11px; margin-top: 6px; color: var(--text-muted);"></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- PAGE 6: PROMETHEUS CONFIG -->
         <div id="page-prometheus" class="hidden">
           <div class="panel" style="width: 100%; display: flex; flex-direction: column; gap: 15px; background: var(--app-bg-panel); border: 1px solid var(--app-border); border-radius: 8px; padding: 20px;">
@@ -744,11 +657,6 @@
             <div style="display: flex; flex-direction: column; gap: 15px;">
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <span style="font-size: 12px; color: var(--text-muted);">Edit, check configuration, and trigger hot reload.</span>
-                <div style="display: flex; gap: 8px;">
-                  <button class="btn btn-secondary" onclick="insertExporterJob()" style="font-size: 11px; padding: 4px 10px; height: auto; border-color: var(--app-border);">
-                    + Insert Active Exporter Job
-                  </button>
-                </div>
               </div>
 
               <!-- Alerts -->

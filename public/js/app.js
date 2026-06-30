@@ -228,9 +228,8 @@ function showPage(pageId) {
     pageDesc.textContent = 'Informasi endpoint API backend dan diagnostik kesehatan sistem.';
     diagTime.textContent = new Date().toLocaleString();
   } else if (pageId === 'installer') {
-    pageTitle.textContent = 'Exporter Installer';
-    pageDesc.textContent = 'Panduan instalasi otomatis dan generate command setup service systemd Prometheus Exporters.';
-    initInstallerPage();
+    navigate('overview');
+    return;
   } else if (pageId === 'prometheus') {
     pageTitle.textContent = 'Prometheus Config';
     pageDesc.textContent = 'Kelola, validasi, dan muat ulang (hot reload) konfigurasi file prometheus.yml.';
