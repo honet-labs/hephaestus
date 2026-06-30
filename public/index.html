@@ -508,7 +508,10 @@
               <div style="display: flex; align-items: center; gap: 12px;">
                 <!-- Fullscreen Play Button -->
                 <button class="btn btn-primary" onclick="openFullscreenSlideshow()" style="padding: 6px 12px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 6px;">
-                  <span>📺 Fullscreen</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                  </svg>
+                  <span>Fullscreen</span>
                 </button>
 
                 <!-- View Mode Buttons -->
@@ -523,7 +526,7 @@
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
                   </button>
                   <button class="btn btn-primary" id="btn-slideshow-play" onclick="toggleSlideshowPlay()" style="padding: 4px 12px; height: auto; display: inline-flex; align-items: center; gap: 6px;">
-                    <span id="btn-slideshow-play-icon">⏸️</span>
+                    <span id="btn-slideshow-play-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></span>
                     <span id="btn-slideshow-play-text">Pause</span>
                   </button>
                   <button class="btn btn-secondary" onclick="nextSlide()" style="padding: 4px 8px; height: auto;" title="Next Panel">

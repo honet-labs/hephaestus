@@ -3121,8 +3121,9 @@ function renderMonitoringViews(views) {
           <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">
             ${escapeHtml(view.description || 'No description provided.')}
           </p>
-          <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-            <span>⏱️ Slideshow Interval:</span>
+          <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>Slideshow Interval:</span>
             <strong style="color: var(--text-white);">${view.slideDuration}s</strong>
           </div>
         </div>
@@ -3130,11 +3131,11 @@ function renderMonitoringViews(views) {
           <button class="btn btn-primary" onclick="startMonitoringPlayer('${view.id}')" style="flex-grow: 1; padding: 6px 12px; font-size: 11px; height: auto; justify-content: center;">
             View / Play
           </button>
-          <button class="btn btn-secondary" onclick="openEditMonitoringViewModal('${view.id}')" style="padding: 6px 10px; font-size: 11px; height: auto;" title="Edit View">
-            ✏️
+          <button class="btn btn-secondary" onclick="openEditMonitoringViewModal('${view.id}')" style="padding: 6px 10px; font-size: 11px; height: auto; display: flex; align-items: center; justify-content: center;" title="Edit View">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
           </button>
-          <button class="btn btn-danger" onclick="deleteMonitoringView('${view.id}')" style="padding: 6px 10px; font-size: 11px; height: auto;" title="Delete View">
-            🗑️
+          <button class="btn btn-danger" onclick="deleteMonitoringView('${view.id}')" style="padding: 6px 10px; font-size: 11px; height: auto; display: flex; align-items: center; justify-content: center;" title="Delete View">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
         </div>
       </div>
@@ -3494,10 +3495,10 @@ function updatePlayPauseButton() {
   const text = document.getElementById('btn-slideshow-play-text');
   
   if (slideshowActive) {
-    icon.textContent = '⏸️';
+    icon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
     text.textContent = 'Pause';
   } else {
-    icon.textContent = '▶️';
+    icon.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
     text.textContent = 'Play';
   }
 }

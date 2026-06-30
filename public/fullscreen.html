@@ -176,7 +176,6 @@
     <iframe id="slideshow-iframe" allowfullscreen></iframe>
   </div>
 
-  <!-- Floating Controls -->
   <div id="floating-controls">
     <div class="control-info">
       <div class="control-title" id="lbl-title">Loading View...</div>
@@ -184,21 +183,29 @@
     </div>
     
     <div class="control-buttons">
-      <button class="btn-circle" onclick="prevSlide()" title="Previous Panel">⏮️</button>
-      <button class="btn-circle btn-play" id="btn-play" onclick="togglePlay()" title="Play/Pause">⏸️</button>
-      <button class="btn-circle" onclick="nextSlide()" title="Next Panel">⏭️</button>
+      <button class="btn-circle" onclick="prevSlide()" title="Previous Panel" style="display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+      </button>
+      <button class="btn-circle btn-play" id="btn-play" onclick="togglePlay()" title="Play/Pause" style="display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+      </button>
+      <button class="btn-circle" onclick="nextSlide()" title="Next Panel" style="display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+      </button>
     </div>
     
     <div style="height: 24px; border-left: 1px solid rgba(255,255,255,0.15);"></div>
     
-    <button class="btn-circle" onclick="closeFullscreen()" title="Close Slideshow" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #ff7b72;">❌</button>
+    <button class="btn-circle" onclick="closeFullscreen()" title="Close Slideshow" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #ff7b72; display: flex; align-items: center; justify-content: center;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
   </div>
 
   <!-- Error Overlay (Hidden by default) -->
   <div id="error-overlay" class="hidden">
     <div class="error-card">
-      <span style="font-size: 48px;">⚠️</span>
-      <h2 style="margin: 16px 0 8px 0; color: #ff7b72;">Failed to Load View</h2>
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff7b72" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 16px auto; display: block;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      <h2 style="margin: 0 0 8px 0; color: #ff7b72;">Failed to Load View</h2>
       <p id="error-message" style="color: #a0a0a0; font-size: 13px; line-height: 1.5; margin-bottom: 20px;">Could not retrieve the requested monitoring view.</p>
       <button class="btn btn-secondary" onclick="window.close()" style="padding: 8px 16px;">Close Tab</button>
     </div>
@@ -304,10 +311,10 @@
       const btnPlay = document.getElementById('btn-play');
       
       if (slideshowActive) {
-        btnPlay.textContent = '⏸️';
+        btnPlay.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
         startSlideshowTimer();
       } else {
-        btnPlay.textContent = '▶️';
+        btnPlay.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
         stopSlideshowTimer();
       }
     }
