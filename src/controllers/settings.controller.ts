@@ -448,8 +448,8 @@ export class SettingsController {
    * Test connection of a registered server configuration
    */
   public async testConfigConnection(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const list = await grafanaService.getConfigsList();
       const target = list.find(c => c.id === id);
 
