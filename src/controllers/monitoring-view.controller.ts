@@ -196,6 +196,5 @@ export class MonitoringViewController {
     }
   };
 }
-}
 
 export const monitoringViewController = new MonitoringViewController();
