@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { query } from "../config/db";
+import { query, logActivity } from "../config/db";
 import fs from "fs";
 import config from "../config/env";
 
@@ -65,12 +65,12 @@ export class MonitoringViewController {
       const { title, description, urls, slideDuration } = req.body;
 
       if (!title || typeof title !== "string" || !title.trim()) {
-        res.status(400).json({ success: false, error: "Validation Error", message: "Judul monitoring view wajib diisi." });
+        res.status(400).json({ success: false, error: "Validation Error", message: "Monitoring view title is required." });
         return;
       }
 
       if (!urls || !Array.isArray(urls)) {
-        res.status(400).json({ success: false, error: "Validation Error", message: "URLs dashboard harus berupa array." });
+        res.status(400).json({ success: false, error: "Validation Error", message: "Dashboard URLs must be an array." });
         return;
       }
 
@@ -98,6 +98,13 @@ export class MonitoringViewController {
 
       await this.writeViewsToDisk();
 
+      await logActivity(
+        "Monitoring View",
+        "Create View",
+        `Created monitoring view "${finalTitle}" with ${cleanedUrls.length} dashboards`,
+        "SUCCESS"
+      );
+
       res.status(201).json({ success: true, data: newItem });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
@@ -110,18 +117,18 @@ export class MonitoringViewController {
       const { title, description, urls, slideDuration } = req.body;
 
       if (!title || typeof title !== "string" || !title.trim()) {
-        res.status(400).json({ success: false, error: "Validation Error", message: "Judul monitoring view wajib diisi." });
+        res.status(400).json({ success: false, error: "Validation Error", message: "Monitoring view title is required." });
         return;
       }
 
       if (!urls || !Array.isArray(urls)) {
-        res.status(400).json({ success: false, error: "Validation Error", message: "URLs dashboard harus berupa array." });
+        res.status(400).json({ success: false, error: "Validation Error", message: "Dashboard URLs must be an array." });
         return;
       }
 
       const check = await query("SELECT 1 FROM monitoring_views WHERE id = $1", [id]);
       if (check.rows.length === 0) {
-        res.status(404).json({ success: false, error: "Not Found", message: "Monitoring view tidak ditemukan." });
+        res.status(404).json({ success: false, error: "Not Found", message: "Monitoring view not found." });
         return;
       }
 
@@ -148,6 +155,13 @@ export class MonitoringViewController {
 
       await this.writeViewsToDisk();
 
+      await logActivity(
+        "Monitoring View",
+        "Update View",
+        `Updated monitoring view "${finalTitle}" with ${cleanedUrls.length} dashboards`,
+        "SUCCESS"
+      );
+
       res.status(200).json({ success: true, data: updatedItem });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
@@ -158,21 +172,30 @@ export class MonitoringViewController {
     try {
       const { id } = req.params;
 
-      const check = await query("SELECT 1 FROM monitoring_views WHERE id = $1", [id]);
+      const check = await query("SELECT name FROM monitoring_views WHERE id = $1", [id]);
       if (check.rows.length === 0) {
-        res.status(404).json({ success: false, error: "Not Found", message: "Monitoring view tidak ditemukan." });
+        res.status(404).json({ success: false, error: "Not Found", message: "Monitoring view not found." });
         return;
       }
+      const viewName = check.rows[0].name;
 
       await query("DELETE FROM monitoring_views WHERE id = $1", [id]);
 
       await this.writeViewsToDisk();
 
-      res.status(200).json({ success: true, message: "Monitoring view berhasil dihapus." });
+      await logActivity(
+        "Monitoring View",
+        "Delete View",
+        `Deleted monitoring view "${viewName}"`,
+        "SUCCESS"
+      );
+
+      res.status(200).json({ success: true, message: "Monitoring view deleted successfully." });
     } catch (error: any) {
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
     }
   };
+}
 }
 
 export const monitoringViewController = new MonitoringViewController();

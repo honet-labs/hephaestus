@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import { prometheusService } from "../services/prometheus.service";
+import { logActivity } from "../config/db";
 
 export class PrometheusController {
   /**
@@ -81,8 +82,10 @@ export class PrometheusController {
 
       const result = await prometheusService.saveConfig(content);
       if (result.success) {
+        await logActivity("Prometheus Config", "Edit Config", "Successfully validated, saved, and reloaded prometheus.yml", "SUCCESS");
         return res.status(200).json(result);
       } else {
+        await logActivity("Prometheus Config", "Edit Config", `Failed to save/reload prometheus.yml: ${result.message}`, "ERROR");
         return res.status(422).json(result);
       }
     } catch (err: any) {
@@ -132,6 +135,7 @@ export class PrometheusController {
       }
 
       const item = await prometheusService.saveConfigProfile(profile);
+      await logActivity("Prometheus Settings", "Save Profile", `Saved/updated Prometheus profile "${profile.name}" (Mode: ${profile.mode}, Path: ${profile.path})`, "SUCCESS");
       return res.status(200).json({
         success: true,
         message: "Prometheus connection profile saved successfully.",
@@ -154,7 +158,12 @@ export class PrometheusController {
   public async deleteConfigProfile(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const list = await prometheusService.getConfigsList();
+      const target = list.find(c => c.id === id);
+      const name = target ? target.name : id;
+      
       await prometheusService.deleteConfigProfile(id);
+      await logActivity("Prometheus Settings", "Delete Profile", `Deleted Prometheus profile "${name}" (ID: ${id})`, "SUCCESS");
       return res.status(200).json({
         success: true,
         message: "Prometheus connection profile deleted successfully."
@@ -176,7 +185,12 @@ export class PrometheusController {
   public async activateConfigProfile(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const list = await prometheusService.getConfigsList();
+      const target = list.find(c => c.id === id);
+      const name = target ? target.name : id;
+
       await prometheusService.activateConfigProfile(id);
+      await logActivity("Prometheus Settings", "Activate Profile", `Activated Prometheus profile "${name}" (ID: ${id})`, "SUCCESS");
       return res.status(200).json({
         success: true,
         message: "Prometheus connection profile activated successfully."

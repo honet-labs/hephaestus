@@ -2,7 +2,7 @@
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -214,6 +214,28 @@ function showPage(pageId) {
     if (arrow) arrow.style.transform = 'rotate(0deg)';
   }
 
+  const settingsPages = ['database', 'user-management', 'activity-logs'];
+  const isSettingsPage = settingsPages.includes(pageId);
+  const setSubmenu = document.getElementById('settings-submenu');
+  const setParentMenu = document.getElementById('menu-settings-parent');
+  const setArrow = document.getElementById('menu-settings-arrow');
+
+  if (isSettingsPage) {
+    if (setSubmenu) {
+      setSubmenu.classList.remove('hidden');
+      setSubmenu.style.display = 'flex';
+    }
+    if (setParentMenu) setParentMenu.classList.add('active');
+    if (setArrow) setArrow.style.transform = 'rotate(180deg)';
+  } else {
+    if (setSubmenu) {
+      setSubmenu.classList.add('hidden');
+      setSubmenu.style.display = 'none';
+    }
+    if (setParentMenu) setParentMenu.classList.remove('active');
+    if (setArrow) setArrow.style.transform = 'rotate(0deg)';
+  }
+
   // Update header descriptions
   activeModuleName.textContent = pageId.toUpperCase();
   
@@ -252,8 +274,16 @@ function showPage(pageId) {
     initOidLibraryPage();
   } else if (pageId === 'database') {
     pageTitle.textContent = 'System Settings';
-    pageDesc.textContent = 'Konfigurasi koneksi PostgreSQL Database dan tuning performa.';
+    pageDesc.textContent = 'PostgreSQL database connection settings and performance tuning.';
     initDatabasePage();
+  } else if (pageId === 'user-management') {
+    pageTitle.textContent = 'User Management';
+    pageDesc.textContent = 'Create, list, delete user accounts and manage credentials.';
+    initUserManagementPage();
+  } else if (pageId === 'activity-logs') {
+    pageTitle.textContent = 'Activity Audit Logs';
+    pageDesc.textContent = 'View and query chronological audit logs of portal configuration events.';
+    initActivityLogsPage();
   }
 }
 
@@ -3441,6 +3471,7 @@ function renderPlayer() {
     
     activeMonitoringView.urls.forEach((url, index) => {
       const cleanedUrl = getEmbedUrl(url);
+      const escapedUrl = (cleanedUrl || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
       
       const panelDiv = document.createElement('div');
       panelDiv.className = 'panel';
@@ -3456,7 +3487,7 @@ function renderPlayer() {
           <span style="font-size: 11px; font-weight: bold; color: var(--text-white);">Panel ${index + 1}</span>
         </div>
         <div style="width: 100%; flex-grow: 1; overflow: hidden; position: relative;">
-          <iframe src="${cleanedUrl}" style="border: none; width: 125%; height: 125%; transform: scale(0.8); transform-origin: 0 0; position: absolute; top: 0; left: 0;" allowfullscreen></iframe>
+          <iframe src="${escapedUrl}" style="border: none; width: 125%; height: 125%; transform: scale(0.8); transform-origin: 0 0; position: absolute; top: 0; left: 0;" allowfullscreen></iframe>
         </div>
       `;
       gridDiv.appendChild(panelDiv);
@@ -3470,6 +3501,7 @@ function renderPlayer() {
     
     const url = activeMonitoringView.urls[currentSlideIndex];
     const cleanedUrl = getEmbedUrl(url);
+    const escapedUrl = (cleanedUrl || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     
     const panelDiv = document.createElement('div');
     panelDiv.className = 'panel';
@@ -3484,7 +3516,7 @@ function renderPlayer() {
         <span style="font-size: 11px; font-weight: bold; color: var(--text-white);">Active Panel: ${currentSlideIndex + 1} of ${activeMonitoringView.urls.length}</span>
       </div>
       <div style="width: 100%; flex-grow: 1; overflow: hidden; position: relative;">
-        <iframe src="${cleanedUrl}" style="border: none; width: 111%; height: 111%; transform: scale(0.9); transform-origin: 0 0; position: absolute; top: 0; left: 0;" allowfullscreen></iframe>
+        <iframe src="${escapedUrl}" style="border: none; width: 111%; height: 111%; transform: scale(0.9); transform-origin: 0 0; position: absolute; top: 0; left: 0;" allowfullscreen></iframe>
       </div>
     `;
     renderArea.appendChild(panelDiv);
@@ -3604,6 +3636,9 @@ function adjustPlayerInterval() {
 }
 
 function getEmbedUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return '';
+  }
   try {
     let u = new URL(url);
     if (!u.searchParams.has('embed')) {
@@ -3618,11 +3653,13 @@ function getEmbedUrl(url) {
     return u.toString();
   } catch (e) {
     let result = url;
-    if (!result.includes('embed=')) {
-      result += (result.includes('?') ? '&' : '?') + 'embed=true';
-    }
-    if (result.includes('/d/') && !result.includes('/d-solo/') && !result.includes('kiosk=')) {
-      result += '&kiosk=true';
+    if (typeof result.includes === 'function') {
+      if (!result.includes('embed=')) {
+        result += (result.includes('?') ? '&' : '?') + 'embed=true';
+      }
+      if (result.includes('/d/') && !result.includes('/d-solo/') && !result.includes('kiosk=')) {
+        result += '&kiosk=true';
+      }
     }
     return result;
   }
@@ -4227,12 +4264,12 @@ async function testDbConfiguration(event) {
       if (response.ok && data.success) {
         feedback.className = 'alert alert-success';
         title.textContent = 'Success';
-        desc.textContent = data.message || 'Koneksi ke database berhasil! Konfigurasi valid.';
+        desc.textContent = data.message || 'Database connection successful! Configuration is valid.';
         addLog('Database', 'Test connection succeeded.', 'SUCCESS');
       } else {
         feedback.className = 'alert alert-danger';
         title.textContent = 'Connection Error';
-        desc.textContent = data.message || 'Gagal terhubung ke database dengan konfigurasi tersebut.';
+        desc.textContent = data.message || 'Failed to connect to the database with the provided configuration.';
         addLog('Database', `Test connection failed: ${data.message || data.error}`, 'ERROR');
       }
       feedback.classList.remove('hidden');
@@ -4349,7 +4386,7 @@ async function submitQuickAddPanelUrl() {
   const input = document.getElementById('quick-add-url-input');
   const newUrl = input ? input.value.trim() : '';
   if (!newUrl) {
-    alert('Silakan masukkan URL panel Grafana.');
+    alert('Please enter a Grafana panel URL.');
     return;
   }
 
@@ -4399,10 +4436,337 @@ async function submitQuickAddPanelUrl() {
         startSlideshowTimer();
       }
     } else {
-      alert('Gagal menambahkan panel: ' + (result.message || 'Unknown error'));
+      alert('Failed to add panel: ' + (result.message || 'Unknown error'));
     }
   } catch (error) {
-    alert('Koneksi API Error: ' + error.message);
+    alert('API Connection Error: ' + error.message);
+  }
+}
+
+// System settings / Database sub-menu toggle logic
+function toggleSettingsSubmenu() {
+  const submenu = document.getElementById('settings-submenu');
+  const arrow = document.getElementById('menu-settings-arrow');
+  if (submenu) {
+    const isHidden = submenu.classList.contains('hidden') || submenu.style.display === 'none';
+    if (isHidden) {
+      submenu.classList.remove('hidden');
+      submenu.style.display = 'flex';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+      // Navigate to database if not already on a database/settings page
+      const hash = window.location.hash.replace('#', '') || 'overview';
+      if (!['database', 'user-management', 'activity-logs'].includes(hash)) {
+        navigate('database');
+      }
+    } else {
+      submenu.classList.add('hidden');
+      submenu.style.display = 'none';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
+// User Management Page Logic
+async function initUserManagementPage() {
+  await loadUsersList();
+}
+
+async function loadUsersList() {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+        <span class="spinner" style="margin-right: 8px;"></span> Loading users...
+      </td>
+    </tr>
+  `;
+
+  try {
+    const res = await fetch('/api/v1/users');
+    const data = await res.json();
+
+    if (data.success && data.users) {
+      if (data.users.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+              No user accounts found.
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = data.users.map(u => {
+          const deleteBtn = u.username === 'sysadmin' 
+            ? `<button class="btn btn-secondary" disabled style="padding: 2px 8px; font-size: 10.5px; height: auto; opacity: 0.5; cursor: not-allowed; border-color: var(--app-border);">Delete</button>`
+            : `<button class="btn btn-secondary" onclick="deleteUserAccount('${u.id}', '${u.username}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Delete</button>`;
+
+          return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--text-white);">${escapeHtml(u.username)}</td>
+              <td style="padding: 10px 12px; font-size: 12px; color: var(--text-muted);">${escapeHtml(u.email)}</td>
+              <td style="padding: 10px 12px; font-size: 12px; vertical-align: middle;">
+                <span class="status-badge" style="font-size: 9px; padding: 1px 4px; ${u.role === 'ADMIN' ? 'background: rgba(16,185,129,0.05); color: #10b981; border: 1px solid rgba(16,185,129,0.1);' : 'background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);'}">${u.role}</span>
+              </td>
+              <td style="padding: 10px 12px; font-size: 11px; font-family: monospace; color: var(--text-muted);">${new Date(u.created_at).toLocaleString()}</td>
+              <td style="padding: 10px 12px; font-size: 12px; text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" class="btn btn-secondary" onclick="openResetPasswordModal('${u.id}', '${u.username}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; border-color: var(--app-border);">Reset Password</button>
+                ${deleteBtn}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; color: #ff7b72; padding: 20px;">
+            Failed to load users: ${data.message || data.error}
+          </td>
+        </tr>
+      `;
+    }
+  } catch (error) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; color: #ff7b72; padding: 20px;">
+          Failed to fetch users from backend: ${error.message}
+        </td>
+      </tr>
+    `;
+  }
+}
+
+function openAddUserModal() {
+  const modal = document.getElementById('modal-add-user');
+  if (modal) {
+    modal.classList.add('active');
+    document.getElementById('form-add-user').reset();
+  }
+}
+
+function closeAddUserModal() {
+  const modal = document.getElementById('modal-add-user');
+  if (modal) modal.classList.remove('active');
+}
+
+async function submitAddUser(event) {
+  if (event) event.preventDefault();
+
+  const username = document.getElementById('add-user-username').value.trim();
+  const email = document.getElementById('add-user-email').value.trim();
+  const password = document.getElementById('add-user-password').value;
+  const role = document.getElementById('add-user-role').value;
+
+  try {
+    const res = await fetch('/api/v1/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password, role })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('User account created successfully.');
+      closeAddUserModal();
+      await loadUsersList();
+      addLog('User Management', `Created user account "${username}"`, 'SUCCESS');
+    } else {
+      alert('Failed to create user: ' + (data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error connecting to backend: ' + error.message);
+  }
+}
+
+async function deleteUserAccount(id, username) {
+  if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/v1/users/${id}`, {
+      method: 'DELETE'
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert(`User "${username}" deleted successfully.`);
+      await loadUsersList();
+      addLog('User Management', `Deleted user account "${username}"`, 'SUCCESS');
+    } else {
+      alert('Failed to delete user: ' + (data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error connecting to backend: ' + error.message);
+  }
+}
+
+function openResetPasswordModal(id, username) {
+  const modal = document.getElementById('modal-reset-password');
+  if (modal) {
+    document.getElementById('reset-password-userid').value = id;
+    document.getElementById('reset-password-username').textContent = username;
+    document.getElementById('reset-password-newval').value = '';
+    modal.classList.add('active');
+  }
+}
+
+function closeResetPasswordModal() {
+  const modal = document.getElementById('modal-reset-password');
+  if (modal) modal.classList.remove('active');
+}
+
+async function submitResetPassword(event) {
+  if (event) event.preventDefault();
+
+  const id = document.getElementById('reset-password-userid').value;
+  const username = document.getElementById('reset-password-username').textContent;
+  const newPassword = document.getElementById('reset-password-newval').value;
+
+  try {
+    const res = await fetch(`/api/v1/users/${id}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: newPassword })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert(`Password for user "${username}" reset successfully.`);
+      closeResetPasswordModal();
+      addLog('User Management', `Reset password for user "${username}"`, 'SUCCESS');
+    } else {
+      alert('Failed to reset password: ' + (data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error connecting to backend: ' + error.message);
+  }
+}
+
+// Activity Logs Page Logic
+let logsPage = 1;
+const logsLimit = 15;
+
+async function initActivityLogsPage() {
+  logsPage = 1;
+  await loadActivityLogs();
+}
+
+async function loadActivityLogs() {
+  const tbody = document.getElementById('activity-logs-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+        <span class="spinner" style="margin-right: 8px;"></span> Loading activity logs...
+      </td>
+    </tr>
+  `;
+
+  const search = document.getElementById('log-search-input').value.trim();
+  const module = document.getElementById('log-module-filter').value;
+  const status = document.getElementById('log-status-filter').value;
+
+  let queryUrl = `/api/v1/activity-logs?page=${logsPage}&limit=${logsLimit}`;
+  if (search) queryUrl += `&search=${encodeURIComponent(search)}`;
+  if (module) queryUrl += `&module=${encodeURIComponent(module)}`;
+  if (status) queryUrl += `&status=${encodeURIComponent(status)}`;
+
+  try {
+    const res = await fetch(queryUrl);
+    const data = await res.json();
+
+    if (data.success && data.logs) {
+      if (data.logs.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+              No activity logs found.
+            </td>
+          </tr>
+        `;
+        document.getElementById('logs-pagination-info').textContent = 'Showing 0-0 of 0 logs';
+        document.getElementById('btn-logs-prev').disabled = true;
+        document.getElementById('btn-logs-next').disabled = true;
+      } else {
+        tbody.innerHTML = data.logs.map(log => {
+          let badgeClass = 'status-default';
+          if (log.status === 'SUCCESS') badgeClass = 'status-configured';
+          else if (log.status === 'ERROR') badgeClass = 'status-text-red';
+          else if (log.status === 'WARNING') badgeClass = 'status-text-yellow';
+
+          return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 11.5px;">
+              <td style="padding: 8px 12px; font-family: monospace; color: var(--text-muted);">${new Date(log.created_at).toLocaleString()}</td>
+              <td style="padding: 8px 12px; font-weight: 600; color: var(--text-white);">${escapeHtml(log.module)}</td>
+              <td style="padding: 8px 12px; color: #58a6ff; font-weight: 500;">${escapeHtml(log.action)}</td>
+              <td style="padding: 8px 12px; color: var(--text-muted); word-break: break-word;">${escapeHtml(log.details)}</td>
+              <td style="padding: 8px 12px; vertical-align: middle;">
+                <span class="status-badge ${badgeClass}" style="font-size: 9px; padding: 1px 4px;">${log.status}</span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        const startIdx = (logsPage - 1) * logsLimit + 1;
+        const endIdx = startIdx + data.logs.length - 1;
+        const total = data.total || 0;
+        document.getElementById('logs-pagination-info').textContent = `Showing ${startIdx}-${endIdx} of ${total} logs`;
+
+        document.getElementById('btn-logs-prev').disabled = logsPage <= 1;
+        document.getElementById('btn-logs-next').disabled = endIdx >= total;
+      }
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; color: #ff7b72; padding: 20px;">
+            Failed to load logs: ${data.message || data.error}
+          </td>
+        </tr>
+      `;
+    }
+  } catch (error) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; color: #ff7b72; padding: 20px;">
+          Failed to fetch logs from backend: ${error.message}
+        </td>
+      </tr>
+    `;
+  }
+}
+
+function changeLogsPage(direction) {
+  logsPage += direction;
+  if (logsPage < 1) logsPage = 1;
+  loadActivityLogs();
+}
+
+function filterActivityLogs() {
+  logsPage = 1;
+  loadActivityLogs();
+}
+
+async function clearActivityLogs() {
+  if (!confirm('Are you sure you want to permanently clear all activity logs? This action cannot be undone.')) return;
+
+  try {
+    const res = await fetch('/api/v1/activity-logs', {
+      method: 'DELETE'
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('Activity logs cleared successfully.');
+      logsPage = 1;
+      await loadActivityLogs();
+      addLog('System', 'Activity audit logs cleared.', 'SUCCESS');
+    } else {
+      alert('Failed to clear logs: ' + (data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error connecting to backend: ' + error.message);
   }
 }
 

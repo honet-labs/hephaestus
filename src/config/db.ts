@@ -200,6 +200,21 @@ export async function query(text: string, params?: any[]) {
   }
 }
 
+export async function logActivity(module: string, action: string, details: string, status: string = "SUCCESS") {
+  try {
+    if (!isDbConnected || !activePool) {
+      console.log(`[Activity Log (DB Offline)] [${module}] ${action}: ${details} (${status})`);
+      return;
+    }
+    await activePool.query(
+      `INSERT INTO activity_logs (module, action, details, status) VALUES ($1, $2, $3, $4)`,
+      [module, action, details, status]
+    );
+  } catch (err) {
+    console.error("Failed to write activity log:", err);
+  }
+}
+
 export async function initDb() {
   console.log("⚙️  [DB] Initializing PostgreSQL connection pool and tables...");
   isDbConnected = false;
@@ -271,6 +286,26 @@ export async function initDb() {
       syntax VARCHAR(255),
       access VARCHAR(255),
       description TEXT
+    );`,
+
+    // 6. Users table
+    `CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(100) UNIQUE NOT NULL,
+      email VARCHAR(100) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      role VARCHAR(50) DEFAULT 'operator',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 7. Activity logs table
+    `CREATE TABLE IF NOT EXISTS activity_logs (
+      id SERIAL PRIMARY KEY,
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      module VARCHAR(100) NOT NULL,
+      action VARCHAR(100) NOT NULL,
+      details TEXT,
+      status VARCHAR(50) DEFAULT 'SUCCESS'
     );`
   ];
 
@@ -286,7 +321,9 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_oid_registry_lower_name ON oid_registry(lower(name));`,
     `CREATE INDEX IF NOT EXISTS idx_oid_registry_lower_oid ON oid_registry(lower(oid));`,
     `CREATE INDEX IF NOT EXISTS idx_grafana_configs_is_active ON grafana_configs(is_active) WHERE is_active = true;`,
-    `CREATE INDEX IF NOT EXISTS idx_prometheus_configs_is_active ON prometheus_configs(is_active) WHERE is_active = true;`
+    `CREATE INDEX IF NOT EXISTS idx_prometheus_configs_is_active ON prometheus_configs(is_active) WHERE is_active = true;`,
+    `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`,
+    `CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp DESC);`
   ];
 
   for (const q of indexQueries) {
@@ -295,11 +332,30 @@ export async function initDb() {
 
   console.log("✅ [DB] PostgreSQL tables and indexes checked/created successfully.");
 
+  // Seed default admin user if not exists
+  try {
+    const userCheck = await pool.query("SELECT 1 FROM users LIMIT 1");
+    if (userCheck.rowCount === 0) {
+      const crypto = require("crypto");
+      const passwordHash = crypto.createHash("sha256").update("hephaestus").digest("hex");
+      await pool.query(
+        `INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)`,
+        ["sysadmin", "admin@hephaestus.local", passwordHash, "ADMIN"]
+      );
+      console.log("🌱 [DB] Seeded default user: sysadmin (password: hephaestus)");
+    }
+  } catch (err) {
+    console.error("❌ [DB] Failed to seed default user:", err);
+  }
+
   // Automatic Data Migration from local JSON files
   await migrateLocalDataToPg();
 
   // Populate dynamic configurations in-memory caches
   await populateMemoryCaches();
+
+  // Log startup activity
+  await logActivity("System", "Database Connected", "Database tables initialized and connection established successfully", "SUCCESS");
 }
 
 export async function populateMemoryCaches() {

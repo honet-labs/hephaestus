@@ -8,6 +8,8 @@ import prometheusRoutes from "./routes/prometheus.routes";
 import monitoringViewRoutes from "./routes/monitoring-view.routes";
 import snmpRoutes from "./routes/snmp.routes";
 import systemRoutes from "./routes/system.routes";
+import userRoutes from "./routes/user.routes";
+import activityLogRoutes from "./routes/activity-log.routes";
 
 const app = express();
 
@@ -57,6 +59,8 @@ app.use("/api/v1/prometheus", prometheusRoutes);
 app.use("/api/v1/monitoring-views", monitoringViewRoutes);
 app.use("/api/v1/snmp", snmpRoutes);
 app.use("/api/v1/system", systemRoutes);
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/activity-logs", activityLogRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {

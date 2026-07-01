@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { grafanaService } from "../services/grafana.service";
 import config from "../config/env";
+import { logActivity } from "../config/db";
 
 // Mask token for security
 function maskToken(token: string): string {
@@ -96,6 +97,7 @@ export class SettingsController {
       // Handle Reset
       if (action === "reset") {
         await grafanaService.resetConfig();
+        await logActivity("Grafana Settings", "Reset Configuration", "Reverted Grafana connection settings to environment defaults", "SUCCESS");
         res.status(200).json({
           success: true,
           message: "Grafana integration settings reset successfully. Reverted to default settings."
@@ -135,21 +137,24 @@ export class SettingsController {
         try {
           const success = await grafanaService.testConnection(host, targetToken);
           if (success) {
+            await logActivity("Grafana Settings", "Test Connection", `Successful connection test to Grafana host "${host}"`, "SUCCESS");
             res.status(200).json({
               success: true,
-              message: "Koneksi ke Grafana berhasil!"
+              message: "Connection to Grafana successful!"
             });
           } else {
+            await logActivity("Grafana Settings", "Test Connection", `Unusual response from connection test to Grafana host "${host}"`, "WARNING");
             res.status(200).json({
               success: false,
-              message: "Grafana merespon dengan status tidak biasa. Koneksi diragukan."
+              message: "Grafana responded with an unusual status. Connection status doubtful."
             });
           }
         } catch (err: any) {
+          await logActivity("Grafana Settings", "Test Connection", `Failed connection test to Grafana host "${host}": ${err.message}`, "ERROR");
           res.status(200).json({
             success: false,
-            error: "Koneksi Gagal",
-            message: err.message || "Gagal menghubungkan ke Grafana."
+            error: "Connection Failed",
+            message: err.message || "Failed to connect to Grafana."
           });
         }
         return;
@@ -161,10 +166,11 @@ export class SettingsController {
         try {
           await grafanaService.testConnection(host, targetToken);
         } catch (err: any) {
+          await logActivity("Grafana Settings", "Save Configuration", `Failed to save Grafana settings to host "${host}" because connection test failed`, "ERROR");
           res.status(400).json({
             success: false,
-            error: "Gagal Menyimpan",
-            message: `Penyimpanan dibatalkan karena uji koneksi gagal: ${err.message}`
+            error: "Save Failed",
+            message: `Save canceled because connection test failed: ${err.message}`
           });
           return;
         }
@@ -197,10 +203,11 @@ export class SettingsController {
 
         // Save
         await grafanaService.saveConfig(host, targetToken, finalDatasourceUid);
+        await logActivity("Grafana Settings", "Save Configuration", `Saved Grafana integration settings to host "${host}"`, "SUCCESS");
         
-        let successMessage = "Konfigurasi Grafana berhasil disimpan dan diterapkan!";
+        let successMessage = "Grafana configuration saved and applied successfully!";
         if (autoDetectedName) {
-          successMessage += ` (Prometheus UID terdeteksi otomatis: "${autoDetectedName}")`;
+          successMessage += ` (Prometheus UID auto-detected: "${autoDetectedName}")`;
         }
 
         res.status(200).json({
@@ -342,6 +349,7 @@ export class SettingsController {
       }
 
       await grafanaService.saveConfigsList(list);
+      await logActivity("Grafana Settings", "Save Profile", `Saved/updated Grafana profile "${name}" (Host: ${host})`, "SUCCESS");
 
       res.status(200).json({
         success: true,
@@ -382,6 +390,7 @@ export class SettingsController {
       }
 
       await grafanaService.saveConfigsList(list);
+      await logActivity("Grafana Settings", "Delete Profile", `Deleted Grafana profile "${itemToDelete.name}" (Host: ${itemToDelete.host})`, "SUCCESS");
 
       res.status(200).json({
         success: true,
@@ -418,6 +427,7 @@ export class SettingsController {
 
       list.forEach(c => c.isActive = (c.id === id));
       await grafanaService.saveConfigsList(list);
+      await logActivity("Grafana Settings", "Activate Profile", `Activated Grafana profile "${target.name}" (Host: ${target.host})`, "SUCCESS");
 
       res.status(200).json({
         success: true,
@@ -453,12 +463,14 @@ export class SettingsController {
       }
 
       const success = await grafanaService.testConnection(target.host, target.token);
+      await logActivity("Grafana Settings", "Test Connection Profile", `${success ? "Successful" : "Failed"} connection test to Grafana profile "${target.name}"`, success ? "SUCCESS" : "ERROR");
       res.status(200).json({
         success: true,
         isConnected: success,
         message: success ? "Connection successful!" : "Connection failed."
       });
     } catch (error: any) {
+      await logActivity("Grafana Settings", "Test Connection Profile", `Failed connection test to Grafana profile "${id}": ${error.message}`, "ERROR");
       res.status(200).json({
         success: false,
         isConnected: false,

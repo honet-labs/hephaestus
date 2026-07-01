@@ -62,15 +62,15 @@ export class GrafanaService {
       if (error.response) {
         const status = error.response.status;
         if (status === 401) {
-          throw new Error("Otorisasi gagal: Token Grafana tidak valid atau tidak memiliki akses (401 Unauthorized).");
+          throw new Error("Authorization failed: Grafana token is invalid or unauthorized (401 Unauthorized).");
         }
         if (status === 403) {
-          throw new Error("Akses dilarang (403 Forbidden).");
+          throw new Error("Access denied (403 Forbidden).");
         }
-        throw new Error(`Grafana merespons dengan status ${status}: ${error.response.data?.message || error.message}`);
+        throw new Error(`Grafana responded with status ${status}: ${error.response.data?.message || error.message}`);
       }
       
-      throw new Error(`Gagal menghubungi server Grafana: ${error.message}`);
+      throw new Error(`Failed to connect to Grafana server: ${error.message}`);
     }
   }
 
@@ -180,7 +180,7 @@ export class GrafanaService {
 
       await this.saveConfigsList(list);
     } catch (error: any) {
-      throw new Error(`Gagal menyimpan konfigurasi Grafana: ${error.message}`);
+      throw new Error(`Failed to save Grafana configuration: ${error.message}`);
     }
   }
 
@@ -199,7 +199,7 @@ export class GrafanaService {
         isConfigured: !!(process.env.GRAFANA_HOST && process.env.GRAFANA_TOKEN)
       });
     } catch (error: any) {
-      throw new Error(`Gagal mereset konfigurasi Grafana: ${error.message}`);
+      throw new Error(`Failed to reset Grafana configuration: ${error.message}`);
     }
   }
 

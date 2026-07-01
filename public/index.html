@@ -108,15 +108,41 @@
               </a>
             </div>
           </div>
-          <a href="#database" id="menu-database" class="menu-item">
-            <span class="menu-item-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-2.239 10-5V5c0-2.761-4.477-5-10-5S2 2.239 2 5v12c0 2.739 4.477 5 10 5z"></path><path d="M2 5c0 2.761 4.477 5 10 5s10-2.239 10-5"></path><path d="M2 11c0 2.761 4.477 5 10 5s10-2.239 10-5"></path></svg>
-            </span>
-            <div>
-              <div class="menu-item-title">System Settings</div>
-              <div class="menu-item-sub">Database configuration</div>
+          <!-- System Settings Parent Menu -->
+          <div class="menu-item-group" style="display: flex; flex-direction: column;">
+            <a href="javascript:void(0)" id="menu-settings-parent" class="menu-item" onclick="toggleSettingsSubmenu()" style="cursor: pointer;">
+              <span class="menu-item-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              </span>
+              <div style="flex-grow: 1;">
+                <div class="menu-item-title">System Settings</div>
+                <div class="menu-item-sub">Manage portal settings</div>
+              </div>
+              <span class="menu-arrow" id="menu-settings-arrow" style="transition: transform 0.2s; display: flex; align-items: center; color: var(--text-muted);">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </a>
+            <div id="settings-submenu" class="submenu-list hidden" style="padding-left: 20px; display: none; flex-direction: column; gap: 2px; margin-top: 2px;">
+              <a href="#database" id="menu-database" class="menu-item" style="padding: 6px 16px; border-radius: 4px;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Database Configuration</div>
+                </div>
+              </a>
+              <a href="#user-management" id="menu-user-management" class="menu-item" style="padding: 6px 16px; border-radius: 4px;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">User Management</div>
+                </div>
+              </a>
+              <a href="#activity-logs" id="menu-activity-logs" class="menu-item" style="padding: 6px 16px; border-radius: 4px;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Activity Logs</div>
+                </div>
+              </a>
             </div>
-          </a>
+          </div>
         </nav>
       </div>
 
@@ -959,6 +985,98 @@
             </div>
           </div>
         </div>
+        
+        <!-- PAGE 9: USER MANAGEMENT -->
+        <div id="page-user-management" class="hidden">
+          <div class="panel">
+            <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+              <h3 class="panel-title" style="margin-bottom: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">User Accounts</h3>
+              <button type="button" class="btn btn-primary" onclick="openAddUserModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 11px; height: auto;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                <span>Add User</span>
+              </button>
+            </div>
+
+            <div class="table-wrapper" style="border: 1px solid var(--app-border); border-radius: 4px;">
+              <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                  <tr style="background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);">
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Username</th>
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Email</th>
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 100px;">Role</th>
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 150px;">Created At</th>
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600; width: 220px; text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="users-tbody">
+                  <!-- Users list populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE 10: ACTIVITY LOGS -->
+        <div id="page-activity-logs" class="hidden">
+          <div class="panel">
+            <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <h3 class="panel-title" style="margin-bottom: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">Activity Audit Logs</h3>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="log-search-input" onkeyup="filterActivityLogs()" placeholder="Search logs..." style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 150px;">
+                <select id="log-module-filter" onchange="filterActivityLogs()" style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 120px;">
+                  <option value="">All Modules</option>
+                  <option value="System">System</option>
+                  <option value="Database Configuration">Database</option>
+                  <option value="Grafana Settings">Grafana</option>
+                  <option value="Prometheus Settings">Prometheus</option>
+                  <option value="Prometheus Config">Prometheus Config</option>
+                  <option value="User Management">User Management</option>
+                  <option value="SNMP">SNMP</option>
+                </select>
+                <select id="log-status-filter" onchange="filterActivityLogs()" style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 100px;">
+                  <option value="">All Status</option>
+                  <option value="SUCCESS">Success</option>
+                  <option value="ERROR">Error</option>
+                  <option value="WARNING">Warning</option>
+                </select>
+                <button type="button" class="btn btn-secondary" onclick="clearActivityLogs()" style="padding: 6px 12px; font-size: 11px; height: auto; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Clear Logs</button>
+              </div>
+            </div>
+
+            <div class="table-wrapper" style="border: 1px solid var(--app-border); border-radius: 4px;">
+              <table style="width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed;">
+                <colgroup>
+                  <col style="width: 180px;">
+                  <col style="width: 140px;">
+                  <col style="width: 140px;">
+                  <col style="width: auto;">
+                  <col style="width: 100px;">
+                </colgroup>
+                <thead>
+                  <tr style="background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);">
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Timestamp</th>
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Module</th>
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Action</th>
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Details</th>
+                    <th style="font-size: 11px; padding: 10px 12px; color: var(--text-muted); font-weight: 600;">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="activity-logs-tbody">
+                  <!-- Log entries populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Activity Logs Pagination -->
+            <div id="logs-pagination-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 11px; color: var(--text-muted);">
+              <div id="logs-pagination-info">Showing 0-0 of 0 logs</div>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-secondary" id="btn-logs-prev" onclick="changeLogsPage(-1)" style="padding: 4px 10px; font-size: 11px; height: auto;">Prev</button>
+                <button type="button" class="btn btn-secondary" id="btn-logs-next" onclick="changeLogsPage(1)" style="padding: 4px 10px; font-size: 11px; height: auto;">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div>
     </main>
@@ -1073,6 +1191,74 @@
     </div>
   </div>
 
+  <!-- MODAL: ADD USER -->
+  <div id="modal-add-user" class="modal-overlay">
+    <div class="modal-dialog" style="max-width: 450px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">Add User Account</h3>
+        <button class="modal-close" onclick="closeAddUserModal()">&times;</button>
+      </div>
+      <form id="form-add-user" onsubmit="submitAddUser(event)">
+        <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Username</label>
+            <input type="text" id="add-user-username" required placeholder="e.g. john_doe" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+          </div>
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Email Address</label>
+            <input type="email" id="add-user-email" required placeholder="e.g. john@company.com" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+          </div>
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Initial Password</label>
+            <input type="password" id="add-user-password" required placeholder="••••••••" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+          </div>
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">System Role</label>
+            <select id="add-user-role" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              <option value="operator" selected>Operator (Default)</option>
+              <option value="ADMIN">Administrator</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeAddUserModal()" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px; height: auto;">Create User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: RESET PASSWORD -->
+  <div id="modal-reset-password" class="modal-overlay">
+    <div class="modal-dialog" style="max-width: 400px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">Reset User Password</h3>
+        <button class="modal-close" onclick="closeResetPasswordModal()">&times;</button>
+      </div>
+      <form id="form-reset-password" onsubmit="submitResetPassword(event)">
+        <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+          <input type="hidden" id="reset-password-userid">
+          <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;">
+            Enter new password for user: <strong id="reset-password-username" style="color: var(--text-white);"></strong>
+          </p>
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">New Password</label>
+            <input type="password" id="reset-password-newval" required placeholder="••••••••" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px; height: auto;">Reset Password</button>
+        </div>
+      </form>
+    </div>
+
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      alert("JS Diagnostic Error:\n" + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno);
+      return false;
+    };
+  </script>
   <script src="js/app.js"></script>
 </body>
 </html>

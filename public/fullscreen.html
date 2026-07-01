@@ -219,6 +219,11 @@
   </div>
 
   <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      alert("JS Diagnostic Error:\n" + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno);
+      return false;
+    };
+
     let viewData = null;
     let currentSlideIndex = 0;
     let slideshowActive = true;
@@ -393,6 +398,9 @@
     }
 
     function getEmbedUrl(url) {
+      if (!url || typeof url !== 'string') {
+        return '';
+      }
       try {
         let u = new URL(url);
         if (!u.searchParams.has('embed')) {
@@ -407,11 +415,13 @@
         return u.toString();
       } catch (e) {
         let result = url;
-        if (!result.includes('embed=')) {
-          result += (result.includes('?') ? '&' : '?') + 'embed=true';
-        }
-        if (result.includes('/d/') && !result.includes('/d-solo/') && !result.includes('kiosk=')) {
-          result += '&kiosk=true';
+        if (typeof result.includes === 'function') {
+          if (!result.includes('embed=')) {
+            result += (result.includes('?') ? '&' : '?') + 'embed=true';
+          }
+          if (result.includes('/d/') && !result.includes('/d-solo/') && !result.includes('kiosk=')) {
+            result += '&kiosk=true';
+          }
         }
         return result;
       }

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import config from "../config/env";
-import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists, updateEnvFile, saveDbConfigToFile } from "../config/db";
+import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists, updateEnvFile, saveDbConfigToFile, logActivity } from "../config/db";
 
 function maskPassword(pwd: string): string {
   if (!pwd) return "";
@@ -83,10 +83,17 @@ export class SystemController {
         setupPool(existing);
         await initDb();
 
+        await logActivity(
+          "Database Configuration",
+          "Save Configuration",
+          `Failed database configuration change to host "${host}"`,
+          "ERROR"
+        );
+
         res.status(400).json({
           success: false,
           error: "Connection Failed",
-          message: `Gagal terhubung ke database dengan konfigurasi baru: ${dbConnectionError}`
+          message: `Failed to connect to database with new configuration: ${dbConnectionError}`
         });
         return;
       }
@@ -95,9 +102,16 @@ export class SystemController {
       saveDbConfigToFile(newConfig);
       updateEnvFile(newConfig);
 
+      await logActivity(
+        "Database Configuration",
+        "Save Configuration",
+        `Successfully updated database configuration to host "${host}"`,
+        "SUCCESS"
+      );
+
       res.status(200).json({
         success: true,
-        message: "Konfigurasi database berhasil disimpan dan diterapkan!",
+        message: "Database configuration saved and applied successfully!",
         isConnected: isDbConnected
       });
     } catch (err: any) {
@@ -155,16 +169,31 @@ export class SystemController {
         tempClient.release();
         await tempPool.end();
 
+        await logActivity(
+          "Database Configuration",
+          "Test Connection",
+          `Successful database connection test to host "${host}"`,
+          "SUCCESS"
+        );
+
         res.status(200).json({
           success: true,
-          message: "Koneksi ke database berhasil! Konfigurasi valid."
+          message: "Database connection test successful! Configuration is valid."
         });
       } catch (err: any) {
         await tempPool.end().catch(() => {});
+
+        await logActivity(
+          "Database Configuration",
+          "Test Connection",
+          `Failed database connection test to host "${host}": ${err.message}`,
+          "ERROR"
+        );
+
         res.status(400).json({
           success: false,
           error: "Connection Failed",
-          message: `Gagal terhubung ke database: ${err.message || String(err)}`
+          message: `Failed to connect to database: ${err.message || String(err)}`
         });
       }
     } catch (err: any) {

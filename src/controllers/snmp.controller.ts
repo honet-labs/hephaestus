@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { SnmpService } from "../services/snmp.service";
+import { logActivity } from "../config/db";
 
 const snmpService = new SnmpService();
 
@@ -39,8 +40,10 @@ export class SnmpController {
         url: sourceUrl || undefined,
         text: mibText || undefined
       });
+      await logActivity("SNMP", "Import MIB", `Successfully imported MIB "${mibName}"`, "SUCCESS");
       res.status(201).json({ success: true, message: `MIB '${mibName}' imported successfully.`, data: result });
     } catch (error: any) {
+      await logActivity("SNMP", "Import MIB", `Failed to import MIB "${mibName}": ${error.message}`, "ERROR");
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
     }
   }
@@ -50,11 +53,14 @@ export class SnmpController {
     try {
       const success = await snmpService.deleteMib(name);
       if (success) {
+        await logActivity("SNMP", "Delete MIB", `Deleted MIB "${name}"`, "SUCCESS");
         res.status(200).json({ success: true, message: `MIB '${name}' deleted successfully.` });
       } else {
+        await logActivity("SNMP", "Delete MIB", `Failed to delete MIB "${name}": MIB not found`, "ERROR");
         res.status(404).json({ success: false, error: "Not Found", message: `MIB '${name}' not found in imported list.` });
       }
     } catch (error: any) {
+      await logActivity("SNMP", "Delete MIB", `Error deleting MIB "${name}": ${error.message}`, "ERROR");
       res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
     }
   }
