@@ -5047,51 +5047,50 @@ function renderActiveDataTable(data) {
     return;
   }
   
-  // Build headers
-  let topHeaderHtml = '';
-  let subHeaderHtml = '';
+  // 1. Build Sheets Tab Bar (Excel-like Sheet Tabs)
+  let sheetsBarHtml = `
+    <div class="excel-sheets-bar" style="display: flex; background: rgba(0,0,0,0.25); border: 1px solid var(--app-border); border-bottom: none; padding: 6px 12px 0 12px; gap: 4px; border-top-left-radius: 4px; border-top-right-radius: 4px; align-items: flex-end;">
+      <div style="display: flex; gap: 4px; align-items: flex-end; width: 100%; border-bottom: 1px solid var(--app-border); padding-bottom: 0;">
+        <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; margin-right: 12px; padding-bottom: 8px; display: inline-flex; align-items: center; gap: 4px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+          Sheets:
+        </span>
+  `;
   
   ips.forEach((ip, idx) => {
-    const isLast = idx === ips.length - 1;
-    const borderStyle = isLast ? '' : 'border-right: 2px solid var(--app-border);';
-    topHeaderHtml += `
-      <th colspan="${columns.length + 2}" style="text-align: center; font-weight: bold; background: rgba(88, 166, 255, 0.15); color: var(--text-white); font-size: 11.5px; padding: 10px; ${borderStyle}">
-        IP Address: ${ip}
-      </th>
-    `;
+    const isFirst = idx === 0;
+    const btnClass = isFirst ? 'sheet-tab active' : 'sheet-tab';
+    const activeStyle = isFirst 
+      ? 'background: var(--app-background); border: 1px solid var(--app-border); border-bottom: 1px solid var(--app-background); color: #58a6ff; font-weight: bold; border-top: 3px solid #58a6ff; margin-bottom: -1px; border-top-left-radius: 4px; border-top-right-radius: 4px; padding: 6px 16px; font-size: 11px; cursor: pointer;'
+      : 'background: rgba(0,0,0,0.3); border: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); color: var(--text-muted); margin-bottom: 0; border-top-left-radius: 4px; border-top-right-radius: 4px; padding: 5px 16px; font-size: 11px; cursor: pointer;';
     
-    subHeaderHtml += `
-      <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">Timestamp</th>
-      <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">IP Address</th>
+    sheetsBarHtml += `
+      <button type="button" class="${btnClass}" data-ip="${ip}" onclick="switchQueryExplorerSheet('${ip}')" style="${activeStyle}">
+        ${ip}
+      </button>
     `;
-    
-    columns.forEach((col, colIdx) => {
-      const colIsLast = colIdx === columns.length - 1;
-      const thStyle = (colIsLast && !isLast) 
-        ? 'font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600; border-right: 2px solid var(--app-border);'
-        : 'font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;';
-        
-      subHeaderHtml += `<th style="${thStyle}">${escapeHtml(col)}</th>`;
-    });
   });
   
-  // Build rows
-  let rowsHtml = '';
+  sheetsBarHtml += `
+      </div>
+    </div>
+  `;
   
-  rows.forEach(row => {
-    rowsHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 11.5px;">`;
+  // 2. Build Tables (One for each IP)
+  let tablesHtml = '';
+  
+  ips.forEach((ip, ipIdx) => {
+    const isFirstIp = ipIdx === 0;
+    const tableId = `sheet-table-${ip.replace(/\./g, '_')}`;
+    const tableClass = isFirstIp ? 'query-explorer-sheet-table' : 'query-explorer-sheet-table hidden';
     
-    ips.forEach((ip, idx) => {
-      const isLast = idx === ips.length - 1;
-      
+    let rowsHtml = '';
+    
+    rows.forEach(row => {
       const ipData = row[ip] || {};
+      let colsHtml = '';
       
-      rowsHtml += `
-        <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${row.timestampStr}</td>
-        <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${ip}</td>
-      `;
-      
-      columns.forEach((col, colIdx) => {
+      columns.forEach(col => {
         const val = ipData[col];
         let displayVal = '-';
         let valStyle = '';
@@ -5099,15 +5098,15 @@ function renderActiveDataTable(data) {
         if (val !== undefined && val !== null) {
           if (typeof val === 'number') {
             displayVal = val.toFixed(2);
-            // Dynamic styling
+            // Dynamic styling based on warning levels
             const lowerCol = col.toLowerCase();
             if (lowerCol.includes('cpu') || lowerCol.includes('mem') || lowerCol.includes('ram') || lowerCol.includes('disk') || lowerCol.includes('usage')) {
               if (val > 90) {
-                valStyle = 'color: #ff7b72; font-weight: bold;'; // Danger Red
+                valStyle = 'color: #ff7b72; font-weight: bold;'; 
               } else if (val > 75) {
-                valStyle = 'color: #e3b341; font-weight: bold;'; // Warning Orange
+                valStyle = 'color: #e3b341; font-weight: bold;'; 
               } else {
-                valStyle = 'color: #56d364;'; // OK Green
+                valStyle = 'color: #56d364;'; 
               }
             }
           } else {
@@ -5115,40 +5114,79 @@ function renderActiveDataTable(data) {
           }
         }
         
-        const cellIsLast = colIdx === columns.length - 1;
-        if (cellIsLast && !isLast) {
-          rowsHtml += `<td style="padding: 8px; font-family: monospace; ${valStyle} border-right: 2px solid var(--app-border);">${displayVal}</td>`;
-        } else {
-          rowsHtml += `<td style="padding: 8px; font-family: monospace; ${valStyle}">${displayVal}</td>`;
-        }
+        colsHtml += `<td style="padding: 8px; font-family: monospace; ${valStyle}">${displayVal}</td>`;
       });
+      
+      rowsHtml += `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 11.5px;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+          <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${row.timestampStr}</td>
+          <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${ip}</td>
+          ${colsHtml}
+        </tr>
+      `;
     });
     
-    rowsHtml += `</tr>`;
+    tablesHtml += `
+      <div class="${tableClass}" id="${tableId}" style="max-height: 500px; overflow: auto; border: 1px solid var(--app-border); border-top: none; background: transparent; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--app-border); background: var(--app-sidebar);">
+              <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600; width: 160px;">Timestamp</th>
+              <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600; width: 130px;">IP Address</th>
+              ${columns.map(col => `<th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">${escapeHtml(col)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+    `;
   });
   
   // Set output HTML table
   outputArea.removeAttribute('style');
   outputArea.className = 'table-wrapper';
-  outputArea.style.border = '1px solid var(--app-border)';
   outputArea.style.background = 'transparent';
-  outputArea.style.maxHeight = '550px';
-  outputArea.style.overflow = 'auto';
-  outputArea.innerHTML = `
-    <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
-      <thead>
-        <tr style="border-bottom: 1px solid var(--app-border); background: var(--app-sidebar);">
-          ${topHeaderHtml}
-        </tr>
-        <tr style="border-bottom: 1px solid var(--app-border); background: rgba(0,0,0,0.25);">
-          ${subHeaderHtml}
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
-  `;
+  outputArea.innerHTML = sheetsBarHtml + tablesHtml;
+}
+
+// Global switcher function for active IP Address sheet tab
+window.switchQueryExplorerSheet = function(ip) {
+  // Hide all sheet tables
+  document.querySelectorAll('.query-explorer-sheet-table').forEach(tbl => {
+    tbl.classList.add('hidden');
+  });
+  
+  // Show active sheet table
+  const targetTbl = document.getElementById(`sheet-table-${ip.replace(/\./g, '_')}`);
+  if (targetTbl) {
+    targetTbl.classList.remove('hidden');
+  }
+  
+  // Update tab buttons styling
+  document.querySelectorAll('.sheet-tab').forEach(btn => {
+    const btnIp = btn.getAttribute('data-ip');
+    if (btnIp === ip) {
+      btn.className = 'sheet-tab active';
+      btn.style.background = 'var(--app-background)';
+      btn.style.borderBottom = '1px solid var(--app-background)';
+      btn.style.color = '#58a6ff';
+      btn.style.fontWeight = 'bold';
+      btn.style.borderTop = '3px solid #58a6ff';
+      btn.style.padding = '6px 16px';
+      btn.style.marginBottom = '-1px';
+    } else {
+      btn.className = 'sheet-tab';
+      btn.style.background = 'rgba(0,0,0,0.3)';
+      btn.style.borderBottom = '1px solid var(--app-border)';
+      btn.style.color = 'var(--text-muted)';
+      btn.style.borderTop = '1px solid var(--app-border)';
+      btn.style.padding = '5px 16px';
+      btn.style.marginBottom = '0';
+    }
+  });
+};
 }
 
 function exportActivePanelToExcel() {
