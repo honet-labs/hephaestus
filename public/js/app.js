@@ -5151,9 +5151,9 @@ function renderActiveDataTable(data) {
   `;
 }
 
-function exportActivePanelToCsv() {
+function exportActivePanelToExcel() {
   if (!activeQueryPanelId) return;
-  exportPanelToCsv(activeQueryPanelId);
+  exportPanelToExcel(activeQueryPanelId);
 }
 
 
@@ -5537,8 +5537,8 @@ async function deleteQueryPanel(panelId) {
   }
 }
 
-// Export Panel Data to CSV
-function exportPanelToCsv(panelId) {
+// Export Panel Data to Excel (multi-sheet: one sheet per IP Address)
+function exportPanelToExcel(panelId) {
   const data = panelQueryCache[panelId];
   if (!data) return;
   
@@ -5547,59 +5547,59 @@ function exportPanelToCsv(panelId) {
   const rows = data.rows || [];
   
   if (ips.length === 0 || rows.length === 0) return;
-  
-  const csvRows = [];
-  
-  // Build Header Row 1: IPs
-  const header1 = [];
-  ips.forEach(ip => {
-    header1.push(`IP Address: ${ip}`);
-    // Colspans empty spacer
-    for (let i = 0; i < columns.length + 1; i++) {
-      header1.push('');
-    }
-  });
-  csvRows.push(header1.join(','));
-  
-  // Build Header Row 2: Sub-headers
-  const header2 = [];
-  ips.forEach(ip => {
-    header2.push('Timestamp');
-    header2.push('IP_Address');
-    columns.forEach(col => {
-      header2.push(col);
-    });
-  });
-  csvRows.push(header2.join(','));
-  
-  // Build Data Rows
-  rows.forEach(row => {
-    const csvRow = [];
+
+  const exportFn = () => {
+    // Create new workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Create sheet for each IP Address
     ips.forEach(ip => {
-      const ipData = row[ip] || {};
-      csvRow.push(row.timestampStr);
-      csvRow.push(ip);
-      columns.forEach(col => {
-        const val = ipData[col];
-        if (val !== undefined && val !== null) {
-          csvRow.push(typeof val === 'number' ? val.toFixed(4) : `"${String(val).replace(/"/g, '""')}"`);
-        } else {
-          csvRow.push('');
-        }
+      const sheetData = [];
+      
+      // Header row
+      const headers = ['Timestamp', 'IP Address', ...columns];
+      sheetData.push(headers);
+      
+      // Data rows
+      rows.forEach(row => {
+        const ipData = row[ip] || {};
+        const dataRow = [
+          row.timestampStr,
+          ip
+        ];
+        
+        columns.forEach(col => {
+          const val = ipData[col];
+          if (val !== undefined && val !== null) {
+            dataRow.push(typeof val === 'number' ? Number(val.toFixed(4)) : val);
+          } else {
+            dataRow.push('');
+          }
+        });
+        
+        sheetData.push(dataRow);
       });
+      
+      // Convert to worksheet
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      
+      // Add to workbook. Limit sheet name to 31 chars (Excel requirement)
+      const sheetName = ip.substring(0, 31);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
     });
-    csvRows.push(csvRow.join(','));
-  });
-  
-  const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `query_explorer_data_${panelId}.csv`);
-  document.body.appendChild(link); // Required for FF
-  
-  link.click();
-  document.body.removeChild(link);
+    
+    // Write workbook to file
+    XLSX.writeFile(wb, `query_explorer_data_${panelId}.xlsx`);
+  };
+
+  if (typeof XLSX === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    script.onload = exportFn;
+    document.head.appendChild(script);
+  } else {
+    exportFn();
+  }
 }
 
 
