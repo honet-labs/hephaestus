@@ -4873,7 +4873,7 @@ function renderQueryPanels(panels) {
         </div>
         <div style="display: flex; gap: 8px; border-top: 1px solid var(--app-border); padding-top: 12px; margin-top: auto;">
           <button class="btn btn-primary" onclick="showQueryResultsView('${panel.id}')" style="flex-grow: 1; padding: 6px 12px; font-size: 11px; height: auto; justify-content: center;">
-            Run Query
+            Open
           </button>
           <button class="btn btn-secondary" onclick="openEditQueryPanelModal('${panel.id}')" style="padding: 6px 10px; font-size: 11px; height: auto; display: flex; align-items: center; justify-content: center;" title="Edit Panel">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -4903,7 +4903,10 @@ function showQueryResultsView(panelId) {
   document.getElementById('query-explorer-list-container').classList.add('hidden');
   document.getElementById('query-explorer-results-container').classList.remove('hidden');
   
-  // Reset output area to default loading state
+  // Hide CSV export button initially until data is loaded
+  document.getElementById('btn-results-export').classList.add('hidden');
+  
+  // Reset output area to default prompt state
   const outputArea = document.getElementById('query-results-output');
   outputArea.removeAttribute('style');
   outputArea.style.minHeight = '200px';
@@ -4915,12 +4918,9 @@ function showQueryResultsView(panelId) {
   outputArea.style.border = '1px dashed var(--app-border)';
   outputArea.innerHTML = `
     <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
-      <span class="spinner" style="margin-right: 8px;"></span> Executing query metrics from Grafana...
+      Click "Run Query" button above to fetch telemetry metrics from Grafana.
     </div>
   `;
-  
-  // Run query
-  runActiveQuery();
 }
 
 function exitQueryResultsView() {
@@ -4941,6 +4941,21 @@ async function runActiveQuery() {
   
   if (btn) btn.disabled = true;
   if (spinner) spinner.classList.remove('hidden');
+  
+  // Set output area to loading state
+  outputArea.removeAttribute('style');
+  outputArea.style.minHeight = '200px';
+  outputArea.style.display = 'flex';
+  outputArea.style.alignItems = 'center';
+  outputArea.style.justifyContent = 'center';
+  outputArea.style.background = 'rgba(0,0,0,0.15)';
+  outputArea.style.borderRadius = '4px';
+  outputArea.style.border = '1px dashed var(--app-border)';
+  outputArea.innerHTML = `
+    <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
+      <span class="spinner" style="margin-right: 8px;"></span> Executing query metrics from Grafana...
+    </div>
+  `;
   
   try {
     const res = await fetch(`/api/v1/query-explorer/panels/${panelId}/query`, {
