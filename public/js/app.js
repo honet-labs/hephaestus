@@ -5187,7 +5187,6 @@ window.switchQueryExplorerSheet = function(ip) {
     }
   });
 };
-}
 
 function exportActivePanelToExcel() {
   if (!activeQueryPanelId) return;
