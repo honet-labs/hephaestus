@@ -5061,8 +5061,8 @@ function renderActiveDataTable(data) {
     `;
     
     subHeaderHtml += `
-      <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">IP Address</th>
       <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">Timestamp</th>
+      <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">IP Address</th>
     `;
     
     columns.forEach((col, colIdx) => {
@@ -5087,8 +5087,8 @@ function renderActiveDataTable(data) {
       const ipData = row[ip] || {};
       
       rowsHtml += `
-        <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${ip}</td>
         <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${row.timestampStr}</td>
+        <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${ip}</td>
       `;
       
       columns.forEach((col, colIdx) => {
@@ -5165,16 +5165,17 @@ function addQueryColumnInput(name, query) {
   const div = document.createElement('div');
   div.className = 'query-column-row';
   div.style.display = 'grid';
-  div.style.gridTemplateColumns = '180px 1fr 40px';
+  div.style.gridTemplateColumns = '150px 1fr 40px';
   div.style.gap = '12px';
   div.style.alignItems = 'center';
+  div.style.marginBottom = '12px';
   
   div.innerHTML = `
     <div>
       <input type="text" placeholder="e.g. CPU" class="query-col-name form-control" value="${escapeHtml(name)}" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
     </div>
     <div>
-      <textarea placeholder="PromQL: e.g. 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)" class="query-col-expr form-control" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; height: 35px; box-sizing: border-box; resize: none; font-family: monospace;"></textarea>
+      <textarea placeholder="PromQL: e.g. 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)" class="query-col-expr form-control" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; height: 55px; box-sizing: border-box; resize: vertical; font-family: monospace;"></textarea>
     </div>
     <div style="text-align: center;">
       <button type="button" class="btn btn-secondary" onclick="removeQueryColumnInput(this)" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255,123,114,0.15);">
@@ -5563,8 +5564,8 @@ function exportPanelToCsv(panelId) {
   // Build Header Row 2: Sub-headers
   const header2 = [];
   ips.forEach(ip => {
-    header2.push('IP_Address');
     header2.push('Timestamp');
+    header2.push('IP_Address');
     columns.forEach(col => {
       header2.push(col);
     });
@@ -5576,8 +5577,8 @@ function exportPanelToCsv(panelId) {
     const csvRow = [];
     ips.forEach(ip => {
       const ipData = row[ip] || {};
-      csvRow.push(ip);
       csvRow.push(row.timestampStr);
+      csvRow.push(ip);
       columns.forEach(col => {
         const val = ipData[col];
         if (val !== undefined && val !== null) {
