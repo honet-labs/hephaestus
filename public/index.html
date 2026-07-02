@@ -1129,15 +1129,9 @@
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                   <span>Back</span>
                 </button>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <div>
-                    <h2 id="query-results-title" style="margin: 0; font-size: 18px; color: var(--text-white);">Panel Name</h2>
-                    <p id="query-results-desc" style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--text-muted);">Panel Description</p>
-                  </div>
-                  <button type="button" class="btn btn-secondary" onclick="openAddQueryPanelModal()" style="padding: 4px 10px; font-size: 11px; height: auto; border-color: var(--app-border); display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.03);">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <span>Add Query Panel</span>
-                  </button>
+                <div>
+                  <h2 id="query-results-title" style="margin: 0; font-size: 18px; color: var(--text-white);">Panel Name</h2>
+                  <p id="query-results-desc" style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--text-muted);">Panel Description</p>
                 </div>
               </div>
               
@@ -1147,6 +1141,10 @@
               </div>
 
               <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-secondary" onclick="openAddQueryPanelModal()" style="padding: 6px 12px; font-size: 11px; height: 30px; border-color: var(--app-border); display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <span>Add Query</span>
+                </button>
                 <button class="btn btn-primary" id="btn-results-run" onclick="runActiveQuery()" style="padding: 6px 12px; font-size: 11px; height: 30px; display: inline-flex; align-items: center; gap: 6px;">
                   <span class="spinner hidden" id="spinner-results-run" style="width: 10px; height: 10px; border-width: 2px;"></span>
                   <span>Run Query</span>
