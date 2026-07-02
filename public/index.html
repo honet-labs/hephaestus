@@ -1089,32 +1089,75 @@
 
         <!-- PAGE: QUERY DATA EXPLORER -->
         <div id="page-query-explorer" class="hidden">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--app-border); padding-bottom: 16px;">
-            <div>
-              <h2 style="margin: 0; font-size: 18px; color: var(--text-white);">Query Data Explorer</h2>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Create panel views to query and display tabular metric data side-by-side grouped by server.</p>
+          
+          <!-- STATE A: LIST VIEW -->
+          <div id="query-explorer-list-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--app-border); padding-bottom: 16px;">
+              <div>
+                <h2 style="margin: 0; font-size: 18px; color: var(--text-white);">Query Data Panels</h2>
+                <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Create panel views to query and display tabular metric data side-by-side grouped by server.</p>
+              </div>
+              <button class="btn btn-primary" onclick="openAddQueryPanelModal()" style="display: flex; align-items: center; gap: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Add Query Panel</span>
+              </button>
             </div>
-            <button class="btn btn-primary" onclick="openAddQueryPanelModal()" style="display: flex; align-items: center; gap: 8px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>Add Query Panel</span>
-            </button>
+
+            <!-- Empty State -->
+            <div id="query-explorer-empty-state" class="panel hidden" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border: 1px dashed var(--app-border); background: rgba(255,255,255,0.01);">
+              <div style="color: var(--text-muted); display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </div>
+              <div>
+                <h3 style="margin: 0; font-size: 15px; color: var(--text-white);">No Query Panels Found</h3>
+                <p style="margin: 6px 0 0 0; font-size: 12px; color: var(--text-muted); max-width: 450px;">Create a query panel to fetch metrics (like CPU, Memory, Disk) across servers and view them in a structured table.</p>
+              </div>
+              <button class="btn btn-primary" onclick="openAddQueryPanelModal()">Create First Panel</button>
+            </div>
+
+            <!-- Query Panels List Grid Container -->
+            <div id="query-panels-grid" class="dashboard-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+              <!-- Dynamic panels go here -->
+            </div>
           </div>
 
-          <!-- Empty State -->
-          <div id="query-explorer-empty-state" class="panel hidden" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border: 1px dashed var(--app-border); background: rgba(255,255,255,0.01);">
-            <div style="color: var(--text-muted); display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            </div>
-            <div>
-              <h3 style="margin: 0; font-size: 15px; color: var(--text-white);">No Query Panels Found</h3>
-              <p style="margin: 6px 0 0 0; font-size: 12px; color: var(--text-muted); max-width: 450px;">Create a query panel to fetch metrics (like CPU, Memory, Disk) across servers and view them in a structured table.</p>
-            </div>
-            <button class="btn btn-primary" onclick="openAddQueryPanelModal()">Create First Panel</button>
-          </div>
+          <!-- STATE B: RESULTS / DETAIL VIEW -->
+          <div id="query-explorer-results-container" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--app-border); padding-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="btn btn-secondary" onclick="exitQueryResultsView()" style="padding: 6px 12px; height: auto; display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                  <span>Back</span>
+                </button>
+                <div>
+                  <h2 id="query-results-title" style="margin: 0; font-size: 18px; color: var(--text-white);">Panel Name</h2>
+                  <p id="query-results-desc" style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--text-muted);">Panel Description</p>
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span id="query-results-time-badge" class="status-badge" style="background: rgba(88, 166, 255, 0.1); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.2);">Time Range</span>
+                <span id="query-results-cols-badge" class="status-badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">Columns</span>
+              </div>
 
-          <!-- Query Panels List Container -->
-          <div id="query-panels-list" style="display: flex; flex-direction: column; gap: 24px;">
-            <!-- Dynamic panels containing the tables go here -->
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-primary" id="btn-results-run" onclick="runActiveQuery()" style="padding: 6px 12px; font-size: 11px; height: 30px; display: inline-flex; align-items: center; gap: 6px;">
+                  <span class="spinner hidden" id="spinner-results-run" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                  <span>Refresh Query</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-results-export" onclick="exportActivePanelToCsv()" style="padding: 6px 12px; font-size: 11px; height: 30px; border-color: var(--app-border); display: inline-flex; align-items: center; gap: 6px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Table Output Area -->
+            <div id="query-results-output" style="min-height: 200px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.15); border-radius: 4px; border: 1px dashed var(--app-border);">
+              <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
+                Executing query metrics...
+              </div>
+            </div>
           </div>
         </div>
 

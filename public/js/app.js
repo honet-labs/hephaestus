@@ -4779,12 +4779,19 @@ async function clearActivityLogs() {
 // ==========================================
 let queryPanels = [];
 let queryExplorerDatasources = [];
+let activeQueryPanelId = null;
+const panelQueryCache = {};
 
 function initQueryExplorerPage() {
+  // Exit results view if active
+  activeQueryPanelId = null;
+  document.getElementById('query-explorer-results-container').classList.add('hidden');
+  document.getElementById('query-explorer-list-container').classList.remove('hidden');
+  
   // Reset container view
   document.getElementById('query-explorer-empty-state').classList.add('hidden');
-  document.getElementById('query-panels-list').innerHTML = `
-    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+  document.getElementById('query-panels-grid').innerHTML = `
+    <div style="text-align: center; padding: 40px; color: var(--text-muted); grid-column: 1 / -1;">
       <span class="spinner" style="margin-right: 8px;"></span> Loading query panels...
     </div>
   `;
@@ -4795,7 +4802,7 @@ function initQueryExplorerPage() {
 }
 
 async function loadQueryPanels() {
-  const container = document.getElementById('query-panels-list');
+  const grid = document.getElementById('query-panels-grid');
   const emptyState = document.getElementById('query-explorer-empty-state');
   
   try {
@@ -4806,7 +4813,7 @@ async function loadQueryPanels() {
       queryPanels = result.data || [];
       
       if (queryPanels.length === 0) {
-        container.innerHTML = '';
+        grid.innerHTML = '';
         emptyState.classList.remove('hidden');
         return;
       }
@@ -4814,16 +4821,16 @@ async function loadQueryPanels() {
       emptyState.classList.add('hidden');
       renderQueryPanels(queryPanels);
     } else {
-      container.innerHTML = `
-        <div class="panel" style="padding: 20px; text-align: center; color: #ff7b72;">
+      grid.innerHTML = `
+        <div class="panel" style="padding: 20px; text-align: center; color: #ff7b72; grid-column: 1 / -1;">
           Failed to load query panels: ${result.message || 'Unknown error'}
         </div>
       `;
       addLog('Query Explorer', 'Failed to load query panels: ' + (result.message || 'Unknown error'), 'ERROR');
     }
   } catch (error) {
-    container.innerHTML = `
-      <div class="panel" style="padding: 20px; text-align: center; color: #ff7b72;">
+    grid.innerHTML = `
+      <div class="panel" style="padding: 20px; text-align: center; color: #ff7b72; grid-column: 1 / -1;">
         Error connecting to backend: ${error.message}
       </div>
     `;
@@ -4832,84 +4839,105 @@ async function loadQueryPanels() {
 }
 
 function renderQueryPanels(panels) {
-  const container = document.getElementById('query-panels-list');
-  container.innerHTML = '';
+  const grid = document.getElementById('query-panels-grid');
+  grid.innerHTML = '';
   
   panels.forEach(panel => {
-    // Generate Column Names info badge
     const colNames = panel.columns.map(c => c.name).join(', ');
     
-    const panelEl = document.createElement('div');
-    panelEl.className = 'panel';
-    panelEl.style.display = 'flex';
-    panelEl.style.flexDirection = 'column';
-    panelEl.style.gap = '16px';
-    panelEl.id = `query-panel-card-${panel.id}`;
-    
-    panelEl.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--app-border); padding-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+    grid.innerHTML += `
+      <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
         <div>
-          <h3 style="margin: 0 0 4px 0; font-size: 15px; color: var(--text-white); display: flex; align-items: center; gap: 8px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #58a6ff;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
-            ${escapeHtml(panel.name)}
-          </h3>
-          <p style="margin: 0; font-size: 11.5px; color: var(--text-muted);">${escapeHtml(panel.description || 'No description provided')}</p>
-          
-          <div style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; font-size: 10.5px;">
-            <span class="status-badge" style="background: rgba(88, 166, 255, 0.1); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.2);">
-              Time: ${panel.timeRangeFrom} to ${panel.timeRangeTo} (step: ${panel.step})
-            </span>
-            <span class="status-badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">
-              Columns: ${escapeHtml(colNames)}
-            </span>
-            <span class="status-badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid var(--app-border);">
-              DS UID: ${panel.datasourceUid}
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 14px; color: var(--text-white); display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #58a6ff;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+              ${escapeHtml(panel.name)}
+            </h3>
+            <span class="status-badge status-configured" style="font-size: 9px; font-weight: normal; padding: 2px 6px; text-transform: none;">
+              ${panel.columns.length} Column${panel.columns.length !== 1 ? 's' : ''}
             </span>
           </div>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px; min-height: 34px;">
+            ${escapeHtml(panel.description || 'No description provided.')}
+          </p>
+          <div style="font-size: 11px; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span>Time Range:</span>
+              <strong style="color: var(--text-white); font-weight: normal;">${panel.timeRangeFrom} to ${panel.timeRangeTo} (${panel.step})</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(colNames)}">
+              <span>Metrics:</span>
+              <strong style="color: var(--text-white); font-weight: normal;">${escapeHtml(colNames)}</strong>
+            </div>
+          </div>
         </div>
-        
-        <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
-          <button class="btn btn-primary" id="btn-run-query-${panel.id}" onclick="runQueryForPanel('${panel.id}')" style="padding: 6px 12px; font-size: 11px; height: 30px; display: inline-flex; align-items: center; gap: 6px;">
-            <span class="spinner hidden" id="spinner-run-query-${panel.id}" style="width: 10px; height: 10px; border-width: 2px;"></span>
-            <span>Run Query</span>
+        <div style="display: flex; gap: 8px; border-top: 1px solid var(--app-border); padding-top: 12px; margin-top: auto;">
+          <button class="btn btn-primary" onclick="showQueryResultsView('${panel.id}')" style="flex-grow: 1; padding: 6px 12px; font-size: 11px; height: auto; justify-content: center;">
+            Run Query
           </button>
-          
-          <button class="btn btn-secondary hidden" id="btn-export-csv-${panel.id}" onclick="exportPanelToCsv('${panel.id}')" style="padding: 6px 12px; font-size: 11px; height: 30px; border-color: var(--app-border); display: inline-flex; align-items: center; gap: 6px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            <span>Export CSV</span>
+          <button class="btn btn-secondary" onclick="openEditQueryPanelModal('${panel.id}')" style="padding: 6px 10px; font-size: 11px; height: auto; display: flex; align-items: center; justify-content: center;" title="Edit Panel">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
           </button>
-          
-          <button class="btn btn-secondary" onclick="openEditQueryPanelModal('${panel.id}')" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Panel">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          <button class="btn btn-danger" onclick="deleteQueryPanel('${panel.id}')" style="padding: 6px 10px; font-size: 11px; height: auto; display: flex; align-items: center; justify-content: center;" title="Delete Panel">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           </button>
-          
-          <button class="btn btn-secondary" onclick="deleteQueryPanel('${panel.id}')" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Panel">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
-        </div>
-      </div>
-      
-      <!-- Panel Output Area -->
-      <div id="query-panel-output-${panel.id}" style="min-height: 80px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.15); border-radius: 4px; border: 1px dashed var(--app-border);">
-        <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
-          Click "Run Query" to fetch time-series metrics.
         </div>
       </div>
     `;
-    
-    container.appendChild(panelEl);
   });
 }
 
-// Run Query for a Panel
-// Storing last queried data in global object for CSV exporter
-const panelQueryCache = {};
+function showQueryResultsView(panelId) {
+  const panel = queryPanels.find(p => p.id === panelId);
+  if (!panel) return;
+  
+  activeQueryPanelId = panelId;
+  
+  // Set metadata
+  document.getElementById('query-results-title').textContent = panel.name;
+  document.getElementById('query-results-desc').textContent = panel.description || 'No description provided.';
+  document.getElementById('query-results-time-badge').textContent = `Time: ${panel.timeRangeFrom} to ${panel.timeRangeTo} (step: ${panel.step})`;
+  document.getElementById('query-results-cols-badge').textContent = `Columns: ${panel.columns.map(c => c.name).join(', ')}`;
+  
+  // Switch view state
+  document.getElementById('query-explorer-list-container').classList.add('hidden');
+  document.getElementById('query-explorer-results-container').classList.remove('hidden');
+  
+  // Reset output area to default loading state
+  const outputArea = document.getElementById('query-results-output');
+  outputArea.removeAttribute('style');
+  outputArea.style.minHeight = '200px';
+  outputArea.style.display = 'flex';
+  outputArea.style.alignItems = 'center';
+  outputArea.style.justifyContent = 'center';
+  outputArea.style.background = 'rgba(0,0,0,0.15)';
+  outputArea.style.borderRadius = '4px';
+  outputArea.style.border = '1px dashed var(--app-border)';
+  outputArea.innerHTML = `
+    <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
+      <span class="spinner" style="margin-right: 8px;"></span> Executing query metrics from Grafana...
+    </div>
+  `;
+  
+  // Run query
+  runActiveQuery();
+}
 
-async function runQueryForPanel(panelId) {
-  const btn = document.getElementById(`btn-run-query-${panelId}`);
-  const spinner = document.getElementById(`spinner-run-query-${panelId}`);
-  const exportBtn = document.getElementById(`btn-export-csv-${panelId}`);
-  const outputArea = document.getElementById(`query-panel-output-${panelId}`);
+function exitQueryResultsView() {
+  activeQueryPanelId = null;
+  document.getElementById('query-explorer-results-container').classList.add('hidden');
+  document.getElementById('query-explorer-list-container').classList.remove('hidden');
+  loadQueryPanels();
+}
+
+async function runActiveQuery() {
+  if (!activeQueryPanelId) return;
+  
+  const panelId = activeQueryPanelId;
+  const btn = document.getElementById('btn-results-run');
+  const spinner = document.getElementById('spinner-results-run');
+  const exportBtn = document.getElementById('btn-results-export');
+  const outputArea = document.getElementById('query-results-output');
   
   if (btn) btn.disabled = true;
   if (spinner) spinner.classList.remove('hidden');
@@ -4928,10 +4956,18 @@ async function runQueryForPanel(panelId) {
       const data = result.data;
       panelQueryCache[panelId] = data; // Cache data for exporting
       
-      renderPanelDataTable(panelId, data);
+      renderActiveDataTable(data);
       if (exportBtn) exportBtn.classList.remove('hidden');
       addLog('Query Explorer', `Successfully executed query for panel.`, 'SUCCESS');
     } else {
+      outputArea.removeAttribute('style');
+      outputArea.style.minHeight = '120px';
+      outputArea.style.display = 'flex';
+      outputArea.style.alignItems = 'center';
+      outputArea.style.justifyContent = 'center';
+      outputArea.style.border = '1px solid var(--app-border)';
+      outputArea.style.borderRadius = '4px';
+      outputArea.style.background = 'rgba(255,0,0,0.02)';
       outputArea.innerHTML = `
         <div style="padding: 24px; text-align: center; color: #ff7b72; font-size: 12px;">
           <strong>Query Error:</strong> ${result.message || 'Failed to fetch query results'}
@@ -4940,6 +4976,14 @@ async function runQueryForPanel(panelId) {
       addLog('Query Explorer', `Query execution failed: ${result.message || 'Unknown error'}`, 'ERROR');
     }
   } catch (error) {
+    outputArea.removeAttribute('style');
+    outputArea.style.minHeight = '120px';
+    outputArea.style.display = 'flex';
+    outputArea.style.alignItems = 'center';
+    outputArea.style.justifyContent = 'center';
+    outputArea.style.border = '1px solid var(--app-border)';
+    outputArea.style.borderRadius = '4px';
+    outputArea.style.background = 'rgba(255,0,0,0.02)';
     outputArea.innerHTML = `
       <div style="padding: 24px; text-align: center; color: #ff7b72; font-size: 12px;">
         <strong>Connection Error:</strong> ${error.message}
@@ -4952,14 +4996,21 @@ async function runQueryForPanel(panelId) {
   }
 }
 
-function renderPanelDataTable(panelId, data) {
-  const outputArea = document.getElementById(`query-panel-output-${panelId}`);
+function renderActiveDataTable(data) {
+  const outputArea = document.getElementById('query-results-output');
   
   const ips = data.ips || [];
   const columns = data.columns || [];
   const rows = data.rows || [];
   
   if (ips.length === 0 || rows.length === 0) {
+    outputArea.removeAttribute('style');
+    outputArea.style.minHeight = '120px';
+    outputArea.style.display = 'flex';
+    outputArea.style.alignItems = 'center';
+    outputArea.style.justifyContent = 'center';
+    outputArea.style.border = '1px solid var(--app-border)';
+    outputArea.style.borderRadius = '4px';
     outputArea.innerHTML = `
       <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">
         No telemetry matches found in database for the given time range.
@@ -4976,24 +5027,24 @@ function renderPanelDataTable(panelId, data) {
     const isLast = idx === ips.length - 1;
     const borderStyle = isLast ? '' : 'border-right: 2px solid var(--app-border);';
     topHeaderHtml += `
-      <th colspan="${columns.length + 2}" style="text-align: center; font-weight: bold; background: rgba(88, 166, 255, 0.1); color: var(--text-white); font-size: 11.5px; padding: 10px; ${borderStyle}">
-        IP_Address: ${ip}
+      <th colspan="${columns.length + 2}" style="text-align: center; font-weight: bold; background: rgba(88, 166, 255, 0.15); color: var(--text-white); font-size: 11.5px; padding: 10px; ${borderStyle}">
+        IP Address: ${ip}
       </th>
     `;
     
     subHeaderHtml += `
-      <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">IP_Address</th>
+      <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">IP Address</th>
       <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">Timestamp</th>
     `;
     
-    columns.forEach(col => {
-      subHeaderHtml += `<th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">${escapeHtml(col)}</th>`;
+    columns.forEach((col, colIdx) => {
+      const colIsLast = colIdx === columns.length - 1;
+      const thStyle = (colIsLast && !isLast) 
+        ? 'font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600; border-right: 2px solid var(--app-border);'
+        : 'font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;';
+        
+      subHeaderHtml += `<th style="${thStyle}">${escapeHtml(col)}</th>`;
     });
-    
-    // Add right-hand separator if not last IP
-    if (!isLast) {
-      subHeaderHtml = subHeaderHtml.substring(0, subHeaderHtml.length - 5) + ` style="border-right: 2px solid var(--app-border);">` + escapeHtml(columns[columns.length - 1]) + '</th>';
-    }
   });
   
   // Build rows
@@ -5004,7 +5055,6 @@ function renderPanelDataTable(panelId, data) {
     
     ips.forEach((ip, idx) => {
       const isLast = idx === ips.length - 1;
-      const borderRightClass = isLast ? '' : 'style="border-right: 2px solid var(--app-border);"';
       
       const ipData = row[ip] || {};
       
@@ -5050,18 +5100,19 @@ function renderPanelDataTable(panelId, data) {
   });
   
   // Set output HTML table
+  outputArea.removeAttribute('style');
   outputArea.className = 'table-wrapper';
   outputArea.style.border = '1px solid var(--app-border)';
   outputArea.style.background = 'transparent';
-  outputArea.style.maxHeight = '500px';
+  outputArea.style.maxHeight = '550px';
   outputArea.style.overflow = 'auto';
   outputArea.innerHTML = `
     <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
       <thead>
-        <tr style="border-bottom: 1px solid var(--app-border); background: var(--app-card-dark);">
+        <tr style="border-bottom: 1px solid var(--app-border); background: var(--app-sidebar);">
           ${topHeaderHtml}
         </tr>
-        <tr style="border-bottom: 1px solid var(--app-border); background: rgba(0,0,0,0.2);">
+        <tr style="border-bottom: 1px solid var(--app-border); background: rgba(0,0,0,0.25);">
           ${subHeaderHtml}
         </tr>
       </thead>
@@ -5071,6 +5122,12 @@ function renderPanelDataTable(panelId, data) {
     </table>
   `;
 }
+
+function exportActivePanelToCsv() {
+  if (!activeQueryPanelId) return;
+  exportPanelToCsv(activeQueryPanelId);
+}
+
 
 // Modal column inputs handlers
 function addQueryColumnInput(name, query) {
