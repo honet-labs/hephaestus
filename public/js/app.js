@@ -5456,6 +5456,10 @@ async function submitQueryPanelForm() {
     
     if (res.ok && result.success) {
       closeQueryPanelModal();
+      // Switch back to list view if currently in results view
+      document.getElementById('query-explorer-results-container').classList.add('hidden');
+      document.getElementById('query-explorer-list-container').classList.remove('hidden');
+      activeQueryPanelId = null;
       loadQueryPanels();
       addLog('Query Explorer', `Successfully saved query panel "${name}".`, 'SUCCESS');
     } else {
