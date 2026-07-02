@@ -1,0 +1,284 @@
+import axios from "axios";
+import config from "../config/env";
+import pool, { query, logActivity } from "../config/db";
+
+export interface QueryColumn {
+  name: string;
+  query: string;
+}
+
+export interface QueryPanelItem {
+  id: string;
+  name: string;
+  description?: string;
+  datasourceType: string;
+  datasourceUid: string;
+  timeRangeFrom: string;
+  timeRangeTo: string;
+  step: string;
+  columns: QueryColumn[];
+  createdAt?: Date;
+}
+
+function parseRelativeTime(timeStr: string): number {
+  const now = Math.floor(Date.now() / 1000);
+  if (timeStr === "now") return now;
+  const match = timeStr.trim().match(/^now-(\d+)([smhdwy])$/);
+  if (!match) {
+    const parsed = Date.parse(timeStr);
+    if (!isNaN(parsed)) {
+      return Math.floor(parsed / 1000);
+    }
+    return now;
+  }
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  let seconds = 0;
+  switch (unit) {
+    case "s": seconds = value; break;
+    case "m": seconds = value * 60; break;
+    case "h": seconds = value * 3600; break;
+    case "d": seconds = value * 86400; break;
+    case "w": seconds = value * 86400 * 7; break;
+    case "y": seconds = value * 86400 * 365; break;
+  }
+  return now - seconds;
+}
+
+function formatTimestamp(epochSecs: number): string {
+  const date = new Date(epochSecs * 1000);
+  const pad = (num: number) => num.toString().padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+export class QueryExplorerService {
+  /**
+   * Retrieves all saved query panels.
+   */
+  public async getQueryPanels(): Promise<QueryPanelItem[]> {
+    const res = await query(
+      `SELECT id, name, description, datasource_type AS "datasourceType", datasource_uid AS "datasourceUid", 
+              time_range_from AS "timeRangeFrom", time_range_to AS "timeRangeTo", step, columns, created_at AS "createdAt"
+       FROM query_panels
+       ORDER BY created_at DESC`
+    );
+    return res.rows;
+  }
+
+  /**
+   * Retrieves a single query panel by ID.
+   */
+  public async getQueryPanelById(id: string): Promise<QueryPanelItem | null> {
+    const res = await query(
+      `SELECT id, name, description, datasource_type AS "datasourceType", datasource_uid AS "datasourceUid", 
+              time_range_from AS "timeRangeFrom", time_range_to AS "timeRangeTo", step, columns, created_at AS "createdAt"
+       FROM query_panels
+       WHERE id = $1`,
+      [id]
+    );
+    if (res.rows.length === 0) return null;
+    return res.rows[0];
+  }
+
+  /**
+   * Saves or updates a query panel.
+   */
+  public async saveQueryPanel(panel: Partial<QueryPanelItem>): Promise<QueryPanelItem> {
+    const columnsJson = JSON.stringify(panel.columns || []);
+    
+    if (panel.id) {
+      await query(
+        `UPDATE query_panels
+         SET name = $1, description = $2, datasource_type = $3, datasource_uid = $4, 
+             time_range_from = $5, time_range_to = $6, step = $7, columns = $8
+         WHERE id = $9`,
+        [
+          panel.name,
+          panel.description || null,
+          panel.datasourceType || "grafana",
+          panel.datasourceUid,
+          panel.timeRangeFrom || "now-1h",
+          panel.timeRangeTo || "now",
+          panel.step || "1m",
+          columnsJson,
+          panel.id
+        ]
+      );
+      
+      const updated = await this.getQueryPanelById(panel.id);
+      if (!updated) throw new Error("Failed to retrieve updated query panel.");
+      return updated;
+    } else {
+      const newId = "qp-" + Date.now();
+      await query(
+        `INSERT INTO query_panels (id, name, description, datasource_type, datasource_uid, time_range_from, time_range_to, step, columns)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          newId,
+          panel.name,
+          panel.description || null,
+          panel.datasourceType || "grafana",
+          panel.datasourceUid,
+          panel.timeRangeFrom || "now-1h",
+          panel.timeRangeTo || "now",
+          panel.step || "1m",
+          columnsJson
+        ]
+      );
+      
+      const created = await this.getQueryPanelById(newId);
+      if (!created) throw new Error("Failed to retrieve created query panel.");
+      return created;
+    }
+  }
+
+  /**
+   * Deletes a query panel by ID.
+   */
+  public async deleteQueryPanel(id: string): Promise<void> {
+    await query("DELETE FROM query_panels WHERE id = $1", [id]);
+  }
+
+  /**
+   * Executes queries for all columns in a query panel and returns aligned tabular data.
+   */
+  public async executeQuery(
+    datasourceUid: string,
+    timeRangeFrom: string,
+    timeRangeTo: string,
+    step: string,
+    columns: QueryColumn[]
+  ): Promise<any> {
+    const grafanaConfig = config.getGrafanaConfig();
+    if (!grafanaConfig.isConfigured) {
+      throw new Error("Grafana Integration is not configured. Please configure it in Settings first.");
+    }
+
+    const start = parseRelativeTime(timeRangeFrom);
+    const end = parseRelativeTime(timeRangeTo);
+    
+    // Build Grafana Datasource Proxy Query URL
+    const proxyUrl = `${grafanaConfig.host}/api/datasources/proxy/uid/${datasourceUid}/api/v1/query_range`;
+    
+    console.log(`[QueryExplorer] Target Proxy URL: ${proxyUrl}`);
+    console.log(`[QueryExplorer] Range: ${start} to ${end} (step: ${step})`);
+
+    // dataStore[ipAddress][timestampSecs][columnName] = value
+    const dataStore: Record<string, Record<number, Record<string, any>>> = {};
+    const allTimestamps = new Set<number>();
+    const allIps = new Set<string>();
+
+    // Run queries in parallel
+    const queryPromises = columns.map(async (col) => {
+      try {
+        const response = await axios.get(proxyUrl, {
+          params: {
+            query: col.query,
+            start,
+            end,
+            step
+          },
+          headers: {
+            "Authorization": `Bearer ${grafanaConfig.token}`
+          },
+          timeout: 15000
+        });
+
+        if (response.data && response.data.status === "success" && response.data.data.result) {
+          const results = response.data.data.result;
+          
+          for (const item of results) {
+            const metric = item.metric || {};
+            
+            // Extract IP Address or instance from metrics
+            let ipAddress = "Unknown";
+            if (metric.instance) {
+              ipAddress = metric.instance.split(":")[0];
+            } else if (metric.node) {
+              ipAddress = metric.node.split(":")[0];
+            } else {
+              // Find first key that looks like an ip address or has any label
+              const keys = Object.keys(metric);
+              if (keys.length > 0) {
+                // If it's job, skip it if there's other info
+                const valKey = keys.find(k => k !== "job") || keys[0];
+                ipAddress = metric[valKey];
+              }
+            }
+
+            allIps.add(ipAddress);
+
+            // Populate timeseries values
+            const values = item.values || []; // Array of [timestamp, value]
+            for (const [ts, val] of values) {
+              const tsSecs = Math.floor(parseFloat(ts));
+              allTimestamps.add(tsSecs);
+
+              if (!dataStore[ipAddress]) {
+                dataStore[ipAddress] = {};
+              }
+              if (!dataStore[ipAddress][tsSecs]) {
+                dataStore[ipAddress][tsSecs] = {};
+              }
+
+              const numVal = parseFloat(val);
+              dataStore[ipAddress][tsSecs][col.name] = isNaN(numVal) ? val : numVal;
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error(`[QueryExplorer] Column query "${col.name}" failed:`, err.message);
+        // We continue executing other queries even if one fails
+      }
+    });
+
+    await Promise.all(queryPromises);
+
+    // Sort IP Addresses and Timestamps
+    const sortedIps = Array.from(allIps).sort();
+    const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => b - a); // descending by default for latest first in table
+
+    // Format the response data for easy rendering
+    // We will align data by timestamp
+    const rows: any[] = [];
+    
+    for (const ts of sortedTimestamps) {
+      const timestampStr = formatTimestamp(ts);
+      
+      // We return both flat rows and structured side-by-side cells
+      const rowItem: Record<string, any> = {
+        timestamp: ts,
+        timestampStr: timestampStr
+      };
+
+      // Populate flat values for each IP
+      sortedIps.forEach((ip) => {
+        rowItem[ip] = {
+          ipAddress: ip,
+          timestampStr: timestampStr
+        };
+        
+        columns.forEach((col) => {
+          const val = (dataStore[ip] && dataStore[ip][ts]) ? dataStore[ip][ts][col.name] : null;
+          rowItem[ip][col.name] = val;
+        });
+      });
+
+      rows.push(rowItem);
+    }
+
+    return {
+      ips: sortedIps,
+      columns: columns.map(c => c.name),
+      rows: rows
+    };
+  }
+}
+
+export const queryExplorerService = new QueryExplorerService();

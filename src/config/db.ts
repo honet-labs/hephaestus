@@ -306,6 +306,20 @@ export async function initDb() {
       action VARCHAR(100) NOT NULL,
       details TEXT,
       status VARCHAR(50) DEFAULT 'SUCCESS'
+    );`,
+
+    // 8. Query Panels table
+    `CREATE TABLE IF NOT EXISTS query_panels (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      datasource_type VARCHAR(50) NOT NULL,
+      datasource_uid VARCHAR(100) NOT NULL,
+      time_range_from VARCHAR(50) DEFAULT 'now-1h',
+      time_range_to VARCHAR(50) DEFAULT 'now',
+      step VARCHAR(50) DEFAULT '1m',
+      columns JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
@@ -323,7 +337,8 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_grafana_configs_is_active ON grafana_configs(is_active) WHERE is_active = true;`,
     `CREATE INDEX IF NOT EXISTS idx_prometheus_configs_is_active ON prometheus_configs(is_active) WHERE is_active = true;`,
     `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`,
-    `CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp DESC);`
+    `CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_query_panels_created_at ON query_panels(created_at DESC);`
   ];
 
   for (const q of indexQueries) {

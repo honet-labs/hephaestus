@@ -10,6 +10,7 @@ import snmpRoutes from "./routes/snmp.routes";
 import systemRoutes from "./routes/system.routes";
 import userRoutes from "./routes/user.routes";
 import activityLogRoutes from "./routes/activity-log.routes";
+import queryExplorerRoutes from "./routes/query-explorer.routes";
 
 const app = express();
 
@@ -61,6 +62,7 @@ app.use("/api/v1/snmp", snmpRoutes);
 app.use("/api/v1/system", systemRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/activity-logs", activityLogRoutes);
+app.use("/api/v1/query-explorer", queryExplorerRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {

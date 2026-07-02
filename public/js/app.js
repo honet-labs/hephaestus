@@ -2,7 +2,7 @@
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -284,6 +284,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'Activity Audit Logs';
     pageDesc.textContent = 'View and query chronological audit logs of portal configuration events.';
     initActivityLogsPage();
+  } else if (pageId === 'query-explorer') {
+    pageTitle.textContent = 'Query Data Explorer';
+    pageDesc.textContent = 'Fetch and align multi-column metrics grouped by server IP Address from Grafana datasources.';
+    initQueryExplorerPage();
   }
 }
 
@@ -4769,6 +4773,713 @@ async function clearActivityLogs() {
     alert('Error connecting to backend: ' + error.message);
   }
 }
+
+// ==========================================
+// QUERY DATA EXPLORER MODULE
+// ==========================================
+let queryPanels = [];
+let queryExplorerDatasources = [];
+
+function initQueryExplorerPage() {
+  // Reset container view
+  document.getElementById('query-explorer-empty-state').classList.add('hidden');
+  document.getElementById('query-panels-list').innerHTML = `
+    <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+      <span class="spinner" style="margin-right: 8px;"></span> Loading query panels...
+    </div>
+  `;
+  
+  // Load initial settings and panels
+  populateGrafanaConnectionsForQueryPanel();
+  loadQueryPanels();
+}
+
+async function loadQueryPanels() {
+  const container = document.getElementById('query-panels-list');
+  const emptyState = document.getElementById('query-explorer-empty-state');
+  
+  try {
+    const res = await fetch('/api/v1/query-explorer/panels');
+    const result = await res.json();
+    
+    if (res.ok && result.success) {
+      queryPanels = result.data || [];
+      
+      if (queryPanels.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      emptyState.classList.add('hidden');
+      renderQueryPanels(queryPanels);
+    } else {
+      container.innerHTML = `
+        <div class="panel" style="padding: 20px; text-align: center; color: #ff7b72;">
+          Failed to load query panels: ${result.message || 'Unknown error'}
+        </div>
+      `;
+      addLog('Query Explorer', 'Failed to load query panels: ' + (result.message || 'Unknown error'), 'ERROR');
+    }
+  } catch (error) {
+    container.innerHTML = `
+      <div class="panel" style="padding: 20px; text-align: center; color: #ff7b72;">
+        Error connecting to backend: ${error.message}
+      </div>
+    `;
+    addLog('Query Explorer', 'API connection error while loading panels: ' + error.message, 'ERROR');
+  }
+}
+
+function renderQueryPanels(panels) {
+  const container = document.getElementById('query-panels-list');
+  container.innerHTML = '';
+  
+  panels.forEach(panel => {
+    // Generate Column Names info badge
+    const colNames = panel.columns.map(c => c.name).join(', ');
+    
+    const panelEl = document.createElement('div');
+    panelEl.className = 'panel';
+    panelEl.style.display = 'flex';
+    panelEl.style.flexDirection = 'column';
+    panelEl.style.gap = '16px';
+    panelEl.id = `query-panel-card-${panel.id}`;
+    
+    panelEl.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--app-border); padding-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h3 style="margin: 0 0 4px 0; font-size: 15px; color: var(--text-white); display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #58a6ff;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+            ${escapeHtml(panel.name)}
+          </h3>
+          <p style="margin: 0; font-size: 11.5px; color: var(--text-muted);">${escapeHtml(panel.description || 'No description provided')}</p>
+          
+          <div style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; font-size: 10.5px;">
+            <span class="status-badge" style="background: rgba(88, 166, 255, 0.1); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.2);">
+              Time: ${panel.timeRangeFrom} to ${panel.timeRangeTo} (step: ${panel.step})
+            </span>
+            <span class="status-badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">
+              Columns: ${escapeHtml(colNames)}
+            </span>
+            <span class="status-badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid var(--app-border);">
+              DS UID: ${panel.datasourceUid}
+            </span>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
+          <button class="btn btn-primary" id="btn-run-query-${panel.id}" onclick="runQueryForPanel('${panel.id}')" style="padding: 6px 12px; font-size: 11px; height: 30px; display: inline-flex; align-items: center; gap: 6px;">
+            <span class="spinner hidden" id="spinner-run-query-${panel.id}" style="width: 10px; height: 10px; border-width: 2px;"></span>
+            <span>Run Query</span>
+          </button>
+          
+          <button class="btn btn-secondary hidden" id="btn-export-csv-${panel.id}" onclick="exportPanelToCsv('${panel.id}')" style="padding: 6px 12px; font-size: 11px; height: 30px; border-color: var(--app-border); display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Export CSV</span>
+          </button>
+          
+          <button class="btn btn-secondary" onclick="openEditQueryPanelModal('${panel.id}')" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Panel">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </button>
+          
+          <button class="btn btn-secondary" onclick="deleteQueryPanel('${panel.id}')" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Panel">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Panel Output Area -->
+      <div id="query-panel-output-${panel.id}" style="min-height: 80px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.15); border-radius: 4px; border: 1px dashed var(--app-border);">
+        <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
+          Click "Run Query" to fetch time-series metrics.
+        </div>
+      </div>
+    `;
+    
+    container.appendChild(panelEl);
+  });
+}
+
+// Run Query for a Panel
+// Storing last queried data in global object for CSV exporter
+const panelQueryCache = {};
+
+async function runQueryForPanel(panelId) {
+  const btn = document.getElementById(`btn-run-query-${panelId}`);
+  const spinner = document.getElementById(`spinner-run-query-${panelId}`);
+  const exportBtn = document.getElementById(`btn-export-csv-${panelId}`);
+  const outputArea = document.getElementById(`query-panel-output-${panelId}`);
+  
+  if (btn) btn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  
+  try {
+    const res = await fetch(`/api/v1/query-explorer/panels/${panelId}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const result = await res.json();
+    
+    if (res.ok && result.success) {
+      const data = result.data;
+      panelQueryCache[panelId] = data; // Cache data for exporting
+      
+      renderPanelDataTable(panelId, data);
+      if (exportBtn) exportBtn.classList.remove('hidden');
+      addLog('Query Explorer', `Successfully executed query for panel.`, 'SUCCESS');
+    } else {
+      outputArea.innerHTML = `
+        <div style="padding: 24px; text-align: center; color: #ff7b72; font-size: 12px;">
+          <strong>Query Error:</strong> ${result.message || 'Failed to fetch query results'}
+        </div>
+      `;
+      addLog('Query Explorer', `Query execution failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (error) {
+    outputArea.innerHTML = `
+      <div style="padding: 24px; text-align: center; color: #ff7b72; font-size: 12px;">
+        <strong>Connection Error:</strong> ${error.message}
+      </div>
+    `;
+    addLog('Query Explorer', `Network error executing query: ${error.message}`, 'ERROR');
+  } finally {
+    if (btn) btn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
+  }
+}
+
+function renderPanelDataTable(panelId, data) {
+  const outputArea = document.getElementById(`query-panel-output-${panelId}`);
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  const rows = data.rows || [];
+  
+  if (ips.length === 0 || rows.length === 0) {
+    outputArea.innerHTML = `
+      <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">
+        No telemetry matches found in database for the given time range.
+      </div>
+    `;
+    return;
+  }
+  
+  // Build headers
+  let topHeaderHtml = '';
+  let subHeaderHtml = '';
+  
+  ips.forEach((ip, idx) => {
+    const isLast = idx === ips.length - 1;
+    const borderStyle = isLast ? '' : 'border-right: 2px solid var(--app-border);';
+    topHeaderHtml += `
+      <th colspan="${columns.length + 2}" style="text-align: center; font-weight: bold; background: rgba(88, 166, 255, 0.1); color: var(--text-white); font-size: 11.5px; padding: 10px; ${borderStyle}">
+        IP_Address: ${ip}
+      </th>
+    `;
+    
+    subHeaderHtml += `
+      <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">IP_Address</th>
+      <th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">Timestamp</th>
+    `;
+    
+    columns.forEach(col => {
+      subHeaderHtml += `<th style="font-size: 10.5px; padding: 8px; color: var(--text-muted); font-weight: 600;">${escapeHtml(col)}</th>`;
+    });
+    
+    // Add right-hand separator if not last IP
+    if (!isLast) {
+      subHeaderHtml = subHeaderHtml.substring(0, subHeaderHtml.length - 5) + ` style="border-right: 2px solid var(--app-border);">` + escapeHtml(columns[columns.length - 1]) + '</th>';
+    }
+  });
+  
+  // Build rows
+  let rowsHtml = '';
+  
+  rows.forEach(row => {
+    rowsHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 11.5px;">`;
+    
+    ips.forEach((ip, idx) => {
+      const isLast = idx === ips.length - 1;
+      const borderRightClass = isLast ? '' : 'style="border-right: 2px solid var(--app-border);"';
+      
+      const ipData = row[ip] || {};
+      
+      rowsHtml += `
+        <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${ip}</td>
+        <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${row.timestampStr}</td>
+      `;
+      
+      columns.forEach((col, colIdx) => {
+        const val = ipData[col];
+        let displayVal = '-';
+        let valStyle = '';
+        
+        if (val !== undefined && val !== null) {
+          if (typeof val === 'number') {
+            displayVal = val.toFixed(2);
+            // Dynamic styling
+            const lowerCol = col.toLowerCase();
+            if (lowerCol.includes('cpu') || lowerCol.includes('mem') || lowerCol.includes('ram') || lowerCol.includes('disk') || lowerCol.includes('usage')) {
+              if (val > 90) {
+                valStyle = 'color: #ff7b72; font-weight: bold;'; // Danger Red
+              } else if (val > 75) {
+                valStyle = 'color: #e3b341; font-weight: bold;'; // Warning Orange
+              } else {
+                valStyle = 'color: #56d364;'; // OK Green
+              }
+            }
+          } else {
+            displayVal = String(val);
+          }
+        }
+        
+        const cellIsLast = colIdx === columns.length - 1;
+        if (cellIsLast && !isLast) {
+          rowsHtml += `<td style="padding: 8px; font-family: monospace; ${valStyle} border-right: 2px solid var(--app-border);">${displayVal}</td>`;
+        } else {
+          rowsHtml += `<td style="padding: 8px; font-family: monospace; ${valStyle}">${displayVal}</td>`;
+        }
+      });
+    });
+    
+    rowsHtml += `</tr>`;
+  });
+  
+  // Set output HTML table
+  outputArea.className = 'table-wrapper';
+  outputArea.style.border = '1px solid var(--app-border)';
+  outputArea.style.background = 'transparent';
+  outputArea.style.maxHeight = '500px';
+  outputArea.style.overflow = 'auto';
+  outputArea.innerHTML = `
+    <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
+      <thead>
+        <tr style="border-bottom: 1px solid var(--app-border); background: var(--app-card-dark);">
+          ${topHeaderHtml}
+        </tr>
+        <tr style="border-bottom: 1px solid var(--app-border); background: rgba(0,0,0,0.2);">
+          ${subHeaderHtml}
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+  `;
+}
+
+// Modal column inputs handlers
+function addQueryColumnInput(name, query) {
+  const container = document.getElementById('query-panel-columns-list');
+  const index = container.children.length;
+  
+  const div = document.createElement('div');
+  div.className = 'query-column-row';
+  div.style.display = 'grid';
+  div.style.gridTemplateColumns = '180px 1fr 40px';
+  div.style.gap = '12px';
+  div.style.alignItems = 'center';
+  
+  div.innerHTML = `
+    <div>
+      <input type="text" placeholder="e.g. CPU" class="query-col-name form-control" value="${escapeHtml(name)}" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+    </div>
+    <div>
+      <textarea placeholder="PromQL: e.g. 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)" class="query-col-expr form-control" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; height: 35px; box-sizing: border-box; resize: none; font-family: monospace;"></textarea>
+    </div>
+    <div style="text-align: center;">
+      <button type="button" class="btn btn-secondary" onclick="removeQueryColumnInput(this)" style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255,123,114,0.15);">
+        &times;
+      </button>
+    </div>
+  `;
+  
+  // Set textarea content correctly to handle raw string literals
+  div.querySelector('.query-col-expr').value = query;
+  
+  container.appendChild(div);
+}
+
+function removeQueryColumnInput(btn) {
+  const row = btn.closest('.query-column-row');
+  if (row) {
+    row.remove();
+  }
+}
+
+// Modal open/close handlers
+async function populateGrafanaConnectionsForQueryPanel() {
+  const select = document.getElementById('query-panel-config-id');
+  if (!select) return;
+  
+  // Fetch configurations list if empty
+  if (grafanaConfigs.length === 0) {
+    try {
+      const res = await fetch('/api/v1/settings/grafana/configs');
+      const r = await res.json();
+      if (r.success && Array.isArray(r.data)) {
+        grafanaConfigs = r.data;
+      }
+    } catch (_) {}
+  }
+  
+  // Populate options
+  select.innerHTML = '<option value="">-- Use Active Configuration --</option>';
+  grafanaConfigs.forEach(c => {
+    select.innerHTML += `<option value="${c.id}">${escapeHtml(c.name)} (${c.host})</option>`;
+  });
+}
+
+async function loadGrafanaDatasourcesForPanel() {
+  const configSelect = document.getElementById('query-panel-config-id');
+  const dsSelect = document.getElementById('query-panel-datasource-uid');
+  
+  dsSelect.innerHTML = '<option value="">Loading datasources...</option>';
+  
+  const configId = configSelect.value;
+  const url = configId 
+    ? `/api/v1/settings/grafana/datasources?configId=${configId}`
+    : `/api/v1/settings/grafana/datasources`;
+    
+  try {
+    const res = await fetch(url);
+    const result = await res.json();
+    
+    if (res.ok && result.success && Array.isArray(result.data)) {
+      const datasources = result.data;
+      
+      // Filter prometheus datasources or show all
+      const promDatasources = datasources.filter(ds => ds.type === 'prometheus');
+      
+      if (promDatasources.length === 0 && datasources.length > 0) {
+        dsSelect.innerHTML = '<option value="">-- Select Datasource --</option>';
+        datasources.forEach(ds => {
+          dsSelect.innerHTML += `<option value="${ds.uid}">${escapeHtml(ds.name)} (${ds.type})</option>`;
+        });
+      } else if (promDatasources.length > 0) {
+        dsSelect.innerHTML = '<option value="">-- Select Prometheus Datasource --</option>';
+        promDatasources.forEach(ds => {
+          dsSelect.innerHTML += `<option value="${ds.uid}" selected>${escapeHtml(ds.name)}</option>`;
+        });
+      } else {
+        dsSelect.innerHTML = '<option value="">No datasources found</option>';
+      }
+    } else {
+      dsSelect.innerHTML = '<option value="">Failed to load datasources</option>';
+    }
+  } catch (error) {
+    dsSelect.innerHTML = '<option value="">Connection error loading datasources</option>';
+  }
+}
+
+function openAddQueryPanelModal() {
+  document.getElementById('query-panel-modal-title').textContent = 'Add Query Panel';
+  document.getElementById('query-panel-id').value = '';
+  document.getElementById('query-panel-name').value = '';
+  document.getElementById('query-panel-description').value = '';
+  document.getElementById('query-panel-config-id').value = '';
+  document.getElementById('query-panel-from').value = 'now-1h';
+  document.getElementById('query-panel-to').value = 'now';
+  document.getElementById('query-panel-step').value = '1m';
+  
+  document.getElementById('query-panel-columns-list').innerHTML = '';
+  document.getElementById('query-test-feedback').classList.add('hidden');
+  
+  // Add two default metric columns for CPU and Memory
+  addQueryColumnInput('CPU', '100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)');
+  addQueryColumnInput('Memory', '(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100');
+  
+  // Load datasources
+  loadGrafanaDatasourcesForPanel();
+  
+  document.getElementById('modal-query-panel').classList.add('active');
+}
+
+async function openEditQueryPanelModal(panelId) {
+  const panel = queryPanels.find(p => p.id === panelId);
+  if (!panel) return;
+  
+  document.getElementById('query-panel-modal-title').textContent = 'Edit Query Panel';
+  document.getElementById('query-panel-id').value = panel.id;
+  document.getElementById('query-panel-name').value = panel.name;
+  document.getElementById('query-panel-description').value = panel.description || '';
+  document.getElementById('query-panel-from').value = panel.timeRangeFrom;
+  document.getElementById('query-panel-to').value = panel.timeRangeTo;
+  document.getElementById('query-panel-step').value = panel.step;
+  
+  // We can select the config associated with this datasource if needed, but since active is default, we can leave config selection as default
+  document.getElementById('query-panel-config-id').value = '';
+  
+  document.getElementById('query-panel-columns-list').innerHTML = '';
+  document.getElementById('query-test-feedback').classList.add('hidden');
+  
+  panel.columns.forEach(col => {
+    addQueryColumnInput(col.name, col.query);
+  });
+  
+  // Set datasource list selection
+  await loadGrafanaDatasourcesForPanel();
+  document.getElementById('query-panel-datasource-uid').value = panel.datasourceUid;
+  
+  document.getElementById('modal-query-panel').classList.add('active');
+}
+
+function closeQueryPanelModal() {
+  document.getElementById('modal-query-panel').classList.remove('active');
+}
+
+// Get columns list from modal form fields
+function getColumnsFromModal() {
+  const colElements = document.querySelectorAll('#query-panel-columns-list .query-column-row');
+  const columns = [];
+  
+  colElements.forEach(el => {
+    const nameInput = el.querySelector('.query-col-name');
+    const exprInput = el.querySelector('.query-col-expr');
+    
+    if (nameInput && exprInput && nameInput.value.trim() !== '' && exprInput.value.trim() !== '') {
+      columns.push({
+        name: nameInput.value.trim(),
+        query: exprInput.value.trim()
+      });
+    }
+  });
+  
+  return columns;
+}
+
+// Test Query configuration (Dry Run)
+async function testQueryPanelConfig() {
+  const dsUid = document.getElementById('query-panel-datasource-uid').value;
+  const timeFrom = document.getElementById('query-panel-from').value;
+  const timeTo = document.getElementById('query-panel-to').value;
+  const step = document.getElementById('query-panel-step').value;
+  
+  const columns = getColumnsFromModal();
+  
+  const feedback = document.getElementById('query-test-feedback');
+  const title = document.getElementById('query-test-title');
+  const desc = document.getElementById('query-test-desc');
+  const testBtn = document.querySelector('button[onclick="testQueryPanelConfig()"]');
+  const spinner = document.getElementById('spinner-test-query');
+  
+  if (!dsUid) {
+    feedback.className = 'alert alert-error';
+    title.textContent = 'Validation Error';
+    desc.textContent = 'Please select a Target Datasource.';
+    feedback.classList.remove('hidden');
+    return;
+  }
+  
+  if (columns.length === 0) {
+    feedback.className = 'alert alert-error';
+    title.textContent = 'Validation Error';
+    desc.textContent = 'At least one metric column configuration is required.';
+    feedback.classList.remove('hidden');
+    return;
+  }
+  
+  if (testBtn) testBtn.disabled = true;
+  if (spinner) spinner.classList.remove('hidden');
+  feedback.classList.add('hidden');
+  
+  try {
+    const res = await fetch('/api/v1/query-explorer/query-test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        datasourceUid: dsUid,
+        timeRangeFrom: timeFrom,
+        timeRangeTo: timeTo,
+        step,
+        columns
+      })
+    });
+    
+    const result = await res.json();
+    
+    if (res.ok && result.success) {
+      const data = result.data;
+      const ipsCount = (data.ips || []).length;
+      const rowsCount = (data.rows || []).length;
+      
+      feedback.className = 'alert alert-configured';
+      title.textContent = 'Dry Run Test Passed';
+      desc.textContent = `Found ${ipsCount} servers / IP addresses with ${rowsCount} time-series data rows successfully.`;
+      feedback.classList.remove('hidden');
+    } else {
+      feedback.className = 'alert alert-error';
+      title.textContent = 'Dry Run Test Failed';
+      desc.textContent = result.message || 'Failed to dry run metrics query.';
+      feedback.classList.remove('hidden');
+    }
+  } catch (error) {
+    feedback.className = 'alert alert-error';
+    title.textContent = 'API Connection Error';
+    desc.textContent = error.message;
+    feedback.classList.remove('hidden');
+  } finally {
+    if (testBtn) testBtn.disabled = false;
+    if (spinner) spinner.classList.add('hidden');
+  }
+}
+
+// Submit Panel save/update form
+async function submitQueryPanelForm() {
+  const id = document.getElementById('query-panel-id').value;
+  const name = document.getElementById('query-panel-name').value;
+  const description = document.getElementById('query-panel-description').value;
+  const dsUid = document.getElementById('query-panel-datasource-uid').value;
+  const timeFrom = document.getElementById('query-panel-from').value;
+  const timeTo = document.getElementById('query-panel-to').value;
+  const step = document.getElementById('query-panel-step').value;
+  
+  const columns = getColumnsFromModal();
+  
+  if (!name.trim()) {
+    alert('Please enter a panel name.');
+    return;
+  }
+  
+  if (!dsUid) {
+    alert('Please select a target datasource.');
+    return;
+  }
+  
+  if (columns.length === 0) {
+    alert('Please add at least one metrics column configuration.');
+    return;
+  }
+  
+  const payload = {
+    name,
+    description,
+    datasourceType: 'grafana',
+    datasourceUid: dsUid,
+    timeRangeFrom: timeFrom,
+    timeRangeTo: timeTo,
+    step,
+    columns
+  };
+  
+  const url = id ? `/api/v1/query-explorer/panels/${id}` : '/api/v1/query-explorer/panels';
+  const method = id ? 'PUT' : 'POST';
+  
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await res.json();
+    
+    if (res.ok && result.success) {
+      closeQueryPanelModal();
+      loadQueryPanels();
+      addLog('Query Explorer', `Successfully saved query panel "${name}".`, 'SUCCESS');
+    } else {
+      alert('Failed to save panel: ' + (result.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('API connection error: ' + error.message);
+  }
+}
+
+// Delete query panel
+async function deleteQueryPanel(panelId) {
+  if (!confirm('Apakah Anda yakin ingin menghapus panel query explorer ini?')) return;
+  
+  try {
+    const res = await fetch(`/api/v1/query-explorer/panels/${panelId}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    
+    if (res.ok && result.success) {
+      loadQueryPanels();
+      addLog('Query Explorer', 'Successfully deleted query panel.', 'SUCCESS');
+    } else {
+      alert('Failed to delete query panel: ' + (result.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('API connection error: ' + error.message);
+  }
+}
+
+// Export Panel Data to CSV
+function exportPanelToCsv(panelId) {
+  const data = panelQueryCache[panelId];
+  if (!data) return;
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  const rows = data.rows || [];
+  
+  if (ips.length === 0 || rows.length === 0) return;
+  
+  const csvRows = [];
+  
+  // Build Header Row 1: IPs
+  const header1 = [];
+  ips.forEach(ip => {
+    header1.push(`IP Address: ${ip}`);
+    // Colspans empty spacer
+    for (let i = 0; i < columns.length + 1; i++) {
+      header1.push('');
+    }
+  });
+  csvRows.push(header1.join(','));
+  
+  // Build Header Row 2: Sub-headers
+  const header2 = [];
+  ips.forEach(ip => {
+    header2.push('IP_Address');
+    header2.push('Timestamp');
+    columns.forEach(col => {
+      header2.push(col);
+    });
+  });
+  csvRows.push(header2.join(','));
+  
+  // Build Data Rows
+  rows.forEach(row => {
+    const csvRow = [];
+    ips.forEach(ip => {
+      const ipData = row[ip] || {};
+      csvRow.push(ip);
+      csvRow.push(row.timestampStr);
+      columns.forEach(col => {
+        const val = ipData[col];
+        if (val !== undefined && val !== null) {
+          csvRow.push(typeof val === 'number' ? val.toFixed(4) : `"${String(val).replace(/"/g, '""')}"`);
+        } else {
+          csvRow.push('');
+        }
+      });
+    });
+    csvRows.push(csvRow.join(','));
+  });
+  
+  const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `query_explorer_data_${panelId}.csv`);
+  document.body.appendChild(link); // Required for FF
+  
+  link.click();
+  document.body.removeChild(link);
+}
+
 
 
 
