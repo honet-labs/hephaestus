@@ -5602,8 +5602,6 @@ async function deleteQueryPanel(panelId) {
     alert('API connection error: ' + error.message);
   }
 }
-
-[ignoring loop detection]
 // Export dropdown handlers
 window.toggleExportDropdown = function(event) {
   event.stopPropagation();
