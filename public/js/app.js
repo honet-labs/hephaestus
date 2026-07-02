@@ -5024,6 +5024,40 @@ async function runActiveQuery() {
   }
 }
 
+function formatMetricValue(val, columnName) {
+  if (val === undefined || val === null) {
+    return '-';
+  }
+  
+  const num = Number(val);
+  if (isNaN(num)) {
+    return String(val);
+  }
+  
+  const colLower = columnName.toLowerCase();
+  
+  // 1. Percentage formatting (CPU, Memory, Usage, etc.)
+  if (colLower.includes('cpu') || colLower.includes('mem') || colLower.includes('ram') || colLower.includes('usage') || colLower.includes('%')) {
+    // Standard percentage suffix
+    return num.toFixed(2) + ' %';
+  }
+  
+  // 2. Bytes / Disk Size formatting
+  if (colLower.includes('disk') || colLower.includes('bytes') || colLower.includes('size') || colLower.includes('free') || colLower.includes('avail') || colLower.includes('space') || colLower.includes('capacity')) {
+    // If the value is large, format as bytes (KB, MB, GB, TB)
+    if (num > 1000) {
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+      const i = Math.floor(Math.log(num) / Math.log(k));
+      const formatted = (num / Math.pow(k, i)).toFixed(2);
+      return `${formatted} ${sizes[i]}`;
+    }
+  }
+  
+  // 3. Default formatting for numbers
+  return num.toFixed(2);
+}
+
 function renderActiveDataTable(data) {
   const outputArea = document.getElementById('query-results-output');
   
@@ -5096,11 +5130,12 @@ function renderActiveDataTable(data) {
         let valStyle = '';
         
         if (val !== undefined && val !== null) {
+          displayVal = formatMetricValue(val, col);
+          
           if (typeof val === 'number') {
-            displayVal = val.toFixed(2);
             // Dynamic styling based on warning levels
             const lowerCol = col.toLowerCase();
-            if (lowerCol.includes('cpu') || lowerCol.includes('mem') || lowerCol.includes('ram') || lowerCol.includes('disk') || lowerCol.includes('usage')) {
+            if (lowerCol.includes('cpu') || lowerCol.includes('mem') || lowerCol.includes('ram') || lowerCol.includes('usage')) {
               if (val > 90) {
                 valStyle = 'color: #ff7b72; font-weight: bold;'; 
               } else if (val > 75) {
@@ -5109,8 +5144,6 @@ function renderActiveDataTable(data) {
                 valStyle = 'color: #56d364;'; 
               }
             }
-          } else {
-            displayVal = String(val);
           }
         }
         
@@ -5608,7 +5641,7 @@ function exportPanelToExcel(panelId) {
         columns.forEach(col => {
           const val = ipData[col];
           if (val !== undefined && val !== null) {
-            dataRow.push(typeof val === 'number' ? Number(val.toFixed(4)) : val);
+            dataRow.push(formatMetricValue(val, col));
           } else {
             dataRow.push('');
           }
