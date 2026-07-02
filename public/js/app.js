@@ -4820,6 +4820,12 @@ async function loadQueryPanels() {
       
       emptyState.classList.add('hidden');
       renderQueryPanels(queryPanels);
+      
+      // Auto-restore active query panel on page load/refresh
+      const savedActivePanelId = sessionStorage.getItem('activeQueryPanelId');
+      if (savedActivePanelId && queryPanels.some(p => p.id === savedActivePanelId)) {
+        showQueryResultsView(savedActivePanelId);
+      }
     } else {
       grid.innerHTML = `
         <div class="panel" style="padding: 20px; text-align: center; color: #ff7b72; grid-column: 1 / -1;">
@@ -4892,6 +4898,7 @@ function showQueryResultsView(panelId) {
   if (!panel) return;
   
   activeQueryPanelId = panelId;
+  sessionStorage.setItem('activeQueryPanelId', panelId);
   
   // Set metadata
   document.getElementById('query-results-title').textContent = panel.name;
@@ -4925,6 +4932,7 @@ function showQueryResultsView(panelId) {
 
 function exitQueryResultsView() {
   activeQueryPanelId = null;
+  sessionStorage.removeItem('activeQueryPanelId');
   document.getElementById('query-explorer-results-container').classList.add('hidden');
   document.getElementById('query-explorer-list-container').classList.remove('hidden');
   loadQueryPanels();
