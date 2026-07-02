@@ -279,6 +279,69 @@ export class QueryExplorerService {
       rows: rows
     };
   }
+
+  /**
+   * Fetches Prometheus metrics metadata via Grafana datasource proxy
+   */
+  public async getMetricsMetadata(datasourceUid: string, queryStr?: string): Promise<any> {
+    const grafanaConfig = config.getGrafanaConfig();
+    if (!grafanaConfig.isConfigured) {
+      throw new Error("Grafana Integration is not configured. Please configure it in Settings first.");
+    }
+    
+    const proxyUrl = `${grafanaConfig.host}/api/datasources/proxy/uid/${datasourceUid}/api/v1/metadata`;
+    console.log(`[QueryExplorer] Fetching metadata from proxy: ${proxyUrl}`);
+    
+    try {
+      const response = await axios.get(proxyUrl, {
+        headers: {
+          "Authorization": `Bearer ${grafanaConfig.token}`
+        },
+        timeout: 10000
+      });
+
+      if (response.data && response.data.status === "success") {
+        const allMetadata = response.data.data;
+        const result: any[] = [];
+        const queryLower = queryStr ? queryStr.toLowerCase().trim() : "";
+        
+        let count = 0;
+        for (const metricName of Object.keys(allMetadata)) {
+          if (queryLower && !metricName.toLowerCase().includes(queryLower)) {
+            continue;
+          }
+          
+          const metaList = allMetadata[metricName];
+          if (Array.isArray(metaList) && metaList.length > 0) {
+            result.push({
+              metric: metricName,
+              type: metaList[0].type || "unknown",
+              help: metaList[0].help || "No description provided."
+            });
+          } else {
+            result.push({
+              metric: metricName,
+              type: "unknown",
+              help: "No description provided."
+            });
+          }
+          
+          count++;
+          if (count >= 200) {
+            break;
+          }
+        }
+        
+        // Sort results alphabetically by metric name
+        result.sort((a, b) => a.metric.localeCompare(b.metric));
+        return result;
+      }
+      throw new Error("Prometheus returned non-success response status.");
+    } catch (err: any) {
+      console.error(`[QueryExplorer] Failed to fetch metrics metadata:`, err.message);
+      throw new Error(`Failed to fetch metadata: ${err.message}`);
+    }
+  }
 }
 
 export const queryExplorerService = new QueryExplorerService();

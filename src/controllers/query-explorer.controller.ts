@@ -269,6 +269,39 @@ export class QueryExplorerController {
       });
     }
   }
+
+  /**
+   * GET /api/v1/query-explorer/metadata
+   * Fetch metrics metadata from target datasource
+   */
+  public async getMetricsMetadata(req: Request, res: Response): Promise<void> {
+    try {
+      const datasourceUid = req.query.datasourceUid as string;
+      const queryStr = req.query.query as string;
+
+      if (!datasourceUid) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Parameter 'datasourceUid' is required."
+        });
+        return;
+      }
+
+      const metadata = await queryExplorerService.getMetricsMetadata(datasourceUid, queryStr);
+      res.status(200).json({
+        success: true,
+        data: metadata
+      });
+    } catch (error: any) {
+      console.error("[QueryExplorerController] getMetricsMetadata error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Metadata Fetch Error",
+        message: error.message || "Failed to fetch metrics metadata."
+      });
+    }
+  }
 }
 
 export const queryExplorerController = new QueryExplorerController();

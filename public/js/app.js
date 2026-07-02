@@ -5603,5 +5603,129 @@ function exportPanelToCsv(panelId) {
 }
 
 
+// ==========================================
+// EXPLORE METRICS LIBRARY FUNCTIONALITY
+// ==========================================
+async function openExploreMetricsModal() {
+  const dsUid = document.getElementById('query-panel-datasource-uid').value;
+  if (!dsUid) {
+    alert('Please select a target datasource first.');
+    return;
+  }
+  
+  document.getElementById('explore-metrics-search').value = '';
+  document.getElementById('modal-explore-metrics').classList.add('active');
+  
+  // Load default metrics list (empty query)
+  await loadMetricsLibrary('');
+}
+
+function closeExploreMetricsModal() {
+  document.getElementById('modal-explore-metrics').classList.remove('active');
+}
+
+async function loadMetricsLibrary(queryStr = '') {
+  const dsUid = document.getElementById('query-panel-datasource-uid').value;
+  const listEl = document.getElementById('explore-metrics-list');
+  const loadingEl = document.getElementById('explore-metrics-loading');
+  
+  loadingEl.classList.remove('hidden');
+  listEl.innerHTML = '';
+  
+  try {
+    const res = await fetch(`/api/v1/query-explorer/metadata?datasourceUid=${dsUid}&query=${encodeURIComponent(queryStr)}`);
+    const result = await res.json();
+    
+    if (res.ok && result.success) {
+      const data = result.data || [];
+      
+      if (data.length === 0) {
+        listEl.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 30px; color: var(--text-muted);">
+              No metrics found matching "${escapeHtml(queryStr)}".
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      let html = '';
+      data.forEach(item => {
+        // Prettify metric name for the column name input (convert snake_case to Title Case/Upper Case and remove common prefixes)
+        let nameSuggestion = item.metric
+          .replace(/^node_/, '')
+          .replace(/_total$/, '')
+          .replace(/_seconds$/, '')
+          .replace(/_bytes$/, '')
+          .replace(/_/g, ' ')
+          .toUpperCase();
+        
+        // Truncate name suggestion if too long
+        if (nameSuggestion.length > 25) {
+          nameSuggestion = nameSuggestion.substring(0, 22) + '...';
+        }
+        
+        // Escape single quotes for inline JS call
+        const escapedMetric = escapeHtml(item.metric);
+        const escapedName = escapeHtml(nameSuggestion);
+        
+        html += `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); cursor: default;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 8px; text-align: center;">
+              <button type="button" class="btn btn-secondary" onclick="addMetricFromLibrary('${escapedName}', '${escapedMetric}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #58a6ff; border-color: rgba(88,166,255,0.15);" title="Add metric to panel columns">
+                +
+              </button>
+            </td>
+            <td style="padding: 8px; font-weight: 600; color: var(--text-white); word-break: break-all; font-family: monospace;">${escapedMetric}</td>
+            <td style="padding: 8px;">
+              <span class="status-badge" style="background: rgba(88, 166, 255, 0.1); color: #58a6ff; padding: 2px 6px; font-size: 9.5px; text-transform: uppercase;">${escapeHtml(item.type)}</span>
+            </td>
+            <td style="padding: 8px; color: var(--text-muted); line-height: 1.4;">${escapeHtml(item.help)}</td>
+          </tr>
+        `;
+      });
+      listEl.innerHTML = html;
+    } else {
+      listEl.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: center; padding: 30px; color: #ff7b72;">
+            Failed to load metrics metadata: ${result.message || 'Unknown error'}
+          </td>
+        </tr>
+      `;
+    }
+  } catch (error) {
+    listEl.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 30px; color: #ff7b72;">
+          Connection error: ${error.message}
+        </td>
+      </tr>
+    `;
+  } finally {
+    loadingEl.classList.add('hidden');
+  }
+}
+
+let searchDebounceTimeout = null;
+function searchMetricsLibrary() {
+  if (searchDebounceTimeout) {
+    clearTimeout(searchDebounceTimeout);
+  }
+  
+  searchDebounceTimeout = setTimeout(() => {
+    const q = document.getElementById('explore-metrics-search').value;
+    loadMetricsLibrary(q);
+  }, 300);
+}
+
+function addMetricFromLibrary(colName, metricQuery) {
+  addQueryColumnInput(colName, metricQuery);
+  addLog('Query Explorer', `Added metric "${metricQuery}" to columns.`, 'SUCCESS');
+}
+
+
+
 
 

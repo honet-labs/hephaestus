@@ -1379,10 +1379,16 @@
         <div style="border-top: 1px solid var(--app-border); padding-top: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h4 style="margin: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; color: var(--text-white);">Metrics Columns</h4>
-            <button class="btn btn-secondary" onclick="addQueryColumnInput('', '')" style="padding: 4px 10px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>Add Metric Column</span>
-            </button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-secondary" type="button" onclick="openExploreMetricsModal()" style="padding: 4px 10px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px; border-color: #58a6ff; color: #58a6ff; background: rgba(88,166,255,0.05);">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span>Explore Metrics Library</span>
+              </button>
+              <button class="btn btn-secondary" type="button" onclick="addQueryColumnInput('', '')" style="padding: 4px 10px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Add Metric Column</span>
+              </button>
+            </div>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px;">
@@ -1419,6 +1425,54 @@
         </button>
         <button class="btn btn-secondary" onclick="closeQueryPanelModal()" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
         <button class="btn btn-primary" onclick="submitQueryPanelForm()" style="padding: 8px 16px; font-size: 12px; height: auto;">Save Panel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EXPLORE METRICS LIBRARY -->
+  <div id="modal-explore-metrics" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-dialog" style="max-width: 800px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">Explore Metrics Library</h3>
+        <button class="modal-close" onclick="closeExploreMetricsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;">
+          Search and insert metrics from your Prometheus target datasource.
+        </p>
+        
+        <div class="form-group" style="display: flex; gap: 10px;">
+          <input type="text" id="explore-metrics-search" oninput="searchMetricsLibrary()" placeholder="Enter text to filter metric names by..." style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; flex-grow: 1; box-sizing: border-box;">
+          <button class="btn btn-primary" onclick="searchMetricsLibrary()" style="padding: 8px 16px; font-size: 12px; height: auto;">Search</button>
+        </div>
+        
+        <div id="explore-metrics-loading" class="hidden" style="text-align: center; padding: 20px; color: var(--text-muted);">
+          <span class="spinner" style="margin-right: 8px;"></span> Fetching metrics metadata...
+        </div>
+        
+        <!-- Metrics List Table -->
+        <div id="explore-metrics-table-container" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px; background: rgba(0,0,0,0.15);">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11.5px;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--app-border); background: var(--app-sidebar);">
+                <th style="padding: 8px; font-weight: bold; width: 50px; text-align: center;">Add</th>
+                <th style="padding: 8px; font-weight: bold; width: 250px;">Metric</th>
+                <th style="padding: 8px; font-weight: bold; width: 80px;">Type</th>
+                <th style="padding: 8px; font-weight: bold;">Help Description</th>
+              </tr>
+            </thead>
+            <tbody id="explore-metrics-list">
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                  Please select a datasource first and search for metrics.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="btn btn-secondary" onclick="closeExploreMetricsModal()" style="padding: 8px 16px; font-size: 12px; height: auto;">Close</button>
       </div>
     </div>
   </div>

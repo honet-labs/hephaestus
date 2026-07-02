@@ -3,11 +3,13 @@ import { queryExplorerController } from "../controllers/query-explorer.controlle
 
 const router = Router();
 
-/**
-   * @route   GET /api/v1/query-explorer/panels
-   * @desc    Retrieve all query panels
-   */
 router.get("/panels", (req, res) => queryExplorerController.getQueryPanels(req, res));
+
+/**
+   * @route   GET /api/v1/query-explorer/metadata
+   * @desc    Retrieve metrics metadata from target datasource
+   */
+router.get("/metadata", (req, res) => queryExplorerController.getMetricsMetadata(req, res));
 
 /**
    * @route   POST /api/v1/query-explorer/panels
