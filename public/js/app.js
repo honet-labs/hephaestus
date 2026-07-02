@@ -5085,10 +5085,6 @@ function renderActiveDataTable(data) {
   let sheetsBarHtml = `
     <div class="excel-sheets-bar" style="display: flex; background: rgba(0,0,0,0.25); border: 1px solid var(--app-border); border-bottom: none; padding: 6px 12px 0 12px; gap: 4px; border-top-left-radius: 4px; border-top-right-radius: 4px; align-items: flex-end;">
       <div style="display: flex; gap: 4px; align-items: flex-end; width: 100%; border-bottom: 1px solid var(--app-border); padding-bottom: 0;">
-        <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; margin-right: 12px; padding-bottom: 8px; display: inline-flex; align-items: center; gap: 4px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-          Sheets:
-        </span>
   `;
   
   ips.forEach((ip, idx) => {
@@ -5607,7 +5603,29 @@ async function deleteQueryPanel(panelId) {
   }
 }
 
-// Export Panel Data to Excel (multi-sheet: one sheet per IP Address)
+[ignoring loop detection]
+// Export dropdown handlers
+window.toggleExportDropdown = function(event) {
+  event.stopPropagation();
+  const menu = document.getElementById('export-dropdown-menu');
+  if (menu) {
+    const isVisible = menu.style.display === 'block';
+    menu.style.display = isVisible ? 'none' : 'block';
+  }
+};
+
+window.addEventListener('click', function() {
+  const menu = document.getElementById('export-dropdown-menu');
+  if (menu) {
+    menu.style.display = 'none';
+  }
+});
+
+function exportActivePanelToExcel() {
+  if (!activeQueryPanelId) return;
+  exportPanelToExcel(activeQueryPanelId);
+}
+
 function exportPanelToExcel(panelId) {
   const data = panelQueryCache[panelId];
   if (!data) return;
@@ -5619,18 +5637,13 @@ function exportPanelToExcel(panelId) {
   if (ips.length === 0 || rows.length === 0) return;
 
   const exportFn = () => {
-    // Create new workbook
     const wb = XLSX.utils.book_new();
     
-    // Create sheet for each IP Address
     ips.forEach(ip => {
       const sheetData = [];
-      
-      // Header row
       const headers = ['Timestamp', 'IP Address', ...columns];
       sheetData.push(headers);
       
-      // Data rows
       rows.forEach(row => {
         const ipData = row[ip] || {};
         const dataRow = [
@@ -5650,15 +5663,11 @@ function exportPanelToExcel(panelId) {
         sheetData.push(dataRow);
       });
       
-      // Convert to worksheet
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
-      
-      // Add to workbook. Limit sheet name to 31 chars (Excel requirement)
       const sheetName = ip.substring(0, 31);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     });
     
-    // Write workbook to file
     XLSX.writeFile(wb, `query_explorer_data_${panelId}.xlsx`);
   };
 
@@ -5671,6 +5680,192 @@ function exportPanelToExcel(panelId) {
     exportFn();
   }
 }
+
+window.exportActivePanelToCsv = function() {
+  if (!activeQueryPanelId) return;
+  const data = panelQueryCache[activeQueryPanelId];
+  if (!data) return;
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  const rows = data.rows || [];
+  
+  if (ips.length === 0 || rows.length === 0) return;
+  
+  const csvRows = [];
+  const headers = ['Timestamp', 'IP Address', ...columns];
+  csvRows.push(headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','));
+  
+  rows.forEach(row => {
+    ips.forEach(ip => {
+      const ipData = row[ip] || {};
+      const csvRow = [row.timestampStr, ip];
+      columns.forEach(col => {
+        const val = ipData[col];
+        csvRow.push(val !== undefined && val !== null ? formatMetricValue(val, col) : '');
+      });
+      csvRows.push(csvRow.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    });
+  });
+  
+  const csvContent = "\ufeff" + csvRows.join("\n");
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `query_explorer_data_${activeQueryPanelId}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+window.exportActivePanelToTxt = function() {
+  if (!activeQueryPanelId) return;
+  const data = panelQueryCache[activeQueryPanelId];
+  if (!data) return;
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  const rows = data.rows || [];
+  
+  if (ips.length === 0 || rows.length === 0) return;
+  
+  let txt = `QUERY METRICS EXPORT\n`;
+  txt += `Panel: ${data.name || activeQueryPanelId}\n`;
+  txt += `Date: ${new Date().toLocaleString()}\n`;
+  txt += "=".repeat(50) + "\n\n";
+  
+  ips.forEach(ip => {
+    txt += `Server IP: ${ip}\n`;
+    txt += "-".repeat(50) + "\n";
+    txt += "Timestamp\t" + columns.join("\t") + "\n";
+    
+    rows.forEach(row => {
+      const ipData = row[ip] || {};
+      const vals = columns.map(col => {
+        const val = ipData[col];
+        return val !== undefined && val !== null ? formatMetricValue(val, col) : '-';
+      });
+      txt += `${row.timestampStr}\t${vals.join("\t")}\n`;
+    });
+    txt += "\n";
+  });
+  
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `query_explorer_data_${activeQueryPanelId}.txt`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+window.exportActivePanelToChartImage = function() {
+  if (!activeQueryPanelId) return;
+  const data = panelQueryCache[activeQueryPanelId];
+  if (!data) return;
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  const rows = data.rows || [];
+  
+  if (ips.length === 0 || rows.length === 0) return;
+  
+  const processChartExport = () => {
+    const tempDiv = document.createElement('div');
+    tempDiv.style.width = '1000px';
+    tempDiv.style.height = '600px';
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '-9999px';
+    document.body.appendChild(tempDiv);
+    
+    const chart = echarts.init(tempDiv, 'dark');
+    
+    const timestamps = rows.map(r => r.timestampStr).reverse();
+    const series = [];
+    
+    ips.forEach(ip => {
+      columns.forEach(col => {
+        const seriesData = rows.map(row => {
+          const ipData = row[ip] || {};
+          return ipData[col] !== undefined ? ipData[col] : null;
+        }).reverse();
+        
+        series.push({
+          name: `${ip} - ${col}`,
+          type: 'line',
+          data: seriesData,
+          smooth: true,
+          showSymbol: false
+        });
+      });
+    });
+    
+    const option = {
+      backgroundColor: '#0d1117',
+      title: {
+        text: data.name || 'Metrics Trend Chart',
+        textStyle: { color: '#ffffff', fontSize: 16 },
+        left: 'center',
+        top: 20
+      },
+      legend: {
+        data: series.map(s => s.name),
+        textStyle: { color: '#c9d1d9' },
+        top: 50
+      },
+      grid: {
+        left: '5%',
+        right: '5%',
+        bottom: '10%',
+        top: '20%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: timestamps,
+        axisLabel: { color: '#8b949e' }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: { color: '#8b949e' },
+        splitLine: { lineStyle: { color: '#21262d' } }
+      },
+      series: series
+    };
+    
+    chart.setOption(option);
+    
+    setTimeout(() => {
+      const imgUrl = chart.getDataURL({
+        type: 'png',
+        pixelRatio: 2,
+        excludeComponents: ['toolbox']
+      });
+      
+      const link = document.createElement('a');
+      link.href = imgUrl;
+      link.download = `query_explorer_chart_${activeQueryPanelId}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      chart.dispose();
+      document.body.removeChild(tempDiv);
+    }, 300);
+  };
+  
+  if (typeof echarts === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
+    script.onload = processChartExport;
+    document.head.appendChild(script);
+  } else {
+    processChartExport();
+  }
+};
 
 
 // ==========================================
