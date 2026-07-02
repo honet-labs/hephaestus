@@ -5083,7 +5083,7 @@ function renderActiveDataTable(data) {
   
   // 1. Build Sheets Tab Bar (Excel-like Sheet Tabs)
   let sheetsBarHtml = `
-    <div class="excel-sheets-bar" style="display: flex; background: rgba(0,0,0,0.25); border: 1px solid var(--app-border); border-bottom: none; padding: 6px 12px 0 12px; gap: 4px; border-top-left-radius: 4px; border-top-right-radius: 4px; align-items: flex-end;">
+    <div class="excel-sheets-bar" style="display: flex; background: rgba(0,0,0,0.25); border-bottom: 1px solid var(--app-border); padding: 6px 12px 0 12px; gap: 4px; border-top-left-radius: 4px; border-top-right-radius: 4px; align-items: flex-end;">
       <div style="display: flex; gap: 4px; align-items: flex-end; width: 100%; border-bottom: 1px solid var(--app-border); padding-bottom: 0;">
   `;
   
@@ -5156,7 +5156,7 @@ function renderActiveDataTable(data) {
     });
     
     tablesHtml += `
-      <div class="${tableClass}" id="${tableId}" style="max-height: 500px; overflow: auto; border: 1px solid var(--app-border); border-top: none; background: transparent; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;">
+      <div class="${tableClass}" id="${tableId}" style="max-height: calc(100vh - 290px); overflow: auto; background: transparent; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;">
         <table style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
           <thead>
             <tr style="border-bottom: 1px solid var(--app-border); background: var(--app-sidebar);">
