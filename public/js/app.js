@@ -5461,10 +5461,42 @@ async function submitQueryPanelForm() {
     
     if (res.ok && result.success) {
       closeQueryPanelModal();
-      // Switch back to list view if currently in results view
-      document.getElementById('query-explorer-results-container').classList.add('hidden');
-      document.getElementById('query-explorer-list-container').classList.remove('hidden');
-      activeQueryPanelId = null;
+      
+      const savedPanel = result.data;
+      
+      // Update local queryPanels array
+      const existingIdx = queryPanels.findIndex(p => p.id === savedPanel.id);
+      if (existingIdx !== -1) {
+        queryPanels[existingIdx] = savedPanel;
+      } else {
+        queryPanels.push(savedPanel);
+      }
+      
+      // If we are currently viewing this panel in the results view, update its header info dynamically
+      if (activeQueryPanelId === savedPanel.id) {
+        document.getElementById('query-results-title').textContent = savedPanel.name;
+        document.getElementById('query-results-desc').textContent = savedPanel.description || 'No description provided.';
+        
+        const cols = savedPanel.columns.map(c => c.name).join(', ');
+        document.getElementById('query-results-cols-badge').textContent = `COLUMNS: ${cols.toUpperCase()}`;
+        
+        const timeInfo = `TIME: ${savedPanel.timeRangeFrom.toUpperCase()} TO ${savedPanel.timeRangeTo.toUpperCase()} (STEP: ${savedPanel.step.toUpperCase()})`;
+        document.getElementById('query-results-time-badge').textContent = timeInfo;
+        
+        // Reset output area to prompt for running query since settings updated
+        document.getElementById('query-results-output').innerHTML = `
+          <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
+            Click "Run Query" button above to fetch telemetry metrics from Grafana with the updated settings.
+          </div>
+        `;
+        document.getElementById('btn-results-export').classList.add('hidden');
+      } else {
+        // Go back to list view for newly created panels
+        document.getElementById('query-explorer-results-container').classList.add('hidden');
+        document.getElementById('query-explorer-list-container').classList.remove('hidden');
+        activeQueryPanelId = null;
+      }
+      
       loadQueryPanels();
       addLog('Query Explorer', `Successfully saved query panel "${name}".`, 'SUCCESS');
     } else {
