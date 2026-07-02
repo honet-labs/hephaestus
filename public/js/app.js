@@ -4930,6 +4930,11 @@ function exitQueryResultsView() {
   loadQueryPanels();
 }
 
+function editActiveQueryPanel() {
+  if (!activeQueryPanelId) return;
+  openEditQueryPanelModal(activeQueryPanelId);
+}
+
 async function runActiveQuery() {
   if (!activeQueryPanelId) return;
   
