@@ -1527,16 +1527,16 @@
 
   <!-- MODAL: EXPORT CHART OPTIONS -->
   <div id="modal-export-chart" class="modal-overlay" style="z-index: 1100;">
-    <div class="modal-dialog" style="max-width: 800px; width: 95%;">
+    <div class="modal-dialog" style="max-width: 950px; width: 95%;">
       <div class="modal-header">
         <h3 class="modal-title">Export Chart Image</h3>
         <button class="modal-close" onclick="closeExportChartModal()">&times;</button>
       </div>
-      <div class="modal-body" style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+      <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
         
-        <!-- Left Side: Controls -->
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="form-group">
+        <!-- Top Controls Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+          <div class="form-group" style="grid-column: span 2; min-width: 250px;">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Chart Title</label>
             <input type="text" id="export-chart-title-input" placeholder="Enter custom chart title" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
           </div>
@@ -1554,35 +1554,33 @@
               <option value="all">All Metrics</option>
             </select>
           </div>
+
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Background Theme</label>
+            <select id="export-chart-bg-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              <option value="grafana">Grafana Dark (#0d1117)</option>
+              <option value="midnight">Midnight Blue (#1a1b26)</option>
+              <option value="slate">Slate Card (#1f1f1f)</option>
+              <option value="light">Light Mode (#ffffff)</option>
+            </select>
+          </div>
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div class="form-group">
-              <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Background Theme</label>
-              <select id="export-chart-bg-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
-                <option value="grafana">Grafana Dark (#0d1117)</option>
-                <option value="midnight">Midnight Blue (#1a1b26)</option>
-                <option value="slate">Slate Card (#1f1f1f)</option>
-                <option value="light">Light Mode (#ffffff)</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Color Palette</label>
-              <select id="export-chart-palette-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
-                <option value="grafana">Grafana Classic</option>
-                <option value="cool">Cool Tech</option>
-                <option value="warm">Warm Sunset</option>
-                <option value="neon">Cyberpunk Neon</option>
-                <option value="monochrome">Monochrome Sleek</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Color Palette</label>
+            <select id="export-chart-palette-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              <option value="grafana">Grafana Classic</option>
+              <option value="cool">Cool Tech</option>
+              <option value="warm">Warm Sunset</option>
+              <option value="neon">Cyberpunk Neon</option>
+              <option value="monochrome">Monochrome Sleek</option>
+            </select>
           </div>
         </div>
         
-        <!-- Right Side: Preview Container -->
-        <div style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Bottom: Preview Container (Much Larger) -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
           <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; display: block;">Live Preview</label>
-          <div id="export-chart-preview-container" style="width: 100%; height: 260px; background: #0d1117; border-radius: 4px; border: 1px solid var(--app-border); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+          <div id="export-chart-preview-container" style="width: 100%; height: 400px; background: #0d1117; border-radius: 4px; border: 1px solid var(--app-border); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
             <!-- ECharts preview will render here -->
           </div>
         </div>
