@@ -5798,6 +5798,220 @@ const colorPalettes = {
 };
 
 let previewChartInstance = null;
+let exportChartData = null;
+
+function updateExportDropdowns(data) {
+  const dropdownContent = document.getElementById('export-chart-ip-dropdown-content');
+  const metricSelect = document.getElementById('export-chart-metric-select');
+  if (!dropdownContent || !metricSelect) return;
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  
+  // 1. Populate IP Checkboxes
+  dropdownContent.innerHTML = '';
+  
+  // "Select All" Option
+  const allRow = document.createElement('div');
+  allRow.style.padding = '6px 12px';
+  allRow.style.display = 'flex';
+  allRow.style.alignItems = 'center';
+  allRow.style.gap = '8px';
+  allRow.style.cursor = 'pointer';
+  allRow.onmouseover = function() { this.style.background = 'rgba(255,255,255,0.05)'; };
+  allRow.onmouseout = function() { this.style.background = 'transparent'; };
+  allRow.onclick = function(e) {
+    e.stopPropagation();
+    const allCheckbox = document.getElementById('ip-checkbox-all');
+    if (allCheckbox) {
+      allCheckbox.checked = !allCheckbox.checked;
+      toggleAllIpCheckboxes(allCheckbox.checked);
+    }
+  };
+  
+  allRow.innerHTML = `
+    <input type="checkbox" id="ip-checkbox-all" checked style="cursor: pointer; pointer-events: none;">
+    <span style="font-size: 12px; color: var(--text-white);">Select All</span>
+  `;
+  dropdownContent.appendChild(allRow);
+  
+  // Individual IP Options
+  ips.forEach(ip => {
+    const ipRow = document.createElement('div');
+    ipRow.style.padding = '6px 12px';
+    ipRow.style.display = 'flex';
+    ipRow.style.alignItems = 'center';
+    ipRow.style.gap = '8px';
+    ipRow.style.cursor = 'pointer';
+    ipRow.onmouseover = function() { this.style.background = 'rgba(255,255,255,0.05)'; };
+    ipRow.onmouseout = function() { this.style.background = 'transparent'; };
+    
+    ipRow.onclick = function(e) {
+      e.stopPropagation();
+      const cb = document.getElementById(`ip-checkbox-${ip.replace(/\./g, '-')}`);
+      if (cb) {
+        cb.checked = !cb.checked;
+        onIpCheckboxChange();
+      }
+    };
+    
+    ipRow.innerHTML = `
+      <input type="checkbox" class="ip-checkbox-item" id="ip-checkbox-${ip.replace(/\./g, '-')}" value="${ip}" checked style="cursor: pointer; pointer-events: none;">
+      <span style="font-size: 12px; color: var(--text-white);">${ip}</span>
+    `;
+    dropdownContent.appendChild(ipRow);
+  });
+  
+  // Update button label
+  updateExportIpDropdownLabel();
+  
+  // 2. Populate Metric select dropdown
+  const currentMetric = metricSelect.value;
+  metricSelect.innerHTML = '<option value="all">All Metrics</option>';
+  columns.forEach(col => {
+    metricSelect.innerHTML += `<option value="${col}">${col}</option>`;
+  });
+  if (currentMetric === 'all' || columns.includes(currentMetric)) {
+    metricSelect.value = currentMetric;
+  } else {
+    metricSelect.value = 'all';
+  }
+}
+
+window.toggleExportIpDropdown = function(e) {
+  if (e) e.stopPropagation();
+  const content = document.getElementById('export-chart-ip-dropdown-content');
+  if (content) {
+    content.style.display = content.style.display === 'block' ? 'none' : 'block';
+  }
+};
+
+window.toggleAllIpCheckboxes = function(checked) {
+  const items = document.querySelectorAll('.ip-checkbox-item');
+  items.forEach(item => {
+    item.checked = checked;
+  });
+  updateExportIpDropdownLabel();
+  updateChartPreview();
+};
+
+window.onIpCheckboxChange = function() {
+  const items = document.querySelectorAll('.ip-checkbox-item');
+  const allCheckbox = document.getElementById('ip-checkbox-all');
+  
+  const allChecked = Array.from(items).every(item => item.checked);
+  if (allCheckbox) {
+    allCheckbox.checked = allChecked;
+  }
+  
+  updateExportIpDropdownLabel();
+  updateChartPreview();
+};
+
+window.updateExportIpDropdownLabel = function() {
+  const items = document.querySelectorAll('.ip-checkbox-item');
+  const label = document.getElementById('export-chart-ip-dropdown-label');
+  if (!label) return;
+  
+  const checkedItems = Array.from(items).filter(item => item.checked).map(item => item.value);
+  
+  if (checkedItems.length === 0) {
+    label.innerText = 'No IP Address Selected';
+  } else if (checkedItems.length === items.length) {
+    label.innerText = 'All IP Addresses';
+  } else if (checkedItems.length <= 2) {
+    label.innerText = checkedItems.join(', ');
+  } else {
+    label.innerText = `${checkedItems.length} IPs Selected`;
+  }
+};
+
+document.addEventListener('click', function(e) {
+  const content = document.getElementById('export-chart-ip-dropdown-content');
+  const btn = document.getElementById('export-chart-ip-dropdown-btn');
+  if (content && content.style.display === 'block') {
+    if (btn && btn.contains(e.target)) return;
+    if (!content.contains(e.target)) {
+      content.style.display = 'none';
+    }
+  }
+});
+
+async function handleExportTimeRangeChange() {
+  if (!activeQueryPanelId) return;
+  
+  const timeRangeSelect = document.getElementById('export-chart-timerange-select');
+  const selectedTimeRange = timeRangeSelect ? timeRangeSelect.value : 'default';
+  
+  const previewContainer = document.getElementById('export-chart-preview-container');
+  if (previewContainer) {
+    previewContainer.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; height: 100%;">
+        <span class="spinner" style="margin-right: 8px;"></span> Querying metrics for new time range...
+      </div>
+    `;
+  }
+  
+  if (previewChartInstance) {
+    previewChartInstance.dispose();
+    previewChartInstance = null;
+  }
+  
+  if (selectedTimeRange === 'default') {
+    exportChartData = JSON.parse(JSON.stringify(panelQueryCache[activeQueryPanelId]));
+    updateExportDropdowns(exportChartData);
+    initPreviewChartInstance();
+    updateChartPreview();
+    return;
+  }
+  
+  try {
+    const body = {};
+    body.timeRangeFrom = selectedTimeRange;
+    body.timeRangeTo = 'now';
+    
+    // Determine step based on time range
+    if (selectedTimeRange === 'now-15m') body.step = '15s';
+    else if (selectedTimeRange === 'now-1h') body.step = '1m';
+    else if (selectedTimeRange === 'now-6h') body.step = '5m';
+    else if (selectedTimeRange === 'now-12h') body.step = '5m';
+    else if (selectedTimeRange === 'now-24h') body.step = '15m';
+    else if (selectedTimeRange === 'now-7d') body.step = '1h';
+    
+    const res = await fetch(`/api/v1/query-explorer/panels/${activeQueryPanelId}/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    
+    const result = await res.json();
+    
+    if (res.ok && result.success) {
+      exportChartData = result.data;
+      updateExportDropdowns(exportChartData);
+      initPreviewChartInstance();
+      updateChartPreview();
+    } else {
+      if (previewContainer) {
+        previewContainer.innerHTML = `
+          <div style="text-align: center; color: #ff7b72; font-size: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; height: 100%;">
+            <strong>Query Error:</strong> ${result.message || 'Failed to fetch query results'}
+          </div>
+        `;
+      }
+    }
+  } catch (error) {
+    if (previewContainer) {
+      previewContainer.innerHTML = `
+        <div style="text-align: center; color: #ff7b72; font-size: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; height: 100%;">
+          <strong>Connection Error:</strong> ${error.message}
+        </div>
+      `;
+    }
+  }
+}
 
 function initPreviewChartInstance() {
   const container = document.getElementById('export-chart-preview-container');
@@ -5815,7 +6029,7 @@ function initPreviewChartInstance() {
 function updateChartPreview() {
   if (!previewChartInstance) return;
   if (!activeQueryPanelId) return;
-  const data = panelQueryCache[activeQueryPanelId];
+  const data = exportChartData;
   if (!data) return;
   
   const ips = data.ips || [];
@@ -5824,7 +6038,8 @@ function updateChartPreview() {
   
   if (ips.length === 0 || rows.length === 0) return;
   
-  const selectedIp = document.getElementById('export-chart-ip-select').value;
+  const ipCheckboxes = document.querySelectorAll('.ip-checkbox-item');
+  const targetIps = Array.from(ipCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
   const selectedMetric = document.getElementById('export-chart-metric-select').value;
   const customTitle = document.getElementById('export-chart-title-input').value;
   const bgTheme = document.getElementById('export-chart-bg-select').value;
@@ -5834,6 +6049,14 @@ function updateChartPreview() {
   const colors = colorPalettes[palette] || colorPalettes.grafana;
   
   const rawTimestamps = rows.map(r => r.timestampStr).reverse();
+  
+  let timeRangeText = '';
+  if (rawTimestamps.length > 0) {
+    const startTime = rawTimestamps[0];
+    const endTime = rawTimestamps[rawTimestamps.length - 1];
+    timeRangeText = `Time Range: ${startTime} - ${endTime}`;
+  }
+  
   const shortTimestamps = rawTimestamps.map(ts => {
     const parts = ts.split(' ');
     if (parts.length === 2) {
@@ -5847,7 +6070,6 @@ function updateChartPreview() {
   });
   
   const series = [];
-  const targetIps = selectedIp === 'all' ? ips : [selectedIp];
   const targetColumns = selectedMetric === 'all' ? columns : [selectedMetric];
   
   targetIps.forEach(ip => {
@@ -5872,14 +6094,33 @@ function updateChartPreview() {
     color: colors,
     title: {
       text: customTitle || 'Metrics Trend Chart',
+      subtext: timeRangeText,
       textStyle: { color: theme.text, fontSize: 13 },
+      subtextStyle: { color: theme.axis, fontSize: 9 },
       left: 'center',
-      top: 10
+      top: 5
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'line',
+        lineStyle: {
+          color: theme.axis,
+          width: 1,
+          type: 'dashed'
+        }
+      },
+      backgroundColor: theme.bg === '#ffffff' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(20, 20, 20, 0.95)',
+      borderColor: theme.split,
+      textStyle: {
+        color: theme.text,
+        fontSize: 11
+      }
     },
     legend: {
       data: series.map(s => s.name),
       textStyle: { color: theme.text, fontSize: 9 },
-      top: 32,
+      top: 38,
       type: 'scroll',
       width: '90%'
     },
@@ -5887,7 +6128,7 @@ function updateChartPreview() {
       left: '4%',
       right: '4%',
       bottom: '15%',
-      top: '25%',
+      top: '28%',
       containLabel: true
     },
     xAxis: {
@@ -5927,29 +6168,13 @@ window.openExportChartModal = function() {
   const data = panelQueryCache[activeQueryPanelId];
   if (!data) return;
   
-  const ips = data.ips || [];
-  const columns = data.columns || [];
+  exportChartData = JSON.parse(JSON.stringify(data));
   
   // Populate Title
-  document.getElementById('export-chart-title-input').value = data.name || 'Metrics Trend Chart';
+  document.getElementById('export-chart-title-input').value = exportChartData.name || 'Metrics Trend Chart';
   
-  // Populate IP select dropdown
-  const ipSelect = document.getElementById('export-chart-ip-select');
-  if (ipSelect) {
-    ipSelect.innerHTML = '<option value="all">All IP Addresses</option>';
-    ips.forEach(ip => {
-      ipSelect.innerHTML += `<option value="${ip}">${ip}</option>`;
-    });
-  }
-  
-  // Populate Metric select dropdown
-  const metricSelect = document.getElementById('export-chart-metric-select');
-  if (metricSelect) {
-    metricSelect.innerHTML = '<option value="all">All Metrics</option>';
-    columns.forEach(col => {
-      metricSelect.innerHTML += `<option value="${col}">${col}</option>`;
-    });
-  }
+  // Populate dropdowns & checkboxes
+  updateExportDropdowns(exportChartData);
   
   // Set defaults for theme & palette
   document.getElementById('export-chart-bg-select').value = 'grafana';
@@ -5961,7 +6186,6 @@ window.openExportChartModal = function() {
   // Bind change events to form elements to automatically update preview
   const controls = [
     'export-chart-title-input',
-    'export-chart-ip-select',
     'export-chart-metric-select',
     'export-chart-bg-select',
     'export-chart-palette-select'
@@ -5974,6 +6198,13 @@ window.openExportChartModal = function() {
       el.onchange = updateChartPreview;
     }
   });
+  
+  // Set default time range and bind event listener
+  const timeRangeSelect = document.getElementById('export-chart-timerange-select');
+  if (timeRangeSelect) {
+    timeRangeSelect.value = 'default';
+    timeRangeSelect.onchange = handleExportTimeRangeChange;
+  }
   
   // Load ECharts and render preview
   const previewContainer = document.getElementById('export-chart-preview-container');
@@ -6008,19 +6239,20 @@ window.closeExportChartModal = function() {
 };
 
 window.submitExportChart = function() {
-  const ipSelect = document.getElementById('export-chart-ip-select').value;
+  const ipCheckboxes = document.querySelectorAll('.ip-checkbox-item');
+  const selectedIps = Array.from(ipCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
   const metricSelect = document.getElementById('export-chart-metric-select').value;
   const customTitle = document.getElementById('export-chart-title-input').value;
   const bgTheme = document.getElementById('export-chart-bg-select').value;
   const palette = document.getElementById('export-chart-palette-select').value;
   
   closeExportChartModal();
-  exportActivePanelToChartImageWithOptions(ipSelect, metricSelect, customTitle, bgTheme, palette);
+  exportActivePanelToChartImageWithOptions(selectedIps, metricSelect, customTitle, bgTheme, palette);
 };
-
+ 
 window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedMetric, customTitle, bgTheme, palette) {
   if (!activeQueryPanelId) return;
-  const data = panelQueryCache[activeQueryPanelId];
+  const data = exportChartData;
   if (!data) return;
   
   const ips = data.ips || [];
@@ -6028,6 +6260,15 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
   const rows = data.rows || [];
   
   if (ips.length === 0 || rows.length === 0) return;
+  
+  let targetIps = [];
+  if (Array.isArray(selectedIp)) {
+    targetIps = selectedIp;
+  } else if (selectedIp && selectedIp !== 'all') {
+    targetIps = [selectedIp];
+  } else {
+    targetIps = ips;
+  }
   
   const processChartExport = () => {
     const tempDiv = document.createElement('div');
@@ -6044,6 +6285,14 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
     const colors = colorPalettes[palette] || colorPalettes.grafana;
     
     const rawTimestamps = rows.map(r => r.timestampStr).reverse();
+    
+    let timeRangeText = '';
+    if (rawTimestamps.length > 0) {
+      const startTime = rawTimestamps[0];
+      const endTime = rawTimestamps[rawTimestamps.length - 1];
+      timeRangeText = `Time Range: ${startTime} - ${endTime}`;
+    }
+
     const shortTimestamps = rawTimestamps.map(ts => {
       const parts = ts.split(' ');
       if (parts.length === 2) {
@@ -6057,7 +6306,6 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
     });
     
     const series = [];
-    const targetIps = selectedIp === 'all' ? ips : [selectedIp];
     const targetColumns = selectedMetric === 'all' ? columns : [selectedMetric];
     
     targetIps.forEach(ip => {
@@ -6082,14 +6330,16 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
       color: colors,
       title: {
         text: customTitle || 'Metrics Trend Chart',
+        subtext: timeRangeText,
         textStyle: { color: theme.text, fontSize: 16 },
+        subtextStyle: { color: theme.axis, fontSize: 11 },
         left: 'center',
-        top: 20
+        top: 15
       },
       legend: {
         data: series.map(s => s.name),
         textStyle: { color: theme.text, fontSize: 11 },
-        top: 50,
+        top: 55,
         type: 'scroll',
         width: '90%'
       },
@@ -6097,7 +6347,7 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
         left: '5%',
         right: '5%',
         bottom: '12%',
-        top: '20%',
+        top: '22%',
         containLabel: true
       },
       xAxis: {
@@ -6142,7 +6392,15 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
       link.href = imgUrl;
       
       let filename = `query_explorer_chart_${activeQueryPanelId}`;
-      if (selectedIp !== 'all') filename += `_${selectedIp.replace(/\./g, '_')}`;
+      if (Array.isArray(selectedIp)) {
+        if (selectedIp.length === 1) {
+          filename += `_${selectedIp[0].replace(/\./g, '_')}`;
+        } else if (selectedIp.length < ips.length) {
+          filename += `_selected_ips`;
+        }
+      } else if (selectedIp && selectedIp !== 'all') {
+        filename += `_${selectedIp.replace(/\./g, '_')}`;
+      }
       if (selectedMetric !== 'all') filename += `_${selectedMetric.toLowerCase()}`;
       filename += '.png';
       

@@ -1541,17 +1541,36 @@
             <input type="text" id="export-chart-title-input" placeholder="Enter custom chart title" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
           </div>
           
-          <div class="form-group">
+          <div class="form-group" style="position: relative;">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">IP Address</label>
-            <select id="export-chart-ip-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
-              <option value="all">All IP Addresses</option>
-            </select>
+            <div id="export-chart-ip-dropdown" style="position: relative;">
+              <button type="button" id="export-chart-ip-dropdown-btn" onclick="toggleExportIpDropdown(event)" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; text-align: left; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                <span id="export-chart-ip-dropdown-label">All IP Addresses</span>
+                <span style="font-size: 10px; color: var(--text-muted);">▼</span>
+              </button>
+              <div id="export-chart-ip-dropdown-content" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 4px; z-index: 1200; max-height: 200px; overflow-y: auto; margin-top: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); padding: 4px 0;">
+                <!-- Checkboxes will be populated dynamically -->
+              </div>
+            </div>
           </div>
           
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Metric Column</label>
             <select id="export-chart-metric-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
               <option value="all">All Metrics</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Time Range</label>
+            <select id="export-chart-timerange-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              <option value="default">Use Panel Default</option>
+              <option value="now-15m">Last 15 minutes</option>
+              <option value="now-1h">Last 1 hour</option>
+              <option value="now-6h">Last 6 hours</option>
+              <option value="now-12h">Last 12 hours</option>
+              <option value="now-24h">Last 24 hours</option>
+              <option value="now-7d">Last 7 days</option>
             </select>
           </div>
 
