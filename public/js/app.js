@@ -6144,12 +6144,32 @@ function updateChartPreview() {
     tooltip: {
       trigger: 'axis',
       axisPointer: {
-        type: 'line',
+        type: 'cross',
+        label: {
+          show: false
+        },
         lineStyle: {
           color: theme.axis,
           width: 1,
           type: 'dashed'
         }
+      },
+      formatter: function(params) {
+        if (!params || params.length === 0) return '';
+        const timestamp = params[0].name;
+        let html = `<div style="font-weight: 600; margin-bottom: 4px; border-bottom: 1px solid ${theme.split}; padding-bottom: 4px; font-size: 11px;">${timestamp}</div>`;
+        params.forEach(item => {
+          const nameParts = item.seriesName.split(' - ');
+          const colName = nameParts.length > 1 ? nameParts[1] : '';
+          const formattedValue = formatMetricValue(item.value, colName);
+          html += `
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 11px; margin: 3px 0;">
+              <span style="color: ${theme.text}">${item.marker} ${item.seriesName}</span>
+              <span style="font-weight: 600; color: ${theme.text}">${formattedValue}</span>
+            </div>
+          `;
+        });
+        return html;
       },
       backgroundColor: theme.bg === '#ffffff' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(20, 20, 20, 0.95)',
       borderColor: theme.split,
