@@ -32,6 +32,9 @@ const corsOptions: cors.CorsOptions = {
 app.use(cors(corsOptions));
 
 // 1b. Security Headers — configure Helmet to work with frontend inline scripts
+// Only enable upgradeInsecureRequests when running behind HTTPS reverse proxy
+const isHttps = process.env.HTTPS === "true" || process.env.NODE_ENV === "production";
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -44,8 +47,8 @@ app.use(helmet({
       frameSrc: ["'self'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
-      formAction: ["'self'", "'unsafe-inline'"],
-      upgradeInsecureRequests: []
+      formAction: ["'self'"],
+      ...(isHttps ? { upgradeInsecureRequests: [] } : {})
     }
   },
   crossOriginEmbedderPolicy: false,
