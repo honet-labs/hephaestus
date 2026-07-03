@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { queryExplorerController } from "../controllers/query-explorer.controller";
+import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
@@ -15,19 +16,19 @@ router.get("/metadata", (req, res) => queryExplorerController.getMetricsMetadata
    * @route   POST /api/v1/query-explorer/panels
    * @desc    Create a new query panel
    */
-router.post("/panels", (req, res) => queryExplorerController.createQueryPanel(req, res));
+router.post("/panels", requireRole("ADMIN"), (req, res) => queryExplorerController.createQueryPanel(req, res));
 
 /**
    * @route   PUT /api/v1/query-explorer/panels/:id
    * @desc    Update an existing query panel
    */
-router.put("/panels/:id", (req, res) => queryExplorerController.updateQueryPanel(req, res));
+router.put("/panels/:id", requireRole("ADMIN"), (req, res) => queryExplorerController.updateQueryPanel(req, res));
 
 /**
    * @route   DELETE /api/v1/query-explorer/panels/:id
    * @desc    Delete a query panel
    */
-router.delete("/panels/:id", (req, res) => queryExplorerController.deleteQueryPanel(req, res));
+router.delete("/panels/:id", requireRole("ADMIN"), (req, res) => queryExplorerController.deleteQueryPanel(req, res));
 
 /**
    * @route   POST /api/v1/query-explorer/panels/:id/query

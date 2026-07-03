@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { SnmpController } from "../controllers/snmp.controller";
+import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
@@ -10,10 +11,10 @@ router.get("/presets", SnmpController.getPresets);
 router.get("/mibs", SnmpController.getImportedMibs);
 
 // Import a new MIB
-router.post("/mibs/import", SnmpController.importMib);
+router.post("/mibs/import", requireRole("ADMIN"), SnmpController.importMib);
 
 // Delete an imported MIB
-router.delete("/mibs/:name", SnmpController.deleteMib);
+router.delete("/mibs/:name", requireRole("ADMIN"), SnmpController.deleteMib);
 
 // Global OID registry list
 router.get("/registry", SnmpController.getRegistry);
