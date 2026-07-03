@@ -7254,6 +7254,7 @@ async function triggerQueryPreview(buttonEl) {
   if (!activeQueryPanelId) return;
   const panelId = activeQueryPanelId;
   const vizType = document.getElementById('preview-viz-type').value;
+  const splitMetrics = document.getElementById('preview-split-metrics').checked;
   
   const spinner = buttonEl.querySelector('.spinner');
   const labelSpan = buttonEl.querySelector('span:last-child');
@@ -7308,7 +7309,8 @@ async function triggerQueryPreview(buttonEl) {
     } else {
       document.getElementById('query-results-output').style.display = 'none';
       document.getElementById('query-results-chart').style.display = 'block';
-      renderActiveDataChart(data, vizType);
+      const isSplitActive = ['line', 'area', 'bar'].includes(vizType) && splitMetrics;
+      renderActiveDataChart(data, vizType, isSplitActive);
     }
   } catch (error) {
     if (window.diagLog) window.diagLog(`triggerQueryPreview: error occurred - ${error.message}`, '#ff7b72');
@@ -7321,16 +7323,17 @@ async function triggerQueryPreview(buttonEl) {
 }
 window.triggerQueryPreview = triggerQueryPreview;
 
-function renderActiveDataChart(data, type) {
+function renderActiveDataChart(data, type, splitMetrics) {
   const container = document.getElementById('query-results-chart');
   if (!container) return;
   
-  if (dataPreviewChartInstance) {
+  dataPreviewChartInstances.forEach(instance => {
     try {
-      dataPreviewChartInstance.dispose();
+      instance.dispose();
     } catch (_) {}
-    dataPreviewChartInstance = null;
-  }
+  });
+  dataPreviewChartInstances = [];
+  container.innerHTML = '';
   
   const ips = data.ips || [];
   const columns = data.columns || [];
@@ -7338,80 +7341,48 @@ function renderActiveDataChart(data, type) {
   
   if (ips.length === 0 || rows.length === 0) {
     container.innerHTML = `
-      <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; display: flex; align-items: center; justify-content: center; height: 100%;">
+      <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid var(--app-border); border-radius: 4px; background: rgba(0,0,0,0.15);">
         No telemetry matches found in database for the given time range.
       </div>
     `;
     return;
   }
   
-  dataPreviewChartInstance = echarts.init(container, 'dark');
   const chronologicalRows = [...rows].reverse();
-  let option = {};
   
-  if (type === 'pie' || type === 'donut') {
-    const pieData = [];
-    ips.forEach(ip => {
-      columns.forEach(col => {
-        let total = 0;
-        let count = 0;
-        chronologicalRows.forEach(row => {
-          const ipData = row[ip] || {};
-          const val = ipData[col];
-          if (val !== undefined && val !== null && typeof val === 'number') {
-            total += val;
-            count++;
-          }
-        });
-        const avg = count > 0 ? Number((total / count).toFixed(2)) : 0;
-        pieData.push({
-          name: `${ip} - ${col}`,
-          value: avg
-        });
-      });
-    });
-    
-    option = {
-      backgroundColor: 'transparent',
-      tooltip: {
-        trigger: 'item',
-        formatter: '{b}: {c} ({d}%)',
-        backgroundColor: '#161b22',
-        borderColor: '#30363d',
-        textStyle: { color: '#c9d1d9' }
-      },
-      legend: {
-        orient: 'vertical',
-        left: 'left',
-        textStyle: { color: '#8b949e' }
-      },
-      series: [
-        {
-          name: 'Metrics Averages',
-          type: 'pie',
-          radius: type === 'donut' ? ['40%', '70%'] : '55%',
-          avoidLabelOverlap: true,
-          label: {
-            show: true,
-            formatter: '{b}: {c}'
-          },
-          emphasis: {
-            label: {
-              show: true,
-              fontSize: '14',
-              fontWeight: 'bold'
-            }
-          },
-          data: pieData
-        }
-      ]
-    };
-  } else {
-    const xAxisData = chronologicalRows.map(r => r.timestampStr);
-    const series = [];
-    
-    ips.forEach(ip => {
-      columns.forEach(col => {
+  if (splitMetrics && ['line', 'area', 'bar'].includes(type)) {
+    // Render one chart per column/metric
+    columns.forEach(col => {
+      const chartWrapper = document.createElement('div');
+      chartWrapper.style.marginBottom = '24px';
+      chartWrapper.style.border = '1px solid var(--app-border)';
+      chartWrapper.style.borderRadius = '4px';
+      chartWrapper.style.padding = '15px';
+      chartWrapper.style.background = 'rgba(0,0,0,0.15)';
+      chartWrapper.style.boxSizing = 'border-box';
+      
+      const chartTitle = document.createElement('h4');
+      chartTitle.style.margin = '0 0 12px 0';
+      chartTitle.style.fontSize = '12px';
+      chartTitle.style.color = 'var(--text-white)';
+      chartTitle.style.fontWeight = '600';
+      chartTitle.style.textTransform = 'uppercase';
+      chartTitle.style.letterSpacing = '0.5px';
+      chartTitle.textContent = `${col} Preview`;
+      
+      const canvas = document.createElement('div');
+      canvas.style.width = '100%';
+      canvas.style.height = '300px';
+      
+      chartWrapper.appendChild(chartTitle);
+      chartWrapper.appendChild(canvas);
+      container.appendChild(chartWrapper);
+      
+      const chartInstance = echarts.init(canvas, 'dark');
+      const xAxisData = chronologicalRows.map(r => r.timestampStr);
+      const series = [];
+      
+      ips.forEach(ip => {
         const seriesData = chronologicalRows.map(row => {
           const ipData = row[ip] || {};
           const val = ipData[col];
@@ -7419,55 +7390,204 @@ function renderActiveDataChart(data, type) {
         });
         
         series.push({
-          name: `${ip} - ${col}`,
+          name: ip,
           type: type === 'bar' ? 'bar' : 'line',
           smooth: true,
           areaStyle: type === 'area' ? { opacity: 0.15 } : undefined,
-          data: seriesData
+          data: seriesData,
+          tooltip: {
+            valueFormatter: (value) => formatMetricValue(value, col)
+          }
         });
       });
+      
+      const option = {
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: '#161b22',
+          borderColor: '#30363d',
+          textStyle: { color: '#c9d1d9' }
+        },
+        legend: {
+          data: series.map(s => s.name),
+          textStyle: { color: '#8b949e' }
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          boundaryGap: type === 'bar',
+          data: xAxisData,
+          axisLine: { lineStyle: { color: '#30363d' } },
+          axisLabel: { color: '#8b949e', fontSize: 10 }
+        },
+        yAxis: {
+          type: 'value',
+          axisLine: { lineStyle: { color: '#30363d' } },
+          splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
+          axisLabel: {
+            color: '#8b949e',
+            formatter: (value) => formatMetricValue(value, col)
+          }
+        },
+        series: series
+      };
+      
+      chartInstance.setOption(option);
+      dataPreviewChartInstances.push(chartInstance);
     });
+  } else {
+    // Single consolidated chart (stacked/all-in-one metrics or pie/donut)
+    const chartWrapper = document.createElement('div');
+    chartWrapper.style.border = '1px solid var(--app-border)';
+    chartWrapper.style.borderRadius = '4px';
+    chartWrapper.style.padding = '15px';
+    chartWrapper.style.background = 'rgba(0,0,0,0.15)';
+    chartWrapper.style.boxSizing = 'border-box';
     
-    option = {
-      backgroundColor: 'transparent',
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: '#161b22',
-        borderColor: '#30363d',
-        textStyle: { color: '#c9d1d9' }
-      },
-      legend: {
-        data: series.map(s => s.name),
-        textStyle: { color: '#8b949e' }
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        boundaryGap: type === 'bar',
-        data: xAxisData,
-        axisLine: { lineStyle: { color: '#30363d' } },
-        axisLabel: { color: '#8b949e', fontSize: 10 }
-      },
-      yAxis: {
-        type: 'value',
-        axisLine: { lineStyle: { color: '#30363d' } },
-        splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
-        axisLabel: { color: '#8b949e' }
-      },
-      series: series
-    };
+    const canvas = document.createElement('div');
+    canvas.style.width = '100%';
+    canvas.style.height = '400px';
+    
+    chartWrapper.appendChild(canvas);
+    container.appendChild(chartWrapper);
+    
+    const chartInstance = echarts.init(canvas, 'dark');
+    let option = {};
+    
+    if (type === 'pie' || type === 'donut') {
+      const pieData = [];
+      ips.forEach(ip => {
+        columns.forEach(col => {
+          let total = 0;
+          let count = 0;
+          chronologicalRows.forEach(row => {
+            const ipData = row[ip] || {};
+            const val = ipData[col];
+            if (val !== undefined && val !== null && typeof val === 'number') {
+              total += val;
+              count++;
+            }
+          });
+          const avg = count > 0 ? Number((total / count).toFixed(2)) : 0;
+          pieData.push({
+            name: `${ip} - ${col}`,
+            value: avg
+          });
+        });
+      });
+      
+      option = {
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'item',
+          formatter: (params) => {
+            // Find which column it is to format properly
+            const matchCol = columns.find(c => params.name.endsWith(c));
+            const formatted = matchCol ? formatMetricValue(params.value, matchCol) : params.value;
+            return `${params.marker} ${params.name}: <strong>${formatted}</strong> (${params.percent}%)`;
+          },
+          backgroundColor: '#161b22',
+          borderColor: '#30363d',
+          textStyle: { color: '#c9d1d9' }
+        },
+        legend: {
+          orient: 'vertical',
+          left: 'left',
+          textStyle: { color: '#8b949e' }
+        },
+        series: [
+          {
+            name: 'Metrics Averages',
+            type: 'pie',
+            radius: type === 'donut' ? ['40%', '70%'] : '55%',
+            avoidLabelOverlap: true,
+            label: {
+              show: true,
+              formatter: (params) => {
+                const matchCol = columns.find(c => params.name.endsWith(c));
+                const formatted = matchCol ? formatMetricValue(params.value, matchCol) : params.value;
+                return `${params.name}: ${formatted}`;
+              }
+            },
+            emphasis: {
+              label: {
+                show: true,
+                fontSize: '14',
+                fontWeight: 'bold'
+              }
+            },
+            data: pieData
+          }
+        ]
+      };
+    } else {
+      const xAxisData = chronologicalRows.map(r => r.timestampStr);
+      const series = [];
+      
+      ips.forEach(ip => {
+        columns.forEach(col => {
+          const seriesData = chronologicalRows.map(row => {
+            const ipData = row[ip] || {};
+            const val = ipData[col];
+            return val !== undefined && val !== null ? Number(val.toFixed(2)) : null;
+          });
+          
+          series.push({
+            name: `${ip} - ${col}`,
+            type: type === 'bar' ? 'bar' : 'line',
+            smooth: true,
+            areaStyle: type === 'area' ? { opacity: 0.15 } : undefined,
+            data: seriesData,
+            tooltip: {
+              valueFormatter: (value) => formatMetricValue(value, col)
+            }
+          });
+        });
+      });
+      
+      option = {
+        backgroundColor: 'transparent',
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: '#161b22',
+          borderColor: '#30363d',
+          textStyle: { color: '#c9d1d9' }
+        },
+        legend: {
+          data: series.map(s => s.name),
+          textStyle: { color: '#8b949e' }
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          boundaryGap: type === 'bar',
+          data: xAxisData,
+          axisLine: { lineStyle: { color: '#30363d' } },
+          axisLabel: { color: '#8b949e', fontSize: 10 }
+        },
+        yAxis: {
+          type: 'value',
+          axisLine: { lineStyle: { color: '#30363d' } },
+          splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
+          axisLabel: { color: '#8b949e' }
+        },
+        series: series
+      };
+    }
+    
+    chartInstance.setOption(option);
+    dataPreviewChartInstances.push(chartInstance);
   }
-  
-  dataPreviewChartInstance.setOption(option);
 }
 window.renderActiveDataChart = renderActiveDataChart;
-
-
-
-
-
