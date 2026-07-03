@@ -5428,7 +5428,10 @@ async function populateGrafanaConnectionsForQueryPanel() {
   }
   
   // Populate options
-  select.innerHTML = '<option value="">-- Use Active Configuration --</option>';
+  select.innerHTML = `
+    <option value="">-- Select Connection --</option>
+    <option value="active">Active Configuration (Default)</option>
+  `;
   grafanaConfigs.forEach(c => {
     select.innerHTML += `<option value="${c.id}">${escapeHtml(c.name)} (${c.host})</option>`;
   });
@@ -5437,13 +5440,19 @@ async function populateGrafanaConnectionsForQueryPanel() {
 async function loadGrafanaDatasourcesForPanel() {
   const configSelect = document.getElementById('query-panel-config-id');
   const dsSelect = document.getElementById('query-panel-datasource-uid');
+  if (!configSelect || !dsSelect) return;
+  
+  const configId = configSelect.value;
+  if (!configId) {
+    dsSelect.innerHTML = '<option value="">-- Select Connection first --</option>';
+    return;
+  }
   
   dsSelect.innerHTML = '<option value="">Loading datasources...</option>';
   
-  const configId = configSelect.value;
-  const url = configId 
-    ? `/api/v1/settings/grafana/datasources?configId=${configId}`
-    : `/api/v1/settings/grafana/datasources`;
+  const url = configId === 'active'
+    ? `/api/v1/settings/grafana/datasources`
+    : `/api/v1/settings/grafana/datasources?configId=${configId}`;
     
   try {
     const res = await fetch(url);
@@ -5476,12 +5485,15 @@ async function loadGrafanaDatasourcesForPanel() {
   }
 }
 
-function openAddQueryPanelModal() {
+async function openAddQueryPanelModal() {
   document.getElementById('query-panel-modal-title').textContent = 'Add Query Panel';
   document.getElementById('query-panel-id').value = '';
   document.getElementById('query-panel-name').value = '';
   document.getElementById('query-panel-description').value = '';
+  
+  await populateGrafanaConnectionsForQueryPanel();
   document.getElementById('query-panel-config-id').value = '';
+  
   document.getElementById('query-panel-from').value = 'now-1h';
   document.getElementById('query-panel-to').value = 'now';
   document.getElementById('query-panel-step').value = '1m';
@@ -5496,7 +5508,7 @@ function openAddQueryPanelModal() {
   addQueryColumnInput('CPU', '100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)');
   addQueryColumnInput('Memory', '(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100');
   
-  // Load datasources
+  // Load datasources (will be empty select placeholder)
   loadGrafanaDatasourcesForPanel();
   
   document.getElementById('modal-query-panel').classList.add('active');
@@ -5524,8 +5536,41 @@ async function openEditQueryPanelModal(panelId) {
     document.getElementById('query-panel-custom-to-input').value = formatToDatetimeLocalValue(panel.timeRangeTo);
   }
   
-  // We can select the config associated with this datasource if needed, but since active is default, we can leave config selection as default
-  document.getElementById('query-panel-config-id').value = '';
+  // Populate connections select
+  await populateGrafanaConnectionsForQueryPanel();
+  
+  // Find which connection contains panel.datasourceUid
+  let foundConfigId = '';
+  
+  // Try active config first
+  try {
+    const res = await fetch(`/api/v1/settings/grafana/datasources`);
+    const r = await res.json();
+    if (r.success && Array.isArray(r.data)) {
+      if (r.data.some(ds => ds.uid === panel.datasourceUid)) {
+        foundConfigId = 'active';
+      }
+    }
+  } catch (_) {}
+  
+  // If not found in active, try other custom configs
+  if (!foundConfigId && grafanaConfigs.length > 0) {
+    for (const config of grafanaConfigs) {
+      try {
+        const res = await fetch(`/api/v1/settings/grafana/datasources?configId=${config.id}`);
+        const r = await res.json();
+        if (r.success && Array.isArray(r.data)) {
+          if (r.data.some(ds => ds.uid === panel.datasourceUid)) {
+            foundConfigId = config.id;
+            break;
+          }
+        }
+      } catch (_) {}
+    }
+  }
+  
+  // Set the selected connection ID
+  document.getElementById('query-panel-config-id').value = foundConfigId;
   
   document.getElementById('query-panel-columns-list').innerHTML = '';
   document.getElementById('query-test-feedback').classList.add('hidden');
@@ -5534,7 +5579,7 @@ async function openEditQueryPanelModal(panelId) {
     addQueryColumnInput(col.name, col.query);
   });
   
-  // Set datasource list selection
+  // Load datasources for the selected connection
   await loadGrafanaDatasourcesForPanel();
   document.getElementById('query-panel-datasource-uid').value = panel.datasourceUid;
   

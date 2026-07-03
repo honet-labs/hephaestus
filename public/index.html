@@ -1530,35 +1530,35 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Panel Name</label>
-            <input type="text" id="query-panel-name" placeholder="e.g. Server Resources Explorer" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <input type="text" id="query-panel-name" placeholder="e.g. Server Resources Explorer" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; height: 35px;">
           </div>
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Description (Optional)</label>
-            <input type="text" id="query-panel-description" placeholder="e.g. CPU, RAM, Disk monitoring" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <input type="text" id="query-panel-description" placeholder="e.g. CPU, RAM, Disk monitoring" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; height: 35px;">
           </div>
         </div>
 
         <!-- Datasource Selection -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: flex-end;">
           <div class="form-group">
-            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Grafana Connection Profile</label>
-            <select id="query-panel-config-id" onchange="loadGrafanaDatasourcesForPanel()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
-              <option value="">-- Use Active Configuration --</option>
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Connections</label>
+            <select id="query-panel-config-id" onchange="loadGrafanaDatasourcesForPanel()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; height: 35px;">
+              <option value="">-- Select Connection --</option>
             </select>
           </div>
           <div class="form-group">
-            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Target Datasource</label>
-            <select id="query-panel-datasource-uid" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
-              <option value="">Loading datasources...</option>
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">datasource</label>
+            <select id="query-panel-datasource-uid" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; height: 35px;">
+              <option value="">-- Select Connection first --</option>
             </select>
           </div>
         </div>
 
         <!-- Query Parameters (Time range & Step) -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: flex-end;">
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Time Range</label>
-            <select id="query-panel-from" onchange="toggleQueryCustomTimeFields(this.value)" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <select id="query-panel-from" onchange="toggleQueryCustomTimeFields(this.value)" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; height: 35px;">
               <option value="now-15m">Last 15 minutes</option>
               <option value="now-1h" selected>Last 1 hour</option>
               <option value="now-6h">Last 6 hours</option>
@@ -1570,7 +1570,7 @@
           </div>
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Step / Interval</label>
-            <select id="query-panel-step" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <select id="query-panel-step" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; height: 35px;">
               <option value="15s">15 seconds</option>
               <option value="30s">30 seconds</option>
               <option value="1m" selected>1 minute</option>
@@ -1581,7 +1581,7 @@
           </div>
           <div class="form-group" id="query-panel-to-container">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Time To</label>
-            <input type="text" id="query-panel-to" value="now" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <input type="text" id="query-panel-to" value="now" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; height: 35px;">
           </div>
         </div>
 
@@ -1589,11 +1589,11 @@
         <div id="query-panel-custom-time-row" style="display: none; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom Time From</label>
-            <input type="datetime-local" id="query-panel-custom-from-input" step="1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; color-scheme: dark;">
+            <input type="datetime-local" id="query-panel-custom-from-input" step="1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; color-scheme: dark; height: 35px;">
           </div>
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom Time To (Optional, leave blank for 'now')</label>
-            <input type="datetime-local" id="query-panel-custom-to-input" step="1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; color-scheme: dark;">
+            <input type="datetime-local" id="query-panel-custom-to-input" step="1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; color-scheme: dark; height: 35px;">
           </div>
         </div>
 
