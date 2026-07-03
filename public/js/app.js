@@ -5759,6 +5759,169 @@ window.exportActivePanelToTxt = function() {
   document.body.removeChild(link);
 };
 
+// ==========================================
+// CHART EXPORT OPTIONS AND LIVE PREVIEW
+// ==========================================
+const themeStyles = {
+  grafana: {
+    bg: '#0b0c10',
+    text: '#c9d1d9',
+    axis: '#8b949e',
+    split: '#21262d'
+  },
+  midnight: {
+    bg: '#1a1b26',
+    text: '#a9b1d6',
+    axis: '#787c99',
+    split: '#24283b'
+  },
+  slate: {
+    bg: '#1f1f1f',
+    text: '#e0e0e0',
+    axis: '#888888',
+    split: '#333333'
+  },
+  light: {
+    bg: '#ffffff',
+    text: '#333333',
+    axis: '#666666',
+    split: '#e0e0e0'
+  }
+};
+
+const colorPalettes = {
+  grafana: ['#73BF69', '#5794F2', '#FADE2A', '#FF9E1B', '#F2495C', '#B877D9', '#70DBFF', '#E075B6'],
+  cool: ['#00f2fe', '#4facfe', '#7000ff', '#b18cf4', '#0000fe'],
+  warm: ['#ff5e62', '#ff9966', '#ff4e50', '#f9d423', '#e74c3c'],
+  neon: ['#39ff14', '#ff007f', '#00ffff', '#ffff00', '#ff00ff'],
+  monochrome: ['#58a6ff', '#1f6feb', '#104eb2', '#8b949e', '#c9d1d9']
+};
+
+let previewChartInstance = null;
+
+function initPreviewChartInstance() {
+  const container = document.getElementById('export-chart-preview-container');
+  if (!container) return;
+  
+  if (previewChartInstance) {
+    previewChartInstance.dispose();
+    previewChartInstance = null;
+  }
+  
+  container.innerHTML = '';
+  previewChartInstance = echarts.init(container, 'dark');
+}
+
+function updateChartPreview() {
+  if (!previewChartInstance) return;
+  if (!activeQueryPanelId) return;
+  const data = panelQueryCache[activeQueryPanelId];
+  if (!data) return;
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  const rows = data.rows || [];
+  
+  if (ips.length === 0 || rows.length === 0) return;
+  
+  const selectedIp = document.getElementById('export-chart-ip-select').value;
+  const selectedMetric = document.getElementById('export-chart-metric-select').value;
+  const customTitle = document.getElementById('export-chart-title-input').value;
+  const bgTheme = document.getElementById('export-chart-bg-select').value;
+  const palette = document.getElementById('export-chart-palette-select').value;
+  
+  const theme = themeStyles[bgTheme] || themeStyles.grafana;
+  const colors = colorPalettes[palette] || colorPalettes.grafana;
+  
+  const rawTimestamps = rows.map(r => r.timestampStr).reverse();
+  const shortTimestamps = rawTimestamps.map(ts => {
+    const parts = ts.split(' ');
+    if (parts.length === 2) {
+      const dateParts = parts[0].split('-');
+      const timeParts = parts[1].split(':');
+      if (dateParts.length === 3 && timeParts.length === 3) {
+        return `${dateParts[1]}-${dateParts[2]} ${timeParts[0]}:${timeParts[1]}`;
+      }
+    }
+    return ts;
+  });
+  
+  const series = [];
+  const targetIps = selectedIp === 'all' ? ips : [selectedIp];
+  const targetColumns = selectedMetric === 'all' ? columns : [selectedMetric];
+  
+  targetIps.forEach(ip => {
+    targetColumns.forEach(col => {
+      const seriesData = rows.map(row => {
+        const ipData = row[ip] || {};
+        return ipData[col] !== undefined ? ipData[col] : null;
+      }).reverse();
+      
+      series.push({
+        name: `${ip} - ${col}`,
+        type: 'line',
+        data: seriesData,
+        smooth: true,
+        showSymbol: false
+      });
+    });
+  });
+  
+  const option = {
+    backgroundColor: theme.bg,
+    color: colors,
+    title: {
+      text: customTitle || 'Metrics Trend Chart',
+      textStyle: { color: theme.text, fontSize: 13 },
+      left: 'center',
+      top: 10
+    },
+    legend: {
+      data: series.map(s => s.name),
+      textStyle: { color: theme.text, fontSize: 9 },
+      top: 32,
+      type: 'scroll',
+      width: '90%'
+    },
+    grid: {
+      left: '4%',
+      right: '4%',
+      bottom: '15%',
+      top: '25%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: shortTimestamps,
+      axisLabel: { 
+        color: theme.axis, 
+        fontSize: 9,
+        rotate: 15,
+        interval: 'auto',
+        hideOverlap: true
+      },
+      axisLine: { lineStyle: { color: theme.split } }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { 
+        color: theme.axis, 
+        fontSize: 9,
+        formatter: function(value) {
+          if (targetColumns.length === 1) {
+            return formatMetricValue(value, targetColumns[0]);
+          }
+          return value;
+        }
+      },
+      splitLine: { lineStyle: { color: theme.split } }
+    },
+    series: series
+  };
+  
+  previewChartInstance.setOption(option, true);
+}
+
 window.openExportChartModal = function() {
   if (!activeQueryPanelId) return;
   const data = panelQueryCache[activeQueryPanelId];
@@ -5766,6 +5929,9 @@ window.openExportChartModal = function() {
   
   const ips = data.ips || [];
   const columns = data.columns || [];
+  
+  // Populate Title
+  document.getElementById('export-chart-title-input').value = data.name || 'Metrics Trend Chart';
   
   // Populate IP select dropdown
   const ipSelect = document.getElementById('export-chart-ip-select');
@@ -5785,22 +5951,74 @@ window.openExportChartModal = function() {
     });
   }
   
+  // Set defaults for theme & palette
+  document.getElementById('export-chart-bg-select').value = 'grafana';
+  document.getElementById('export-chart-palette-select').value = 'grafana';
+  
+  // Show modal
   document.getElementById('modal-export-chart').classList.add('active');
+  
+  // Bind change events to form elements to automatically update preview
+  const controls = [
+    'export-chart-title-input',
+    'export-chart-ip-select',
+    'export-chart-metric-select',
+    'export-chart-bg-select',
+    'export-chart-palette-select'
+  ];
+  
+  controls.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.oninput = updateChartPreview;
+      el.onchange = updateChartPreview;
+    }
+  });
+  
+  // Load ECharts and render preview
+  const previewContainer = document.getElementById('export-chart-preview-container');
+  previewContainer.innerHTML = `
+    <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
+      <span class="spinner" style="margin-right: 8px;"></span> Loading chart preview...
+    </div>
+  `;
+  
+  if (typeof echarts === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
+    script.onload = () => {
+      initPreviewChartInstance();
+      updateChartPreview();
+    };
+    document.head.appendChild(script);
+  } else {
+    setTimeout(() => {
+      initPreviewChartInstance();
+      updateChartPreview();
+    }, 150);
+  }
 };
 
 window.closeExportChartModal = function() {
+  if (previewChartInstance) {
+    previewChartInstance.dispose();
+    previewChartInstance = null;
+  }
   document.getElementById('modal-export-chart').classList.remove('active');
 };
 
 window.submitExportChart = function() {
   const ipSelect = document.getElementById('export-chart-ip-select').value;
   const metricSelect = document.getElementById('export-chart-metric-select').value;
+  const customTitle = document.getElementById('export-chart-title-input').value;
+  const bgTheme = document.getElementById('export-chart-bg-select').value;
+  const palette = document.getElementById('export-chart-palette-select').value;
   
   closeExportChartModal();
-  exportActivePanelToChartImageWithOptions(ipSelect, metricSelect);
+  exportActivePanelToChartImageWithOptions(ipSelect, metricSelect, customTitle, bgTheme, palette);
 };
 
-window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedMetric) {
+window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedMetric, customTitle, bgTheme, palette) {
   if (!activeQueryPanelId) return;
   const data = panelQueryCache[activeQueryPanelId];
   if (!data) return;
@@ -5813,8 +6031,8 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
   
   const processChartExport = () => {
     const tempDiv = document.createElement('div');
-    tempDiv.style.width = '1000px';
-    tempDiv.style.height = '600px';
+    tempDiv.style.width = '1200px';
+    tempDiv.style.height = '700px';
     tempDiv.style.position = 'absolute';
     tempDiv.style.left = '-9999px';
     tempDiv.style.top = '-9999px';
@@ -5822,10 +6040,23 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
     
     const chart = echarts.init(tempDiv, 'dark');
     
-    const timestamps = rows.map(r => r.timestampStr).reverse();
-    const series = [];
+    const theme = themeStyles[bgTheme] || themeStyles.grafana;
+    const colors = colorPalettes[palette] || colorPalettes.grafana;
     
-    // Filter IPs and Columns based on user selection
+    const rawTimestamps = rows.map(r => r.timestampStr).reverse();
+    const shortTimestamps = rawTimestamps.map(ts => {
+      const parts = ts.split(' ');
+      if (parts.length === 2) {
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+        if (dateParts.length === 3 && timeParts.length === 3) {
+          return `${dateParts[1]}-${dateParts[2]} ${timeParts[0]}:${timeParts[1]}`;
+        }
+      }
+      return ts;
+    });
+    
+    const series = [];
     const targetIps = selectedIp === 'all' ? ips : [selectedIp];
     const targetColumns = selectedMetric === 'all' ? columns : [selectedMetric];
     
@@ -5846,57 +6077,54 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
       });
     });
     
-    // Generate descriptive chart title
-    let chartTitle = data.name || 'Metrics Trend Chart';
-    if (selectedIp !== 'all' || selectedMetric !== 'all') {
-      chartTitle += ' (';
-      if (selectedIp !== 'all') chartTitle += `IP: ${selectedIp}`;
-      if (selectedIp !== 'all' && selectedMetric !== 'all') chartTitle += ', ';
-      if (selectedMetric !== 'all') chartTitle += `Metric: ${selectedMetric}`;
-      chartTitle += ')';
-    }
-    
     const option = {
-      backgroundColor: '#0d1117',
+      backgroundColor: theme.bg,
+      color: colors,
       title: {
-        text: chartTitle,
-        textStyle: { color: '#ffffff', fontSize: 16 },
+        text: customTitle || 'Metrics Trend Chart',
+        textStyle: { color: theme.text, fontSize: 16 },
         left: 'center',
         top: 20
       },
       legend: {
         data: series.map(s => s.name),
-        textStyle: { color: '#c9d1d9' },
-        top: 50
+        textStyle: { color: theme.text, fontSize: 11 },
+        top: 50,
+        type: 'scroll',
+        width: '90%'
       },
       grid: {
         left: '5%',
         right: '5%',
-        bottom: '10%',
+        bottom: '12%',
         top: '20%',
         containLabel: true
       },
       xAxis: {
         type: 'category',
-        data: timestamps,
-        axisLabel: { color: '#8b949e' }
+        data: shortTimestamps,
+        axisLabel: { 
+          color: theme.axis, 
+          fontSize: 10,
+          rotate: 15,
+          interval: 'auto',
+          hideOverlap: true
+        },
+        axisLine: { lineStyle: { color: theme.split } }
       },
       yAxis: {
         type: 'value',
         axisLabel: { 
-          color: '#8b949e',
+          color: theme.axis, 
+          fontSize: 10,
           formatter: function(value) {
-            // Apply human readable metrics format based on the selected metric or standard numbers
-            // If we are looking at one specific metric, format accordingly
             if (targetColumns.length === 1) {
-              const colName = targetColumns[0];
-              const formattedVal = formatMetricValue(value, colName);
-              return formattedVal;
+              return formatMetricValue(value, targetColumns[0]);
             }
             return value;
           }
         },
-        splitLine: { lineStyle: { color: '#21262d' } }
+        splitLine: { lineStyle: { color: theme.split } }
       },
       series: series
     };
@@ -5913,7 +6141,6 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
       const link = document.createElement('a');
       link.href = imgUrl;
       
-      // Dynamic download filename
       let filename = `query_explorer_chart_${activeQueryPanelId}`;
       if (selectedIp !== 'all') filename += `_${selectedIp.replace(/\./g, '_')}`;
       if (selectedMetric !== 'all') filename += `_${selectedMetric.toLowerCase()}`;
