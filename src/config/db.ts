@@ -370,13 +370,13 @@ export async function initDb() {
   try {
     const userCheck = await pool.query("SELECT 1 FROM users LIMIT 1");
     if (userCheck.rowCount === 0) {
-      const crypto = require("crypto");
-      const passwordHash = crypto.createHash("sha256").update("hephaestus").digest("hex");
+      const bcrypt = require("bcrypt");
+      const passwordHash = await bcrypt.hash("hephaestus", 12);
       await pool.query(
         `INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)`,
         ["sysadmin", "admin@hephaestus.local", passwordHash, "ADMIN"]
       );
-      console.log("🌱 [DB] Seeded default user: sysadmin (password: hephaestus)");
+      console.log("🌱 [DB] Seeded default user: sysadmin");
     }
   } catch (err) {
     console.error("❌ [DB] Failed to seed default user:", err);

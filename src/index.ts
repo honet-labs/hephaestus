@@ -1,8 +1,10 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import path from "path";
 import config from "./config/env";
 import { initDb, isDbConnected } from "./config/db";
+import { globalLimiter, loginLimiter } from "./middleware/rate-limit.middleware";
 import settingsRoutes from "./routes/settings.routes";
 import monitoringViewRoutes from "./routes/monitoring-view.routes";
 import snmpRoutes from "./routes/snmp.routes";
@@ -16,8 +18,11 @@ const app = express();
 // 1. CORS Configuration
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    // Allow all origins dynamically to prevent CORS issues on different ports or IP addresses
-    callback(null, true);
+    if (!origin || config.allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -26,8 +31,14 @@ const corsOptions: cors.CorsOptions = {
 
 app.use(cors(corsOptions));
 
+// 1b. Security Headers
+app.use(helmet());
+
+// 1c. Rate Limiting
+app.use("/api/v1", globalLimiter);
+
 // 2. Request parsing middlewares
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Simple logger middleware

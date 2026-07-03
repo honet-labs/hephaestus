@@ -26,8 +26,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install system dependencies (snmpwalk and nmap)
-RUN apk add --no-cache net-snmp-tools nmap
+# Install system dependencies (snmpwalk only, nmap removed for security)
+RUN apk add --no-cache net-snmp-tools
+
+# Create non-root user
+RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
 
 # Copy package descriptors and install production-only dependencies
 COPY package*.json ./
@@ -40,7 +43,9 @@ COPY --from=builder /app/dist ./dist
 COPY public/ ./public
 
 # Create persistent data directory for fallback db.json storage (if used)
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data && chown -R appuser:appgroup /app
+
+USER appuser
 
 EXPOSE 5000
 

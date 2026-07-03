@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import axios from "axios";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { config } from "../config/env";
 import { query } from "../config/db";
 
@@ -510,9 +510,17 @@ export class SnmpService {
       const operation = options.operation;
 
       const binary = operation === "get" ? "snmpget" : "snmpwalk";
-      const cmd = `${binary} -v ${versionStr} -c "${community}" -On -t 4 -r 1 "${host}:${port}" "${startOid}"`;
+      const args = [
+        "-v", versionStr,
+        "-c", community,
+        "-On",
+        "-t", "4",
+        "-r", "1",
+        `${host}:${port}`,
+        startOid
+      ];
 
-      exec(cmd, async (error, stdout, stderr) => {
+      execFile(binary, args, async (error, stdout, stderr) => {
         if (error && !stdout) {
           return reject(new Error(stderr || error.message));
         }

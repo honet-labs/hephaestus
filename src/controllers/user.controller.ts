@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 import { query, logActivity } from "../config/db";
+
+const BCRYPT_ROUNDS = 12;
 
 export class UserController {
   // List Users
@@ -52,7 +55,7 @@ export class UserController {
         return;
       }
 
-      const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
       const targetRole = role || "operator";
 
       const insertResult = await query(
@@ -161,7 +164,7 @@ export class UserController {
       }
 
       const username = userRes.rows[0].username;
-      const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
       await query("UPDATE users SET password = $1 WHERE id = $2", [passwordHash, id]);
 
@@ -335,11 +338,9 @@ export class UserController {
         return;
       }
 
-      const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
-
       const userRes = await query(
-        "SELECT id, username, email, role FROM users WHERE username = $1 AND password = $2",
-        [username.trim(), passwordHash]
+        "SELECT id, username, email, role, password FROM users WHERE username = $1",
+        [username.trim()]
       );
 
       if (userRes.rowCount === 0) {
@@ -352,6 +353,15 @@ export class UserController {
       }
 
       const user = userRes.rows[0];
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
+        res.status(401).json({
+          success: false,
+          error: "Unauthorized",
+          message: "Invalid username or password."
+        });
+        return;
+      }
       const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 

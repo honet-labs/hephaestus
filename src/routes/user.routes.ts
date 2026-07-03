@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { userController } from "../controllers/user.controller";
+import { loginLimiter } from "../middleware/rate-limit.middleware";
 
 const router = Router();
 
-router.post("/login", userController.login);
+router.post("/login", loginLimiter, userController.login);
 router.post("/logout", userController.logout);
 router.get("/session", userController.getSession);
 
