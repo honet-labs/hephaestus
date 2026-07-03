@@ -6365,11 +6365,6 @@ function updateChartPreview() {
   const rawTimestamps = rows.map(r => r.timestampStr).reverse();
   
   let timeRangeText = '';
-  if (rawTimestamps.length > 0) {
-    const startTime = rawTimestamps[0];
-    const endTime = rawTimestamps[rawTimestamps.length - 1];
-    timeRangeText = `Time Range: ${startTime} - ${endTime}`;
-  }
   
   const shortTimestamps = rawTimestamps.map(ts => {
     const parts = ts.split(' ');
@@ -6634,11 +6629,6 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
     const rawTimestamps = rows.map(r => r.timestampStr).reverse();
     
     let timeRangeText = '';
-    if (rawTimestamps.length > 0) {
-      const startTime = rawTimestamps[0];
-      const endTime = rawTimestamps[rawTimestamps.length - 1];
-      timeRangeText = `Time Range: ${startTime} - ${endTime}`;
-    }
 
     const shortTimestamps = rawTimestamps.map(ts => {
       const parts = ts.split(' ');
