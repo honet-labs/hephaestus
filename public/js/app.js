@@ -154,7 +154,7 @@ function initAppOnce() {
 }
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -419,9 +419,8 @@ function showPage(pageId) {
     navigate('overview');
     return;
   } else if (pageId === 'prometheus') {
-    pageTitle.textContent = 'Prometheus Config';
-    pageDesc.textContent = 'Kelola, validasi, dan muat ulang (hot reload) konfigurasi file prometheus.yml.';
-    initPrometheusPage();
+    navigate('overview');
+    return;
   } else if (pageId === 'monitoring') {
     pageTitle.textContent = 'Monitoring View';
     pageDesc.textContent = 'Slideshow rotasi monitoring dashboard Grafana ter-embed.';
@@ -7220,8 +7219,228 @@ window.triggerBackgroundExport = triggerBackgroundExport;
 
 function hideTablePreview() {
   document.getElementById('query-table-preview-wrapper').classList.add('hidden');
+  if (dataPreviewChartInstance) {
+    try {
+      dataPreviewChartInstance.dispose();
+    } catch (_) {}
+    dataPreviewChartInstance = null;
+  }
 }
 window.hideTablePreview = hideTablePreview;
+
+let dataPreviewChartInstance = null;
+
+async function triggerQueryPreview(buttonEl) {
+  if (!activeQueryPanelId) return;
+  const panelId = activeQueryPanelId;
+  const vizType = document.getElementById('preview-viz-type').value;
+  
+  const spinner = buttonEl.querySelector('.spinner');
+  const labelSpan = buttonEl.querySelector('span:last-child');
+  const originalText = labelSpan ? labelSpan.textContent : 'Preview';
+  
+  if (spinner) spinner.classList.remove('hidden');
+  buttonEl.disabled = true;
+  
+  try {
+    if (!panelQueryCache[panelId]) {
+      if (window.diagLog) window.diagLog(`triggerQueryPreview: data not cached, loading from backend api`);
+      if (labelSpan) labelSpan.textContent = 'Fetching data...';
+      
+      const res = await fetch(`/api/v1/query-explorer/panels/${panelId}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await res.json();
+      
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || 'Failed to fetch query results');
+      }
+      
+      panelQueryCache[panelId] = result.data;
+      addLog('Query Explorer', `Successfully fetched data for preview.`, 'SUCCESS');
+    }
+    
+    document.getElementById('query-table-preview-wrapper').classList.remove('hidden');
+    
+    const titleEl = document.getElementById('query-preview-title');
+    if (titleEl) {
+      const typeLabel = vizType === 'table' ? 'Table' : (vizType.charAt(0).toUpperCase() + vizType.slice(1) + ' Chart');
+      titleEl.innerHTML = `
+        <span style="display: inline-block; width: 6px; height: 6px; background: #58a6ff; border-radius: 50%;"></span>
+        Interactive Data Preview (${typeLabel})
+      `;
+    }
+    
+    const data = panelQueryCache[panelId];
+    
+    if (vizType === 'table') {
+      document.getElementById('query-results-chart').style.display = 'none';
+      document.getElementById('query-results-output').style.display = 'block';
+      renderActiveDataTable(data);
+    } else {
+      document.getElementById('query-results-output').style.display = 'none';
+      document.getElementById('query-results-chart').style.display = 'block';
+      renderActiveDataChart(data, vizType);
+    }
+  } catch (error) {
+    if (window.diagLog) window.diagLog(`triggerQueryPreview: error occurred - ${error.message}`, '#ff7b72');
+    alert(`Preview Failed: ${error.message}`);
+  } finally {
+    if (spinner) spinner.classList.add('hidden');
+    buttonEl.disabled = false;
+    if (labelSpan) labelSpan.textContent = originalText;
+  }
+}
+window.triggerQueryPreview = triggerQueryPreview;
+
+function renderActiveDataChart(data, type) {
+  const container = document.getElementById('query-results-chart');
+  if (!container) return;
+  
+  if (dataPreviewChartInstance) {
+    try {
+      dataPreviewChartInstance.dispose();
+    } catch (_) {}
+    dataPreviewChartInstance = null;
+  }
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  const rows = data.rows || [];
+  
+  if (ips.length === 0 || rows.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; display: flex; align-items: center; justify-content: center; height: 100%;">
+        No telemetry matches found in database for the given time range.
+      </div>
+    `;
+    return;
+  }
+  
+  dataPreviewChartInstance = echarts.init(container, 'dark');
+  const chronologicalRows = [...rows].reverse();
+  let option = {};
+  
+  if (type === 'pie' || type === 'donut') {
+    const pieData = [];
+    ips.forEach(ip => {
+      columns.forEach(col => {
+        let total = 0;
+        let count = 0;
+        chronologicalRows.forEach(row => {
+          const ipData = row[ip] || {};
+          const val = ipData[col];
+          if (val !== undefined && val !== null && typeof val === 'number') {
+            total += val;
+            count++;
+          }
+        });
+        const avg = count > 0 ? Number((total / count).toFixed(2)) : 0;
+        pieData.push({
+          name: `${ip} - ${col}`,
+          value: avg
+        });
+      });
+    });
+    
+    option = {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} ({d}%)',
+        backgroundColor: '#161b22',
+        borderColor: '#30363d',
+        textStyle: { color: '#c9d1d9' }
+      },
+      legend: {
+        orient: 'vertical',
+        left: 'left',
+        textStyle: { color: '#8b949e' }
+      },
+      series: [
+        {
+          name: 'Metrics Averages',
+          type: 'pie',
+          radius: type === 'donut' ? ['40%', '70%'] : '55%',
+          avoidLabelOverlap: true,
+          label: {
+            show: true,
+            formatter: '{b}: {c}'
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: '14',
+              fontWeight: 'bold'
+            }
+          },
+          data: pieData
+        }
+      ]
+    };
+  } else {
+    const xAxisData = chronologicalRows.map(r => r.timestampStr);
+    const series = [];
+    
+    ips.forEach(ip => {
+      columns.forEach(col => {
+        const seriesData = chronologicalRows.map(row => {
+          const ipData = row[ip] || {};
+          const val = ipData[col];
+          return val !== undefined && val !== null ? Number(val.toFixed(2)) : null;
+        });
+        
+        series.push({
+          name: `${ip} - ${col}`,
+          type: type === 'bar' ? 'bar' : 'line',
+          smooth: true,
+          areaStyle: type === 'area' ? { opacity: 0.15 } : undefined,
+          data: seriesData
+        });
+      });
+    });
+    
+    option = {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: '#161b22',
+        borderColor: '#30363d',
+        textStyle: { color: '#c9d1d9' }
+      },
+      legend: {
+        data: series.map(s => s.name),
+        textStyle: { color: '#8b949e' }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: type === 'bar',
+        data: xAxisData,
+        axisLine: { lineStyle: { color: '#30363d' } },
+        axisLabel: { color: '#8b949e', fontSize: 10 }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { lineStyle: { color: '#30363d' } },
+        splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
+        axisLabel: { color: '#8b949e' }
+      },
+      series: series
+    };
+  }
+  
+  dataPreviewChartInstance.setOption(option);
+}
+window.renderActiveDataChart = renderActiveDataChart;
 
 
 

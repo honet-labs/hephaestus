@@ -4,7 +4,6 @@ import path from "path";
 import config from "./config/env";
 import { initDb, isDbConnected } from "./config/db";
 import settingsRoutes from "./routes/settings.routes";
-import prometheusRoutes from "./routes/prometheus.routes";
 import monitoringViewRoutes from "./routes/monitoring-view.routes";
 import snmpRoutes from "./routes/snmp.routes";
 import systemRoutes from "./routes/system.routes";
@@ -59,7 +58,6 @@ import { authMiddleware } from "./middleware/auth.middleware";
 // 4. API Routes registration
 app.use("/api/v1", authMiddleware);
 app.use("/api/v1/settings", settingsRoutes);
-app.use("/api/v1/prometheus", prometheusRoutes);
 app.use("/api/v1/monitoring-views", monitoringViewRoutes);
 app.use("/api/v1/snmp", snmpRoutes);
 app.use("/api/v1/system", systemRoutes);
