@@ -1,0 +1,10 @@
+node_modules
+dist
+data
+package-lock.json
+CVS
+.git
+.hg
+.svn
+*.min.js
+*.min.css
