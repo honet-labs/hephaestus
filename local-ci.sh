@@ -65,11 +65,16 @@ fi
 # Step 3: Linting & Formatting Check
 echo -e "${YELLOW}[3/5] Running ESLint and Prettier check...${NC}"
 if command -v npm &> /dev/null; then
-    if npm run lint && npm run format:check; then
-        echo -e "${GREEN}✓ Linting and formatting checks passed successfully!${NC}"
+    if [ -d "node_modules" ]; then
+        if npm run lint && npm run format:check; then
+            echo -e "${GREEN}✓ Linting and formatting checks passed successfully!${NC}"
+        else
+            echo -e "${RED}❌ FAILED: Code linting or formatting checks failed. Run 'npm run lint:fix' or 'npm run format' to resolve!${NC}"
+            exit 1
+        fi
     else
-        echo -e "${RED}❌ FAILED: Code linting or formatting checks failed. Run 'npm run lint:fix' or 'npm run format' to resolve!${NC}"
-        exit 1
+        echo -e "${YELLOW}⚠️ WARNING: 'node_modules' folder not found. Skipping linting and formatting checks on host.${NC}"
+        echo -e "${YELLOW}If you are developing locally, run 'npm install' to enable these checks.${NC}"
     fi
 else
     echo -e "${YELLOW}⚠️ WARNING: npm not available on this host. Skipping linting check.${NC}"

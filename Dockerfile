@@ -6,9 +6,16 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy tsconfig and source files
+# Copy tsconfig, source files, and lint/format configurations
 COPY tsconfig.json ./
 COPY src/ ./src/
+COPY .eslintrc.json ./
+COPY .eslintignore ./
+COPY .prettierrc ./
+COPY .prettierignore ./
+
+# Run linting and formatting check to ensure code quality before compiling
+RUN npm run lint && npm run format:check
 
 # Compile TypeScript
 RUN npm run build
