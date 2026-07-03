@@ -7219,16 +7219,16 @@ window.triggerBackgroundExport = triggerBackgroundExport;
 
 function hideTablePreview() {
   document.getElementById('query-table-preview-wrapper').classList.add('hidden');
-  if (dataPreviewChartInstance) {
+  dataPreviewChartInstances.forEach(instance => {
     try {
-      dataPreviewChartInstance.dispose();
+      instance.dispose();
     } catch (_) {}
-    dataPreviewChartInstance = null;
-  }
+  });
+  dataPreviewChartInstances = [];
 }
 window.hideTablePreview = hideTablePreview;
 
-let dataPreviewChartInstance = null;
+let dataPreviewChartInstances = [];
 
 function loadEChartsLibrary() {
   return new Promise((resolve, reject) => {
