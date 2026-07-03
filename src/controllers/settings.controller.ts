@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { Request, Response } from "express";
 import { grafanaService } from "../services/grafana.service";
 import config from "../config/env";
@@ -338,7 +339,7 @@ export class SettingsController {
         }
       } else {
         const newItem = {
-          id: "cfg-" + Date.now(),
+          id: "cfg-" + crypto.randomUUID(),
           name: name.trim(),
           host: host.trim(),
           token: targetToken.trim(),

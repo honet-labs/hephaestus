@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import axios from "axios";
 import config from "../config/env";
 import { query } from "../config/db";
@@ -160,7 +161,7 @@ export class QueryExplorerService {
       if (!updated) throw new Error("Failed to retrieve updated query panel.");
       return updated;
     } else {
-      const newId = "qp-" + Date.now();
+      const newId = "qp-" + crypto.randomUUID();
       await query(
         `INSERT INTO query_panels (id, name, description, datasource_type, datasource_uid, time_range_from, time_range_to, step, columns)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,

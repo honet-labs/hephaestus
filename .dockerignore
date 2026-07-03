@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.env.*
+node_modules
+dist
+data
+*.log
+.vscode
+.idea
+*.mib
+db_config.json

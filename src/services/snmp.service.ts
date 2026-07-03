@@ -180,7 +180,15 @@ export class SnmpService {
     let content = "";
     
     if (source.url) {
-      const response = await axios.get(source.url, { timeout: 10000 });
+      const parsedUrl = new URL(source.url);
+      const blockedHosts = ["169.254.169.254", "localhost", "127.0.0.1", "0.0.0.0", "::1", "metadata.google.internal"];
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+        throw new Error("Only HTTP and HTTPS URLs are allowed for MIB import.");
+      }
+      if (blockedHosts.includes(parsedUrl.hostname) || parsedUrl.hostname.startsWith("10.") || parsedUrl.hostname.startsWith("192.168.") || /^172\.(1[6-9]|2\d|3[01])\./.test(parsedUrl.hostname)) {
+        throw new Error("Importing MIBs from internal/private network addresses is not allowed.");
+      }
+      const response = await axios.get(source.url, { timeout: 10000, maxRedirects: 0 });
       content = response.data;
     } else if (source.text) {
       content = source.text;
@@ -528,6 +536,8 @@ export class SnmpService {
         const lines = stdout.split(/\r?\n/);
         const results: SnmpQueryResult[] = [];
 
+        const registry = await this.getOidRegistry();
+
         for (const line of lines) {
           if (!line.trim()) continue;
           const match = line.match(/^(\.?[0-9.]+)\s*=\s*(.*?)$/);
@@ -554,7 +564,7 @@ export class SnmpService {
             let cleanOid = rawOid;
             if (cleanOid.startsWith(".")) cleanOid = cleanOid.substring(1);
 
-            const translation = await this.translateOid(cleanOid);
+            const translation = await this.translateOid(cleanOid, registry);
             results.push({
               oid: cleanOid,
               name: translation.name,

@@ -1,9 +1,27 @@
-import axios from "axios";
+import crypto from "crypto";
+import axios, { AxiosInstance } from "axios";
+import http from "http";
+import https from "https";
 import fs from "fs";
 import config, { updateActiveGrafanaCache } from "../config/env";
 import pool, { query } from "../config/db";
 
+const httpAgent = new http.Agent({ keepAlive: true });
+const httpsAgent = new https.Agent({ keepAlive: true });
+
 export class GrafanaService {
+  private getClient(host: string, token: string): AxiosInstance {
+    const cleanedHost = host.trim().replace(/\/$/, "");
+    return axios.create({
+      baseURL: cleanedHost,
+      headers: {
+        "Authorization": `Bearer ${token}`
+      },
+      timeout: 10000,
+      httpAgent,
+      httpsAgent
+    });
+  }
   /**
    * Helper function to convert dynamic dates or timestamps into 13-digit Unix Epoch Milliseconds.
    * Handles ISO strings, standard timestamp numbers (10-digit/13-digit), and relative dates.
@@ -44,16 +62,10 @@ export class GrafanaService {
    */
   public async testConnection(host: string, token: string): Promise<boolean> {
     try {
-      const cleanedHost = host.trim().replace(/\/$/, "");
-      const targetUrl = `${cleanedHost}/api/health`;
+      const client = this.getClient(host, token);
 
-      console.log(`[GrafanaService] Testing Grafana API connection: GET ${targetUrl}`);
-      const response = await axios.get(targetUrl, {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
-        timeout: 5000
-      });
+      console.log(`[GrafanaService] Testing Grafana API connection: GET /api/health`);
+      const response = await client.get("/api/health", { timeout: 5000 });
 
       return response.status === 200;
     } catch (error: any) {
@@ -167,7 +179,7 @@ export class GrafanaService {
         activeItem.datasourceUid = (datasourceUid || "bf5jy3ppyomwwd").trim();
       } else {
         const newItem = {
-          id: "cfg-" + Date.now(),
+          id: "cfg-" + crypto.randomUUID(),
           name: "Grafana Integration",
           host: host.trim(),
           token: token.trim(),
@@ -216,16 +228,10 @@ export class GrafanaService {
         throw new Error("Grafana host and token must be configured before listing datasources.");
       }
 
-      const cleanedHost = host.trim().replace(/\/$/, "");
-      const targetUrl = `${cleanedHost}/api/datasources`;
+      const client = this.getClient(host, token);
 
-      console.log(`[GrafanaService] Fetching datasources: GET ${targetUrl}`);
-      const response = await axios.get(targetUrl, {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
-        timeout: 10000
-      });
+      console.log(`[GrafanaService] Fetching datasources: GET /api/datasources`);
+      const response = await client.get("/api/datasources");
 
       return Array.isArray(response.data) ? response.data : [];
     } catch (error: any) {

@@ -1,6 +1,8 @@
+import { promises as fsPromises } from "fs";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import crypto from "crypto";
 import { exec } from "child_process";
 import axios from "axios";
 import yaml from "js-yaml";
@@ -8,14 +10,42 @@ import { Client } from "ssh2";
 import config, { PrometheusConfigItem, updateActivePrometheusCache } from "../config/env";
 import pool, { query } from "../config/db";
 
+const SSH_IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
 export class PrometheusService {
-  /**
-   * Helper to connect to SSH target and return the Client
-   */
+  private sshConnections = new Map<string, { client: Client; lastUsed: number }>();
+
+  private getSSHConnectionKey(activeConfig: any): string {
+    return `${activeConfig.sshHost}:${activeConfig.sshPort || 22}:${activeConfig.sshUser}`;
+  }
+
+  private isConnectionAlive(entry: { client: Client; lastUsed: number }): boolean {
+    return Date.now() - entry.lastUsed < SSH_IDLE_TIMEOUT_MS;
+  }
+
+  public async cleanupIdleSshConnections(): Promise<void> {
+    for (const [key, entry] of this.sshConnections) {
+      if (!this.isConnectionAlive(entry)) {
+        try { entry.client.end(); } catch (_) {}
+        this.sshConnections.delete(key);
+      }
+    }
+  }
+
   private getSSHConnection(activeConfig: any): Promise<Client> {
+    const key = this.getSSHConnectionKey(activeConfig);
+    const cached = this.sshConnections.get(key);
+    if (cached && this.isConnectionAlive(cached)) {
+      cached.lastUsed = Date.now();
+      return Promise.resolve(cached.client);
+    }
+
     return new Promise((resolve, reject) => {
       const conn = new Client();
-      conn.on("ready", () => resolve(conn))
+      conn.on("ready", () => {
+        this.sshConnections.set(key, { client: conn, lastUsed: Date.now() });
+        resolve(conn);
+      })
           .on("error", (err) => reject(err))
           .connect({
             host: activeConfig.sshHost,
@@ -93,13 +123,11 @@ export class PrometheusService {
       const configPath = activeConfig.path;
       const dir = path.dirname(configPath);
 
-      // Ensure containing directory exists
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
+      await fsPromises.mkdir(dir, { recursive: true });
 
-      // Write default starter template if file does not exist
-      if (!fs.existsSync(configPath)) {
+      try {
+        await fsPromises.access(configPath);
+      } catch (_) {
         const defaultYaml = `global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -109,10 +137,10 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 `;
-        fs.writeFileSync(configPath, defaultYaml, "utf-8");
+        await fsPromises.writeFile(configPath, defaultYaml, "utf-8");
       }
 
-      const content = fs.readFileSync(configPath, "utf-8");
+      const content = await fsPromises.readFile(configPath, "utf-8");
       return {
         path: configPath,
         content
@@ -155,15 +183,15 @@ scrape_configs:
     if (activeConfig.mode === "local") {
       const tempFilePath = path.join(os.tmpdir(), `prometheus-validate-${Date.now()}.yml`);
       try {
-        fs.writeFileSync(tempFilePath, content, "utf-8");
+        await fsPromises.writeFile(tempFilePath, content, "utf-8");
       } catch (e: any) {
         return { valid: true };
       }
 
       return new Promise((resolve) => {
-        exec(`promtool check config "${tempFilePath}"`, (err, stdout, stderr) => {
+        exec(`promtool check config "${tempFilePath}"`, async (err, stdout, stderr) => {
           try {
-            fs.unlinkSync(tempFilePath);
+            await fsPromises.unlink(tempFilePath);
           } catch (_) {
             // ignore
           }
@@ -238,7 +266,7 @@ scrape_configs:
 
     if (activeConfig.mode === "local") {
       const configPath = activeConfig.path;
-      fs.writeFileSync(configPath, content, "utf-8");
+      await fsPromises.writeFile(configPath, content, "utf-8");
 
       try {
         await axios.post(activeConfig.reloadUrl, {}, { timeout: 3000 });
@@ -324,6 +352,7 @@ scrape_configs:
   }
   /**
    * Retrieves all saved Prometheus configurations.
+   * Secrets (sshPassword, sshKey) are masked in the response.
    */
   public async getConfigsList(): Promise<PrometheusConfigItem[]> {
     const res = await query(
@@ -332,7 +361,16 @@ scrape_configs:
        FROM prometheus_configs
        ORDER BY name ASC`
     );
-    return res.rows;
+    return res.rows.map((row: any) => ({
+      ...row,
+      sshPassword: row.sshPassword ? this.maskSecret(row.sshPassword) : row.sshPassword,
+      sshKey: row.sshKey ? this.maskSecret(row.sshKey) : row.sshKey,
+    }));
+  }
+
+  private maskSecret(value: string): string {
+    if (!value || value.length <= 4) return "***";
+    return value.substring(0, 4) + "***";
   }
 
   /**
@@ -377,7 +415,7 @@ scrape_configs:
 
       // Also write back to JSON file for physical persistence redundancy
       try {
-        fs.writeFileSync(config.prometheusConfigsFile, JSON.stringify(list, null, 2), "utf-8");
+        await fsPromises.writeFile(config.prometheusConfigsFile, JSON.stringify(list, null, 2), "utf-8");
         console.log(`[PrometheusService] Synchronized configurations to disk: ${config.prometheusConfigsFile}`);
       } catch (err: any) {
         console.error("[PrometheusService] Failed to write configurations to JSON file:", err.message);
@@ -423,7 +461,7 @@ scrape_configs:
     } else {
       // Create new
       item = {
-        id: "prom-cfg-" + Date.now(),
+        id: "prom-cfg-" + crypto.randomUUID(),
         name: profile.name || "Remote Prometheus",
         mode: profile.mode || "local",
         path: profile.path || "/etc/prometheus/prometheus.yml",

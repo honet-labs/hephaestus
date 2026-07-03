@@ -222,6 +222,14 @@ const feedbackDesc = document.getElementById('feedback-desc');
 
 let defaultDatasourceUid = 'bf5jy3ppyomwwd';
 
+function debounce(fn, delay = 300) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
 
 const logsTbody = document.getElementById('logs-tbody');
 
@@ -262,6 +270,22 @@ function initApp() {
   const launcherBtn = document.getElementById('diagnostic-launcher');
   if (launcherBtn) {
     launcherBtn.style.display = debugOverlayEnabled ? 'flex' : 'none';
+  }
+
+  // Debounced search/filter inputs
+  const registryInput = document.getElementById('search-registry-input');
+  if (registryInput) {
+    registryInput.addEventListener('input', debounce(() => {
+      oidLibraryPage = 1;
+      filterOidRegistry();
+    }));
+  }
+
+  const logSearchInput = document.getElementById('log-search-input');
+  if (logSearchInput) {
+    logSearchInput.addEventListener('input', debounce(() => {
+      filterActivityLogs();
+    }));
   }
 }
 

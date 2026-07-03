@@ -1,4 +1,6 @@
 import { Pool, Client } from "pg";
+import crypto from "crypto";
+import bcrypt from "bcrypt";
 import fs from "fs";
 import path from "path";
 import config, { updateActiveGrafanaCache, updateActivePrometheusCache } from "./env";
@@ -190,7 +192,7 @@ export async function query(text: string, params?: any[]) {
     }
     const res = await activePool.query(text, params);
     const duration = Date.now() - start;
-    if (duration > 100) {
+    if (duration > 500) {
       console.warn(`[DB] Slow query detected: ${text} took ${duration}ms`);
     }
     return res;
@@ -304,6 +306,7 @@ export async function initDb() {
       email VARCHAR(100) UNIQUE NOT NULL,
       password VARCHAR(255) NOT NULL,
       role VARCHAR(50) DEFAULT 'operator',
+      force_password_change BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
@@ -341,12 +344,10 @@ export async function initDb() {
     );`
   ];
 
-  // Run schema creation
-  for (const q of schemaQueries) {
-    await pool.query(q);
-  }
+  // Run schema creation in parallel
+  await Promise.all(schemaQueries.map(q => pool.query(q)));
 
-  // Create performance indexes for tuning
+  // Create performance indexes in parallel
   const indexQueries = [
     `CREATE INDEX IF NOT EXISTS idx_oid_registry_mib_name ON oid_registry(mib_name);`,
     `CREATE INDEX IF NOT EXISTS idx_oid_registry_name ON oid_registry(name);`,
@@ -359,10 +360,7 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp DESC);`,
     `CREATE INDEX IF NOT EXISTS idx_query_panels_created_at ON query_panels(created_at DESC);`
   ];
-
-  for (const q of indexQueries) {
-    await pool.query(q);
-  }
+  await Promise.all(indexQueries.map(q => pool.query(q)));
 
   console.log("✅ [DB] PostgreSQL tables and indexes checked/created successfully.");
 
@@ -370,11 +368,10 @@ export async function initDb() {
   try {
     const userCheck = await pool.query("SELECT 1 FROM users LIMIT 1");
     if (userCheck.rowCount === 0) {
-      const bcrypt = require("bcrypt");
       const passwordHash = await bcrypt.hash("hephaestus", 12);
       await pool.query(
-        `INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)`,
-        ["sysadmin", "admin@hephaestus.local", passwordHash, "ADMIN"]
+        `INSERT INTO users (username, email, password, role, force_password_change) VALUES ($1, $2, $3, $4, $5)`,
+        ["sysadmin", "admin@hephaestus.local", passwordHash, "ADMIN", true]
       );
       console.log("🌱 [DB] Seeded default user: sysadmin");
     }
@@ -551,26 +548,30 @@ async function migrateLocalDataToPg() {
           }
         }
 
-        // Insert OIDs with chunks to prevent huge query payload
+        // Insert OIDs with bulk INSERT ON CONFLICT DO NOTHING to avoid N+1 queries
         const oids = Object.keys(registry);
         const batchSize = 100;
         let oidsMigrated = 0;
 
         for (let i = 0; i < oids.length; i += batchSize) {
           const chunk = oids.slice(i, i + batchSize);
+          const valuePlaceholders = chunk.map((_, idx) =>
+            `($${idx * 6 + 1}, $${idx * 6 + 2}, $${idx * 6 + 3}, $${idx * 6 + 4}, $${idx * 6 + 5}, $${idx * 6 + 6})`
+          ).join(", ");
+
+          const values: any[] = [];
           for (const oid of chunk) {
             const info = registry[oid];
-            const checkOid = await client.query("SELECT 1 FROM oid_registry WHERE oid = $1", [oid]);
-            if (checkOid.rowCount === 0) {
-              await client.query(
-                `INSERT INTO oid_registry (oid, name, mib_name, syntax, access, description)
-                 VALUES ($1, $2, $3, $4, $5, $6)
-                 ON CONFLICT (oid) DO NOTHING`,
-                [oid, info.name, info.mib, info.syntax || null, info.access || null, info.description || null]
-              );
-              oidsMigrated++;
-            }
+            values.push(oid, info.name, info.mib, info.syntax || null, info.access || null, info.description || null);
           }
+
+          const res = await client.query(
+            `INSERT INTO oid_registry (oid, name, mib_name, syntax, access, description)
+             VALUES ${valuePlaceholders}
+             ON CONFLICT (oid) DO NOTHING`,
+            values
+          );
+          oidsMigrated += res.rowCount || 0;
         }
 
         if (oidsMigrated > 0) {

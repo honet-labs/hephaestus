@@ -339,7 +339,7 @@ export class UserController {
       }
 
       const userRes = await query(
-        "SELECT id, username, email, role, password FROM users WHERE username = $1",
+        "SELECT id, username, email, role, password, force_password_change FROM users WHERE username = $1",
         [username.trim()]
       );
 
@@ -362,12 +362,13 @@ export class UserController {
         });
         return;
       }
-      const token = crypto.randomBytes(32).toString("hex");
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       await query(
         "INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)",
-        [user.id, token, expiresAt]
+        [user.id, tokenHash, expiresAt]
       );
 
       await logActivity(
@@ -380,7 +381,8 @@ export class UserController {
       res.status(200).json({
         success: true,
         message: "Login successful.",
-        token,
+        token: rawToken,
+        forcePasswordChange: !!user.force_password_change,
         user: {
           username: user.username,
           email: user.email,
@@ -410,19 +412,20 @@ export class UserController {
         return;
       }
 
-      const token = authHeader.split(" ")[1];
+      const rawToken = authHeader.split(" ")[1];
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
       
       // Get user name before deleting session
       const sessionRes = await query(
         `SELECT u.username FROM user_sessions s
          JOIN users u ON s.user_id = u.id
          WHERE s.token = $1`,
-        [token]
+        [tokenHash]
       );
       
       const username = sessionRes.rowCount && sessionRes.rowCount > 0 ? sessionRes.rows[0].username : "Unknown";
 
-      await query("DELETE FROM user_sessions WHERE token = $1", [token]);
+      await query("DELETE FROM user_sessions WHERE token = $1", [tokenHash]);
 
       await logActivity(
         "Authentication",
@@ -445,6 +448,87 @@ export class UserController {
     }
   }
 
+  // Change Password (force password change)
+  public async changePassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { oldPassword, newPassword } = req.body;
+
+      if (!oldPassword || !newPassword) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Old password and new password are required."
+        });
+        return;
+      }
+
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        res.status(401).json({
+          success: false,
+          error: "Unauthorized",
+          message: "Authentication token is missing."
+        });
+        return;
+      }
+
+      const rawToken = authHeader.split(" ")[1];
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+      const sessionRes = await query(
+        `SELECT s.user_id, u.username, u.password FROM user_sessions s
+         JOIN users u ON s.user_id = u.id
+         WHERE s.token = $1 AND s.expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (sessionRes.rowCount === 0) {
+        res.status(401).json({
+          success: false,
+          error: "Unauthorized",
+          message: "Session is invalid or expired."
+        });
+        return;
+      }
+
+      const session = sessionRes.rows[0];
+      const isValid = await bcrypt.compare(oldPassword, session.password);
+      if (!isValid) {
+        res.status(401).json({
+          success: false,
+          error: "Unauthorized",
+          message: "Old password is incorrect."
+        });
+        return;
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+      await query(
+        "UPDATE users SET password = $1, force_password_change = false WHERE id = $2",
+        [passwordHash, session.user_id]
+      );
+
+      await logActivity(
+        "Authentication",
+        "Change Password",
+        `User "${session.username}" changed their password`,
+        "SUCCESS"
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Password changed successfully."
+      });
+    } catch (error: any) {
+      console.error("[UserController] Change password error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message
+      });
+    }
+  }
+
   // Get Session
   public async getSession(req: Request, res: Response): Promise<void> {
     const authHeader = req.headers.authorization;
@@ -457,14 +541,15 @@ export class UserController {
       return;
     }
 
-    const token = authHeader.split(" ")[1];
+    const rawToken = authHeader.split(" ")[1];
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
 
     try {
       const sessionRes = await query(
         `SELECT u.username, u.email, u.role FROM user_sessions s
          JOIN users u ON s.user_id = u.id
          WHERE s.token = $1 AND s.expires_at > NOW()`,
-        [token]
+        [tokenHash]
       );
 
       if (sessionRes.rowCount === 0) {

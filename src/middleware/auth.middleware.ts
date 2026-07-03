@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import crypto from "crypto";
 import { query } from "../config/db";
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -18,7 +19,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     return;
   }
 
-  const token = authHeader.split(" ")[1];
+  const rawToken = authHeader.split(" ")[1];
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
 
   try {
     const sessionRes = await query(
@@ -26,7 +28,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
        FROM user_sessions s
        JOIN users u ON s.user_id = u.id
        WHERE s.token = $1 AND s.expires_at > NOW()`,
-      [token]
+      [tokenHash]
     );
 
     if (sessionRes.rowCount === 0) {
