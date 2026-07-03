@@ -5529,8 +5529,8 @@ async function openEditQueryPanelModal(panelId) {
   } else {
     document.getElementById('query-panel-from').value = 'custom';
     toggleQueryCustomTimeFields('custom');
-    document.getElementById('query-panel-custom-from-input').value = panel.timeRangeFrom;
-    document.getElementById('query-panel-custom-to-input').value = panel.timeRangeTo;
+    document.getElementById('query-panel-custom-from-input').value = formatToDatetimeLocalValue(panel.timeRangeFrom);
+    document.getElementById('query-panel-custom-to-input').value = formatToDatetimeLocalValue(panel.timeRangeTo);
   }
   
   // We can select the config associated with this datasource if needed, but since active is default, we can leave config selection as default
@@ -6944,6 +6944,45 @@ function toggleExportCustomTimeFields(val) {
   }
 }
 window.toggleExportCustomTimeFields = toggleExportCustomTimeFields;
+
+function formatToDatetimeLocalValue(dateStr) {
+  if (!dateStr || dateStr === 'now') return '';
+  
+  // Try parsing DD/MM/YYYY HH:mm:ss format
+  const ddmmyyyyRegex = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/;
+  const matchDd = dateStr.trim().match(ddmmyyyyRegex);
+  let dateObj;
+  
+  if (matchDd) {
+    const day = parseInt(matchDd[1], 10);
+    const month = parseInt(matchDd[2], 10) - 1;
+    const year = parseInt(matchDd[3], 10);
+    const hour = matchDd[4] ? parseInt(matchDd[4], 10) : 0;
+    const minute = matchDd[5] ? parseInt(matchDd[5], 10) : 0;
+    const second = matchDd[6] ? parseInt(matchDd[6], 10) : 0;
+    dateObj = new Date(year, month, day, hour, minute, second);
+  } else {
+    // Try standard fallback
+    const parsed = Date.parse(dateStr);
+    if (!isNaN(parsed)) {
+      dateObj = new Date(parsed);
+    }
+  }
+  
+  if (dateObj && !isNaN(dateObj.getTime())) {
+    const pad = (num) => num.toString().padStart(2, '0');
+    const y = dateObj.getFullYear();
+    const m = pad(dateObj.getMonth() + 1);
+    const d = pad(dateObj.getDate());
+    const hh = pad(dateObj.getHours());
+    const mm = pad(dateObj.getMinutes());
+    const ss = pad(dateObj.getSeconds());
+    return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
+  }
+  
+  return '';
+}
+window.formatToDatetimeLocalValue = formatToDatetimeLocalValue;
 
 
 

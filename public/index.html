@@ -1531,12 +1531,12 @@
         <!-- Custom Time Fields Row (Visible only when 'custom' is selected) -->
         <div id="query-panel-custom-time-row" style="display: none; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
           <div class="form-group">
-            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom Time From (DD/MM/YYYY HH:mm:ss)</label>
-            <input type="text" id="query-panel-custom-from-input" placeholder="e.g. 03/07/2026 12:00:00" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom Time From</label>
+            <input type="datetime-local" id="query-panel-custom-from-input" step="1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; color-scheme: dark;">
           </div>
           <div class="form-group">
-            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom Time To (DD/MM/YYYY HH:mm:ss)</label>
-            <input type="text" id="query-panel-custom-to-input" placeholder="e.g. 03/07/2026 18:00:00 atau 'now'" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom Time To (Optional, leave blank for 'now')</label>
+            <input type="datetime-local" id="query-panel-custom-to-input" step="1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; color-scheme: dark;">
           </div>
         </div>
 
@@ -1723,12 +1723,12 @@
           <!-- Export Custom Time inputs -->
           <div id="export-chart-custom-time-fields" style="display: none; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 16px; border: 1px solid var(--app-border); padding: 12px; border-radius: 4px; background: rgba(0,0,0,0.15); margin-bottom: 4px;">
             <div class="form-group" style="margin-bottom: 0;">
-              <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom From (DD/MM/YYYY HH:mm:ss)</label>
-              <input type="text" id="export-chart-custom-from" placeholder="e.g. 03/07/2026 12:00:00" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom From</label>
+              <input type="datetime-local" id="export-chart-custom-from" step="1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; color-scheme: dark;">
             </div>
             <div class="form-group" style="margin-bottom: 0;">
-              <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom To (DD/MM/YYYY HH:mm:ss)</label>
-              <input type="text" id="export-chart-custom-to" placeholder="e.g. 03/07/2026 18:00:00 atau 'now'" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom To (Optional, leave blank for 'now')</label>
+              <input type="datetime-local" id="export-chart-custom-to" step="1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; color-scheme: dark;">
             </div>
           </div>
 
