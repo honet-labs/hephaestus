@@ -1693,16 +1693,115 @@
     </div>
   </div>
 
-  <div id="diagnostic-logger" style="position: fixed; bottom: 10px; left: 10px; z-index: 10000; width: 450px; max-height: 300px; background: rgba(13, 17, 23, 0.95); border: 1px solid #ff7b72; border-radius: 6px; color: #c9d1d9; font-family: monospace; font-size: 11px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-    <div style="padding: 6px 12px; background: #21262d; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="document.getElementById('diagnostic-log-content').style.display = document.getElementById('diagnostic-log-content').style.display === 'none' ? 'block' : 'none'">
-      <strong style="color: #ff7b72;">🔍 DIAGNOSTIC CONSOLE LOGS</strong>
-      <span style="font-size: 10px; color: #8b949e;">Toggle View</span>
+  <!-- Floating Diagnostic Console Launcher Button -->
+  <button id="diagnostic-launcher" onclick="toggleDiagnosticConsole()" style="position: fixed; bottom: 15px; left: 15px; z-index: 10001; background: #21262d; border: 1px solid #30363d; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #ff7b72; box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: all 0.2s;" title="Toggle Debug Console">
+    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 3m0-3a2 2 0 110 3m-3.793-.793l-1.414-1.414m1.414 1.414a2 2 0 102.828 2.828m-2.828-2.828a2 2 0 112.828 2.828m-.793 3.793l1.414 1.414m-1.414-1.414a2 2 0 10-2.828-2.828m2.828 2.828a2 2 0 11-2.828-2.828m3.793-.793h2m-2a2 2 0 10-3 0m3 0a2 2 0 11-3 0"></path>
+    </svg>
+  </button>
+
+  <!-- Diagnostic Logger Panel -->
+  <div id="diagnostic-logger" style="position: fixed; bottom: 15px; left: 60px; z-index: 10000; width: 550px; height: 380px; background: rgba(13, 17, 23, 0.95); border: 1px solid #30363d; border-radius: 8px; color: #c9d1d9; font-family: monospace; font-size: 11px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); transition: all 0.2s ease-in-out; display: none;">
+    <!-- Header -->
+    <div style="padding: 8px 14px; background: #161b22; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; user-select: none;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: #ff7b72; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 6px; height: 6px; background: #39ff14; border-radius: 50%; box-shadow: 0 0 8px #39ff14;"></span>
+          🔍 DEBUGLOGS
+        </span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <!-- Minimize -->
+        <button onclick="setDiagSize('minimize')" style="background: transparent; border: none; color: #8b949e; cursor: pointer; padding: 2px 4px; font-size: 10px; font-weight: bold;" title="Minimize">—</button>
+        <!-- Halfscreen -->
+        <button onclick="setDiagSize('half')" style="background: transparent; border: none; color: #8b949e; cursor: pointer; padding: 2px 4px; font-size: 10px; font-weight: bold;" title="Half Screen">◪</button>
+        <!-- Fullscreen -->
+        <button onclick="setDiagSize('full')" style="background: transparent; border: none; color: #8b949e; cursor: pointer; padding: 2px 4px; font-size: 10px; font-weight: bold;" title="Full Screen">⛶</button>
+        <span style="color: #30363d; margin: 0 2px;">|</span>
+        <!-- Clear -->
+        <button onclick="clearDiagLogs()" style="background: transparent; border: none; color: #ff7b72; cursor: pointer; font-size: 9px; font-weight: bold; padding: 2px 4px;" title="Clear Logs">CLEAR</button>
+        <!-- Close -->
+        <button onclick="toggleDiagnosticConsole(false)" style="background: transparent; border: none; color: #8b949e; cursor: pointer; font-size: 10px; font-weight: bold; margin-left: 2px;" title="Hide Console">✕</button>
+      </div>
     </div>
-    <div id="diagnostic-log-content" style="padding: 8px; overflow-y: auto; flex-grow: 1; display: block; max-height: 250px;">
+    <!-- Content -->
+    <div id="diagnostic-log-content" style="padding: 10px; overflow-y: auto; flex-grow: 1; display: block; background: #0d1117;">
       <!-- Logs will append here -->
     </div>
   </div>
+
   <script>
+    let currentDiagMode = 'hidden'; // 'hidden', 'minimize', 'half', 'full'
+
+    function toggleDiagnosticConsole(show) {
+      const panel = document.getElementById('diagnostic-logger');
+      const launcher = document.getElementById('diagnostic-launcher');
+      if (!panel || !launcher) return;
+      
+      if (show === undefined) {
+        show = panel.style.display === 'none';
+      }
+      
+      if (show) {
+        panel.style.display = 'flex';
+        launcher.style.background = '#ff7b72';
+        launcher.style.color = '#161b22';
+        launcher.style.borderColor = '#ff7b72';
+        if (currentDiagMode === 'hidden') {
+          setDiagSize('half');
+        } else {
+          setDiagSize(currentDiagMode);
+        }
+      } else {
+        panel.style.display = 'none';
+        launcher.style.background = '#21262d';
+        launcher.style.color = '#ff7b72';
+        launcher.style.borderColor = '#30363d';
+        currentDiagMode = 'hidden';
+      }
+    }
+    window.toggleDiagnosticConsole = toggleDiagnosticConsole;
+
+    function setDiagSize(mode) {
+      const panel = document.getElementById('diagnostic-logger');
+      const content = document.getElementById('diagnostic-log-content');
+      if (!panel || !content) return;
+      
+      currentDiagMode = mode;
+      
+      if (mode === 'minimize') {
+        panel.style.width = '350px';
+        panel.style.height = '36px';
+        panel.style.bottom = '15px';
+        panel.style.left = '60px';
+        content.style.display = 'none';
+      } else if (mode === 'half') {
+        panel.style.width = '550px';
+        panel.style.height = '380px';
+        panel.style.bottom = '15px';
+        panel.style.left = '60px';
+        content.style.display = 'block';
+      } else if (mode === 'full') {
+        panel.style.width = 'calc(100vw - 80px)';
+        panel.style.height = 'calc(100vh - 40px)';
+        panel.style.bottom = '20px';
+        panel.style.left = '60px';
+        content.style.display = 'block';
+      }
+      
+      content.scrollTop = content.scrollHeight;
+    }
+    window.setDiagSize = setDiagSize;
+
+    function clearDiagLogs() {
+      const content = document.getElementById('diagnostic-log-content');
+      if (content) {
+        content.innerHTML = '';
+        window.diagLog("Logs cleared", "#58a6ff");
+      }
+    }
+    window.clearDiagLogs = clearDiagLogs;
+
     const diagLog = (msg, color = '#c9d1d9') => {
       const content = document.getElementById('diagnostic-log-content');
       if (content) {
