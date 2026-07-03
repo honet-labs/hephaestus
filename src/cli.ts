@@ -1,5 +1,7 @@
-import crypto from "crypto";
+import bcrypt from "bcrypt";
 import pool, { query } from "./config/db";
+
+const BCRYPT_ROUNDS = 12;
 
 async function main() {
   const args = process.argv.slice(2);
@@ -34,8 +36,8 @@ async function main() {
         process.exit(1);
       }
 
-      const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
-      
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
       const insertRes = await query(
         "INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id",
         [username.trim(), email.trim(), passwordHash, role]
@@ -63,7 +65,7 @@ async function main() {
         process.exit(1);
       }
 
-      const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
       await query("UPDATE users SET password = $1 WHERE username = $2", [passwordHash, username.trim()]);
 
       console.log(`\n✅ Success: Password for user "${username}" has been reset successfully.`);
