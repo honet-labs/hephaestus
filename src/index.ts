@@ -12,6 +12,7 @@ import systemRoutes from "./routes/system.routes";
 import userRoutes from "./routes/user.routes";
 import activityLogRoutes from "./routes/activity-log.routes";
 import queryExplorerRoutes from "./routes/query-explorer.routes";
+import updateRoutes from "./routes/update.routes";
 
 const app = express();
 
@@ -90,6 +91,10 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 import { authMiddleware } from "./middleware/auth.middleware";
+import setupRoutes from "./routes/setup.routes";
+
+// Setup routes (accessible without authentication)
+app.use("/api/v1/setup", setupRoutes);
 
 // 4. API Routes registration
 app.use("/api/v1", authMiddleware);
@@ -100,6 +105,7 @@ app.use("/api/v1/system", systemRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/activity-logs", activityLogRoutes);
 app.use("/api/v1/query-explorer", queryExplorerRoutes);
+app.use("/api/v1/update", updateRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {

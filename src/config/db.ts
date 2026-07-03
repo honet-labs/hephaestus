@@ -1,5 +1,4 @@
 import { Pool, Client } from "pg";
-import bcrypt from "bcrypt";
 import fs from "fs";
 import path from "path";
 import config, { updateActiveGrafanaCache, updateActivePrometheusCache } from "./env";
@@ -363,20 +362,11 @@ export async function initDb() {
 
   console.log("✅ [DB] PostgreSQL tables and indexes checked/created successfully.");
 
-  // Seed default admin user if not exists
-  try {
-    const userCheck = await pool.query("SELECT 1 FROM users LIMIT 1");
-    if (userCheck.rowCount === 0) {
-      const passwordHash = await bcrypt.hash("hephaestus", 12);
-      await pool.query(
-        `INSERT INTO users (username, email, password, role, force_password_change) VALUES ($1, $2, $3, $4, $5)`,
-        ["sysadmin", "admin@hephaestus.local", passwordHash, "ADMIN", true]
-      );
-      console.log("🌱 [DB] Seeded default user: sysadmin");
-    }
-  } catch (err) {
-    console.error("❌ [DB] Failed to seed default user:", err);
-  }
+  // Auto-migration: add missing columns
+  const migrationQueries = [
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT false;`
+  ];
+  await Promise.all(migrationQueries.map(q => pool.query(q)));
 
   // Seed default system roles if not exists
   try {

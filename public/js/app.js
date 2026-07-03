@@ -64,6 +64,143 @@ function showMainApp(user) {
   initAppOnce();
 }
 
+// === SETUP WIZARD ===
+async function checkSetupStatus() {
+  try {
+    const res = await fetch('/api/v1/setup/status');
+    const data = await res.json();
+    if (data.success && data.needsSetup) {
+      document.getElementById('setup-container').style.display = 'flex';
+      document.getElementById('login-container').style.display = 'none';
+    }
+  } catch (e) {
+    console.log('Setup check failed, continuing to login');
+  }
+}
+
+window.handleSetupSubmit = async function(event) {
+  event.preventDefault();
+  const username = document.getElementById('setup-username').value.trim();
+  const email = document.getElementById('setup-email').value.trim();
+  const password = document.getElementById('setup-password').value;
+  const feedback = document.getElementById('setup-feedback');
+  const btn = document.getElementById('setup-submit-btn');
+
+  feedback.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+
+  try {
+    const res = await fetch('/api/v1/setup/create-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      feedback.style.background = 'rgba(35, 134, 54, 0.15)';
+      feedback.style.borderColor = 'rgba(46, 160, 67, 0.4)';
+      feedback.style.color = '#3fb950';
+      feedback.textContent = 'Admin created! Redirecting to login...';
+      feedback.classList.remove('hidden');
+      setTimeout(() => {
+        document.getElementById('setup-container').style.display = 'none';
+        document.getElementById('login-container').style.display = 'flex';
+      }, 1500);
+    } else {
+      feedback.textContent = data.message || 'Failed to create admin user.';
+      feedback.classList.remove('hidden');
+    }
+  } catch (e) {
+    feedback.textContent = 'Connection error: ' + e.message;
+    feedback.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create Admin & Start';
+  }
+};
+
+// === UPDATE SYSTEM ===
+async function checkForUpdates() {
+  const status = document.getElementById('update-status');
+  const applyBtn = document.getElementById('update-apply-btn');
+  status.textContent = 'Checking for updates...';
+  status.style.color = 'var(--text-muted)';
+  applyBtn.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/v1/update/check', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token') }
+    });
+    const data = await res.json();
+    if (data.success && data.hasUpdates) {
+      status.textContent = 'Updates available! Click "Apply Update" to install.';
+      status.style.color = '#f59e0b';
+      applyBtn.style.display = 'inline-block';
+    } else if (data.success) {
+      status.textContent = 'System is up to date.';
+      status.style.color = '#3fb950';
+    } else {
+      status.textContent = 'Could not check for updates: ' + (data.message || 'Unknown error');
+      status.style.color = '#ff7b72';
+    }
+  } catch (e) {
+    status.textContent = 'Failed to check updates: ' + e.message;
+    status.style.color = '#ff7b72';
+  }
+}
+
+async function applyUpdate() {
+  if (!confirm('This will pull the latest code, rebuild, and restart the server. Continue?')) return;
+
+  const status = document.getElementById('update-status');
+  const applyBtn = document.getElementById('update-apply-btn');
+  applyBtn.disabled = true;
+  applyBtn.textContent = 'Updating...';
+  status.textContent = 'Pulling latest code...';
+  status.style.color = '#f59e0b';
+
+  try {
+    const res = await fetch('/api/v1/update/apply', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token')
+      }
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.textContent = 'Update applied! Server is restarting...';
+      status.style.color = '#3fb950';
+      setTimeout(() => {
+        let attempts = 0;
+        const checkAlive = setInterval(async () => {
+          attempts++;
+          try {
+            await fetch('/health');
+            clearInterval(checkAlive);
+            window.location.reload();
+          } catch (e) {
+            if (attempts > 30) {
+              clearInterval(checkAlive);
+              status.textContent = 'Server is taking longer than expected. Please refresh manually.';
+            }
+          }
+        }, 2000);
+      }, 3000);
+    } else {
+      status.textContent = 'Update failed: ' + (data.message || 'Unknown error');
+      status.style.color = '#ff7b72';
+      applyBtn.disabled = false;
+      applyBtn.textContent = 'Apply Update & Restart';
+    }
+  } catch (e) {
+    status.textContent = 'Update failed: ' + e.message;
+    status.style.color = '#ff7b72';
+    applyBtn.disabled = false;
+    applyBtn.textContent = 'Apply Update & Restart';
+  }
+}
+
 window.handleLoginSubmit = async function(event) {
   event.preventDefault();
   const username = document.getElementById('login-username').value.trim();
@@ -290,6 +427,7 @@ function initApp() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  checkSetupStatus();
   checkSession();
 });
 
