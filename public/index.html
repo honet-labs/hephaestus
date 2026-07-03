@@ -1219,7 +1219,7 @@
 
           <!-- STATE B: RESULTS / DETAIL VIEW -->
           <div id="query-explorer-results-container" class="hidden">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--app-border); padding-bottom: 12px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--app-border); padding-bottom: 16px; flex-wrap: wrap; gap: 12px;">
               <div style="display: flex; align-items: center; gap: 12px;">
                 <button class="btn btn-secondary" onclick="exitQueryResultsView()" style="padding: 6px 12px; height: auto; display: inline-flex; align-items: center; gap: 6px;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -1231,53 +1231,110 @@
                 </div>
               </div>
               
-              <div style="display: flex; gap: 8px; align-items: center;">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <span id="query-results-time-badge" class="status-badge" style="background: rgba(88, 166, 255, 0.1); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.2);">Time Range</span>
                 <span id="query-results-cols-badge" class="status-badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2);">Columns</span>
-              </div>
-
-              <div style="display: flex; gap: 8px; align-items: center;">
+                
                 <button class="btn btn-secondary" onclick="editActiveQueryPanel()" style="padding: 6px 12px; font-size: 11px; height: 30px; border-color: var(--app-border); display: inline-flex; align-items: center; gap: 6px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                  <span>Edit Query</span>
+                  <span>Edit Config</span>
                 </button>
-                <button class="btn btn-primary" id="btn-results-run" onclick="runActiveQuery()" style="padding: 6px 12px; font-size: 11px; height: 30px; display: inline-flex; align-items: center; gap: 6px;">
-                  <span class="spinner hidden" id="spinner-results-run" style="width: 10px; height: 10px; border-width: 2px;"></span>
-                  <span>Run Query</span>
-                </button>
-                <!-- Export Dropdown -->
-                <div class="dropdown hidden" id="btn-results-export" style="position: relative; display: inline-block;">
-                  <button class="btn btn-secondary" onclick="toggleExportDropdown(event)" style="padding: 6px 12px; font-size: 11px; height: 30px; border-color: var(--app-border); display: inline-flex; align-items: center; gap: 6px;">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    <span>Export Data</span>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                  </button>
-                  <div class="dropdown-menu" id="export-dropdown-menu" style="display: none; position: absolute; right: 0; top: 34px; background: var(--app-sidebar); border: 1px solid var(--app-border); border-radius: 4px; z-index: 1000; min-width: 170px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-                    <a href="javascript:void(0)" onclick="exportActivePanelToExcel()" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 11px; color: var(--text-white); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                      <span>Excel (.xlsx)</span>
-                    </a>
-                    <a href="javascript:void(0)" onclick="exportActivePanelToCsv()" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 11px; color: var(--text-white); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                      <span>CSV (.csv)</span>
-                    </a>
-                    <a href="javascript:void(0)" onclick="exportActivePanelToTxt()" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 11px; color: var(--text-white); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                      <span>Text (.txt)</span>
-                    </a>
-                    <a href="javascript:void(0)" onclick="openExportChartModal()" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 11px; color: var(--text-white); text-decoration: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="14" x2="21" y2="14"></line><path d="M17 9l-5 5-3-3-4 4"></path></svg>
-                      <span>Chart Image (.png)</span>
-                    </a>
+              </div>
+            </div>
+
+            <!-- Simplified export & preview templates canvas -->
+            <div id="query-export-canvas" style="margin-bottom: 24px;">
+              <h3 style="margin: 0 0 16px 0; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Export & Live View Templates</h3>
+              
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                <!-- Template: CSV -->
+                <div class="panel" style="background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 140px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                      <span style="font-size: 18px;">📄</span>
+                      <h4 style="margin: 0; font-size: 13px; font-weight: 600; color: var(--text-white);">CSV Spreadsheet (.csv)</h4>
+                    </div>
+                    <p style="margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.4;">Export aligned tabular metrics directly into a CSV spreadsheet file.</p>
                   </div>
+                  <button class="btn btn-primary" onclick="triggerBackgroundExport('csv', this)" style="width: 100%; font-size: 11px; padding: 6px 12px; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;">
+                    <span class="spinner hidden" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                    <span>Download CSV</span>
+                  </button>
+                </div>
+
+                <!-- Template: TXT -->
+                <div class="panel" style="background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 140px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                      <span style="font-size: 18px;">📝</span>
+                      <h4 style="margin: 0; font-size: 13px; font-weight: 600; color: var(--text-white);">Plain Text Files (.txt)</h4>
+                    </div>
+                    <p style="margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.4;">Download separate text documents containing metrics, one file per server IP address.</p>
+                  </div>
+                  <button class="btn btn-primary" onclick="triggerBackgroundExport('txt', this)" style="width: 100%; font-size: 11px; padding: 6px 12px; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;">
+                    <span class="spinner hidden" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                    <span>Download TXT</span>
+                  </button>
+                </div>
+
+                <!-- Template: Excel -->
+                <div class="panel" style="background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 140px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                      <span style="font-size: 18px;">📊</span>
+                      <h4 style="margin: 0; font-size: 13px; font-weight: 600; color: var(--text-white);">Excel Document (.xlsx)</h4>
+                    </div>
+                    <p style="margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.4;">Export structured time-series metrics data into a Microsoft Excel-compatible file.</p>
+                  </div>
+                  <button class="btn btn-primary" onclick="triggerBackgroundExport('xlsx', this)" style="width: 100%; font-size: 11px; padding: 6px 12px; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;">
+                    <span class="spinner hidden" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                    <span>Download Excel</span>
+                  </button>
+                </div>
+
+                <!-- Template: Visual ECharts -->
+                <div class="panel" style="background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 140px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                      <span style="font-size: 18px;">📈</span>
+                      <h4 style="margin: 0; font-size: 13px; font-weight: 600; color: var(--text-white);">Visual ECharts (.png)</h4>
+                    </div>
+                    <p style="margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.4;">Configure ECharts theme, colors, palettes, and generate high-resolution PNG charts.</p>
+                  </div>
+                  <button class="btn btn-primary" onclick="triggerBackgroundExport('chart', this)" style="width: 100%; font-size: 11px; padding: 6px 12px; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600;">
+                    <span class="spinner hidden" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                    <span>Configure & Export Chart</span>
+                  </button>
+                </div>
+
+                <!-- Template: Live Table Preview -->
+                <div class="panel" style="background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; min-height: 140px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                      <span style="font-size: 18px;">👁️</span>
+                      <h4 style="margin: 0; font-size: 13px; font-weight: 600; color: var(--text-white);">Data Table Preview</h4>
+                    </div>
+                    <p style="margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.4;">Execute telemetry queries and display parsed metrics rows directly in a tabbed table.</p>
+                  </div>
+                  <button class="btn btn-secondary" onclick="triggerBackgroundExport('table', this)" style="width: 100%; font-size: 11px; padding: 6px 12px; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; border-color: #58a6ff; color: #58a6ff; background: rgba(88,166,255,0.02);">
+                    <span class="spinner hidden" style="width: 10px; height: 10px; border-width: 2px;"></span>
+                    <span>View Data Table</span>
+                  </button>
                 </div>
               </div>
             </div>
 
-            <!-- Table Output Area -->
-            <div id="query-results-output" style="min-height: 200px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.15); border-radius: 4px; border: 1px dashed var(--app-border);">
-              <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
-                Executing query metrics...
+            <!-- Table Preview Section (loaded dynamically below the grid) -->
+            <div id="query-table-preview-wrapper" class="hidden" style="border-top: 1px solid var(--app-border); padding-top: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 11px; font-weight: 700; color: var(--text-white); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                  <span style="display: inline-block; width: 6px; height: 6px; background: #58a6ff; border-radius: 50%;"></span>
+                  Interactive Data Table Preview
+                </h3>
+                <button class="btn btn-secondary" onclick="hideTablePreview()" style="font-size: 10px; padding: 4px 10px; height: auto;">Close Preview</button>
+              </div>
+              <div id="query-results-output">
+                <!-- Aligned metrics table will load here -->
               </div>
             </div>
           </div>
@@ -1798,8 +1855,16 @@
 
   <!-- Floating Diagnostic Console Launcher Button -->
   <button id="diagnostic-launcher" onclick="toggleDiagnosticConsole()" style="position: fixed; bottom: 15px; left: 15px; z-index: 10001; background: #21262d; border: 1px solid #30363d; border-radius: 50%; width: 36px; height: 36px; display: none; align-items: center; justify-content: center; cursor: pointer; color: #ff7b72; box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: all 0.2s;" title="Toggle Debug Console">
-    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 3m0-3a2 2 0 110 3m-3.793-.793l-1.414-1.414m1.414 1.414a2 2 0 102.828 2.828m-2.828-2.828a2 2 0 112.828 2.828m-.793 3.793l1.414 1.414m-1.414-1.414a2 2 0 10-2.828-2.828m2.828 2.828a2 2 0 11-2.828-2.828m3.793-.793h2m-2a2 2 0 10-3 0m3 0a2 2 0 11-3 0"></path>
+    <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="8" height="14" x="8" y="6" rx="4"></rect>
+      <path d="m19 7-3 2"></path>
+      <path d="m5 7 3 2"></path>
+      <path d="m19 19-3-2"></path>
+      <path d="m5 19 3-2"></path>
+      <path d="M20 13h-4"></path>
+      <path d="M4 13h4"></path>
+      <path d="m12 6 1-4"></path>
+      <path d="m12 6-1-4"></path>
     </svg>
   </button>
 

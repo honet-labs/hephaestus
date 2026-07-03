@@ -5067,24 +5067,15 @@ function showQueryResultsView(panelId) {
   document.getElementById('query-explorer-list-container').classList.add('hidden');
   document.getElementById('query-explorer-results-container').classList.remove('hidden');
   
-  // Hide CSV export button initially until data is loaded
-  document.getElementById('btn-results-export').classList.add('hidden');
+  // Hide table preview wrapper by default
+  document.getElementById('query-table-preview-wrapper').classList.add('hidden');
   
-  // Reset output area to default prompt state
+  // Reset output area
   const outputArea = document.getElementById('query-results-output');
-  outputArea.removeAttribute('style');
-  outputArea.style.minHeight = '200px';
-  outputArea.style.display = 'flex';
-  outputArea.style.alignItems = 'center';
-  outputArea.style.justifyContent = 'center';
-  outputArea.style.background = 'rgba(0,0,0,0.15)';
-  outputArea.style.borderRadius = '4px';
-  outputArea.style.border = '1px dashed var(--app-border)';
-  outputArea.innerHTML = `
-    <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
-      Click "Run Query" button above to fetch telemetry metrics from Grafana.
-    </div>
-  `;
+  if (outputArea) {
+    outputArea.removeAttribute('style');
+    outputArea.innerHTML = '';
+  }
 }
 
 function exitQueryResultsView() {
@@ -5739,22 +5730,8 @@ async function submitQueryPanelForm() {
       
       // If we are currently viewing this panel in the results view, update its header info dynamically
       if (activeQueryPanelId === savedPanel.id) {
-        document.getElementById('query-results-title').textContent = savedPanel.name;
-        document.getElementById('query-results-desc').textContent = savedPanel.description || 'No description provided.';
-        
-        const cols = savedPanel.columns.map(c => c.name).join(', ');
-        document.getElementById('query-results-cols-badge').textContent = `COLUMNS: ${cols.toUpperCase()}`;
-        
-        const timeInfo = `TIME: ${savedPanel.timeRangeFrom.toUpperCase()} TO ${savedPanel.timeRangeTo.toUpperCase()} (STEP: ${savedPanel.step.toUpperCase()})`;
-        document.getElementById('query-results-time-badge').textContent = timeInfo;
-        
-        // Reset output area to prompt for running query since settings updated
-        document.getElementById('query-results-output').innerHTML = `
-          <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px;">
-            Click "Run Query" button above to fetch telemetry metrics from Grafana with the updated settings.
-          </div>
-        `;
-        document.getElementById('btn-results-export').classList.add('hidden');
+        delete panelQueryCache[savedPanel.id];
+        showQueryResultsView(savedPanel.id);
       } else {
         // Go back to list view for newly created panels
         document.getElementById('query-explorer-results-container').classList.add('hidden');
@@ -6978,6 +6955,69 @@ function formatToDatetimeLocalValue(dateStr) {
   return '';
 }
 window.formatToDatetimeLocalValue = formatToDatetimeLocalValue;
+
+async function triggerBackgroundExport(type, buttonEl) {
+  if (!activeQueryPanelId) return;
+  const panelId = activeQueryPanelId;
+  
+  // Show spinner inside button
+  const spinner = buttonEl.querySelector('.spinner');
+  const labelSpan = buttonEl.querySelector('span:last-child');
+  const originalText = labelSpan ? labelSpan.textContent : 'Download';
+  
+  if (spinner) spinner.classList.remove('hidden');
+  buttonEl.disabled = true;
+  
+  try {
+    // If not cached, load data first
+    if (!panelQueryCache[panelId]) {
+      if (window.diagLog) window.diagLog(`triggerBackgroundExport: data not cached, loading from backend api`);
+      if (labelSpan) labelSpan.textContent = 'Fetching data...';
+      
+      const res = await fetch(`/api/v1/query-explorer/panels/${panelId}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await res.json();
+      
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || 'Failed to fetch query results');
+      }
+      
+      panelQueryCache[panelId] = result.data;
+      addLog('Query Explorer', `Successfully fetched data for export.`, 'SUCCESS');
+    }
+    
+    // Now trigger corresponding action
+    if (type === 'csv') {
+      exportActivePanelToCsv();
+    } else if (type === 'txt') {
+      exportActivePanelToTxt();
+    } else if (type === 'xlsx') {
+      exportActivePanelToExcel();
+    } else if (type === 'chart') {
+      openExportChartModal();
+    } else if (type === 'table') {
+      document.getElementById('query-table-preview-wrapper').classList.remove('hidden');
+      renderActiveDataTable(panelQueryCache[panelId]);
+    }
+  } catch (error) {
+    if (window.diagLog) window.diagLog(`triggerBackgroundExport: error occurred - ${error.message}`, '#ff7b72');
+    alert(`Export Failed: ${error.message}`);
+  } finally {
+    if (spinner) spinner.classList.add('hidden');
+    buttonEl.disabled = false;
+    if (labelSpan) labelSpan.textContent = originalText;
+  }
+}
+window.triggerBackgroundExport = triggerBackgroundExport;
+
+function hideTablePreview() {
+  document.getElementById('query-table-preview-wrapper').classList.add('hidden');
+}
+window.hideTablePreview = hideTablePreview;
 
 
 
