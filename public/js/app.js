@@ -5228,6 +5228,15 @@ function showQueryResultsView(panelId) {
   // Hide table preview wrapper by default
   document.getElementById('query-table-preview-wrapper').classList.add('hidden');
   
+  // Reset preview controls to default state
+  const vizSelect = document.getElementById('preview-viz-type');
+  if (vizSelect) {
+    vizSelect.value = 'table';
+    togglePreviewSplitCheckboxVisibility('table');
+  }
+  const combineCheckbox = document.getElementById('preview-combine-metrics');
+  if (combineCheckbox) combineCheckbox.checked = false;
+  
   // Reset output area
   const outputArea = document.getElementById('query-results-output');
   if (outputArea) {
@@ -7309,7 +7318,8 @@ async function triggerQueryPreview(buttonEl) {
     } else {
       document.getElementById('query-results-output').style.display = 'none';
       document.getElementById('query-results-chart').style.display = 'block';
-      const isSplitActive = ['line', 'area', 'bar'].includes(vizType) && !combineMetrics;
+      // Split is default for all chart types; combine checkbox overrides this
+      const isSplitActive = !combineMetrics;
       renderActiveDataChart(data, vizType, isSplitActive);
     }
   } catch (error) {
@@ -7322,6 +7332,15 @@ async function triggerQueryPreview(buttonEl) {
   }
 }
 window.triggerQueryPreview = triggerQueryPreview;
+
+// Show/hide the combine-metrics checkbox based on selected viz type
+function togglePreviewSplitCheckboxVisibility(val) {
+  const container = document.getElementById('preview-split-container');
+  if (!container) return;
+  // Show for all chart types except table
+  container.style.display = val === 'table' ? 'none' : 'flex';
+}
+window.togglePreviewSplitCheckboxVisibility = togglePreviewSplitCheckboxVisibility;
 
 function renderActiveDataChart(data, type, splitMetrics) {
   const container = document.getElementById('query-results-chart');
@@ -7350,8 +7369,8 @@ function renderActiveDataChart(data, type, splitMetrics) {
   
   const chronologicalRows = [...rows].reverse();
   
-  if (splitMetrics && ['line', 'area', 'bar'].includes(type)) {
-    // Render one chart per column/metric
+  if (splitMetrics) {
+    // Render one chart per column/metric — applies to ALL chart types
     columns.forEach(col => {
       const chartWrapper = document.createElement('div');
       chartWrapper.style.marginBottom = '24px';
@@ -7372,72 +7391,94 @@ function renderActiveDataChart(data, type, splitMetrics) {
       
       const canvas = document.createElement('div');
       canvas.style.width = '100%';
-      canvas.style.height = '300px';
       
       chartWrapper.appendChild(chartTitle);
       chartWrapper.appendChild(canvas);
       container.appendChild(chartWrapper);
       
-      const chartInstance = echarts.init(canvas, 'dark');
-      const xAxisData = chronologicalRows.map(r => r.timestampStr);
-      const series = [];
+      let option = {};
       
-      ips.forEach(ip => {
-        const seriesData = chronologicalRows.map(row => {
-          const ipData = row[ip] || {};
-          const val = ipData[col];
-          return val !== undefined && val !== null ? Number(val.toFixed(2)) : null;
+      if (type === 'pie' || type === 'donut') {
+        canvas.style.height = '320px';
+        // Per-metric pie: each slice = one IP's average value for this column
+        const pieData = ips.map(ip => {
+          let total = 0, count = 0;
+          chronologicalRows.forEach(row => {
+            const val = (row[ip] || {})[col];
+            if (val !== undefined && val !== null && typeof val === 'number') {
+              total += val; count++;
+            }
+          });
+          return { name: ip, value: count > 0 ? Number((total / count).toFixed(2)) : 0 };
         });
         
-        series.push({
-          name: ip,
-          type: type === 'bar' ? 'bar' : 'line',
-          smooth: true,
-          areaStyle: type === 'area' ? { opacity: 0.15 } : undefined,
-          data: seriesData,
+        option = {
+          backgroundColor: 'transparent',
           tooltip: {
-            valueFormatter: (value) => formatMetricValue(value, col)
-          }
+            trigger: 'item',
+            formatter: (params) => {
+              const formatted = formatMetricValue(params.value, col);
+              return `${params.marker} ${params.name}: <strong>${formatted}</strong> (${params.percent}%)`;
+            },
+            backgroundColor: '#161b22',
+            borderColor: '#30363d',
+            textStyle: { color: '#c9d1d9' }
+          },
+          legend: { orient: 'horizontal', bottom: 0, textStyle: { color: '#8b949e' } },
+          series: [{
+            name: col,
+            type: 'pie',
+            radius: type === 'donut' ? ['38%', '65%'] : '55%',
+            avoidLabelOverlap: true,
+            label: {
+              show: true,
+              formatter: (params) => `${params.name}\n${formatMetricValue(params.value, col)}`
+            },
+            emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+            data: pieData
+          }]
+        };
+      } else {
+        canvas.style.height = '300px';
+        const xAxisData = chronologicalRows.map(r => r.timestampStr);
+        const series = ips.map(ip => {
+          const seriesData = chronologicalRows.map(row => {
+            const val = (row[ip] || {})[col];
+            return val !== undefined && val !== null ? Number(val.toFixed(2)) : null;
+          });
+          return {
+            name: ip,
+            type: type === 'bar' ? 'bar' : 'line',
+            smooth: true,
+            areaStyle: type === 'area' ? { opacity: 0.15 } : undefined,
+            data: seriesData,
+            tooltip: { valueFormatter: (value) => formatMetricValue(value, col) }
+          };
         });
-      });
+        
+        option = {
+          backgroundColor: 'transparent',
+          tooltip: { trigger: 'axis', backgroundColor: '#161b22', borderColor: '#30363d', textStyle: { color: '#c9d1d9' } },
+          legend: { data: series.map(s => s.name), textStyle: { color: '#8b949e' } },
+          grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+          xAxis: {
+            type: 'category',
+            boundaryGap: type === 'bar',
+            data: xAxisData,
+            axisLine: { lineStyle: { color: '#30363d' } },
+            axisLabel: { color: '#8b949e', fontSize: 10 }
+          },
+          yAxis: {
+            type: 'value',
+            axisLine: { lineStyle: { color: '#30363d' } },
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+            axisLabel: { color: '#8b949e', formatter: (value) => formatMetricValue(value, col) }
+          },
+          series: series
+        };
+      }
       
-      const option = {
-        backgroundColor: 'transparent',
-        tooltip: {
-          trigger: 'axis',
-          backgroundColor: '#161b22',
-          borderColor: '#30363d',
-          textStyle: { color: '#c9d1d9' }
-        },
-        legend: {
-          data: series.map(s => s.name),
-          textStyle: { color: '#8b949e' }
-        },
-        grid: {
-          left: '3%',
-          right: '4%',
-          bottom: '3%',
-          containLabel: true
-        },
-        xAxis: {
-          type: 'category',
-          boundaryGap: type === 'bar',
-          data: xAxisData,
-          axisLine: { lineStyle: { color: '#30363d' } },
-          axisLabel: { color: '#8b949e', fontSize: 10 }
-        },
-        yAxis: {
-          type: 'value',
-          axisLine: { lineStyle: { color: '#30363d' } },
-          splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
-          axisLabel: {
-            color: '#8b949e',
-            formatter: (value) => formatMetricValue(value, col)
-          }
-        },
-        series: series
-      };
-      
+      const chartInstance = echarts.init(canvas, 'dark');
       chartInstance.setOption(option);
       dataPreviewChartInstances.push(chartInstance);
     });
