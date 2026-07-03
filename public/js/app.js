@@ -6195,15 +6195,15 @@ function updateChartPreview() {
     legend: {
       data: series.map(s => s.name),
       textStyle: { color: theme.text, fontSize: 9 },
-      top: 38,
+      bottom: 10,
       type: 'scroll',
       width: '90%'
     },
     grid: {
       left: '4%',
       right: '4%',
-      bottom: '15%',
-      top: '28%',
+      bottom: 60,
+      top: 55,
       containLabel: true
     },
     xAxis: {
@@ -6404,15 +6404,15 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
       legend: {
         data: series.map(s => s.name),
         textStyle: { color: theme.text, fontSize: 11 },
-        top: 55,
+        bottom: 15,
         type: 'scroll',
         width: '90%'
       },
       grid: {
         left: '5%',
         right: '5%',
-        bottom: '12%',
-        top: '22%',
+        bottom: 80,
+        top: 75,
         containLabel: true
       },
       xAxis: {
