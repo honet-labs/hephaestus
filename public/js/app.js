@@ -5494,6 +5494,9 @@ function openAddQueryPanelModal() {
   document.getElementById('query-panel-from').value = 'now-1h';
   document.getElementById('query-panel-to').value = 'now';
   document.getElementById('query-panel-step').value = '1m';
+  document.getElementById('query-panel-custom-from-input').value = '';
+  document.getElementById('query-panel-custom-to-input').value = '';
+  toggleQueryCustomTimeFields('now-1h');
   
   document.getElementById('query-panel-columns-list').innerHTML = '';
   document.getElementById('query-test-feedback').classList.add('hidden');
@@ -5516,9 +5519,19 @@ async function openEditQueryPanelModal(panelId) {
   document.getElementById('query-panel-id').value = panel.id;
   document.getElementById('query-panel-name').value = panel.name;
   document.getElementById('query-panel-description').value = panel.description || '';
-  document.getElementById('query-panel-from').value = panel.timeRangeFrom;
-  document.getElementById('query-panel-to').value = panel.timeRangeTo;
   document.getElementById('query-panel-step').value = panel.step;
+  
+  const presetRanges = ['now-15m', 'now-1h', 'now-6h', 'now-12h', 'now-24h', 'now-7d'];
+  if (presetRanges.includes(panel.timeRangeFrom)) {
+    document.getElementById('query-panel-from').value = panel.timeRangeFrom;
+    document.getElementById('query-panel-to').value = panel.timeRangeTo;
+    toggleQueryCustomTimeFields(panel.timeRangeFrom);
+  } else {
+    document.getElementById('query-panel-from').value = 'custom';
+    toggleQueryCustomTimeFields('custom');
+    document.getElementById('query-panel-custom-from-input').value = panel.timeRangeFrom;
+    document.getElementById('query-panel-custom-to-input').value = panel.timeRangeTo;
+  }
   
   // We can select the config associated with this datasource if needed, but since active is default, we can leave config selection as default
   document.getElementById('query-panel-config-id').value = '';
@@ -5564,15 +5577,25 @@ function getColumnsFromModal() {
 // Test Query configuration (Dry Run)
 async function testQueryPanelConfig() {
   const dsUid = document.getElementById('query-panel-datasource-uid').value;
-  const timeFrom = document.getElementById('query-panel-from').value;
-  const timeTo = document.getElementById('query-panel-to').value;
+  let timeFrom = document.getElementById('query-panel-from').value;
+  let timeTo = document.getElementById('query-panel-to').value;
   const step = document.getElementById('query-panel-step').value;
-  
-  const columns = getColumnsFromModal();
   
   const feedback = document.getElementById('query-test-feedback');
   const title = document.getElementById('query-test-title');
   const desc = document.getElementById('query-test-desc');
+  
+  if (timeFrom === 'custom') {
+    timeFrom = document.getElementById('query-panel-custom-from-input').value.trim();
+    timeTo = document.getElementById('query-panel-custom-to-input').value.trim() || 'now';
+    if (!timeFrom) {
+      feedback.className = 'alert alert-error';
+      title.textContent = 'Validation Error';
+      desc.textContent = 'Please enter a custom From time.';
+      feedback.classList.remove('hidden');
+      return;
+    }
+  }
   const testBtn = document.querySelector('button[onclick="testQueryPanelConfig()"]');
   const spinner = document.getElementById('spinner-test-query');
   
@@ -5645,9 +5668,18 @@ async function submitQueryPanelForm() {
   const name = document.getElementById('query-panel-name').value;
   const description = document.getElementById('query-panel-description').value;
   const dsUid = document.getElementById('query-panel-datasource-uid').value;
-  const timeFrom = document.getElementById('query-panel-from').value;
-  const timeTo = document.getElementById('query-panel-to').value;
+  let timeFrom = document.getElementById('query-panel-from').value;
+  let timeTo = document.getElementById('query-panel-to').value;
   const step = document.getElementById('query-panel-step').value;
+  
+  if (timeFrom === 'custom') {
+    timeFrom = document.getElementById('query-panel-custom-from-input').value.trim();
+    timeTo = document.getElementById('query-panel-custom-to-input').value.trim() || 'now';
+    if (!timeFrom) {
+      alert('Please enter a custom From time.');
+      return;
+    }
+  }
   
   const columns = getColumnsFromModal();
   
@@ -6154,7 +6186,11 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
   
   try {
     const body = {};
-    if (selectedTimeRange !== 'default') {
+    if (selectedTimeRange && typeof selectedTimeRange === 'string' && selectedTimeRange.startsWith('custom:')) {
+      const parts = selectedTimeRange.substring(7).split('__');
+      body.timeRangeFrom = parts[0];
+      body.timeRangeTo = parts[1] || 'now';
+    } else if (selectedTimeRange !== 'default') {
       body.timeRangeFrom = selectedTimeRange;
       body.timeRangeTo = 'now';
     }
@@ -6230,7 +6266,13 @@ window.applyExportChartSettings = async function() {
   isExportChartSettingsApplying = true;
   
   const timeRangeSelect = document.getElementById('export-chart-timerange-select');
-  const selectedTimeRange = timeRangeSelect ? timeRangeSelect.value : 'default';
+  let selectedTimeRange = timeRangeSelect ? timeRangeSelect.value : 'default';
+  
+  if (selectedTimeRange === 'custom') {
+    const customFrom = document.getElementById('export-chart-custom-from').value.trim();
+    const customTo = document.getElementById('export-chart-custom-to').value.trim() || 'now';
+    selectedTimeRange = `custom:${customFrom}__${customTo}`;
+  }
   
   const stepSelect = document.getElementById('export-chart-step-select');
   const selectedStep = stepSelect ? stepSelect.value : 'auto';
@@ -6488,6 +6530,11 @@ window.openExportChartModal = function() {
   
   exportChartDataTimeRange = 'default';
   exportChartDataStep = 'auto';
+  
+  // Clear custom inputs
+  document.getElementById('export-chart-custom-from').value = '';
+  document.getElementById('export-chart-custom-to').value = '';
+  toggleExportCustomTimeFields('default');
   
   // Load ECharts and render preview
   const previewContainer = document.getElementById('export-chart-preview-container');
@@ -6871,6 +6918,32 @@ window.toggleDebugOverlaySwitch = function(checked) {
   
   addLog('Configuration', `Diagnostic console overlay ${checked ? 'enabled' : 'disabled'}.`, 'INFO');
 };
+
+function toggleQueryCustomTimeFields(val) {
+  const customTimeRow = document.getElementById('query-panel-custom-time-row');
+  const toContainer = document.getElementById('query-panel-to-container');
+  if (!customTimeRow || !toContainer) return;
+
+  if (val === 'custom') {
+    customTimeRow.style.display = 'grid';
+    toContainer.style.display = 'none';
+  } else {
+    customTimeRow.style.display = 'none';
+    toContainer.style.display = 'block';
+  }
+}
+window.toggleQueryCustomTimeFields = toggleQueryCustomTimeFields;
+
+function toggleExportCustomTimeFields(val) {
+  const customFields = document.getElementById('export-chart-custom-time-fields');
+  if (!customFields) return;
+  if (val === 'custom') {
+    customFields.style.display = 'flex';
+  } else {
+    customFields.style.display = 'none';
+  }
+}
+window.toggleExportCustomTimeFields = toggleExportCustomTimeFields;
 
 
 

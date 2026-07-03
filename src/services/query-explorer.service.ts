@@ -22,10 +22,29 @@ export interface QueryPanelItem {
 
 function parseRelativeTime(timeStr: string): number {
   const now = Math.floor(Date.now() / 1000);
-  if (timeStr === "now") return now;
-  const match = timeStr.trim().match(/^now-(\d+)([smhdwy])$/);
+  const cleanStr = timeStr.trim();
+  if (cleanStr === "now") return now;
+  
+  const match = cleanStr.match(/^now-(\d+)([smhdwy])$/);
   if (!match) {
-    const parsed = Date.parse(timeStr);
+    // Try parsing DD/MM/YYYY HH:mm:ss format
+    const ddmmyyyyRegex = /^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/;
+    const matchDd = cleanStr.match(ddmmyyyyRegex);
+    if (matchDd) {
+      const day = parseInt(matchDd[1], 10);
+      const month = parseInt(matchDd[2], 10) - 1;
+      const year = parseInt(matchDd[3], 10);
+      const hour = matchDd[4] ? parseInt(matchDd[4], 10) : 0;
+      const minute = matchDd[5] ? parseInt(matchDd[5], 10) : 0;
+      const second = matchDd[6] ? parseInt(matchDd[6], 10) : 0;
+      const dateObj = new Date(year, month, day, hour, minute, second);
+      if (!isNaN(dateObj.getTime())) {
+        return Math.floor(dateObj.getTime() / 1000);
+      }
+    }
+
+    // Fallback to standard JavaScript date parsing
+    const parsed = Date.parse(cleanStr);
     if (!isNaN(parsed)) {
       return Math.floor(parsed / 1000);
     }

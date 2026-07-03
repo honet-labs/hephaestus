@@ -1500,19 +1500,16 @@
         <!-- Query Parameters (Time range & Step) -->
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
           <div class="form-group">
-            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Time From</label>
-            <select id="query-panel-from" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Time Range</label>
+            <select id="query-panel-from" onchange="toggleQueryCustomTimeFields(this.value)" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
               <option value="now-15m">Last 15 minutes</option>
               <option value="now-1h" selected>Last 1 hour</option>
               <option value="now-6h">Last 6 hours</option>
               <option value="now-12h">Last 12 hours</option>
               <option value="now-24h">Last 24 hours</option>
               <option value="now-7d">Last 7 days</option>
+              <option value="custom">Custom Range...</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Time To</label>
-            <input type="text" id="query-panel-to" value="now" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
           </div>
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Step / Interval</label>
@@ -1524,6 +1521,22 @@
               <option value="15m">15 minutes</option>
               <option value="1h">1 hour</option>
             </select>
+          </div>
+          <div class="form-group" id="query-panel-to-container">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Time To</label>
+            <input type="text" id="query-panel-to" value="now" required style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <!-- Custom Time Fields Row (Visible only when 'custom' is selected) -->
+        <div id="query-panel-custom-time-row" style="display: none; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom Time From (DD/MM/YYYY HH:mm:ss)</label>
+            <input type="text" id="query-panel-custom-from-input" placeholder="e.g. 03/07/2026 12:00:00" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+          </div>
+          <div class="form-group">
+            <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Custom Time To (DD/MM/YYYY HH:mm:ss)</label>
+            <input type="text" id="query-panel-custom-to-input" placeholder="e.g. 03/07/2026 18:00:00 atau 'now'" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
           </div>
         </div>
 
@@ -1693,7 +1706,7 @@
 
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Time Range</label>
-            <select id="export-chart-timerange-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <select id="export-chart-timerange-select" onchange="toggleExportCustomTimeFields(this.value)" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
               <option value="default">Use Panel Default</option>
               <option value="now-3h">Last 3 hours</option>
               <option value="now-6h">Last 6 hours</option>
@@ -1703,7 +1716,20 @@
               <option value="now-7d">Last 7 days</option>
               <option value="now-14d">Last 14 days</option>
               <option value="now-30d">Last 30 days</option>
+              <option value="custom">Custom Range...</option>
             </select>
+          </div>
+
+          <!-- Export Custom Time inputs -->
+          <div id="export-chart-custom-time-fields" style="display: none; flex-direction: column; gap: 8px; border: 1px solid var(--app-border); padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.15); margin-bottom: 10px;">
+            <div class="form-group">
+              <label style="text-transform: uppercase; font-size: 9px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 4px; display: block;">Custom From (DD/MM/YYYY HH:mm:ss)</label>
+              <input type="text" id="export-chart-custom-from" placeholder="e.g. 03/07/2026 12:00:00" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 6px 10px; border-radius: 4px; font-size: 11px; width: 100%; box-sizing: border-box;">
+            </div>
+            <div class="form-group">
+              <label style="text-transform: uppercase; font-size: 9px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 4px; display: block;">Custom To (DD/MM/YYYY HH:mm:ss)</label>
+              <input type="text" id="export-chart-custom-to" placeholder="e.g. 03/07/2026 18:00:00 atau 'now'" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 6px 10px; border-radius: 4px; font-size: 11px; width: 100%; box-sizing: border-box;">
+            </div>
           </div>
 
           <div class="form-group">
