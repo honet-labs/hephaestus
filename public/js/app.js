@@ -6391,6 +6391,7 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
     });
     
     const option = {
+      animation: false,
       backgroundColor: theme.bg,
       color: colors,
       title: {
