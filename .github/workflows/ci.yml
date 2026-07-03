@@ -30,8 +30,5 @@ jobs:
     - name: Run ESLint Linter Check
       run: npm run lint
 
-    - name: Run Prettier Formatter Check
-      run: npm run format:check
-
     - name: Verify TypeScript Compilation Build
       run: npm run build

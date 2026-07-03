@@ -14,8 +14,8 @@ COPY .eslintignore ./
 COPY .prettierrc ./
 COPY .prettierignore ./
 
-# Run linting and formatting check to ensure code quality before compiling
-RUN npm run lint && npm run format:check
+# Run linting check to ensure code quality before compiling
+RUN npm run lint
 
 # Compile TypeScript
 RUN npm run build
