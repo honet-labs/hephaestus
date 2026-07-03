@@ -5596,6 +5596,7 @@ async function testQueryPanelConfig() {
       return;
     }
   }
+  const columns = getColumnsFromModal();
   const testBtn = document.querySelector('button[onclick="testQueryPanelConfig()"]');
   const spinner = document.getElementById('spinner-test-query');
   
