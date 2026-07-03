@@ -185,6 +185,141 @@ export class UserController {
       });
     }
   }
+
+  // List System Roles
+  public async listRoles(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await query(
+        `SELECT id, name, description, is_default AS "isDefault", created_at AS "createdAt" FROM system_roles ORDER BY id ASC`
+      );
+      res.status(200).json({
+        success: true,
+        data: result.rows
+      });
+    } catch (error: any) {
+      console.error("[UserController] List roles error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message
+      });
+    }
+  }
+
+  // Add System Role
+  public async addRole(req: Request, res: Response): Promise<void> {
+    try {
+      const { name, description } = req.body;
+
+      if (!name || name.trim() === "") {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Role name is required."
+        });
+        return;
+      }
+
+      const checkExists = await query(
+        "SELECT 1 FROM system_roles WHERE LOWER(name) = LOWER($1)",
+        [name.trim()]
+      );
+
+      if (checkExists.rowCount && checkExists.rowCount > 0) {
+        res.status(400).json({
+          success: false,
+          error: "Conflict",
+          message: "A role with this name already exists."
+        });
+        return;
+      }
+
+      const insertResult = await query(
+        `INSERT INTO system_roles (name, description) VALUES ($1, $2) RETURNING id`,
+        [name.trim(), description || ""]
+      );
+
+      await logActivity(
+        "User Management",
+        "Create Role",
+        `Created system role "${name.trim()}"`,
+        "SUCCESS"
+      );
+
+      res.status(201).json({
+        success: true,
+        message: "Role created successfully.",
+        roleId: insertResult.rows[0].id
+      });
+    } catch (error: any) {
+      console.error("[UserController] Add role error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message
+      });
+    }
+  }
+
+  // Delete System Role
+  public async deleteRole(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      const roleRes = await query("SELECT name, is_default FROM system_roles WHERE id = $1", [id]);
+      if (roleRes.rowCount === 0) {
+        res.status(404).json({
+          success: false,
+          error: "Not Found",
+          message: "Role not found."
+        });
+        return;
+      }
+
+      const role = roleRes.rows[0];
+      if (role.is_default) {
+        res.status(400).json({
+          success: false,
+          error: "Forbidden",
+          message: `The default role "${role.name}" cannot be deleted.`
+        });
+        return;
+      }
+
+      // Check if any users are using this role
+      const usersWithRole = await query("SELECT COUNT(*) as count FROM users WHERE LOWER(role) = LOWER($1)", [role.name]);
+      const count = parseInt(usersWithRole.rows[0].count, 10);
+      if (count > 0) {
+        res.status(400).json({
+          success: false,
+          error: "Conflict",
+          message: `Cannot delete role "${role.name}". ${count} user(s) are currently assigned to this role.`
+        });
+        return;
+      }
+
+      await query("DELETE FROM system_roles WHERE id = $1", [id]);
+
+      await logActivity(
+        "User Management",
+        "Delete Role",
+        `Deleted system role "${role.name}"`,
+        "SUCCESS"
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Role deleted successfully."
+      });
+    } catch (error: any) {
+      console.error("[UserController] Delete role error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message
+      });
+    }
+  }
 }
 
 export const userController = new UserController();

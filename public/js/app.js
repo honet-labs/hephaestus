@@ -4472,6 +4472,7 @@ function toggleSettingsSubmenu() {
 
 // User Management Page Logic
 async function initUserManagementPage() {
+  await loadRolesList();
   await loadUsersList();
 }
 
@@ -4491,8 +4492,9 @@ async function loadUsersList() {
     const res = await fetch('/api/v1/users');
     const data = await res.json();
 
-    if (data.success && data.users) {
-      if (data.users.length === 0) {
+    const users = data.success ? (data.data || data.users || []) : [];
+    if (data.success) {
+      if (users.length === 0) {
         tbody.innerHTML = `
           <tr>
             <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
@@ -4501,7 +4503,8 @@ async function loadUsersList() {
           </tr>
         `;
       } else {
-        tbody.innerHTML = data.users.map(u => {
+        tbody.innerHTML = users.map(u => {
+          const createdAt = u.createdAt || u.created_at;
           const deleteBtn = u.username === 'sysadmin' 
             ? `<button class="btn btn-secondary" disabled style="padding: 2px 8px; font-size: 10.5px; height: auto; opacity: 0.5; cursor: not-allowed; border-color: var(--app-border);">Delete</button>`
             : `<button class="btn btn-secondary" onclick="deleteUserAccount('${u.id}', '${u.username}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Delete</button>`;
@@ -4513,7 +4516,7 @@ async function loadUsersList() {
               <td style="padding: 10px 12px; font-size: 12px; vertical-align: middle;">
                 <span class="status-badge" style="font-size: 9px; padding: 1px 4px; ${u.role === 'ADMIN' ? 'background: rgba(16,185,129,0.05); color: #10b981; border: 1px solid rgba(16,185,129,0.1);' : 'background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);'}">${u.role}</span>
               </td>
-              <td style="padding: 10px 12px; font-size: 11px; font-family: monospace; color: var(--text-muted);">${new Date(u.created_at).toLocaleString()}</td>
+              <td style="padding: 10px 12px; font-size: 11px; font-family: monospace; color: var(--text-muted);">${createdAt ? new Date(createdAt).toLocaleString() : '-'}</td>
               <td style="padding: 10px 12px; font-size: 12px; text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
                 <button type="button" class="btn btn-secondary" onclick="openResetPasswordModal('${u.id}', '${u.username}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; border-color: var(--app-border);">Reset Password</button>
                 ${deleteBtn}
@@ -4647,6 +4650,146 @@ async function submitResetPassword(event) {
   }
 }
 
+// ==========================================
+// SYSTEM ROLES MANAGEMENT
+// ==========================================
+async function loadRolesList() {
+  const tbody = document.getElementById('roles-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+        <span class="spinner" style="margin-right: 8px;"></span> Loading roles...
+      </td>
+    </tr>
+  `;
+
+  try {
+    const res = await fetch('/api/v1/users/roles/list');
+    const data = await res.json();
+    const roles = data.success ? (data.data || []) : [];
+
+    if (data.success) {
+      if (roles.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">
+              No system roles found.
+            </td>
+          </tr>
+        `;
+      } else {
+        tbody.innerHTML = roles.map(r => {
+          const isDefault = r.isDefault || r.is_default;
+          const deleteBtn = isDefault
+            ? `<button class="btn btn-secondary" disabled style="padding: 2px 8px; font-size: 10.5px; height: auto; opacity: 0.5; cursor: not-allowed; border-color: var(--app-border);">Delete</button>`
+            : `<button class="btn btn-secondary" onclick="deleteSystemRole('${r.id}', '${escapeHtml(r.name)}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Delete</button>`;
+
+          return `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--text-white);">${escapeHtml(r.name)}</td>
+              <td style="padding: 10px 12px; font-size: 12px; color: var(--text-muted);">${escapeHtml(r.description || '-')}</td>
+              <td style="padding: 10px 12px; font-size: 12px; vertical-align: middle;">
+                <span class="status-badge" style="font-size: 9px; padding: 1px 4px; ${isDefault ? 'background: rgba(88,166,255,0.08); color: #58a6ff; border: 1px solid rgba(88,166,255,0.15);' : 'background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);'}">${isDefault ? 'BUILT-IN' : 'CUSTOM'}</span>
+              </td>
+              <td style="padding: 10px 12px; font-size: 12px; text-align: right;">
+                ${deleteBtn}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Dynamically populate the role dropdown in the Add User modal
+      const roleSelect = document.getElementById('add-user-role');
+      if (roleSelect) {
+        roleSelect.innerHTML = roles.map((r, i) => {
+          const isOp = r.name.toLowerCase() === 'operator';
+          return `<option value="${escapeHtml(r.name)}" ${isOp ? 'selected' : ''}>${escapeHtml(r.name)}</option>`;
+        }).join('');
+      }
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: center; color: #ff7b72; padding: 20px;">
+            Failed to load roles: ${data.message || data.error}
+          </td>
+        </tr>
+      `;
+    }
+  } catch (error) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; color: #ff7b72; padding: 20px;">
+          Failed to fetch roles from backend: ${error.message}
+        </td>
+      </tr>
+    `;
+  }
+}
+
+function openAddRoleModal() {
+  const modal = document.getElementById('modal-add-role');
+  if (modal) {
+    modal.classList.add('active');
+    document.getElementById('form-add-role').reset();
+  }
+}
+
+function closeAddRoleModal() {
+  const modal = document.getElementById('modal-add-role');
+  if (modal) modal.classList.remove('active');
+}
+
+async function submitAddRole(event) {
+  if (event) event.preventDefault();
+
+  const name = document.getElementById('add-role-name').value.trim();
+  const description = document.getElementById('add-role-description').value.trim();
+
+  try {
+    const res = await fetch('/api/v1/users/roles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('System role created successfully.');
+      closeAddRoleModal();
+      await loadRolesList();
+      addLog('User Management', `Created system role "${name}"`, 'SUCCESS');
+    } else {
+      alert('Failed to create role: ' + (data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error connecting to backend: ' + error.message);
+  }
+}
+
+async function deleteSystemRole(id, name) {
+  if (!confirm(`Are you sure you want to delete role "${name}"?`)) return;
+
+  try {
+    const res = await fetch(`/api/v1/users/roles/${id}`, {
+      method: 'DELETE'
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert(`Role "${name}" deleted successfully.`);
+      await loadRolesList();
+      addLog('User Management', `Deleted system role "${name}"`, 'SUCCESS');
+    } else {
+      alert('Failed to delete role: ' + (data.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error connecting to backend: ' + error.message);
+  }
+}
+
 // Activity Logs Page Logic
 let logsPage = 1;
 const logsLimit = 15;
@@ -4681,8 +4824,10 @@ async function loadActivityLogs() {
     const res = await fetch(queryUrl);
     const data = await res.json();
 
-    if (data.success && data.logs) {
-      if (data.logs.length === 0) {
+    const logs = data.success ? (data.data || data.logs || []) : [];
+    const pagination = data.pagination || {};
+    if (data.success) {
+      if (logs.length === 0) {
         tbody.innerHTML = `
           <tr>
             <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
@@ -4694,15 +4839,16 @@ async function loadActivityLogs() {
         document.getElementById('btn-logs-prev').disabled = true;
         document.getElementById('btn-logs-next').disabled = true;
       } else {
-        tbody.innerHTML = data.logs.map(log => {
+        tbody.innerHTML = logs.map(log => {
           let badgeClass = 'status-default';
           if (log.status === 'SUCCESS') badgeClass = 'status-configured';
           else if (log.status === 'ERROR') badgeClass = 'status-text-red';
           else if (log.status === 'WARNING') badgeClass = 'status-text-yellow';
 
+          const logTime = log.timestamp || log.created_at;
           return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 11.5px;">
-              <td style="padding: 8px 12px; font-family: monospace; color: var(--text-muted);">${new Date(log.created_at).toLocaleString()}</td>
+              <td style="padding: 8px 12px; font-family: monospace; color: var(--text-muted);">${logTime ? new Date(logTime).toLocaleString() : '-'}</td>
               <td style="padding: 8px 12px; font-weight: 600; color: var(--text-white);">${escapeHtml(log.module)}</td>
               <td style="padding: 8px 12px; color: #58a6ff; font-weight: 500;">${escapeHtml(log.action)}</td>
               <td style="padding: 8px 12px; color: var(--text-muted); word-break: break-word;">${escapeHtml(log.details)}</td>
@@ -4714,8 +4860,8 @@ async function loadActivityLogs() {
         }).join('');
 
         const startIdx = (logsPage - 1) * logsLimit + 1;
-        const endIdx = startIdx + data.logs.length - 1;
-        const total = data.total || 0;
+        const endIdx = startIdx + logs.length - 1;
+        const total = pagination.total || data.total || 0;
         document.getElementById('logs-pagination-info').textContent = `Showing ${startIdx}-${endIdx} of ${total} logs`;
 
         document.getElementById('btn-logs-prev').disabled = logsPage <= 1;

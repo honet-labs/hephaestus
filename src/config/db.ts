@@ -288,7 +288,16 @@ export async function initDb() {
       description TEXT
     );`,
 
-    // 6. Users table
+    // 6. System Roles table
+    `CREATE TABLE IF NOT EXISTS system_roles (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(50) UNIQUE NOT NULL,
+      description VARCHAR(255),
+      is_default BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 7. Users table
     `CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       username VARCHAR(100) UNIQUE NOT NULL,
@@ -361,6 +370,21 @@ export async function initDb() {
     }
   } catch (err) {
     console.error("❌ [DB] Failed to seed default user:", err);
+  }
+
+  // Seed default system roles if not exists
+  try {
+    const roleCheck = await pool.query("SELECT 1 FROM system_roles LIMIT 1");
+    if (roleCheck.rowCount === 0) {
+      await pool.query(
+        `INSERT INTO system_roles (name, description, is_default) VALUES 
+         ('ADMIN', 'Full system administrator with unrestricted access', true),
+         ('operator', 'Standard operator with read and execute permissions', true)`
+      );
+      console.log("🌱 [DB] Seeded default system roles: ADMIN, operator");
+    }
+  } catch (err) {
+    console.error("❌ [DB] Failed to seed default roles:", err);
   }
 
   // Automatic Data Migration from local JSON files
