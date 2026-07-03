@@ -5917,15 +5917,15 @@ window.exportActivePanelToTxt = function() {
   
   if (ips.length === 0 || rows.length === 0) return;
   
-  let txt = `QUERY METRICS EXPORT\n`;
-  txt += `Panel: ${data.name || activeQueryPanelId}\n`;
-  txt += `Date: ${new Date().toLocaleString()}\n`;
-  txt += "=".repeat(50) + "\n\n";
-  
   ips.forEach(ip => {
+    let txt = `QUERY METRICS EXPORT\n`;
+    txt += `Panel: ${data.name || activeQueryPanelId}\n`;
     txt += `Server IP: ${ip}\n`;
-    txt += "-".repeat(50) + "\n";
+    txt += `Date: ${new Date().toLocaleString()}\n`;
+    txt += "=".repeat(50) + "\n\n";
+    
     txt += "Timestamp\t" + columns.join("\t") + "\n";
+    txt += "-".repeat(50) + "\n";
     
     rows.forEach(row => {
       const ipData = row[ip] || {};
@@ -5935,17 +5935,21 @@ window.exportActivePanelToTxt = function() {
       });
       txt += `${row.timestampStr}\t${vals.join("\t")}\n`;
     });
-    txt += "\n";
+    
+    const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeIp = ip.replace(/[^a-zA-Z0-9.-]/g, '_');
+    link.download = `query_explorer_data_${activeQueryPanelId}_${safeIp}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 100);
   });
-  
-  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `query_explorer_data_${activeQueryPanelId}.txt`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 };
 
 // ==========================================
