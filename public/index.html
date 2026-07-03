@@ -1591,7 +1591,7 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
           <div class="form-group" style="grid-column: span 2; min-width: 250px;">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Chart Title</label>
-            <input type="text" id="export-chart-title-input" placeholder="Enter custom chart title" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <input type="text" id="export-chart-title-input" oninput="updateChartPreview()" placeholder="Enter custom chart title" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
           </div>
           
           <div class="form-group" style="position: relative;">
@@ -1609,7 +1609,7 @@
           
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Metric Column</label>
-            <select id="export-chart-metric-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <select id="export-chart-metric-select" onchange="updateChartPreview()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
               <option value="all">All Metrics</option>
             </select>
           </div>
@@ -1649,7 +1649,7 @@
 
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Background Theme</label>
-            <select id="export-chart-bg-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <select id="export-chart-bg-select" onchange="updateChartPreview()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
               <option value="grafana">Grafana Dark (#0d1117)</option>
               <option value="midnight">Midnight Blue (#1a1b26)</option>
               <option value="slate">Slate Card (#1f1f1f)</option>
@@ -1659,7 +1659,7 @@
           
           <div class="form-group">
             <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Color Palette</label>
-            <select id="export-chart-palette-select" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+            <select id="export-chart-palette-select" onchange="updateChartPreview()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
               <option value="grafana">Grafana Classic</option>
               <option value="cool">Cool Tech</option>
               <option value="warm">Warm Sunset</option>

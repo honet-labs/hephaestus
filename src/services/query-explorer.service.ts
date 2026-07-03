@@ -57,6 +57,32 @@ function formatTimestamp(epochSecs: number): string {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+function parseStepToSeconds(stepStr: string): number {
+  const match = stepStr.trim().match(/^(\d+)([smhdw])$/);
+  if (!match) return 60; // default 1m
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  switch (unit) {
+    case "s": return value;
+    case "m": return value * 60;
+    case "h": return value * 3600;
+    case "d": return value * 86400;
+    case "w": return value * 86400 * 7;
+    default: return value * 60;
+  }
+}
+
+function formatSecondsToStep(secs: number): string {
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
+
 export class QueryExplorerService {
   /**
    * Retrieves all saved query panels.
@@ -162,12 +188,23 @@ export class QueryExplorerService {
 
     const start = parseRelativeTime(timeRangeFrom);
     const end = parseRelativeTime(timeRangeTo);
+    const duration = end - start;
+
+    // Enforce step safety to avoid loading excessive data points
+    let stepInSeconds = parseStepToSeconds(step);
+    const maxDataPoints = 1000;
+    if (duration / stepInSeconds > maxDataPoints) {
+      stepInSeconds = Math.ceil(duration / maxDataPoints);
+      step = formatSecondsToStep(stepInSeconds);
+      console.log(`[QueryExplorer] Step adjusted dynamically to "${step}" to limit data points to ~${maxDataPoints}`);
+    }
     
     // Build Grafana Datasource Proxy Query URL
     const proxyUrl = `${grafanaConfig.host}/api/datasources/proxy/uid/${datasourceUid}/api/v1/query_range`;
     
     console.log(`[QueryExplorer] Target Proxy URL: ${proxyUrl}`);
     console.log(`[QueryExplorer] Range: ${start} to ${end} (step: ${step})`);
+
 
     // dataStore[ipAddress][timestampSecs][columnName] = value
     const dataStore: Record<string, Record<number, Record<string, any>>> = {};

@@ -6052,6 +6052,7 @@ window.toggleAllIpCheckboxes = function(checked) {
     item.checked = checked;
   });
   updateExportIpDropdownLabel();
+  updateChartPreview();
 };
 
 window.onIpCheckboxChange = function() {
@@ -6064,6 +6065,7 @@ window.onIpCheckboxChange = function() {
   }
   
   updateExportIpDropdownLabel();
+  updateChartPreview();
 };
 
 window.updateExportIpDropdownLabel = function() {
@@ -6237,7 +6239,17 @@ function updateChartPreview() {
   const columns = data.columns || [];
   const rows = data.rows || [];
   
-  if (ips.length === 0 || rows.length === 0) return;
+  if (ips.length === 0 || rows.length === 0) {
+    const container = document.getElementById('export-chart-preview-container');
+    if (container) {
+      container.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); font-size: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; height: 100%;">
+          No metrics data found for the selected time range.
+        </div>
+      `;
+    }
+    return;
+  }
   
   const ipCheckboxes = document.querySelectorAll('.ip-checkbox-item');
   const targetIps = Array.from(ipCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
@@ -6432,6 +6444,15 @@ window.openExportChartModal = function() {
       initPreviewChartInstance();
       updateChartPreview();
     };
+    script.onerror = () => {
+      if (previewContainer) {
+        previewContainer.innerHTML = `
+          <div style="text-align: center; color: #ff7b72; font-size: 12px; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 8px;">
+            <strong>Failed to Load Chart Library:</strong> ECharts CDN script could not be loaded. Please check your network connection or verify that jsdelivr is not blocked.
+          </div>
+        `;
+      }
+    };
     document.head.appendChild(script);
   } else {
     setTimeout(() => {
@@ -6470,7 +6491,10 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
   const columns = data.columns || [];
   const rows = data.rows || [];
   
-  if (ips.length === 0 || rows.length === 0) return;
+  if (ips.length === 0 || rows.length === 0) {
+    alert("No data available to export.");
+    return;
+  }
   
   let targetIps = [];
   if (Array.isArray(selectedIp)) {
