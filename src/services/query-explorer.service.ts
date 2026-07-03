@@ -28,7 +28,7 @@ function parseRelativeTime(timeStr: string): number {
   const match = cleanStr.match(/^now-(\d+)([smhdwy])$/);
   if (!match) {
     // Try parsing DD/MM/YYYY HH:mm:ss format
-    const ddmmyyyyRegex = /^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/;
+    const ddmmyyyyRegex = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/;
     const matchDd = cleanStr.match(ddmmyyyyRegex);
     if (matchDd) {
       const day = parseInt(matchDd[1], 10);
