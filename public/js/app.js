@@ -5759,7 +5759,48 @@ window.exportActivePanelToTxt = function() {
   document.body.removeChild(link);
 };
 
-window.exportActivePanelToChartImage = function() {
+window.openExportChartModal = function() {
+  if (!activeQueryPanelId) return;
+  const data = panelQueryCache[activeQueryPanelId];
+  if (!data) return;
+  
+  const ips = data.ips || [];
+  const columns = data.columns || [];
+  
+  // Populate IP select dropdown
+  const ipSelect = document.getElementById('export-chart-ip-select');
+  if (ipSelect) {
+    ipSelect.innerHTML = '<option value="all">All IP Addresses</option>';
+    ips.forEach(ip => {
+      ipSelect.innerHTML += `<option value="${ip}">${ip}</option>`;
+    });
+  }
+  
+  // Populate Metric select dropdown
+  const metricSelect = document.getElementById('export-chart-metric-select');
+  if (metricSelect) {
+    metricSelect.innerHTML = '<option value="all">All Metrics</option>';
+    columns.forEach(col => {
+      metricSelect.innerHTML += `<option value="${col}">${col}</option>`;
+    });
+  }
+  
+  document.getElementById('modal-export-chart').classList.add('active');
+};
+
+window.closeExportChartModal = function() {
+  document.getElementById('modal-export-chart').classList.remove('active');
+};
+
+window.submitExportChart = function() {
+  const ipSelect = document.getElementById('export-chart-ip-select').value;
+  const metricSelect = document.getElementById('export-chart-metric-select').value;
+  
+  closeExportChartModal();
+  exportActivePanelToChartImageWithOptions(ipSelect, metricSelect);
+};
+
+window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedMetric) {
   if (!activeQueryPanelId) return;
   const data = panelQueryCache[activeQueryPanelId];
   if (!data) return;
@@ -5784,8 +5825,12 @@ window.exportActivePanelToChartImage = function() {
     const timestamps = rows.map(r => r.timestampStr).reverse();
     const series = [];
     
-    ips.forEach(ip => {
-      columns.forEach(col => {
+    // Filter IPs and Columns based on user selection
+    const targetIps = selectedIp === 'all' ? ips : [selectedIp];
+    const targetColumns = selectedMetric === 'all' ? columns : [selectedMetric];
+    
+    targetIps.forEach(ip => {
+      targetColumns.forEach(col => {
         const seriesData = rows.map(row => {
           const ipData = row[ip] || {};
           return ipData[col] !== undefined ? ipData[col] : null;
@@ -5801,10 +5846,20 @@ window.exportActivePanelToChartImage = function() {
       });
     });
     
+    // Generate descriptive chart title
+    let chartTitle = data.name || 'Metrics Trend Chart';
+    if (selectedIp !== 'all' || selectedMetric !== 'all') {
+      chartTitle += ' (';
+      if (selectedIp !== 'all') chartTitle += `IP: ${selectedIp}`;
+      if (selectedIp !== 'all' && selectedMetric !== 'all') chartTitle += ', ';
+      if (selectedMetric !== 'all') chartTitle += `Metric: ${selectedMetric}`;
+      chartTitle += ')';
+    }
+    
     const option = {
       backgroundColor: '#0d1117',
       title: {
-        text: data.name || 'Metrics Trend Chart',
+        text: chartTitle,
         textStyle: { color: '#ffffff', fontSize: 16 },
         left: 'center',
         top: 20
@@ -5828,7 +5883,19 @@ window.exportActivePanelToChartImage = function() {
       },
       yAxis: {
         type: 'value',
-        axisLabel: { color: '#8b949e' },
+        axisLabel: { 
+          color: '#8b949e',
+          formatter: function(value) {
+            // Apply human readable metrics format based on the selected metric or standard numbers
+            // If we are looking at one specific metric, format accordingly
+            if (targetColumns.length === 1) {
+              const colName = targetColumns[0];
+              const formattedVal = formatMetricValue(value, colName);
+              return formattedVal;
+            }
+            return value;
+          }
+        },
         splitLine: { lineStyle: { color: '#21262d' } }
       },
       series: series
@@ -5845,7 +5912,14 @@ window.exportActivePanelToChartImage = function() {
       
       const link = document.createElement('a');
       link.href = imgUrl;
-      link.download = `query_explorer_chart_${activeQueryPanelId}.png`;
+      
+      // Dynamic download filename
+      let filename = `query_explorer_chart_${activeQueryPanelId}`;
+      if (selectedIp !== 'all') filename += `_${selectedIp.replace(/\./g, '_')}`;
+      if (selectedMetric !== 'all') filename += `_${selectedMetric.toLowerCase()}`;
+      filename += '.png';
+      
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
