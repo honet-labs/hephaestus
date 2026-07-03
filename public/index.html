@@ -52,6 +52,38 @@
       transform: translateX(22px);
       background-color: #0d1117;
     }
+    /* Unified search bar used across all panel headers */
+    .search-bar {
+      padding: 0 10px 0 32px;
+      height: 30px;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--app-border);
+      color: var(--text-white);
+      font-size: 11.5px;
+      outline: none;
+      transition: border-color 0.15s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 9px center;
+      box-sizing: border-box;
+    }
+    .search-bar::placeholder { color: #6e7681; }
+    .search-bar:focus { border-color: #58a6ff; background-color: rgba(88,166,255,0.04); }
+    /* Unified select filter used in panel headers next to search bars */
+    .filter-select {
+      padding: 0 8px;
+      height: 30px;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--app-border);
+      color: var(--text-white);
+      font-size: 11.5px;
+      outline: none;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    .filter-select:focus { border-color: #58a6ff; }
   </style>
 </head>
   <!-- LOGIN CONTAINER -->
@@ -919,7 +951,7 @@
             <div class="panel">
               <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 class="panel-title" style="margin-bottom: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">OID Dictionary Registry</h3>
-                <input type="text" id="search-registry-input" onkeyup="oidLibraryPage = 1; filterOidRegistry()" placeholder="Search OIDs or names..." style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 180px;">
+                <input type="text" id="search-registry-input" class="search-bar" onkeyup="oidLibraryPage = 1; filterOidRegistry()" placeholder="Search OIDs or names..." style="width: 220px;">
               </div>
 
               <div class="table-wrapper" style="height: 380px; overflow-y: auto; border: 1px solid var(--app-border); border-radius: 4px;">
@@ -1116,8 +1148,8 @@
             <div class="panel-header" style="border-bottom: 1px solid var(--app-border); padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
               <h3 class="panel-title" style="margin-bottom: 0; text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;">Activity Audit Logs</h3>
               <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="text" id="log-search-input" onkeyup="filterActivityLogs()" placeholder="Search logs..." style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 150px;">
-                <select id="log-module-filter" onchange="filterActivityLogs()" style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 120px;">
+                <input type="text" id="log-search-input" class="search-bar" onkeyup="filterActivityLogs()" placeholder="Search logs..." style="width: 180px;">
+                <select id="log-module-filter" class="filter-select" onchange="filterActivityLogs()" style="width: 130px;">
                   <option value="">All Modules</option>
                   <option value="System">System</option>
                   <option value="Database Configuration">Database</option>
@@ -1127,7 +1159,7 @@
                   <option value="User Management">User Management</option>
                   <option value="SNMP">SNMP</option>
                 </select>
-                <select id="log-status-filter" onchange="filterActivityLogs()" style="padding: 4px 8px; border-radius: 4px; background: #242424; border: 1px solid var(--app-border); color: var(--text-white); font-size: 11px; width: 100px;">
+                <select id="log-status-filter" class="filter-select" onchange="filterActivityLogs()" style="width: 110px;">
                   <option value="">All Status</option>
                   <option value="SUCCESS">Success</option>
                   <option value="ERROR">Error</option>
@@ -1668,7 +1700,7 @@
         </p>
         
         <div class="form-group" style="display: flex; gap: 10px;">
-          <input type="text" id="explore-metrics-search" oninput="searchMetricsLibrary()" placeholder="Enter text to filter metric names by..." style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; flex-grow: 1; box-sizing: border-box;">
+          <input type="text" id="explore-metrics-search" class="search-bar" oninput="searchMetricsLibrary()" placeholder="Filter metric names..." style="flex-grow: 1;">
           <button class="btn btn-primary" onclick="searchMetricsLibrary()" style="padding: 8px 16px; font-size: 12px; height: auto;">Search</button>
         </div>
         
