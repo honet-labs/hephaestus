@@ -73,6 +73,28 @@ async function main() {
       console.error("❌ Database Error:", err.message);
       process.exit(1);
     }
+  } else if (command === "list-users" || command === "list") {
+    try {
+      const result = await query("SELECT id, username, email, role, force_password_change FROM users ORDER BY id");
+      if (result.rowCount === 0) {
+        console.log("\n⚠️  No users found in database.");
+      } else {
+        console.log("\n📋 Registered Users:");
+        console.log("─".repeat(70));
+        console.log(`${"ID".padEnd(5)} ${"Username".padEnd(20)} ${"Email".padEnd(30)} ${"Role".padEnd(10)} Force Reset`);
+        console.log("─".repeat(70));
+        for (const row of result.rows) {
+          console.log(
+            `${String(row.id).padEnd(5)} ${row.username.padEnd(20)} ${(row.email || "-").padEnd(30)} ${(row.role || "-").padEnd(10)} ${row.force_password_change ? "Yes" : "No"}`
+          );
+        }
+        console.log("─".repeat(70));
+        console.log(`Total: ${result.rowCount} user(s)`);
+      }
+    } catch (err: any) {
+      console.error("❌ Database Error:", err.message);
+      process.exit(1);
+    }
   } else {
     console.error(`❌ Error: Unknown command "${command}".`);
     printHelp();
@@ -97,6 +119,7 @@ function printHelp() {
   console.log("\nCommands:");
   console.log("  register, create-user   Register a new portal user");
   console.log("  reset-password          Reset password for an existing user");
+  console.log("  list-users, list        List all registered users");
   console.log("\nRegister Options:");
   console.log("  -u, --username <name>   Username for the user");
   console.log("  -e, --email <email>     Email for the user");
@@ -108,6 +131,7 @@ function printHelp() {
   console.log("\nExamples:");
   console.log("  node dist/cli.js register -u devops1 -e devops1@company.com -p SecretPass123");
   console.log("  node dist/cli.js reset-password -u devops1 -p NewPass456");
+  console.log("  node dist/cli.js list-users");
   console.log("====================================================");
 }
 
