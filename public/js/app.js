@@ -6116,7 +6116,11 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
   
   if (previewChartInstance) {
     if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: disposing existing previewChartInstance`);
-    previewChartInstance.dispose();
+    try {
+      previewChartInstance.dispose();
+    } catch (e) {
+      if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: warning - dispose failed: ${e.message}`, '#ff9966');
+    }
     previewChartInstance = null;
   }
   
@@ -6257,7 +6261,11 @@ function initPreviewChartInstance() {
   
   if (previewChartInstance) {
     if (window.diagLog) window.diagLog(`initPreviewChartInstance: disposing existing previewChartInstance`);
-    previewChartInstance.dispose();
+    try {
+      previewChartInstance.dispose();
+    } catch (e) {
+      if (window.diagLog) window.diagLog(`initPreviewChartInstance: warning - dispose failed: ${e.message}`, '#ff9966');
+    }
     previewChartInstance = null;
   }
   
@@ -6505,7 +6513,11 @@ window.openExportChartModal = function() {
 
 window.closeExportChartModal = function() {
   if (previewChartInstance) {
-    previewChartInstance.dispose();
+    try {
+      previewChartInstance.dispose();
+    } catch (e) {
+      if (window.diagLog) window.diagLog(`closeExportChartModal: warning - dispose failed: ${e.message}`, '#ff9966');
+    }
     previewChartInstance = null;
   }
   isExportChartSettingsApplying = false;
