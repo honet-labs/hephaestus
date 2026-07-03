@@ -1,6 +1,158 @@
 // Endpoints
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
+// ==========================================
+// AUTHENTICATION & SESSION MANAGEMENT
+// ==========================================
+
+// Monkeypatch fetch to automatically append Bearer token and handle 401 redirection
+const originalFetch = window.fetch;
+window.fetch = async function(url, options) {
+  options = options || {};
+  options.headers = options.headers || {};
+  
+  const token = localStorage.getItem('hephaestus_session_token');
+  if (token) {
+    if (options.headers instanceof Headers) {
+      options.headers.set('Authorization', `Bearer ${token}`);
+    } else {
+      options.headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  
+  try {
+    const response = await originalFetch(url, options);
+    // If unauthorized, redirect to login screen
+    if (response.status === 401 && !url.includes('/users/login') && !url.includes('/users/session')) {
+      if (window.diagLog) window.diagLog('Session expired or unauthorized (401). Redirecting to login...', '#ff7b72');
+      showLoginScreen();
+    }
+    return response;
+  } catch (err) {
+    throw err;
+  }
+};
+
+function showLoginScreen() {
+  localStorage.removeItem('hephaestus_session_token');
+  const loginContainer = document.getElementById('login-container');
+  const appLayout = document.getElementById('app-layout');
+  if (loginContainer) loginContainer.style.display = 'flex';
+  if (appLayout) appLayout.style.display = 'none';
+  const usernameInput = document.getElementById('login-username');
+  const passwordInput = document.getElementById('login-password');
+  if (usernameInput) usernameInput.value = '';
+  if (passwordInput) passwordInput.value = '';
+  const feedback = document.getElementById('login-feedback');
+  if (feedback) feedback.classList.add('hidden');
+}
+
+function showMainApp(user) {
+  const loginContainer = document.getElementById('login-container');
+  const appLayout = document.getElementById('app-layout');
+  if (loginContainer) loginContainer.style.display = 'none';
+  if (appLayout) appLayout.style.display = 'flex';
+  
+  const avatar = document.getElementById('current-user-avatar');
+  const nameEl = document.getElementById('current-user-name');
+  const roleEl = document.getElementById('current-user-role');
+  
+  if (nameEl) nameEl.textContent = user.username;
+  if (roleEl) roleEl.textContent = user.role;
+  if (avatar) avatar.textContent = user.username.substring(0, 3).toLowerCase();
+  
+  initAppOnce();
+}
+
+window.handleLoginSubmit = async function(event) {
+  event.preventDefault();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const feedback = document.getElementById('login-feedback');
+  
+  if (!username || !password) {
+    feedback.textContent = 'Please enter username and password.';
+    feedback.classList.remove('hidden');
+    return;
+  }
+  
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.disabled = true;
+  
+  try {
+    const res = await originalFetch('/api/v1/users/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, password })
+    });
+    
+    const data = await res.json();
+    if (res.ok && data.success) {
+      localStorage.setItem('hephaestus_session_token', data.token);
+      showMainApp(data.user);
+    } else {
+      feedback.textContent = data.message || 'Login failed.';
+      feedback.classList.remove('hidden');
+    }
+  } catch (err) {
+    feedback.textContent = 'Network or connection error occurred.';
+    feedback.classList.remove('hidden');
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+};
+
+window.handleLogout = async function() {
+  const token = localStorage.getItem('hephaestus_session_token');
+  if (token) {
+    try {
+      await originalFetch('/api/v1/users/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (_) {}
+  }
+  showLoginScreen();
+};
+
+async function checkSession() {
+  const token = localStorage.getItem('hephaestus_session_token');
+  if (!token) {
+    showLoginScreen();
+    return;
+  }
+  
+  try {
+    const res = await originalFetch('/api/v1/users/session', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showMainApp(data.user);
+    } else {
+      showLoginScreen();
+    }
+  } catch (_) {
+    showLoginScreen();
+  }
+}
+
+let isAppInitialized = false;
+function initAppOnce() {
+  if (isAppInitialized) return;
+  
+  // Call initApp which is defined below
+  if (typeof initApp === 'function') {
+    initApp();
+  }
+}
+
 // Navigation pages
 const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging'];
 
@@ -83,7 +235,10 @@ let totalScrapes = 0;
 let systemLogs = [];
 
 // Initialize
-window.addEventListener('DOMContentLoaded', () => {
+function initApp() {
+  if (isAppInitialized) return;
+  isAppInitialized = true;
+
   // Set local diagnostic time
   diagTime.textContent = new Date().toLocaleString();
   
@@ -108,6 +263,10 @@ window.addEventListener('DOMContentLoaded', () => {
   if (launcherBtn) {
     launcherBtn.style.display = debugOverlayEnabled ? 'flex' : 'none';
   }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  checkSession();
 });
 
 // Helper: Format Date object to YYYY-MM-DDTHH:mm

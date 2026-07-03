@@ -54,7 +54,10 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
+import { authMiddleware } from "./middleware/auth.middleware";
+
 // 4. API Routes registration
+app.use("/api/v1", authMiddleware);
 app.use("/api/v1/settings", settingsRoutes);
 app.use("/api/v1/prometheus", prometheusRoutes);
 app.use("/api/v1/monitoring-views", monitoringViewRoutes);

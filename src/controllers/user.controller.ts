@@ -320,6 +320,165 @@ export class UserController {
       });
     }
   }
+
+  // Login
+  public async login(req: Request, res: Response): Promise<void> {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Username and password are required."
+        });
+        return;
+      }
+
+      const passwordHash = crypto.createHash("sha256").update(password).digest("hex");
+
+      const userRes = await query(
+        "SELECT id, username, email, role FROM users WHERE username = $1 AND password = $2",
+        [username.trim(), passwordHash]
+      );
+
+      if (userRes.rowCount === 0) {
+        res.status(401).json({
+          success: false,
+          error: "Unauthorized",
+          message: "Invalid username or password."
+        });
+        return;
+      }
+
+      const user = userRes.rows[0];
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      await query(
+        "INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)",
+        [user.id, token, expiresAt]
+      );
+
+      await logActivity(
+        "Authentication",
+        "Login",
+        `User "${user.username}" logged in successfully`,
+        "SUCCESS"
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Login successful.",
+        token,
+        user: {
+          username: user.username,
+          email: user.email,
+          role: user.role
+        }
+      });
+    } catch (error: any) {
+      console.error("[UserController] Login error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message
+      });
+    }
+  }
+
+  // Logout
+  public async logout(req: Request, res: Response): Promise<void> {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Auth token is missing."
+        });
+        return;
+      }
+
+      const token = authHeader.split(" ")[1];
+      
+      // Get user name before deleting session
+      const sessionRes = await query(
+        `SELECT u.username FROM user_sessions s
+         JOIN users u ON s.user_id = u.id
+         WHERE s.token = $1`,
+        [token]
+      );
+      
+      const username = sessionRes.rowCount && sessionRes.rowCount > 0 ? sessionRes.rows[0].username : "Unknown";
+
+      await query("DELETE FROM user_sessions WHERE token = $1", [token]);
+
+      await logActivity(
+        "Authentication",
+        "Logout",
+        `User "${username}" logged out`,
+        "SUCCESS"
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Logout successful."
+      });
+    } catch (error: any) {
+      console.error("[UserController] Logout error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message
+      });
+    }
+  }
+
+  // Get Session
+  public async getSession(req: Request, res: Response): Promise<void> {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res.status(401).json({
+        success: false,
+        error: "Unauthorized",
+        message: "Session check failed. Token is missing."
+      });
+      return;
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    try {
+      const sessionRes = await query(
+        `SELECT u.username, u.email, u.role FROM user_sessions s
+         JOIN users u ON s.user_id = u.id
+         WHERE s.token = $1 AND s.expires_at > NOW()`,
+        [token]
+      );
+
+      if (sessionRes.rowCount === 0) {
+        res.status(401).json({
+          success: false,
+          error: "Unauthorized",
+          message: "Session is invalid or expired."
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        user: sessionRes.rows[0]
+      });
+    } catch (error: any) {
+      console.error("[UserController] Get session error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: error.message
+      });
+    }
+  }
 }
 
 export const userController = new UserController();

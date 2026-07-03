@@ -307,6 +307,15 @@ export async function initDb() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
+    // 7.5. User Sessions table
+    `CREATE TABLE IF NOT EXISTS user_sessions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      token VARCHAR(255) UNIQUE NOT NULL,
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );`,
+
     // 7. Activity logs table
     `CREATE TABLE IF NOT EXISTS activity_logs (
       id SERIAL PRIMARY KEY,
@@ -316,7 +325,7 @@ export async function initDb() {
       details TEXT,
       status VARCHAR(50) DEFAULT 'SUCCESS'
     );`,
-
+    
     // 8. Query Panels table
     `CREATE TABLE IF NOT EXISTS query_panels (
       id VARCHAR(50) PRIMARY KEY,
@@ -346,6 +355,7 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_grafana_configs_is_active ON grafana_configs(is_active) WHERE is_active = true;`,
     `CREATE INDEX IF NOT EXISTS idx_prometheus_configs_is_active ON prometheus_configs(is_active) WHERE is_active = true;`,
     `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`,
+    `CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token);`,
     `CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp DESC);`,
     `CREATE INDEX IF NOT EXISTS idx_query_panels_created_at ON query_panels(created_at DESC);`
   ];
