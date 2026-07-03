@@ -6099,7 +6099,11 @@ document.addEventListener('click', function(e) {
 });
 
 async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep) {
-  if (!activeQueryPanelId) return;
+  if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: starting. range=${selectedTimeRange}, step=${selectedStep}`);
+  if (!activeQueryPanelId) {
+    if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: ERR - activeQueryPanelId is falsy!`, '#ff7b72');
+    return;
+  }
   
   const previewContainer = document.getElementById('export-chart-preview-container');
   if (previewContainer) {
@@ -6111,17 +6115,20 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
   }
   
   if (previewChartInstance) {
+    if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: disposing existing previewChartInstance`);
     previewChartInstance.dispose();
     previewChartInstance = null;
   }
   
   if (selectedTimeRange === 'default' && selectedStep === 'auto') {
+    if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: default range/step detected. Loading from panelQueryCache`);
     exportChartData = JSON.parse(JSON.stringify(panelQueryCache[activeQueryPanelId]));
     exportChartDataTimeRange = 'default';
     exportChartDataStep = 'auto';
     updateExportDropdowns(exportChartData);
     await new Promise(resolve => {
       setTimeout(() => {
+        if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: default fallback timeout fired`);
         initPreviewChartInstance();
         updateChartPreview();
         resolve();
@@ -6153,6 +6160,7 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
     
     body.step = step;
     
+    if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: sending fetch POST request to /api/v1/query-explorer/panels/${activeQueryPanelId}/query`);
     const res = await fetch(`/api/v1/query-explorer/panels/${activeQueryPanelId}/query`, {
       method: 'POST',
       headers: {
@@ -6161,21 +6169,26 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
       body: JSON.stringify(body)
     });
     
+    if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: response status=${res.status}`);
     const result = await res.json();
+    if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: result success=${result.success}`);
     
     if (res.ok && result.success) {
       exportChartData = result.data;
       exportChartDataTimeRange = selectedTimeRange;
       exportChartDataStep = selectedStep;
+      if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: data received, ips=${exportChartData?.ips?.length}, rows=${exportChartData?.rows?.length}`);
       updateExportDropdowns(exportChartData);
       await new Promise(resolve => {
         setTimeout(() => {
+          if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: success timeout fired. initing & updating chart`);
           initPreviewChartInstance();
           updateChartPreview();
           resolve();
         }, 150);
       });
     } else {
+      if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: ERR - status=${res.status}, msg=${result.message}`, '#ff7b72');
       if (previewContainer) {
         previewContainer.innerHTML = `
           <div style="text-align: center; color: #ff7b72; font-size: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; height: 100%;">
@@ -6185,6 +6198,7 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
       }
     }
   } catch (error) {
+    if (window.diagLog) window.diagLog(`fetchExportChartDataForTimeRange: EXCEPTION caught - ${error.message}`, '#ff7b72');
     if (previewContainer) {
       previewContainer.innerHTML = `
         <div style="text-align: center; color: #ff7b72; font-size: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; height: 100%;">
@@ -6196,6 +6210,7 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
 }
 
 window.applyExportChartSettings = async function() {
+  if (window.diagLog) window.diagLog(`applyExportChartSettings: triggered. isApplying=${isExportChartSettingsApplying}`);
   if (isExportChartSettingsApplying) return;
   isExportChartSettingsApplying = true;
   
@@ -6212,9 +6227,12 @@ window.applyExportChartSettings = async function() {
   }
   
   try {
+    if (window.diagLog) window.diagLog(`applyExportChartSettings: selectedTimeRange=${selectedTimeRange}, exportChartDataTimeRange=${exportChartDataTimeRange}, selectedStep=${selectedStep}, exportChartDataStep=${exportChartDataStep}`);
     if (selectedTimeRange !== exportChartDataTimeRange || selectedStep !== exportChartDataStep) {
+      if (window.diagLog) window.diagLog(`applyExportChartSettings: settings changed, calling fetchExportChartDataForTimeRange`);
       await fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep);
     } else {
+      if (window.diagLog) window.diagLog(`applyExportChartSettings: settings unchanged, calling updateChartPreview directly`);
       updateChartPreview();
     }
   } finally {
@@ -6228,26 +6246,32 @@ window.applyExportChartSettings = async function() {
       `;
     }
     isExportChartSettingsApplying = false;
+    if (window.diagLog) window.diagLog(`applyExportChartSettings: finished. isApplying=false`);
   }
 };
 
 function initPreviewChartInstance() {
   const container = document.getElementById('export-chart-preview-container');
+  if (window.diagLog) window.diagLog(`initPreviewChartInstance: container found=${!!container}`);
   if (!container) return;
   
   if (previewChartInstance) {
+    if (window.diagLog) window.diagLog(`initPreviewChartInstance: disposing existing previewChartInstance`);
     previewChartInstance.dispose();
     previewChartInstance = null;
   }
   
   container.innerHTML = '';
+  if (window.diagLog) window.diagLog(`initPreviewChartInstance: running echarts.init on container (dim: ${container.clientWidth}x${container.clientHeight})`);
   previewChartInstance = echarts.init(container, 'dark');
 }
 
 function updateChartPreview() {
+  if (window.diagLog) window.diagLog(`updateChartPreview: starting. previewChartInstance=${!!previewChartInstance}`);
   if (!previewChartInstance) return;
   if (!activeQueryPanelId) return;
   const data = exportChartData;
+  if (window.diagLog) window.diagLog(`updateChartPreview: data ips=${data?.ips?.length}, rows=${data?.rows?.length}`);
   if (!data) return;
   
   const ips = data.ips || [];
@@ -6255,6 +6279,7 @@ function updateChartPreview() {
   const rows = data.rows || [];
   
   if (ips.length === 0 || rows.length === 0) {
+    if (window.diagLog) window.diagLog(`updateChartPreview: empty ips/rows. ips=${ips.length}, rows=${rows.length}`, '#ff9966');
     const container = document.getElementById('export-chart-preview-container');
     if (container) {
       container.innerHTML = `
@@ -6408,6 +6433,7 @@ function updateChartPreview() {
     series: series
   };
   
+  if (window.diagLog) window.diagLog(`updateChartPreview: calling previewChartInstance.setOption with ${series.length} series`);
   previewChartInstance.setOption(option, true);
 }
 

@@ -1693,9 +1693,34 @@
     </div>
   </div>
 
+  <div id="diagnostic-logger" style="position: fixed; bottom: 10px; left: 10px; z-index: 10000; width: 450px; max-height: 300px; background: rgba(13, 17, 23, 0.95); border: 1px solid #ff7b72; border-radius: 6px; color: #c9d1d9; font-family: monospace; font-size: 11px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+    <div style="padding: 6px 12px; background: #21262d; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="document.getElementById('diagnostic-log-content').style.display = document.getElementById('diagnostic-log-content').style.display === 'none' ? 'block' : 'none'">
+      <strong style="color: #ff7b72;">🔍 DIAGNOSTIC CONSOLE LOGS</strong>
+      <span style="font-size: 10px; color: #8b949e;">Toggle View</span>
+    </div>
+    <div id="diagnostic-log-content" style="padding: 8px; overflow-y: auto; flex-grow: 1; display: block; max-height: 250px;">
+      <!-- Logs will append here -->
+    </div>
+  </div>
   <script>
+    const diagLog = (msg, color = '#c9d1d9') => {
+      const content = document.getElementById('diagnostic-log-content');
+      if (content) {
+        const div = document.createElement('div');
+        div.style.color = color;
+        div.style.marginBottom = '4px';
+        div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+        div.style.paddingBottom = '2px';
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        content.appendChild(div);
+        content.scrollTop = content.scrollHeight;
+      }
+    };
+    window.diagLog = diagLog;
+    diagLog("Diagnostic Logger Initialized", "#58a6ff");
+    
     window.onerror = function(message, source, lineno, colno, error) {
-      alert("JS Diagnostic Error:\n" + message + "\nSource: " + source + "\nLine: " + lineno + "\nCol: " + colno);
+      diagLog(`ERR: ${message} (Line ${lineno}:${colno})`, "#ff7b72");
       return false;
     };
   </script>
