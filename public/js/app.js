@@ -7230,6 +7230,26 @@ window.hideTablePreview = hideTablePreview;
 
 let dataPreviewChartInstance = null;
 
+function loadEChartsLibrary() {
+  return new Promise((resolve, reject) => {
+    if (typeof echarts !== 'undefined') {
+      resolve();
+      return;
+    }
+    if (window.diagLog) window.diagLog('loadEChartsLibrary: appending script tag to head');
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
+    script.onload = () => {
+      if (window.diagLog) window.diagLog('loadEChartsLibrary: loaded successfully', '#56d364');
+      resolve();
+    };
+    script.onerror = () => {
+      reject(new Error('Failed to load ECharts library from CDN. Please check your internet connection.'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
 async function triggerQueryPreview(buttonEl) {
   if (!activeQueryPanelId) return;
   const panelId = activeQueryPanelId;
@@ -7243,6 +7263,11 @@ async function triggerQueryPreview(buttonEl) {
   buttonEl.disabled = true;
   
   try {
+    if (vizType !== 'table' && typeof echarts === 'undefined') {
+      if (window.diagLog) window.diagLog('triggerQueryPreview: ECharts is undefined, loading dynamically...', '#e3b341');
+      if (labelSpan) labelSpan.textContent = 'Loading chart library...';
+      await loadEChartsLibrary();
+    }
     if (!panelQueryCache[panelId]) {
       if (window.diagLog) window.diagLog(`triggerQueryPreview: data not cached, loading from backend api`);
       if (labelSpan) labelSpan.textContent = 'Fetching data...';
