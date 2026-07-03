@@ -339,6 +339,13 @@ export async function initDb() {
       step VARCHAR(50) DEFAULT '1m',
       columns JSONB NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 9. App Config table (key-value for setup status, etc.)
+    `CREATE TABLE IF NOT EXISTS app_config (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
@@ -364,7 +371,12 @@ export async function initDb() {
 
   // Auto-migration: add missing columns
   const migrationQueries = [
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT false;`
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT false;`,
+    `CREATE TABLE IF NOT EXISTS app_config (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`
   ];
   await Promise.all(migrationQueries.map(q => pool.query(q)));
 
@@ -381,6 +393,16 @@ export async function initDb() {
     }
   } catch (err) {
     console.error("❌ [DB] Failed to seed default roles:", err);
+  }
+
+  // Seed setup_completed = false if not exists
+  try {
+    await pool.query(
+      `INSERT INTO app_config (key, value) VALUES ('setup_completed', 'false')
+       ON CONFLICT (key) DO NOTHING`
+    );
+  } catch (err) {
+    console.error("❌ [DB] Failed to seed setup_completed:", err);
   }
 
   // Automatic Data Migration from local JSON files

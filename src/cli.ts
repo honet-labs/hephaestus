@@ -95,6 +95,17 @@ async function main() {
       console.error("❌ Database Error:", err.message);
       process.exit(1);
     }
+  } else if (command === "reset-setup") {
+    try {
+      await query(
+        `INSERT INTO app_config (key, value) VALUES ('setup_completed', 'false')
+         ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = CURRENT_TIMESTAMP`
+      );
+      console.log("\n✅ Setup status reset. Access the web UI to create a new admin account.");
+    } catch (err: any) {
+      console.error("❌ Database Error:", err.message);
+      process.exit(1);
+    }
   } else {
     console.error(`❌ Error: Unknown command "${command}".`);
     printHelp();
@@ -120,6 +131,7 @@ function printHelp() {
   console.log("  register, create-user   Register a new portal user");
   console.log("  reset-password          Reset password for an existing user");
   console.log("  list-users, list        List all registered users");
+  console.log("  reset-setup             Reset setup status (show setup wizard on next login)");
   console.log("\nRegister Options:");
   console.log("  -u, --username <name>   Username for the user");
   console.log("  -e, --email <email>     Email for the user");

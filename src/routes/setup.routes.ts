@@ -4,24 +4,31 @@ import { query, logActivity } from "../config/db";
 
 const router = Router();
 
-// Check if setup is needed (no users exist)
+// Check if setup is needed (setup_completed flag)
 router.get("/status", async (req: Request, res: Response) => {
   try {
-    const result = await query("SELECT COUNT(*) as count FROM users");
-    const count = parseInt(result.rows[0].count, 10);
-    res.status(200).json({ success: true, needsSetup: count === 0 });
+    const result = await query("SELECT value FROM app_config WHERE key = 'setup_completed'");
+    const isCompleted = result.rows.length > 0 && result.rows[0].value === "true";
+    res.status(200).json({ success: true, needsSetup: !isCompleted });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: "Database not ready", message: error.message });
+    // Fallback: if app_config table doesn't exist yet, check user count
+    try {
+      const countResult = await query("SELECT COUNT(*) as count FROM users");
+      const count = parseInt(countResult.rows[0].count, 10);
+      res.status(200).json({ success: true, needsSetup: count === 0 });
+    } catch {
+      res.status(500).json({ success: false, error: "Database not ready", message: error.message });
+    }
   }
 });
 
-// Create first admin user (only works when no users exist)
+// Create first admin user (only works when setup not completed)
 router.post("/create-admin", async (req: Request, res: Response) => {
   try {
-    // Check no users exist
-    const check = await query("SELECT COUNT(*) as count FROM users");
-    if (parseInt(check.rows[0].count, 10) > 0) {
-      res.status(400).json({ success: false, error: "Forbidden", message: "Admin user already exists. Use normal user management." });
+    // Check setup not already completed
+    const configCheck = await query("SELECT value FROM app_config WHERE key = 'setup_completed'");
+    if (configCheck.rows.length > 0 && configCheck.rows[0].value === "true") {
+      res.status(400).json({ success: false, error: "Forbidden", message: "Setup already completed. Use normal login." });
       return;
     }
 
@@ -40,6 +47,11 @@ router.post("/create-admin", async (req: Request, res: Response) => {
     await query(
       `INSERT INTO users (username, email, password, role, force_password_change) VALUES ($1, $2, $3, $4, $5)`,
       [username.trim(), email.trim(), passwordHash, "ADMIN", false]
+    );
+
+    // Mark setup as completed
+    await query(
+      `UPDATE app_config SET value = 'true', updated_at = CURRENT_TIMESTAMP WHERE key = 'setup_completed'`
     );
 
     // Seed roles if not exist
