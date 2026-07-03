@@ -7254,7 +7254,7 @@ async function triggerQueryPreview(buttonEl) {
   if (!activeQueryPanelId) return;
   const panelId = activeQueryPanelId;
   const vizType = document.getElementById('preview-viz-type').value;
-  const splitMetrics = document.getElementById('preview-split-metrics').checked;
+  const combineMetrics = document.getElementById('preview-combine-metrics').checked;
   
   const spinner = buttonEl.querySelector('.spinner');
   const labelSpan = buttonEl.querySelector('span:last-child');
@@ -7309,7 +7309,7 @@ async function triggerQueryPreview(buttonEl) {
     } else {
       document.getElementById('query-results-output').style.display = 'none';
       document.getElementById('query-results-chart').style.display = 'block';
-      const isSplitActive = ['line', 'area', 'bar'].includes(vizType) && splitMetrics;
+      const isSplitActive = ['line', 'area', 'bar'].includes(vizType) && !combineMetrics;
       renderActiveDataChart(data, vizType, isSplitActive);
     }
   } catch (error) {
