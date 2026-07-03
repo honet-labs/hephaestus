@@ -49,7 +49,7 @@ export interface GrafanaConfigItem {
 
 export const config = {
   port: parseInt(process.env.PORT || "5000", 10),
-  allowedOrigins: (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:5173,http://localhost:16754,http://127.0.0.1:3000,http://127.0.0.1:5173")
+  allowedOrigins: (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:5173,http://localhost:16754,http://127.0.0.1:3000,http://127.0.0.1:5173,https://hephaestus-tools.honet.web.id")
     .split(",")
     .map(origin => origin.trim()),
   
