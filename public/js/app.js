@@ -5799,6 +5799,7 @@ const colorPalettes = {
 
 let previewChartInstance = null;
 let exportChartData = null;
+let exportChartDataTimeRange = 'default';
 
 function updateExportDropdowns(data) {
   const dropdownContent = document.getElementById('export-chart-ip-dropdown-content');
@@ -5807,6 +5808,16 @@ function updateExportDropdowns(data) {
   
   const ips = data.ips || [];
   const columns = data.columns || [];
+  
+  // Save current checked state
+  const previousCheckedItems = document.querySelectorAll('.ip-checkbox-item');
+  const hasPrevious = previousCheckedItems.length > 0;
+  const checkedIps = new Set();
+  if (hasPrevious) {
+    previousCheckedItems.forEach(cb => {
+      if (cb.checked) checkedIps.add(cb.value);
+    });
+  }
   
   // 1. Populate IP Checkboxes
   dropdownContent.innerHTML = '';
@@ -5829,8 +5840,9 @@ function updateExportDropdowns(data) {
     }
   };
   
+  const allCheckedByDefault = hasPrevious ? (checkedIps.size === previousCheckedItems.length) : true;
   allRow.innerHTML = `
-    <input type="checkbox" id="ip-checkbox-all" checked style="cursor: pointer; pointer-events: none;">
+    <input type="checkbox" id="ip-checkbox-all" ${allCheckedByDefault ? 'checked' : ''} style="cursor: pointer; pointer-events: none;">
     <span style="font-size: 12px; color: var(--text-white);">Select All</span>
   `;
   dropdownContent.appendChild(allRow);
@@ -5855,8 +5867,9 @@ function updateExportDropdowns(data) {
       }
     };
     
+    const isChecked = hasPrevious ? checkedIps.has(ip) : true;
     ipRow.innerHTML = `
-      <input type="checkbox" class="ip-checkbox-item" id="ip-checkbox-${ip.replace(/\./g, '-')}" value="${ip}" checked style="cursor: pointer; pointer-events: none;">
+      <input type="checkbox" class="ip-checkbox-item" id="ip-checkbox-${ip.replace(/\./g, '-')}" value="${ip}" ${isChecked ? 'checked' : ''} style="cursor: pointer; pointer-events: none;">
       <span style="font-size: 12px; color: var(--text-white);">${ip}</span>
     `;
     dropdownContent.appendChild(ipRow);
@@ -5892,7 +5905,6 @@ window.toggleAllIpCheckboxes = function(checked) {
     item.checked = checked;
   });
   updateExportIpDropdownLabel();
-  updateChartPreview();
 };
 
 window.onIpCheckboxChange = function() {
@@ -5905,7 +5917,6 @@ window.onIpCheckboxChange = function() {
   }
   
   updateExportIpDropdownLabel();
-  updateChartPreview();
 };
 
 window.updateExportIpDropdownLabel = function() {
@@ -5937,11 +5948,8 @@ document.addEventListener('click', function(e) {
   }
 });
 
-async function handleExportTimeRangeChange() {
+async function fetchExportChartDataForTimeRange(selectedTimeRange) {
   if (!activeQueryPanelId) return;
-  
-  const timeRangeSelect = document.getElementById('export-chart-timerange-select');
-  const selectedTimeRange = timeRangeSelect ? timeRangeSelect.value : 'default';
   
   const previewContainer = document.getElementById('export-chart-preview-container');
   if (previewContainer) {
@@ -5959,6 +5967,7 @@ async function handleExportTimeRangeChange() {
   
   if (selectedTimeRange === 'default') {
     exportChartData = JSON.parse(JSON.stringify(panelQueryCache[activeQueryPanelId]));
+    exportChartDataTimeRange = 'default';
     updateExportDropdowns(exportChartData);
     initPreviewChartInstance();
     updateChartPreview();
@@ -5992,6 +6001,7 @@ async function handleExportTimeRangeChange() {
     
     if (res.ok && result.success) {
       exportChartData = result.data;
+      exportChartDataTimeRange = selectedTimeRange;
       updateExportDropdowns(exportChartData);
       initPreviewChartInstance();
       updateChartPreview();
@@ -6014,6 +6024,35 @@ async function handleExportTimeRangeChange() {
     }
   }
 }
+
+window.applyExportChartSettings = async function() {
+  const timeRangeSelect = document.getElementById('export-chart-timerange-select');
+  const selectedTimeRange = timeRangeSelect ? timeRangeSelect.value : 'default';
+  
+  const applyBtn = document.getElementById('btn-export-chart-apply');
+  if (applyBtn) {
+    applyBtn.disabled = true;
+    applyBtn.innerHTML = '<span class="spinner" style="margin-right: 6px; width: 10px; height: 10px;"></span> APPLYING...';
+  }
+  
+  try {
+    if (selectedTimeRange !== exportChartDataTimeRange) {
+      await fetchExportChartDataForTimeRange(selectedTimeRange);
+    } else {
+      updateChartPreview();
+    }
+  } finally {
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      applyBtn.innerHTML = `
+        <svg style="width: 12px; height: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+        </svg>
+        APPLY CONFIGURATION
+      `;
+    }
+  }
+};
 
 function initPreviewChartInstance() {
   const container = document.getElementById('export-chart-preview-container');
@@ -6185,28 +6224,13 @@ window.openExportChartModal = function() {
   // Show modal
   document.getElementById('modal-export-chart').classList.add('active');
   
-  // Bind change events to form elements to automatically update preview
-  const controls = [
-    'export-chart-title-input',
-    'export-chart-metric-select',
-    'export-chart-bg-select',
-    'export-chart-palette-select'
-  ];
-  
-  controls.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.oninput = updateChartPreview;
-      el.onchange = updateChartPreview;
-    }
-  });
-  
-  // Set default time range and bind event listener
+  // Set default time range
   const timeRangeSelect = document.getElementById('export-chart-timerange-select');
   if (timeRangeSelect) {
     timeRangeSelect.value = 'default';
-    timeRangeSelect.onchange = handleExportTimeRangeChange;
   }
+  
+  exportChartDataTimeRange = 'default';
   
   // Load ECharts and render preview
   const previewContainer = document.getElementById('export-chart-preview-container');
