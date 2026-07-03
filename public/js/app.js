@@ -6938,7 +6938,7 @@ function toggleExportCustomTimeFields(val) {
   const customFields = document.getElementById('export-chart-custom-time-fields');
   if (!customFields) return;
   if (val === 'custom') {
-    customFields.style.display = 'flex';
+    customFields.style.display = 'grid';
   } else {
     customFields.style.display = 'none';
   }
