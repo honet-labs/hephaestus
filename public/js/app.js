@@ -5800,6 +5800,7 @@ const colorPalettes = {
 let previewChartInstance = null;
 let exportChartData = null;
 let exportChartDataTimeRange = 'default';
+let exportChartDataStep = 'auto';
 
 function updateExportDropdowns(data) {
   const dropdownContent = document.getElementById('export-chart-ip-dropdown-content');
@@ -5948,7 +5949,7 @@ document.addEventListener('click', function(e) {
   }
 });
 
-async function fetchExportChartDataForTimeRange(selectedTimeRange) {
+async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep) {
   if (!activeQueryPanelId) return;
   
   const previewContainer = document.getElementById('export-chart-preview-container');
@@ -5965,9 +5966,10 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange) {
     previewChartInstance = null;
   }
   
-  if (selectedTimeRange === 'default') {
+  if (selectedTimeRange === 'default' && selectedStep === 'auto') {
     exportChartData = JSON.parse(JSON.stringify(panelQueryCache[activeQueryPanelId]));
     exportChartDataTimeRange = 'default';
+    exportChartDataStep = 'auto';
     updateExportDropdowns(exportChartData);
     initPreviewChartInstance();
     updateChartPreview();
@@ -5976,18 +5978,26 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange) {
   
   try {
     const body = {};
-    body.timeRangeFrom = selectedTimeRange;
-    body.timeRangeTo = 'now';
+    if (selectedTimeRange !== 'default') {
+      body.timeRangeFrom = selectedTimeRange;
+      body.timeRangeTo = 'now';
+    }
     
-    // Determine step based on time range
-    if (selectedTimeRange === 'now-3h') body.step = '1m';
-    else if (selectedTimeRange === 'now-6h') body.step = '5m';
-    else if (selectedTimeRange === 'now-12h') body.step = '5m';
-    else if (selectedTimeRange === 'now-24h') body.step = '15m';
-    else if (selectedTimeRange === 'now-2d') body.step = '30m';
-    else if (selectedTimeRange === 'now-7d') body.step = '1h';
-    else if (selectedTimeRange === 'now-14d') body.step = '3h';
-    else if (selectedTimeRange === 'now-30d') body.step = '6h';
+    // Determine step based on time range / selectedStep
+    let step = selectedStep;
+    if (selectedStep === 'auto') {
+      if (selectedTimeRange === 'now-3h') step = '1m';
+      else if (selectedTimeRange === 'now-6h') step = '5m';
+      else if (selectedTimeRange === 'now-12h') step = '5m';
+      else if (selectedTimeRange === 'now-24h') step = '15m';
+      else if (selectedTimeRange === 'now-2d') step = '30m';
+      else if (selectedTimeRange === 'now-7d') step = '1h';
+      else if (selectedTimeRange === 'now-14d') step = '3h';
+      else if (selectedTimeRange === 'now-30d') step = '6h';
+      else step = '1m'; // default fallback for default timerange
+    }
+    
+    body.step = step;
     
     const res = await fetch(`/api/v1/query-explorer/panels/${activeQueryPanelId}/query`, {
       method: 'POST',
@@ -6002,6 +6012,7 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange) {
     if (res.ok && result.success) {
       exportChartData = result.data;
       exportChartDataTimeRange = selectedTimeRange;
+      exportChartDataStep = selectedStep;
       updateExportDropdowns(exportChartData);
       initPreviewChartInstance();
       updateChartPreview();
@@ -6029,6 +6040,9 @@ window.applyExportChartSettings = async function() {
   const timeRangeSelect = document.getElementById('export-chart-timerange-select');
   const selectedTimeRange = timeRangeSelect ? timeRangeSelect.value : 'default';
   
+  const stepSelect = document.getElementById('export-chart-step-select');
+  const selectedStep = stepSelect ? stepSelect.value : 'auto';
+  
   const applyBtn = document.getElementById('btn-export-chart-apply');
   if (applyBtn) {
     applyBtn.disabled = true;
@@ -6036,8 +6050,8 @@ window.applyExportChartSettings = async function() {
   }
   
   try {
-    if (selectedTimeRange !== exportChartDataTimeRange) {
-      await fetchExportChartDataForTimeRange(selectedTimeRange);
+    if (selectedTimeRange !== exportChartDataTimeRange || selectedStep !== exportChartDataStep) {
+      await fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep);
     } else {
       updateChartPreview();
     }
@@ -6244,13 +6258,18 @@ window.openExportChartModal = function() {
   // Show modal
   document.getElementById('modal-export-chart').classList.add('active');
   
-  // Set default time range
+  // Set default time range & step
   const timeRangeSelect = document.getElementById('export-chart-timerange-select');
   if (timeRangeSelect) {
     timeRangeSelect.value = 'default';
   }
+  const stepSelect = document.getElementById('export-chart-step-select');
+  if (stepSelect) {
+    stepSelect.value = 'auto';
+  }
   
   exportChartDataTimeRange = 'default';
+  exportChartDataStep = 'auto';
   
   // Load ECharts and render preview
   const previewContainer = document.getElementById('export-chart-preview-container');
