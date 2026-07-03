@@ -5971,12 +5971,14 @@ async function handleExportTimeRangeChange() {
     body.timeRangeTo = 'now';
     
     // Determine step based on time range
-    if (selectedTimeRange === 'now-15m') body.step = '15s';
-    else if (selectedTimeRange === 'now-1h') body.step = '1m';
+    if (selectedTimeRange === 'now-3h') body.step = '1m';
     else if (selectedTimeRange === 'now-6h') body.step = '5m';
     else if (selectedTimeRange === 'now-12h') body.step = '5m';
     else if (selectedTimeRange === 'now-24h') body.step = '15m';
+    else if (selectedTimeRange === 'now-2d') body.step = '30m';
     else if (selectedTimeRange === 'now-7d') body.step = '1h';
+    else if (selectedTimeRange === 'now-14d') body.step = '3h';
+    else if (selectedTimeRange === 'now-30d') body.step = '6h';
     
     const res = await fetch(`/api/v1/query-explorer/panels/${activeQueryPanelId}/query`, {
       method: 'POST',
