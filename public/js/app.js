@@ -2,7 +2,7 @@
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'prometheus', 'monitoring', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -101,6 +101,13 @@ window.addEventListener('DOMContentLoaded', () => {
   // Load configuration
   loadGrafanaSettings();
   checkDatabaseConnectionOnLoad();
+
+  // Initialize debug console overlay based on localStorage
+  const debugOverlayEnabled = localStorage.getItem('debugConsoleEnabled') === 'true';
+  const launcherBtn = document.getElementById('diagnostic-launcher');
+  if (launcherBtn) {
+    launcherBtn.style.display = debugOverlayEnabled ? 'flex' : 'none';
+  }
 });
 
 // Helper: Format Date object to YYYY-MM-DDTHH:mm
@@ -214,7 +221,7 @@ function showPage(pageId) {
     if (arrow) arrow.style.transform = 'rotate(0deg)';
   }
 
-  const settingsPages = ['database', 'user-management', 'activity-logs'];
+  const settingsPages = ['database', 'user-management', 'activity-logs', 'debugging'];
   const isSettingsPage = settingsPages.includes(pageId);
   const setSubmenu = document.getElementById('settings-submenu');
   const setParentMenu = document.getElementById('menu-settings-parent');
@@ -276,6 +283,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'System Settings';
     pageDesc.textContent = 'PostgreSQL database connection settings and performance tuning.';
     initDatabasePage();
+  } else if (pageId === 'debugging') {
+    pageTitle.textContent = 'System Debugging';
+    pageDesc.textContent = 'Enable or disable debug features and diagnostic tools.';
+    initDebuggingPage();
   } else if (pageId === 'user-management') {
     pageTitle.textContent = 'User Management';
     pageDesc.textContent = 'Create, list, delete user accounts and manage credentials.';
@@ -6836,6 +6847,30 @@ function addMetricFromLibrary(colName, metricQuery) {
   addQueryColumnInput(colName, metricQuery);
   addLog('Query Explorer', `Added metric "${metricQuery}" to columns.`, 'SUCCESS');
 }
+
+function initDebuggingPage() {
+  const isEnabled = localStorage.getItem('debugConsoleEnabled') === 'true';
+  const checkbox = document.getElementById('debug-overlay-switch');
+  if (checkbox) {
+    checkbox.checked = isEnabled;
+  }
+}
+
+window.toggleDebugOverlaySwitch = function(checked) {
+  localStorage.setItem('debugConsoleEnabled', checked ? 'true' : 'false');
+  
+  const launcher = document.getElementById('diagnostic-launcher');
+  const panel = document.getElementById('diagnostic-logger');
+  
+  if (checked) {
+    if (launcher) launcher.style.display = 'flex';
+  } else {
+    if (launcher) launcher.style.display = 'none';
+    if (panel) panel.style.display = 'none';
+  }
+  
+  addLog('Configuration', `Diagnostic console overlay ${checked ? 'enabled' : 'disabled'}.`, 'INFO');
+};
 
 
 
