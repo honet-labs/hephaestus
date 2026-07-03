@@ -1,7 +1,4 @@
 import { Request, Response } from "express";
-import fs from "fs";
-import path from "path";
-import config from "../config/env";
 import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists, updateEnvFile, saveDbConfigToFile, logActivity } from "../config/db";
 
 function maskPassword(pwd: string): string {

@@ -74,7 +74,7 @@ app.use((req: Request, res: Response) => {
 });
 
 // 6. Global Error Handling Middleware
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error("Unhandled global server error:", err);
   
   res.status(500).json({

@@ -1,6 +1,6 @@
 import axios from "axios";
 import config from "../config/env";
-import pool, { query, logActivity } from "../config/db";
+import { query } from "../config/db";
 
 export interface QueryColumn {
   name: string;

@@ -164,7 +164,9 @@ scrape_configs:
         exec(`promtool check config "${tempFilePath}"`, (err, stdout, stderr) => {
           try {
             fs.unlinkSync(tempFilePath);
-          } catch (_) {}
+          } catch (_) {
+            // ignore
+          }
 
           if (err) {
             if (stderr.toLowerCase().includes("not found") || stderr.toLowerCase().includes("not recognized")) {
@@ -202,7 +204,9 @@ scrape_configs:
         } finally {
           try {
             await this.executeRemoteCommand(conn, `rm -f "${tempPath}"`);
-          } catch (_) {}
+          } catch (_) {
+            // ignore
+          }
         }
       } catch (err: any) {
         // If SSH connection fails during validate check, report it

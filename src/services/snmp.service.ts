@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import axios from "axios";
-import snmp from "net-snmp";
 import { exec } from "child_process";
 import { config } from "../config/env";
 import { query } from "../config/db";
@@ -190,7 +189,7 @@ export class SnmpService {
     }
 
     // Save MIB raw file
-    const safeName = mibName.replace(/[^a-zA-Z0-9_\-]/g, "");
+    const safeName = mibName.replace(/[^a-zA-Z0-9_-]/g, "");
     const mibFilePath = path.join(MIBS_DIR, `${safeName}.mib`);
     fs.writeFileSync(mibFilePath, content, "utf-8");
 
@@ -302,7 +301,7 @@ export class SnmpService {
     this.ensureMibDirectories();
     
     // Remove file from disk
-    const safeName = name.replace(/[^a-zA-Z0-9_\-]/g, "");
+    const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "");
     const mibFilePath = path.join(MIBS_DIR, `${safeName}.mib`);
     if (fs.existsSync(mibFilePath)) {
       fs.unlinkSync(mibFilePath);
@@ -318,7 +317,7 @@ export class SnmpService {
     const cleanText = mibText.replace(/--.*$/gm, "");
     const nodes: MibNode[] = [];
     
-    const regex = /(\w+)\s+(OBJECT-TYPE|OBJECT\s+IDENTIFIER|MODULE-IDENTITY|NOTIFICATION-TYPE|TRAP-TYPE)\s+(.*?)::=\s*\{\s*([\w\-]+)\s+(\d+|\w+\(\d+\))\s*\}/gs;
+    const regex = /(\w+)\s+(OBJECT-TYPE|OBJECT\s+IDENTIFIER|MODULE-IDENTITY|NOTIFICATION-TYPE|TRAP-TYPE)\s+(.*?)::=\s*\{\s*([\w-]+)\s+(\d+|\w+\(\d+\))\s*\}/gs;
     
     let match;
     while ((match = regex.exec(cleanText)) !== null) {
@@ -502,7 +501,7 @@ export class SnmpService {
     oid: string;
     operation: "get" | "walk";
   }): Promise<SnmpQueryResult[]> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const host = options.host;
       const port = options.port || 161;
       const community = options.community || "public";
@@ -523,7 +522,7 @@ export class SnmpService {
 
         for (const line of lines) {
           if (!line.trim()) continue;
-          const match = line.match(/^(\.?[0-9\.]+)\s*=\s*(.*?)$/);
+          const match = line.match(/^(\.?[0-9.]+)\s*=\s*(.*?)$/);
           if (match) {
             const rawOid = match[1];
             const rest = match[2];
