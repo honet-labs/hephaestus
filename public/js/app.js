@@ -5947,6 +5947,7 @@ let previewChartInstance = null;
 let exportChartData = null;
 let exportChartDataTimeRange = 'default';
 let exportChartDataStep = 'auto';
+let isExportChartSettingsApplying = false;
 
 function updateExportDropdowns(data) {
   const dropdownContent = document.getElementById('export-chart-ip-dropdown-content');
@@ -6119,8 +6120,13 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
     exportChartDataTimeRange = 'default';
     exportChartDataStep = 'auto';
     updateExportDropdowns(exportChartData);
-    initPreviewChartInstance();
-    updateChartPreview();
+    await new Promise(resolve => {
+      setTimeout(() => {
+        initPreviewChartInstance();
+        updateChartPreview();
+        resolve();
+      }, 150);
+    });
     return;
   }
   
@@ -6162,8 +6168,13 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
       exportChartDataTimeRange = selectedTimeRange;
       exportChartDataStep = selectedStep;
       updateExportDropdowns(exportChartData);
-      initPreviewChartInstance();
-      updateChartPreview();
+      await new Promise(resolve => {
+        setTimeout(() => {
+          initPreviewChartInstance();
+          updateChartPreview();
+          resolve();
+        }, 150);
+      });
     } else {
       if (previewContainer) {
         previewContainer.innerHTML = `
@@ -6185,6 +6196,9 @@ async function fetchExportChartDataForTimeRange(selectedTimeRange, selectedStep)
 }
 
 window.applyExportChartSettings = async function() {
+  if (isExportChartSettingsApplying) return;
+  isExportChartSettingsApplying = true;
+  
   const timeRangeSelect = document.getElementById('export-chart-timerange-select');
   const selectedTimeRange = timeRangeSelect ? timeRangeSelect.value : 'default';
   
@@ -6213,6 +6227,7 @@ window.applyExportChartSettings = async function() {
         APPLY CONFIGURATION
       `;
     }
+    isExportChartSettingsApplying = false;
   }
 };
 
@@ -6467,6 +6482,7 @@ window.closeExportChartModal = function() {
     previewChartInstance.dispose();
     previewChartInstance = null;
   }
+  isExportChartSettingsApplying = false;
   document.getElementById('modal-export-chart').classList.remove('active');
 };
 
