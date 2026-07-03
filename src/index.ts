@@ -4,7 +4,7 @@ import helmet from "helmet";
 import path from "path";
 import config from "./config/env";
 import { initDb, isDbConnected } from "./config/db";
-import { globalLimiter, loginLimiter } from "./middleware/rate-limit.middleware";
+import { globalLimiter } from "./middleware/rate-limit.middleware";
 import settingsRoutes from "./routes/settings.routes";
 import monitoringViewRoutes from "./routes/monitoring-view.routes";
 import snmpRoutes from "./routes/snmp.routes";

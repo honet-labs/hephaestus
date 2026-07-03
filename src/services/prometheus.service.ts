@@ -1,5 +1,4 @@
 import { promises as fsPromises } from "fs";
-import fs from "fs";
 import path from "path";
 import os from "os";
 import crypto from "crypto";
@@ -26,7 +25,7 @@ export class PrometheusService {
   public async cleanupIdleSshConnections(): Promise<void> {
     for (const [key, entry] of this.sshConnections) {
       if (!this.isConnectionAlive(entry)) {
-        try { entry.client.end(); } catch (_) {}
+        try { entry.client.end(); } catch (_e) { /* ignore close errors */ }
         this.sshConnections.delete(key);
       }
     }
