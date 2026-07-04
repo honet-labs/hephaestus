@@ -61,6 +61,9 @@ app.use(helmet({
   originAgentCluster: false
 }));
 
+// 1b. Trust proxy (required for rate limiting behind reverse proxy / Cloudflare Tunnel)
+app.set("trust proxy", 1);
+
 // 1c. Rate Limiting
 app.use("/api/v1", globalLimiter);
 
