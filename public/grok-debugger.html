@@ -4,81 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grok Debugger - Hephaestus</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #0d1117;
-            --bg-panel: #161b22;
-            --bg-header: #1c2128;
-            --border: #30363d;
-            --text-main: #e6edf3;
-            --text-muted: #8b949e;
+            --background: #242424;
+            --foreground: #cbd5e1;
+            --app-sidebar: rgb(65, 73, 81);
+            --app-topbar: #1e1e1e;
+            --app-card: #2e2e2e;
+            --app-card-dark: #1f1f1f;
+            --app-border: #3c3c3c;
+            --text-white: #ffffff;
+            --text-muted: #a0a0a0;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
             --accent: #58a6ff;
-            --accent2: #f0883e;
-            --success: #3fb950;
-            --fail-bg: rgba(248, 81, 73, 0.12);
-            --fail-text: #ff7b72;
+            --fail-bg: rgba(239, 68, 68, 0.12);
+            --fail-text: #ef4444;
             --radius: 6px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
 
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--bg-header); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-        .header h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--app-topbar); border-bottom: 1px solid var(--app-border); flex-shrink: 0; }
+        .header h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; color: var(--text-white); }
         .header h1 svg { width: 20px; height: 20px; }
         .header-right { display: flex; align-items: center; gap: 12px; }
-        .back-link { color: var(--text-muted); text-decoration: none; font-size: 12px; padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius); transition: all 0.2s; }
-        .back-link:hover { color: var(--text-main); border-color: var(--text-muted); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 12px; padding: 4px 10px; border: 1px solid var(--app-border); border-radius: var(--radius); transition: all 0.2s; }
+        .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
 
         .container { display: flex; flex: 1; min-height: 0; }
-        .left-panel { flex: 0 0 50%; display: flex; flex-direction: column; gap: 1px; background: var(--border); min-width: 15%; }
-        .right-panel { flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; background: var(--border); min-width: 15%; }
+        .left-panel { flex: 0 0 50%; display: flex; flex-direction: column; gap: 1px; background: var(--app-border); min-width: 15%; }
+        .right-panel { flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; background: var(--app-border); min-width: 15%; }
 
-        .splitter { width: 5px; background: var(--bg-main); cursor: col-resize; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: background 0.2s; }
+        .splitter { width: 5px; background: var(--background); cursor: col-resize; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: background 0.2s; }
         .splitter:hover, .splitter.active { background: var(--accent); }
         .splitter::after { content: "\u22EE"; color: #666; font-size: 14px; }
 
-        .panel { background: var(--bg-panel); display: flex; flex-direction: column; flex: 1; min-height: 0; }
-        .panel-header { background: var(--bg-header); padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .panel { background: var(--app-card); display: flex; flex-direction: column; flex: 1; min-height: 0; }
+        .panel-header { background: var(--app-sidebar); padding: 6px 12px; border-bottom: 1px solid var(--app-border); font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .panel-content { flex: 1; position: relative; min-height: 0; display: flex; flex-direction: column; }
 
-        textarea { width: 100%; background: var(--bg-main); color: #ce9178; border: none; padding: 10px; font-family: 'JetBrains Mono', monospace; resize: none; font-size: 12px; line-height: 1.5; outline: none; }
-        textarea::placeholder { color: #484f58; }
-        #custom-pattern { min-height: 80px; flex: 0 0 80px; border-bottom: 1px solid var(--border); }
-        #pattern { min-height: 60px; flex: 0 0 60px; border-bottom: 1px solid var(--border); }
+        textarea {
+            width: 100%;
+            background: var(--app-card-dark);
+            color: var(--foreground);
+            border: none;
+            padding: 10px;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            resize: none;
+            font-size: 12px;
+            line-height: 1.5;
+            outline: none;
+        }
+        textarea::placeholder { color: var(--text-muted); }
+        #custom-pattern { min-height: 80px; flex: 0 0 80px; border-bottom: 1px solid var(--app-border); }
+        #pattern { min-height: 60px; flex: 0 0 60px; border-bottom: 1px solid var(--app-border); }
         #log { flex: 1; min-height: 0; }
 
         #log-container { position: relative; flex: 1; min-height: 0; }
-        #highlighted-log { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; overflow-y: auto; pointer-events: none; z-index: 1; color: #484f58; }
-        #log-container textarea { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 2; color: transparent; caret-color: var(--text-main); background: transparent; }
+        #highlighted-log {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            padding: 10px;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all;
+            overflow-y: auto; pointer-events: none; z-index: 1; color: var(--text-muted);
+        }
+        #log-container textarea { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 2; color: transparent; caret-color: var(--text-white); background: transparent; }
         .parse-fail { color: var(--fail-text); background: var(--fail-bg); border-radius: 2px; }
-        .parse-match-text { color: #8b949e; }
+        .parse-match-text { color: var(--text-muted); }
 
         .legend-section { flex: 0 0 auto; max-height: 200px; overflow-y: auto; padding: 10px 12px; }
-        .static-legend { display: flex; flex-wrap: wrap; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+        .static-legend { display: flex; flex-wrap: wrap; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--app-border); margin-bottom: 8px; }
         .static-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
         .color-box { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1); }
         #dynamic-legend { display: flex; flex-wrap: wrap; gap: 6px; }
-        .legend-item { display: flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); background: var(--bg-main); padding: 2px 8px; border-radius: 3px; border: 1px solid var(--border); }
+        .legend-item { display: flex; align-items: center; gap: 5px; font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; color: var(--text-muted); background: var(--app-card-dark); padding: 2px 8px; border-radius: 3px; border: 1px solid var(--app-border); }
 
         .json-section { flex: 1; min-height: 0; }
-        #output { margin: 0; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; width: 100%; max-width: 100%; box-sizing: border-box; }
+        #output { margin: 0; padding: 10px; font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; width: 100%; max-width: 100%; box-sizing: border-box; }
 
-        .icon-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; font-size: 10px; padding: 2px 8px; border-radius: 3px; transition: all 0.15s; font-family: 'Inter', sans-serif; }
-        .icon-btn:hover { background: var(--border); color: var(--text-main); }
+        .icon-btn { background: none; border: 1px solid var(--app-border); color: var(--text-muted); cursor: pointer; font-size: 10px; padding: 2px 8px; border-radius: 3px; transition: all 0.15s; font-family: inherit; }
+        .icon-btn:hover { background: var(--app-border); color: var(--text-white); }
 
         .status { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
         .status.success { color: var(--success); }
-        .status.error { color: var(--fail-text); }
-        .status.loading { color: #d29922; }
+        .status.error { color: var(--error); }
+        .status.loading { color: var(--warning); }
         .status.idle { color: var(--text-muted); }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-main); }
-        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+        ::-webkit-scrollbar-track { background: var(--app-card-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -136,7 +163,7 @@
                         </div>
                     </div>
                     <div id="dynamic-legend">
-                        <span style="color: #484f58; font-style: italic; font-size: 11px;">Waiting for input...</span>
+                        <span style="color: var(--text-muted); font-style: italic; font-size: 11px;">Waiting for input...</span>
                     </div>
                 </div>
             </div>
@@ -231,7 +258,7 @@
         function updateHighlight() {
             if (!logInput.value) {
                 highlightEl.innerHTML = 'Paste or type your log lines here...';
-                legendEl.innerHTML = '<span style="color: #484f58; font-style: italic; font-size: 11px;">Waiting for input...</span>';
+                legendEl.innerHTML = '<span style="color: var(--text-muted); font-style: italic; font-size: 11px;">Waiting for input...</span>';
                 return;
             }
             highlightEl.textContent = logInput.value;
@@ -316,7 +343,7 @@
             Object.keys(colorMap).forEach(k => {
                 legend += `<div class="legend-item"><span class="color-box" style="background:${colorMap[k]};border-color:${colorMap[k]};"></span>${k}</div>`;
             });
-            legendEl.innerHTML = legend || '<span style="color: #484f58; font-style: italic; font-size: 11px;">No variables extracted.</span>';
+            legendEl.innerHTML = legend || '<span style="color: var(--text-muted); font-style: italic; font-size: 11px;">No variables extracted.</span>';
         }
 
         function highlightJSON(json) {
