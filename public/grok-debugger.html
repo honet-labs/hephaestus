@@ -43,15 +43,14 @@
         .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
 
         .container { display: flex; flex: 1; min-height: 0; }
-        .left-panel { flex: 0 0 50%; display: flex; flex-direction: column; gap: 1px; background: var(--app-border); min-width: 15%; }
-        .right-panel { flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; background: var(--app-border); min-width: 15%; }
+        .left-panel { flex: 0 0 50%; display: flex; flex-direction: column; min-width: 15%; overflow: hidden; }
+        .right-panel { flex: 1 1 0; display: flex; flex-direction: column; min-width: 15%; overflow: hidden; }
 
-        .splitter { width: 5px; background: var(--background); cursor: col-resize; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: background 0.2s; }
+        .splitter { width: 6px; background: var(--app-border); cursor: col-resize; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: background 0.2s; }
         .splitter:hover, .splitter.active { background: var(--accent); }
-        .splitter::after { content: "\u22EE"; color: #666; font-size: 14px; }
 
         .panel { background: var(--app-card); display: flex; flex-direction: column; flex: 1; min-height: 0; }
-        .panel-header { background: var(--app-sidebar); padding: 6px 12px; border-bottom: 1px solid var(--app-border); font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .panel-header { background: var(--app-sidebar); padding: 6px 12px; border-bottom: 1px solid var(--app-border); font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; min-height: 28px; }
         .panel-content { flex: 1; position: relative; min-height: 0; display: flex; flex-direction: column; }
 
         textarea {
@@ -65,13 +64,16 @@
             font-size: 12px;
             line-height: 1.5;
             outline: none;
+            display: block;
         }
         textarea::placeholder { color: var(--text-muted); }
         #custom-pattern { min-height: 80px; flex: 0 0 80px; border-bottom: 1px solid var(--app-border); }
         #pattern { min-height: 60px; flex: 0 0 60px; border-bottom: 1px solid var(--app-border); }
         #log { flex: 1; min-height: 0; }
 
-        #log-container { position: relative; flex: 1; min-height: 0; }
+        #log-container { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+        #log-container .panel-header { flex-shrink: 0; z-index: 3; }
+        #log-container > div { position: relative; flex: 1; min-height: 0; }
         #highlighted-log {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             padding: 10px;
@@ -140,8 +142,10 @@
                     <span>Log Samples (multi-line)</span>
                     <button class="icon-btn" onclick="document.getElementById('log').value=''; updateHighlight();">Clear</button>
                 </div>
-                <div id="highlighted-log">Paste or type your log lines here...</div>
-                <textarea id="log" spellcheck="false"></textarea>
+                <div style="position: relative; flex: 1; min-height: 0;">
+                    <div id="highlighted-log">Paste or type your log lines here...</div>
+                    <textarea id="log" spellcheck="false"></textarea>
+                </div>
             </div>
         </div>
 
