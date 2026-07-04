@@ -357,7 +357,23 @@ export async function initDb() {
   // Run schema creation in parallel
   await Promise.all(schemaQueries.map(q => pool.query(q)));
 
-  // Create performance indexes in parallel
+  // Auto-migration: add missing columns/tables for existing databases (BEFORE indexes)
+  const migrationQueries = [
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT false;`,
+    `ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`,
+    `ALTER TABLE grafana_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+    `ALTER TABLE prometheus_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+    `ALTER TABLE monitoring_views ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+    `ALTER TABLE oid_registry ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+    `CREATE TABLE IF NOT EXISTS app_config (
+      key VARCHAR(100) PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`
+  ];
+  await Promise.all(migrationQueries.map(q => pool.query(q)));
+
+  // Create performance indexes in parallel (AFTER migration ensures columns exist)
   const indexQueries = [
     `CREATE INDEX IF NOT EXISTS idx_oid_registry_mib_name ON oid_registry(mib_name);`,
     `CREATE INDEX IF NOT EXISTS idx_oid_registry_name ON oid_registry(name);`,
@@ -374,22 +390,6 @@ export async function initDb() {
   await Promise.all(indexQueries.map(q => pool.query(q)));
 
   console.log("✅ [DB] PostgreSQL tables and indexes checked/created successfully.");
-
-  // Auto-migration: add missing columns/tables for existing databases
-  const migrationQueries = [
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT false;`,
-    `ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`,
-    `ALTER TABLE grafana_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
-    `ALTER TABLE prometheus_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
-    `ALTER TABLE monitoring_views ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
-    `ALTER TABLE oid_registry ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
-    `CREATE TABLE IF NOT EXISTS app_config (
-      key VARCHAR(100) PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`
-  ];
-  await Promise.all(migrationQueries.map(q => pool.query(q)));
 
   // Seed default system roles if not exists
   try {
