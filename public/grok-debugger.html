@@ -43,14 +43,16 @@
         .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
 
         .container { display: flex; flex: 1; min-height: 0; }
-        .left-panel { flex: 0 0 50%; display: flex; flex-direction: column; min-width: 15%; overflow: hidden; }
-        .right-panel { flex: 1 1 0; display: flex; flex-direction: column; min-width: 15%; overflow: hidden; }
+        .left-panel { flex: 0 0 50%; display: flex; flex-direction: column; gap: 1px; min-width: 15%; overflow: hidden; }
+        .right-panel { flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; min-width: 15%; overflow: hidden; }
 
         .splitter { width: 6px; background: var(--app-border); cursor: col-resize; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: background 0.2s; }
         .splitter:hover, .splitter.active { background: var(--accent); }
 
-        .panel { background: var(--app-card); display: flex; flex-direction: column; flex: 1; min-height: 0; }
-        .panel-header { background: var(--app-sidebar); padding: 6px 12px; border-bottom: 1px solid var(--app-border); font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; min-height: 28px; }
+        .panel { background: var(--app-card); display: flex; flex-direction: column; min-height: 0; }
+        .panel.flex-1 { flex: 1; }
+        .panel.flex-auto { flex: 0 0 auto; }
+        .panel-header { background: var(--app-sidebar); padding: 5px 12px; border-bottom: 1px solid var(--app-border); font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; min-height: 26px; }
         .panel-content { flex: 1; position: relative; min-height: 0; display: flex; flex-direction: column; }
 
         textarea {
@@ -123,21 +125,21 @@
 
     <div class="container">
         <div class="left-panel" id="left-panel">
-            <div class="panel">
+            <div class="panel flex-auto">
                 <div class="panel-header">
                     <span>Custom Patterns</span>
                     <button class="icon-btn" onclick="copyTextarea('custom-pattern')">Copy</button>
                 </div>
                 <textarea id="custom-pattern" spellcheck="false" placeholder="MY_PATTERN [A-Z0-9]+&#10;APP_NAME \\w+"></textarea>
 
-                <div class="panel-header" style="border-top: 1px solid var(--border);">
+                <div class="panel-header" style="border-top: 1px solid var(--app-border);">
                     <span>Grok Pattern</span>
                     <button class="icon-btn" onclick="copyTextarea('pattern')">Copy</button>
                 </div>
                 <textarea id="pattern" spellcheck="false" placeholder="%{TIMESTAMP_ISO8601:timestamp} %{GREEDYDATA:message}"></textarea>
             </div>
 
-            <div class="panel" id="log-container">
+            <div class="panel flex-1" id="log-container">
                 <div class="panel-header">
                     <span>Log Samples (multi-line)</span>
                     <button class="icon-btn" onclick="document.getElementById('log').value=''; updateHighlight();">Clear</button>
@@ -152,7 +154,7 @@
         <div class="splitter" id="drag-splitter"></div>
 
         <div class="right-panel" id="right-panel">
-            <div class="panel">
+            <div class="panel flex-auto">
                 <div class="panel-header">Legend</div>
                 <div class="legend-section">
                     <div class="static-legend">
@@ -172,7 +174,7 @@
                 </div>
             </div>
 
-            <div class="panel json-section">
+            <div class="panel flex-1 json-section">
                 <div class="panel-header">
                     <span>JSON Output</span>
                     <div style="display: flex; align-items: center; gap: 10px;">
