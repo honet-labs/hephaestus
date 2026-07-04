@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grok Debugger - Hephaestus</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0d1117;
+            --bg-panel: #161b22;
+            --bg-header: #1c2128;
+            --border: #30363d;
+            --text-main: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --accent2: #f0883e;
+            --success: #3fb950;
+            --fail-bg: rgba(248, 81, 73, 0.12);
+            --fail-text: #ff7b72;
+            --radius: 6px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--bg-header); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .header h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .header h1 svg { width: 20px; height: 20px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 12px; padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius); transition: all 0.2s; }
+        .back-link:hover { color: var(--text-main); border-color: var(--text-muted); }
+
+        .container { display: flex; flex: 1; min-height: 0; }
+        .left-panel { flex: 0 0 50%; display: flex; flex-direction: column; gap: 1px; background: var(--border); min-width: 15%; }
+        .right-panel { flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; background: var(--border); min-width: 15%; }
+
+        .splitter { width: 5px; background: var(--bg-main); cursor: col-resize; flex-shrink: 0; display: flex; justify-content: center; align-items: center; transition: background 0.2s; }
+        .splitter:hover, .splitter.active { background: var(--accent); }
+        .splitter::after { content: "\u22EE"; color: #666; font-size: 14px; }
+
+        .panel { background: var(--bg-panel); display: flex; flex-direction: column; flex: 1; min-height: 0; }
+        .panel-header { background: var(--bg-header); padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .panel-content { flex: 1; position: relative; min-height: 0; display: flex; flex-direction: column; }
+
+        textarea { width: 100%; background: var(--bg-main); color: #ce9178; border: none; padding: 10px; font-family: 'JetBrains Mono', monospace; resize: none; font-size: 12px; line-height: 1.5; outline: none; }
+        textarea::placeholder { color: #484f58; }
+        #custom-pattern { min-height: 80px; flex: 0 0 80px; border-bottom: 1px solid var(--border); }
+        #pattern { min-height: 60px; flex: 0 0 60px; border-bottom: 1px solid var(--border); }
+        #log { flex: 1; min-height: 0; }
+
+        #log-container { position: relative; flex: 1; min-height: 0; }
+        #highlighted-log { position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; overflow-y: auto; pointer-events: none; z-index: 1; color: #484f58; }
+        #log-container textarea { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 2; color: transparent; caret-color: var(--text-main); background: transparent; }
+        .parse-fail { color: var(--fail-text); background: var(--fail-bg); border-radius: 2px; }
+        .parse-match-text { color: #8b949e; }
+
+        .legend-section { flex: 0 0 auto; max-height: 200px; overflow-y: auto; padding: 10px 12px; }
+        .static-legend { display: flex; flex-wrap: wrap; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+        .static-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+        .color-box { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.1); }
+        #dynamic-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); background: var(--bg-main); padding: 2px 8px; border-radius: 3px; border: 1px solid var(--border); }
+
+        .json-section { flex: 1; min-height: 0; }
+        #output { margin: 0; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow-y: auto; width: 100%; max-width: 100%; box-sizing: border-box; }
+
+        .icon-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; font-size: 10px; padding: 2px 8px; border-radius: 3px; transition: all 0.15s; font-family: 'Inter', sans-serif; }
+        .icon-btn:hover { background: var(--border); color: var(--text-main); }
+
+        .status { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+        .status.success { color: var(--success); }
+        .status.error { color: var(--fail-text); }
+        .status.loading { color: #d29922; }
+        .status.idle { color: var(--text-muted); }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-main); }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <svg viewBox="0 0 16 16" width="20" height="20" fill="var(--accent)"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+            Grok Debugger
+        </h1>
+        <div class="header-right">
+            <a href="/" class="back-link">&larr; Back to Portal</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="left-panel" id="left-panel">
+            <div class="panel">
+                <div class="panel-header">
+                    <span>Custom Patterns</span>
+                    <button class="icon-btn" onclick="copyTextarea('custom-pattern')">Copy</button>
+                </div>
+                <textarea id="custom-pattern" spellcheck="false" placeholder="MY_PATTERN [A-Z0-9]+&#10;APP_NAME \\w+"></textarea>
+
+                <div class="panel-header" style="border-top: 1px solid var(--border);">
+                    <span>Grok Pattern</span>
+                    <button class="icon-btn" onclick="copyTextarea('pattern')">Copy</button>
+                </div>
+                <textarea id="pattern" spellcheck="false" placeholder="%{TIMESTAMP_ISO8601:timestamp} %{GREEDYDATA:message}"></textarea>
+            </div>
+
+            <div class="panel" id="log-container">
+                <div class="panel-header">
+                    <span>Log Samples (multi-line)</span>
+                    <button class="icon-btn" onclick="document.getElementById('log').value=''; updateHighlight();">Clear</button>
+                </div>
+                <div id="highlighted-log">Paste or type your log lines here...</div>
+                <textarea id="log" spellcheck="false"></textarea>
+            </div>
+        </div>
+
+        <div class="splitter" id="drag-splitter"></div>
+
+        <div class="right-panel" id="right-panel">
+            <div class="panel">
+                <div class="panel-header">Legend</div>
+                <div class="legend-section">
+                    <div class="static-legend">
+                        <div class="static-legend-item">
+                            <span class="color-box" style="background: #484f58;"></span> Unmatched
+                        </div>
+                        <div class="static-legend-item">
+                            <span class="color-box" style="background: linear-gradient(90deg, #6a9955, #569cd6);"></span> Captured
+                        </div>
+                        <div class="static-legend-item">
+                            <span class="color-box" style="background: var(--fail-bg); border-color: var(--fail-text);"></span> Parse Fail
+                        </div>
+                    </div>
+                    <div id="dynamic-legend">
+                        <span style="color: #484f58; font-style: italic; font-size: 11px;">Waiting for input...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel json-section">
+                <div class="panel-header">
+                    <span>JSON Output</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="status" class="status idle">-</span>
+                        <button class="icon-btn" onclick="copyJSON()">Copy</button>
+                    </div>
+                </div>
+                <div class="panel-content">
+                    <pre id="output">{}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const splitter = document.getElementById('drag-splitter');
+        const leftPanel = document.getElementById('left-panel');
+        const rightPanel = document.getElementById('right-panel');
+        let isDragging = false;
+
+        splitter.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            splitter.classList.add('active');
+            document.body.style.cursor = 'col-resize';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const container = document.querySelector('.container');
+            const rect = container.getBoundingClientRect();
+            let pct = ((e.clientX - rect.left) / rect.width) * 100;
+            if (pct > 15 && pct < 85) {
+                leftPanel.style.flex = `0 0 ${pct}%`;
+                rightPanel.style.flex = `1 1 0`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) { isDragging = false; splitter.classList.remove('active'); document.body.style.cursor = 'default'; }
+        });
+
+        const customPatternInput = document.getElementById('custom-pattern');
+        const patternInput = document.getElementById('pattern');
+        const logInput = document.getElementById('log');
+        const outputEl = document.getElementById('output');
+        const highlightEl = document.getElementById('highlighted-log');
+        const statusEl = document.getElementById('status');
+        const legendEl = document.getElementById('dynamic-legend');
+
+        const COLORS = ['#6a9955','#569cd6','#ce9178','#dcdcaa','#c586c0','#4ec9b0','#9cdcfe','#f44747','#d7ba7d'];
+        let cachedJSON = "{}";
+        let debounceTimer = null;
+
+        logInput.addEventListener('scroll', () => {
+            highlightEl.scrollTop = logInput.scrollTop;
+            highlightEl.scrollLeft = logInput.scrollLeft;
+        });
+
+        const triggerUpdate = () => {
+            clearTimeout(debounceTimer);
+            updateHighlight();
+            debounceTimer = setTimeout(processGrok, 600);
+        };
+
+        customPatternInput.addEventListener('input', triggerUpdate);
+        patternInput.addEventListener('input', triggerUpdate);
+        logInput.addEventListener('input', triggerUpdate);
+
+        function copyTextarea(id) {
+            navigator.clipboard.writeText(document.getElementById(id).value).then(() => {
+                const btn = event.target; btn.textContent = 'Copied';
+                setTimeout(() => btn.textContent = 'Copy', 1500);
+            });
+        }
+
+        function copyJSON() {
+            navigator.clipboard.writeText(cachedJSON).then(() => {
+                const btn = event.target; btn.textContent = 'Copied';
+                setTimeout(() => btn.textContent = 'Copy', 1500);
+            });
+        }
+
+        function escapeHTML(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+        function updateHighlight() {
+            if (!logInput.value) {
+                highlightEl.innerHTML = 'Paste or type your log lines here...';
+                legendEl.innerHTML = '<span style="color: #484f58; font-style: italic; font-size: 11px;">Waiting for input...</span>';
+                return;
+            }
+            highlightEl.textContent = logInput.value;
+        }
+
+        async function processGrok() {
+            const pattern = patternInput.value;
+            const custom = customPatternInput.value;
+            const log = logInput.value;
+
+            if (!pattern.trim() || !log.trim()) {
+                outputEl.innerHTML = '{}';
+                statusEl.className = 'status idle';
+                statusEl.textContent = '-';
+                return;
+            }
+
+            statusEl.className = 'status loading';
+            statusEl.textContent = 'Processing...';
+
+            try {
+                const res = await fetch('/api/v1/grok-debugger/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pattern, custom_patterns: custom, log })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    const hasFail = data.lines_visual.some(l => l.matched === false && !l.empty && l.text.trim());
+                    statusEl.className = hasFail ? 'status loading' : 'status success';
+                    statusEl.textContent = hasFail ? 'Partial Match' : 'Full Match';
+
+                    cachedJSON = JSON.stringify(data.json_output, null, 4);
+                    outputEl.innerHTML = highlightJSON(cachedJSON);
+                    renderHighlighted(data.lines_visual);
+                } else {
+                    statusEl.className = 'status error';
+                    statusEl.textContent = 'Error';
+                    cachedJSON = JSON.stringify({ error: data.error }, null, 4);
+                    outputEl.innerHTML = `<span style="color: var(--fail-text);">${escapeHTML(data.error)}</span>`;
+                    updateHighlight();
+                }
+            } catch (e) {
+                statusEl.className = 'status error';
+                statusEl.textContent = 'Network Error';
+                outputEl.innerHTML = `<span style="color: var(--fail-text);">${escapeHTML(String(e))}</span>`;
+            }
+        }
+
+        function renderHighlighted(linesData) {
+            let html = '';
+            const colorMap = {};
+            let ci = 0;
+
+            linesData.forEach(l => {
+                let escaped = escapeHTML(l.text);
+                if (l.empty) { html += escaped + '\n'; return; }
+
+                if (l.matched) {
+                    const matches = Object.entries(l.match_data || {})
+                        .filter(([k, v]) => v != null && v !== '')
+                        .map(([k, v]) => ({ key: k, value: String(v) }))
+                        .sort((a, b) => b.value.length - a.value.length);
+
+                    matches.forEach(m => {
+                        if (!colorMap[m.key]) { colorMap[m.key] = COLORS[ci % COLORS.length]; ci++; }
+                        const color = colorMap[m.key];
+                        const ev = escapeHTML(m.value);
+                        escaped = escaped.replace(new RegExp(escapeRegExp(ev), 'g'),
+                            `<span style="color:${color};font-weight:600;" title="${m.key}">${ev}</span>`);
+                    });
+                    html += `<span class="parse-match-text">${escaped}</span>\n`;
+                } else {
+                    html += `<span class="parse-fail" title="No match">${escaped}</span>\n`;
+                }
+            });
+
+            highlightEl.innerHTML = html.replace(/\n$/, '');
+
+            let legend = '';
+            Object.keys(colorMap).forEach(k => {
+                legend += `<div class="legend-item"><span class="color-box" style="background:${colorMap[k]};border-color:${colorMap[k]};"></span>${k}</div>`;
+            });
+            legendEl.innerHTML = legend || '<span style="color: #484f58; font-style: italic; font-size: 11px;">No variables extracted.</span>';
+        }
+
+        function highlightJSON(json) {
+            return escapeHTML(json).replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, (m) => {
+                let color = '#ce9178';
+                if (/^"/.test(m)) { color = /:$/.test(m) ? '#9cdcfe' : '#ce9178'; }
+                else if (/true|false/.test(m)) { color = '#569cd6'; }
+                else if (/null/.test(m)) { color = '#569cd6'; }
+                else { color = '#b5cea8'; }
+                return `<span style="color:${color};">${m}</span>`;
+            });
+        }
+    </script>
+</body>
+</html>

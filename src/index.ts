@@ -13,6 +13,7 @@ import userRoutes from "./routes/user.routes";
 import activityLogRoutes from "./routes/activity-log.routes";
 import queryExplorerRoutes from "./routes/query-explorer.routes";
 import updateRoutes from "./routes/update.routes";
+import grokDebuggerRoutes from "./routes/grok-debugger.routes";
 
 const app = express();
 
@@ -106,6 +107,7 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/activity-logs", activityLogRoutes);
 app.use("/api/v1/query-explorer", queryExplorerRoutes);
 app.use("/api/v1/update", updateRoutes);
+app.use("/api/v1/grok-debugger", grokDebuggerRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
