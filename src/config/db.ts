@@ -200,15 +200,15 @@ export async function query(text: string, params?: any[]) {
   }
 }
 
-export async function logActivity(module: string, action: string, details: string, status: string = "SUCCESS") {
+export async function logActivity(module: string, action: string, details: string, status: string = "SUCCESS", userId: number | null = null) {
   try {
     if (!isDbConnected || !activePool) {
       console.log(`[Activity Log (DB Offline)] [${module}] ${action}: ${details} (${status})`);
       return;
     }
     await activePool.query(
-      `INSERT INTO activity_logs (module, action, details, status) VALUES ($1, $2, $3, $4)`,
-      [module, action, details, status]
+      `INSERT INTO activity_logs (module, action, details, status, user_id) VALUES ($1, $2, $3, $4, $5)`,
+      [module, action, details, status, userId]
     );
   } catch (err) {
     console.error("Failed to write activity log:", err);
@@ -235,17 +235,18 @@ export async function initDb() {
   
   // Create tables with proper schemas and relationships
   const schemaQueries = [
-    // 1. Grafana configs table
+    // 1. GrafanaConfigs - Stores Grafana server connection profiles
     `CREATE TABLE IF NOT EXISTS grafana_configs (
       id VARCHAR(50) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       host VARCHAR(255) NOT NULL,
       token TEXT NOT NULL,
       datasource_uid VARCHAR(100) NOT NULL,
-      is_active BOOLEAN DEFAULT false
+      is_active BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
-    
-    // 2. Prometheus configs table
+
+    // 2. PrometheusConfigs - Stores Prometheus server connection profiles
     `CREATE TABLE IF NOT EXISTS prometheus_configs (
       id VARCHAR(50) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -258,37 +259,40 @@ export async function initDb() {
       ssh_auth VARCHAR(50),
       ssh_password TEXT,
       ssh_key TEXT,
-      is_active BOOLEAN DEFAULT false
+      is_active BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
-    // 3. Monitoring Views table
+    // 3. MonitoringViews - Dashboard slideshow configurations
     `CREATE TABLE IF NOT EXISTS monitoring_views (
       id VARCHAR(50) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       description TEXT,
       interval INTEGER NOT NULL,
       mode VARCHAR(50) NOT NULL,
-      panels JSONB NOT NULL
+      panels JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
-    // 4. MIB Modules table
+    // 4. ImportedMibs - SNMP MIB modules imported into the system
     `CREATE TABLE IF NOT EXISTS imported_mibs (
       name VARCHAR(255) PRIMARY KEY,
       node_count INTEGER NOT NULL,
       imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
-    // 5. OID Registry table
+    // 5. OidRegistry - OID definitions extracted from imported MIBs
     `CREATE TABLE IF NOT EXISTS oid_registry (
       oid VARCHAR(255) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       mib_name VARCHAR(255) NOT NULL REFERENCES imported_mibs(name) ON DELETE CASCADE,
       syntax VARCHAR(255),
       access VARCHAR(255),
-      description TEXT
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
-    // 6. System Roles table
+    // 6. SystemRoles - Available user roles (ADMIN, operator, etc.)
     `CREATE TABLE IF NOT EXISTS system_roles (
       id SERIAL PRIMARY KEY,
       name VARCHAR(50) UNIQUE NOT NULL,
@@ -297,7 +301,7 @@ export async function initDb() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
-    // 7. Users table
+    // 7. Users - Registered portal users
     `CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       username VARCHAR(100) UNIQUE NOT NULL,
@@ -308,7 +312,7 @@ export async function initDb() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
-    // 7.5. User Sessions table
+    // 8. UserSessions - Active user login sessions
     `CREATE TABLE IF NOT EXISTS user_sessions (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -317,17 +321,18 @@ export async function initDb() {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );`,
 
-    // 7. Activity logs table
+    // 9. ActivityLogs - Audit trail of all system actions
     `CREATE TABLE IF NOT EXISTS activity_logs (
       id SERIAL PRIMARY KEY,
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       module VARCHAR(100) NOT NULL,
       action VARCHAR(100) NOT NULL,
       details TEXT,
-      status VARCHAR(50) DEFAULT 'SUCCESS'
+      status VARCHAR(50) DEFAULT 'SUCCESS',
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
     );`,
-    
-    // 8. Query Panels table
+
+    // 10. QueryPanels - Saved query configurations for data explorer
     `CREATE TABLE IF NOT EXISTS query_panels (
       id VARCHAR(50) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -341,7 +346,7 @@ export async function initDb() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
 
-    // 9. App Config table (key-value for setup status, etc.)
+    // 11. AppConfig - Key-value store for app settings (setup_completed, etc.)
     `CREATE TABLE IF NOT EXISTS app_config (
       key VARCHAR(100) PRIMARY KEY,
       value TEXT NOT NULL,
@@ -363,15 +368,21 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`,
     `CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token);`,
     `CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);`,
     `CREATE INDEX IF NOT EXISTS idx_query_panels_created_at ON query_panels(created_at DESC);`
   ];
   await Promise.all(indexQueries.map(q => pool.query(q)));
 
   console.log("✅ [DB] PostgreSQL tables and indexes checked/created successfully.");
 
-  // Auto-migration: add missing columns
+  // Auto-migration: add missing columns/tables for existing databases
   const migrationQueries = [
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS force_password_change BOOLEAN DEFAULT false;`,
+    `ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;`,
+    `ALTER TABLE grafana_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+    `ALTER TABLE prometheus_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+    `ALTER TABLE monitoring_views ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+    `ALTER TABLE oid_registry ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
     `CREATE TABLE IF NOT EXISTS app_config (
       key VARCHAR(100) PRIMARY KEY,
       value TEXT NOT NULL,

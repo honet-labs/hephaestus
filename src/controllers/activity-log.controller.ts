@@ -50,10 +50,11 @@ export class ActivityLogController {
 
       // Query logs
       const logsRes = await query(
-        `SELECT id, timestamp, module, action, details, status 
-         FROM activity_logs 
-         ${whereClause} 
-         ORDER BY timestamp DESC 
+        `SELECT al.id, al.timestamp, al.module, al.action, al.details, al.status, al.user_id, u.username
+         FROM activity_logs al
+         LEFT JOIN users u ON al.user_id = u.id
+         ${whereClause}
+         ORDER BY al.timestamp DESC
          LIMIT $${paramCount} OFFSET $${paramCount + 1}`,
         [...params, limit, offset]
       );
