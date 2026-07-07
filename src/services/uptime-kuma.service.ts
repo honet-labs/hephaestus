@@ -82,6 +82,15 @@ export class UptimeKumaService {
 
   private async ensureClient(): Promise<AxiosInstance> {
     if (this.activeClient) return this.activeClient;
+
+    // Auto-load from DB if no active client
+    await this.loadConfigs();
+    const active = Array.from(this.configs.values()).find(c => c.is_active);
+    if (active) {
+      await this.setActiveConfig(active.id);
+      return this.activeClient!;
+    }
+
     throw new Error("No active Uptime Kuma configuration. Please configure one in Connections first.");
   }
 
