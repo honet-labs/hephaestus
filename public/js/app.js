@@ -4339,7 +4339,7 @@ function renderUptimeMonitors(monitors) {
   const total = monitors.length;
   const up = monitors.filter(m => m.status === 1).length;
   const down = monitors.filter(m => m.status === 0).length;
-  const pending = monitors.filter(m => m.status === 2).length;
+  const pending = monitors.filter(m => m.status !== 1 && m.status !== 0).length;
 
   document.getElementById('uptime-total-count').textContent = total;
   document.getElementById('uptime-up-count').textContent = up;

@@ -108,7 +108,8 @@ export class UptimeKumaService {
     try {
       const res = await client.get("/monitors");
       const raw = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
-      let monitors: Monitor[] = Array.isArray(raw) ? raw : Object.values(raw);
+      let monitors: Monitor[] = (Array.isArray(raw) ? raw : Object.values(raw))
+        .filter((m: any) => m.type !== 'group');
 
       if (filters?.group) {
         monitors = monitors.filter(m => m.group?.toLowerCase().includes(filters.group!.toLowerCase()));
