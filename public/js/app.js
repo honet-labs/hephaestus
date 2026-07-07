@@ -4065,6 +4065,15 @@ function initUptimeMonitorPage() {
   if (uptimeRefreshInterval) clearInterval(uptimeRefreshInterval);
   loadUptimeKumaMonitors();
   uptimeRefreshInterval = setInterval(loadUptimeKumaMonitors, 30000);
+  // Clear interval when leaving page
+  const observer = new MutationObserver(() => {
+    const page = document.getElementById('page-uptime-monitor');
+    if (page && page.classList.contains('hidden')) {
+      if (uptimeRefreshInterval) { clearInterval(uptimeRefreshInterval); uptimeRefreshInterval = null; }
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.getElementById('page-uptime-monitor') || document.body, { attributes: true, attributeFilter: ['class'] });
 }
 
 async function loadUptimeKumaMonitors() {
@@ -4097,7 +4106,13 @@ async function loadUptimeKumaMonitors() {
     if (loadingEl) loadingEl.style.display = 'none';
     if (errorEl) {
       errorEl.style.display = 'block';
-      document.getElementById('uptime-kuma-error-msg').textContent = 'Connection error: ' + error.message;
+      let msg = error.message || 'Unknown error';
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        msg = 'Backend server is not reachable. Please check if the server is running.';
+      } else if (msg.includes('No active')) {
+        msg = 'No Uptime Kuma configuration found. Click "Configure" to set up a connection.';
+      }
+      document.getElementById('uptime-kuma-error-msg').textContent = msg;
     }
   }
 }
@@ -4175,6 +4190,20 @@ async function testUptimeKumaConnection() {
     return;
   }
 
+  // URL validation
+  try {
+    const parsedUrl = new URL(url);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      resultEl.textContent = 'URL must start with http:// or https://';
+      resultEl.style.color = '#ef4444';
+      return;
+    }
+  } catch (_) {
+    resultEl.textContent = 'Invalid URL format. Example: http://192.168.1.100:5001';
+    resultEl.style.color = '#ef4444';
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Testing...';
   resultEl.textContent = '';
@@ -4212,6 +4241,17 @@ async function saveUptimeKumaConfig() {
 
   if (!name || !url || !username || !password) {
     alert('Please fill all fields');
+    return;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      alert('URL must start with http:// or https://');
+      return;
+    }
+  } catch (_) {
+    alert('Invalid URL format. Example: http://192.168.1.100:5001');
     return;
   }
 
