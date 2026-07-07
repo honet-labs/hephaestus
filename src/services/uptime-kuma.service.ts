@@ -57,12 +57,12 @@ export class UptimeKumaService {
     this.activeConfig = config;
     this.activeClient = axios.create({
       baseURL: config.url.replace(/\/$/, ""),
-      timeout: 10000,
+      timeout: 15000,
       headers: { "Content-Type": "application/json" }
     });
   }
 
-  async testConnection(url: string, username: string, password: string): Promise<UptimeKumaHealth> {
+  async testConnection(url: string, _username: string, _password: string): Promise<UptimeKumaHealth> {
     try {
       const client = axios.create({
         baseURL: url.replace(/\/$/, ""),
@@ -70,11 +70,11 @@ export class UptimeKumaService {
         headers: { "Content-Type": "application/json" }
       });
 
-      const res = await client.post("/api/login", { username, password });
-      if (res.data && res.data.ok) {
-        return { connected: true, message: "Connected successfully" };
+      const res = await client.get("/health");
+      if (res.data && (res.data.status === "ok" || res.data.success || res.data.connected)) {
+        return { connected: true, message: "Connected to Uptime Kuma REST API Wrapper" };
       }
-      return { connected: false, message: "Login failed" };
+      return { connected: false, message: "API responded but health check failed" };
     } catch (err: any) {
       return { connected: false, message: err.message || "Connection failed" };
     }
@@ -82,14 +82,14 @@ export class UptimeKumaService {
 
   private async ensureClient(): Promise<AxiosInstance> {
     if (this.activeClient) return this.activeClient;
-    throw new Error("No active Uptime Kuma configuration. Please configure one first.");
+    throw new Error("No active Uptime Kuma configuration. Please configure one in Connections first.");
   }
 
   async getMonitors(filters?: { group?: string; type?: string; status?: number }): Promise<Monitor[]> {
     const client = await this.ensureClient();
     try {
-      const res = await client.get("/api/monitors");
-      let monitors: Monitor[] = res.data.monitors || [];
+      const res = await client.get("/monitors");
+      let monitors: Monitor[] = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
 
       if (filters?.group) {
         monitors = monitors.filter(m => m.group?.toLowerCase().includes(filters.group!.toLowerCase()));
@@ -110,8 +110,11 @@ export class UptimeKumaService {
   async getMonitorById(id: number): Promise<Monitor> {
     const client = await this.ensureClient();
     try {
-      const res = await client.get(`/api/monitors/${id}`);
-      return res.data.monitor || res.data;
+      const res = await client.get(`/monitors`);
+      const monitors: Monitor[] = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
+      const monitor = monitors.find((m: any) => m.id === id);
+      if (!monitor) throw new Error(`Monitor ${id} not found`);
+      return monitor;
     } catch (err: any) {
       throw new Error(`Failed to fetch monitor ${id}: ${err.message}`);
     }
@@ -120,8 +123,9 @@ export class UptimeKumaService {
   async getMonitorStats(id: number): Promise<any> {
     const client = await this.ensureClient();
     try {
-      const res = await client.get(`/api/monitors/${id}/stats`);
-      return res.data;
+      const res = await client.get(`/monitors`);
+      const monitors: Monitor[] = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
+      return monitors.find((m: any) => m.id === id) || {};
     } catch (err: any) {
       throw new Error(`Failed to fetch monitor stats: ${err.message}`);
     }
