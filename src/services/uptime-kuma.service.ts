@@ -59,7 +59,6 @@ export class UptimeKumaService {
     this.activeClient = axios.create({
       baseURL: config.url.replace(/\/$/, ""),
       timeout: 15000,
-      headers: { "Content-Type": "application/json" }
     });
     console.log(`[UptimeKuma] Active config set: ${config.name} (${config.url})`);
   }
@@ -69,7 +68,6 @@ export class UptimeKumaService {
       const client = axios.create({
         baseURL: url.replace(/\/$/, ""),
         timeout: 10000,
-        headers: { "Content-Type": "application/json" }
       });
 
       const res = await client.get("/health");
