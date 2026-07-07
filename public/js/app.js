@@ -1271,7 +1271,7 @@ async function checkUptimeKumaCardConnection(id) {
       method: 'POST'
     });
     const result = await res.json();
-    if (res.ok && result.success && result.isConnected) {
+    if (res.ok && result.success && result.connected) {
       badge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
       badge.style.color = '#10b981';
       badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
@@ -1303,7 +1303,7 @@ async function pingUptimeKumaServer(id) {
       method: 'POST'
     });
     const result = await res.json();
-    if (res.ok && result.success && result.isConnected) {
+    if (res.ok && result.success && result.connected) {
       alert('Uptime Kuma connection succeeded!');
       addLog('Uptime Kuma', 'Manual connection check succeeded.', 'SUCCESS');
     } else {
