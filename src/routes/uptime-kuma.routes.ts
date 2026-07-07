@@ -55,6 +55,23 @@ router.post("/test", requireRole("ADMIN"), async (req: Request, res: Response) =
   }
 });
 
+// Test config by ID
+router.post("/configs/:id/test", requireRole("ADMIN"), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const configs = await uptimeKumaService.getConfigs();
+    const config = configs.find(c => c.id === id);
+    if (!config) {
+      res.status(404).json({ success: false, error: "Config not found" });
+      return;
+    }
+    const result = await uptimeKumaService.testConnection(config.url, config.username, config.password);
+    res.status(200).json({ success: true, ...result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Delete config
 router.delete("/configs/:id", requireRole("ADMIN"), async (req: Request, res: Response) => {
   try {
