@@ -1007,9 +1007,18 @@ function toggleConnectionFields() {
   const prometheusFields = document.getElementById('prometheus-fields');
   const ukFields = document.getElementById('uptime-kuma-fields');
   
-  if (grafanaFields) grafanaFields.classList.toggle('hidden', type !== 'grafana');
-  if (prometheusFields) prometheusFields.classList.toggle('hidden', type !== 'prometheus');
-  if (ukFields) ukFields.classList.toggle('hidden', type !== 'uptime-kuma');
+  if (grafanaFields) {
+    if (type === 'grafana') { grafanaFields.classList.remove('hidden'); grafanaFields.style.display = 'flex'; }
+    else { grafanaFields.classList.add('hidden'); grafanaFields.style.display = 'none'; }
+  }
+  if (prometheusFields) {
+    if (type === 'prometheus') { prometheusFields.classList.remove('hidden'); prometheusFields.style.display = 'flex'; }
+    else { prometheusFields.classList.add('hidden'); prometheusFields.style.display = 'none'; }
+  }
+  if (ukFields) {
+    if (type === 'uptime-kuma') { ukFields.classList.remove('hidden'); ukFields.style.display = 'flex'; }
+    else { ukFields.classList.add('hidden'); ukFields.style.display = 'none'; }
+  }
 }
 
 function togglePrometheusModeFields() {
