@@ -107,7 +107,8 @@ export class UptimeKumaService {
     const client = await this.ensureClient();
     try {
       const res = await client.get("/monitors");
-      let monitors: Monitor[] = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
+      const raw = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
+      const monitors: Monitor[] = Array.isArray(raw) ? raw : Object.values(raw);
 
       if (filters?.group) {
         monitors = monitors.filter(m => m.group?.toLowerCase().includes(filters.group!.toLowerCase()));
@@ -129,7 +130,8 @@ export class UptimeKumaService {
     const client = await this.ensureClient();
     try {
       const res = await client.get(`/monitors`);
-      const monitors: Monitor[] = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
+      const raw = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
+      const monitors: Monitor[] = Array.isArray(raw) ? raw : Object.values(raw);
       const monitor = monitors.find((m: any) => m.id === id);
       if (!monitor) throw new Error(`Monitor ${id} not found`);
       return monitor;
@@ -142,7 +144,8 @@ export class UptimeKumaService {
     const client = await this.ensureClient();
     try {
       const res = await client.get(`/monitors`);
-      const monitors: Monitor[] = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
+      const raw = Array.isArray(res.data) ? res.data : (res.data.monitors || res.data.data || []);
+      const monitors: Monitor[] = Array.isArray(raw) ? raw : Object.values(raw);
       return monitors.find((m: any) => m.id === id) || {};
     } catch (err: any) {
       throw new Error(`Failed to fetch monitor stats: ${err.message}`);
