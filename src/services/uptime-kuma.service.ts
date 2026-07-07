@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from "axios";
+import pool from "../config/db";
 
 interface UptimeKumaConfig {
   id: string;
@@ -16,7 +17,7 @@ interface Monitor {
   url: string;
   hostname: string;
   port: number;
-  status: number; // 0=DOWN, 1=UP, 2=PENDING, 3=MAINTENANCE
+  status: number;
   uptime: number;
   avgResponse: number;
   lastCheck: string;
@@ -37,7 +38,6 @@ export class UptimeKumaService {
 
   async loadConfigs(): Promise<void> {
     try {
-      const pool = require("../config/db").default;
       const result = await pool.query(
         "SELECT * FROM uptime_kuma_configs ORDER BY created_at DESC"
       );
@@ -45,6 +45,7 @@ export class UptimeKumaService {
       for (const row of result.rows) {
         this.configs.set(row.id, row);
       }
+      console.log(`[UptimeKuma] Loaded ${this.configs.size} config(s) from DB`);
     } catch (err: any) {
       console.error("[UptimeKuma] Failed to load configs:", err.message);
     }
@@ -60,6 +61,7 @@ export class UptimeKumaService {
       timeout: 15000,
       headers: { "Content-Type": "application/json" }
     });
+    console.log(`[UptimeKuma] Active config set: ${config.name} (${config.url})`);
   }
 
   async testConnection(url: string, _username: string, _password: string): Promise<UptimeKumaHealth> {
@@ -83,7 +85,7 @@ export class UptimeKumaService {
   private async ensureClient(): Promise<AxiosInstance> {
     if (this.activeClient) return this.activeClient;
 
-    // Auto-load from DB if no active client
+    console.log("[UptimeKuma] No active client, auto-loading from DB...");
     await this.loadConfigs();
     const active = Array.from(this.configs.values()).find(c => c.is_active);
     if (active) {
