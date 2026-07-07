@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 REST API wrapper for Uptime Kuma's Socket.io API
 Enhanced: listens to heartbeat events for live status/uptime/response
@@ -51,37 +51,86 @@ class UptimeKumaClient:
             self.monitors_cache = data
             self.last_update = time.time()
             print(f"[monitorList] Received {len(data)} monitor(s)")
+            
+            # Pre-populate monitor cache with any already received heartbeats
+            for m_id, m in self.monitors_cache.items():
+                m_id_str = str(m_id)
+                beats = self.heartbeats.get(m_id_str)
+                if beats:
+                    latest_beat = beats[-1]
+                    m["status"] = latest_beat.get("status")
+                    if latest_beat.get("time"):
+                        m["lastCheck"] = latest_beat["time"]
+                    
+                    valid_pings = [h.get("ping") for h in beats if h.get("ping") is not None]
+                    m["avgResponse"] = round(sum(valid_pings) / len(valid_pings), 2) if valid_pings else 0
+                    m["msg"] = latest_beat.get("msg", "")
+                    
+                    total = len(beats)
+                    up_count = sum(1 for h in beats if h.get("status") == 1)
+                    m["uptime"] = round((up_count / total * 100) if total > 0 else 0, 2)
 
         @self.sio.on("notificationList")
         def on_notification_list(data):
             self.notifications_cache = data
 
+        @self.sio.on("heartbeatList")
+        def on_heartbeat_list(data):
+            print(f"[heartbeatList] Received heartbeat list for {len(data)} monitor(s)")
+            for m_id, beats in data.items():
+                m_id_str = str(m_id)
+                if not beats:
+                    continue
+                self.heartbeats[m_id_str] = beats[-500:]
+                
+                if m_id_str in self.monitors_cache:
+                    m = self.monitors_cache[m_id_str]
+                    latest_beat = beats[-1]
+                    m["status"] = latest_beat.get("status")
+                    if latest_beat.get("time"):
+                        m["lastCheck"] = latest_beat["time"]
+                    
+                    valid_pings = [h.get("ping") for h in beats if h.get("ping") is not None]
+                    m["avgResponse"] = round(sum(valid_pings) / len(valid_pings), 2) if valid_pings else 0
+                    m["msg"] = latest_beat.get("msg", "")
+                    
+                    total = len(beats)
+                    up_count = sum(1 for h in beats if h.get("status") == 1)
+                    m["uptime"] = round((up_count / total * 100) if total > 0 else 0, 2)
+
         @self.sio.on("heartbeat")
         def on_heartbeat(data):
             monitor_id = str(data.get("monitorID", ""))
+            if not monitor_id:
+                return
             if monitor_id not in self.heartbeats:
                 self.heartbeats[monitor_id] = []
 
-            self.heartbeats[monitor_id].append({
-                "status": data.get("status"),
-                "time": data.get("time"),
-                "ping": data.get("ping"),
-                "msg": data.get("msg", ""),
-            })
-            if len(self.heartbeats[monitor_id]) > 500:
-                self.heartbeats[monitor_id] = self.heartbeats[monitor_id][-500:]
+            # Avoid duplicates if the event is re-sent
+            h_time = data.get("time")
+            if not any(h.get("time") == h_time for h in self.heartbeats[monitor_id]):
+                self.heartbeats[monitor_id].append({
+                    "status": data.get("status"),
+                    "time": data.get("time"),
+                    "ping": data.get("ping"),
+                    "msg": data.get("msg", ""),
+                })
+                if len(self.heartbeats[monitor_id]) > 500:
+                    self.heartbeats[monitor_id] = self.heartbeats[monitor_id][-500:]
 
             if monitor_id in self.monitors_cache:
                 m = self.monitors_cache[monitor_id]
                 m["status"] = data.get("status")
                 if data.get("time"):
                     m["lastCheck"] = data["time"]
-                if data.get("ping") is not None:
-                    m["avgResponse"] = data["ping"]
+                
+                beats = self.heartbeats[monitor_id]
+                valid_pings = [h.get("ping") for h in beats if h.get("ping") is not None]
+                m["avgResponse"] = round(sum(valid_pings) / len(valid_pings), 2) if valid_pings else 0
                 m["msg"] = data.get("msg", "")
 
-                total = len(self.heartbeats[monitor_id])
-                up_count = sum(1 for h in self.heartbeats[monitor_id] if h.get("status") == 1)
+                total = len(beats)
+                up_count = sum(1 for h in beats if h.get("status") == 1)
                 m["uptime"] = round((up_count / total * 100) if total > 0 else 0, 2)
 
             print(f"[heartbeat] Monitor {monitor_id}: status={data.get('status')} ping={data.get('ping')}ms")

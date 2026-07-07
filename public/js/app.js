@@ -6266,8 +6266,8 @@ async function loadGrafanaDatasourcesForPanel() {
       if (res.ok && result.success && Array.isArray(result.data) && result.data.length > 0) {
         dsSelect.innerHTML = '<option value="">-- Select Monitor --</option>';
         result.data.forEach(m => {
-          const statusIcon = m.status === 1 ? '🟢' : m.status === 0 ? '🔴' : '🟡';
-          dsSelect.innerHTML += `<option value="uk-${m.id}">${statusIcon} ${escapeHtml(m.name)} (${m.type})</option>`;
+          const statusText = m.status === 1 ? 'UP' : m.status === 0 ? 'DOWN' : 'PENDING';
+          dsSelect.innerHTML += `<option value="uk-${m.id}">[${statusText}] ${escapeHtml(m.name)} (${m.type})</option>`;
         });
       } else {
         dsSelect.innerHTML = '<option value="">No Uptime Kuma monitors found</option>';
