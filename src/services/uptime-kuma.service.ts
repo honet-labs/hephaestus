@@ -87,9 +87,18 @@ export class UptimeKumaService {
 
     console.log("[UptimeKuma] No active client, auto-loading from DB...");
     await this.loadConfigs();
-    const active = Array.from(this.configs.values()).find(c => c.is_active);
+    const configs = Array.from(this.configs.values());
+    const active = configs.find(c => c.is_active === true || c.is_active === "true" || c.is_active === 1);
+
     if (active) {
       await this.setActiveConfig(active.id);
+      return this.activeClient!;
+    }
+
+    // Fallback: if configs exist but none marked active, use the first one
+    if (configs.length > 0) {
+      console.log(`[UptimeKuma] No config marked active, using first config: ${configs[0].name}`);
+      await this.setActiveConfig(configs[0].id);
       return this.activeClient!;
     }
 
