@@ -351,6 +351,17 @@ export async function initDb() {
       key VARCHAR(100) PRIMARY KEY,
       value TEXT NOT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 12. UptimeKumaConfigs - Uptime Kuma server connection profiles
+    `CREATE TABLE IF NOT EXISTS uptime_kuma_configs (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      url VARCHAR(255) NOT NULL,
+      username VARCHAR(255) NOT NULL,
+      password TEXT NOT NULL,
+      is_active BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
@@ -365,6 +376,15 @@ export async function initDb() {
     `ALTER TABLE prometheus_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
     `ALTER TABLE monitoring_views ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
     `ALTER TABLE oid_registry ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
+    `CREATE TABLE IF NOT EXISTS uptime_kuma_configs (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      url VARCHAR(255) NOT NULL,
+      username VARCHAR(255) NOT NULL,
+      password TEXT NOT NULL,
+      is_active BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
     `CREATE TABLE IF NOT EXISTS app_config (
       key VARCHAR(100) PRIMARY KEY,
       value TEXT NOT NULL,
@@ -385,7 +405,8 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(token);`,
     `CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp DESC);`,
     `CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);`,
-    `CREATE INDEX IF NOT EXISTS idx_query_panels_created_at ON query_panels(created_at DESC);`
+    `CREATE INDEX IF NOT EXISTS idx_query_panels_created_at ON query_panels(created_at DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_uptime_kuma_configs_is_active ON uptime_kuma_configs(is_active) WHERE is_active = true;`
   ];
   await Promise.all(indexQueries.map(q => pool.query(q)));
 

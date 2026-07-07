@@ -14,6 +14,7 @@ import activityLogRoutes from "./routes/activity-log.routes";
 import queryExplorerRoutes from "./routes/query-explorer.routes";
 import updateRoutes from "./routes/update.routes";
 import grokDebuggerRoutes from "./routes/grok-debugger.routes";
+import uptimeKumaRoutes from "./routes/uptime-kuma.routes";
 
 const app = express();
 
@@ -111,6 +112,7 @@ app.use("/api/v1/activity-logs", activityLogRoutes);
 app.use("/api/v1/query-explorer", queryExplorerRoutes);
 app.use("/api/v1/update", updateRoutes);
 app.use("/api/v1/grok-debugger", grokDebuggerRoutes);
+app.use("/api/v1/uptime-kuma", uptimeKumaRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
@@ -144,6 +146,22 @@ initDb()
         await snmpService.syncMibsFromDisk();
       } catch (err: any) {
         console.error("⚠️  [SNMP] Error during MIB auto-sync:", err.message);
+      }
+
+      try {
+        const { uptimeKumaService } = require("./services/uptime-kuma.service");
+        console.log("⚙️  [Uptime Kuma] Loading configs...");
+        await uptimeKumaService.loadConfigs();
+        const configs = await uptimeKumaService.getConfigs();
+        const active = configs.find((c: any) => c.is_active);
+        if (active) {
+          await uptimeKumaService.setActiveConfig(active.id);
+          console.log(`⚙️  [Uptime Kuma] Active config: ${active.name}`);
+        } else {
+          console.log("⚙️  [Uptime Kuma] No active config found.");
+        }
+      } catch (err: any) {
+        console.error("⚠️  [Uptime Kuma] Error loading configs:", err.message);
       }
     } else {
       console.warn("⚠️  [SNMP] Database is not connected. Skipping MIB auto-sync.");

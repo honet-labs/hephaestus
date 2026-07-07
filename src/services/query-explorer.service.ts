@@ -201,6 +201,11 @@ export class QueryExplorerService {
     step: string,
     columns: QueryColumn[]
   ): Promise<any> {
+    // Handle Uptime Kuma datasource
+    if (datasourceUid.startsWith("uk-")) {
+      return this.executeUptimeKumaQuery(datasourceUid, timeRangeFrom, timeRangeTo, columns);
+    }
+
     const grafanaConfig = config.getGrafanaConfig();
     if (!grafanaConfig.isConfigured) {
       throw new Error("Grafana Integration is not configured. Please configure it in Settings first.");
@@ -397,6 +402,60 @@ export class QueryExplorerService {
     } catch (err: any) {
       console.error(`[QueryExplorer] Failed to fetch metrics metadata:`, err.message);
       throw new Error(`Failed to fetch metadata: ${err.message}`);
+    }
+  }
+
+  private async executeUptimeKumaQuery(
+    datasourceUid: string,
+    timeRangeFrom: string,
+    timeRangeTo: string,
+    columns: QueryColumn[]
+  ): Promise<any> {
+    const monitorId = parseInt(datasourceUid.replace("uk-", ""), 10);
+    const { uptimeKumaService } = require("./uptime-kuma.service");
+
+    try {
+      const monitor = await uptimeKumaService.getMonitorById(monitorId);
+      const hostname = monitor.hostname || monitor.url || `monitor-${monitorId}`;
+
+      const ts = Math.floor(Date.now() / 1000);
+      const timestampStr = new Date(ts * 1000).toISOString();
+      const colNames = columns.map(c => c.alias || c.name);
+
+      const rowItem: Record<string, any> = {
+        timestamp: ts,
+        timestampStr: timestampStr
+      };
+
+      rowItem[hostname] = { ipAddress: hostname, timestampStr: timestampStr };
+
+      for (const col of columns) {
+        let value: any;
+        switch (col.query.toLowerCase()) {
+          case "status":
+            value = monitor.status === 1 ? 1 : 0;
+            break;
+          case "uptime":
+            value = monitor.uptime || 0;
+            break;
+          case "response_time":
+          case "avg_response":
+            value = monitor.avgResponse || 0;
+            break;
+          default:
+            value = monitor[col.query] ?? null;
+        }
+        rowItem[hostname][col.name] = value;
+      }
+
+      return {
+        ips: [hostname],
+        columns: colNames,
+        rows: [rowItem]
+      };
+    } catch (err: any) {
+      console.error(`[QueryExplorer] Uptime Kuma query failed:`, err.message);
+      throw new Error(`Uptime Kuma query failed: ${err.message}`);
     }
   }
 }
