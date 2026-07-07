@@ -4361,6 +4361,7 @@ function renderUptimeMonitors(monitors) {
     const uptime = m.uptime != null ? m.uptime.toFixed(2) + '%' : '-';
     const response = m.avgResponse != null ? m.avgResponse + ' ms' : '-';
     const lastCheck = m.lastCheck ? new Date(m.lastCheck).toLocaleString() : '-';
+    const monitorTarget = (m.type === 'ping' || !m.url || m.url === 'https://' || m.url === 'http://') ? (m.hostname || m.url || '-') : m.url;
 
     return `
       <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-primary)'" onmouseout="this.style.background='transparent'">
@@ -4369,7 +4370,7 @@ function renderUptimeMonitors(monitors) {
         </td>
         <td style="padding: 8px 12px; color: var(--text-white); font-weight: 500;">${escapeHtml(m.name)}</td>
         <td style="padding: 8px 12px; color: var(--text-muted);">${escapeHtml(m.type || '-')}</td>
-        <td style="padding: 8px 12px; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(m.url || m.hostname || '-')}</td>
+        <td style="padding: 8px 12px; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(monitorTarget)}</td>
         <td style="padding: 8px 12px; color: ${statusColor}; font-weight: 600;">${uptime}</td>
         <td style="padding: 8px 12px; color: var(--text-muted);">${response}</td>
         <td style="padding: 8px 12px; color: var(--text-muted); font-size: 11px;">${lastCheck}</td>

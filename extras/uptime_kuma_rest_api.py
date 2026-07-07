@@ -48,13 +48,18 @@ class UptimeKumaClient:
 
         @self.sio.on("monitorList")
         def on_monitor_list(data):
-            self.monitors_cache = data
+            if isinstance(data, dict):
+                self.monitors_cache = {str(k): v for k, v in data.items()}
+            elif isinstance(data, list):
+                self.monitors_cache = {str(m.get("id")): m for m in data if m.get("id") is not None}
+            else:
+                self.monitors_cache = {}
+            
             self.last_update = time.time()
-            print(f"[monitorList] Received {len(data)} monitor(s)")
+            print(f"[monitorList] Received {len(self.monitors_cache)} monitor(s)")
             
             # Pre-populate monitor cache with any already received heartbeats
-            for m_id, m in self.monitors_cache.items():
-                m_id_str = str(m_id)
+            for m_id_str, m in self.monitors_cache.items():
                 beats = self.heartbeats.get(m_id_str)
                 if beats:
                     latest_beat = beats[-1]
@@ -76,8 +81,22 @@ class UptimeKumaClient:
 
         @self.sio.on("heartbeatList")
         def on_heartbeat_list(data):
-            print(f"[heartbeatList] Received heartbeat list for {len(data)} monitor(s)")
-            for m_id, beats in data.items():
+            print(f"[heartbeatList] Received heartbeat list data")
+            if isinstance(data, list):
+                grouped = {}
+                for beat in data:
+                    mid = str(beat.get("monitorID", ""))
+                    if mid:
+                        if mid not in grouped:
+                            grouped[mid] = []
+                        grouped[mid].append(beat)
+                items = grouped.items()
+            elif isinstance(data, dict):
+                items = data.items()
+            else:
+                return
+
+            for m_id, beats in items:
                 m_id_str = str(m_id)
                 if not beats:
                     continue
