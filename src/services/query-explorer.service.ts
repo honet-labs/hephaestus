@@ -420,7 +420,7 @@ export class QueryExplorerService {
 
       const ts = Math.floor(Date.now() / 1000);
       const timestampStr = new Date(ts * 1000).toISOString();
-      const colNames = columns.map(c => c.alias || c.name);
+      const colNames = columns.map(c => c.name);
 
       const rowItem: Record<string, any> = {
         timestamp: ts,
