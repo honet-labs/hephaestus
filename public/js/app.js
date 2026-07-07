@@ -296,6 +296,7 @@ const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring',
 // Global Connection registry caches
 let grafanaConfigs = [];
 let prometheusConfigs = [];
+let uptimeKumaConfigs = [];
 
 // DOM elements
 const activeModuleName = document.getElementById('active-module-name');
@@ -614,8 +615,8 @@ function showPage(pageId) {
     pageTitle.textContent = 'System Overview';
     pageDesc.textContent = 'Ringkasan status integrasi Grafana dan telemetri metrik real-time.';
   } else if (pageId === 'settings') {
-    pageTitle.textContent = 'Grafana Settings';
-    pageDesc.textContent = 'Konfigurasi integrasi API Grafana dan kredensial token.';
+    pageTitle.textContent = 'Add Connections';
+    pageDesc.textContent = 'Manage API and service endpoint connections.';
   } else if (pageId === 'diagnostics') {
     pageTitle.textContent = 'System Diagnostics';
     pageDesc.textContent = 'Informasi endpoint API backend dan diagnostik kesehatan sistem.';
@@ -768,8 +769,16 @@ async function loadSettingsRegistry() {
       }
     } catch (_) {}
 
+    try {
+      const resU = await fetch('/api/v1/uptime-kuma/configs');
+      const rU = await resU.json();
+      if (rU.success && Array.isArray(rU.configs)) {
+        uptimeKumaConfigs = rU.configs;
+      }
+    } catch (_) {}
+
     // 3. Render list in registry-cards-container
-    const totalCount = grafanaConfigs.length + prometheusConfigs.length;
+    const totalCount = grafanaConfigs.length + prometheusConfigs.length + uptimeKumaConfigs.length;
     const headerTitle = document.getElementById('registry-header-title');
     if (headerTitle) {
       headerTitle.textContent = `Active Registry (${totalCount})`;
@@ -874,6 +883,46 @@ async function loadSettingsRegistry() {
       `;
     });
 
+    // Render Uptime Kuma connections
+    uptimeKumaConfigs.forEach(c => {
+      const escapedName = c.name.replace(/'/g, "\\'");
+
+      html += `
+        <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+            <div style="width: 36px; height: 36px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10b981; flex-shrink: 0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${c.name}</span>
+                <span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">UPTIME KUMA</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.url}</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
+              CHECKING...
+            </span>
+            <button type="button" class="btn btn-secondary" onclick="pingUptimeKumaServer('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
+            <button type="button" class="btn btn-secondary" onclick="editUptimeKumaConfigById('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="deleteUptimeKumaConfig('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
     registryCardsContainer.innerHTML = html;
 
     // Trigger asynchronous connection checks
@@ -883,6 +932,10 @@ async function loadSettingsRegistry() {
 
     prometheusConfigs.forEach(c => {
       checkPrometheusCardConnection(c.id);
+    });
+
+    uptimeKumaConfigs.forEach(c => {
+      checkUptimeKumaCardConnection(c.id);
     });
 
   } catch (error) {
@@ -949,17 +1002,14 @@ async function pingServer(id) {
 }
 
 function toggleConnectionFields() {
-  if (!inputConnectionType || !grafanaFields || !prometheusFields) return;
-  const type = inputConnectionType.value;
-  if (type === 'grafana') {
-    grafanaFields.classList.remove('hidden');
-    prometheusFields.classList.add('hidden');
-    if (inputConnectionName) inputConnectionName.placeholder = 'e.g. Production Grafana';
-  } else {
-    grafanaFields.classList.add('hidden');
-    prometheusFields.classList.remove('hidden');
-    if (inputConnectionName) inputConnectionName.placeholder = 'e.g. Remote Prometheus';
-  }
+  const type = document.getElementById('connection-type')?.value;
+  const grafanaFields = document.getElementById('grafana-fields');
+  const prometheusFields = document.getElementById('prometheus-fields');
+  const ukFields = document.getElementById('uptime-kuma-fields');
+  
+  if (grafanaFields) grafanaFields.classList.toggle('hidden', type !== 'grafana');
+  if (prometheusFields) prometheusFields.classList.toggle('hidden', type !== 'prometheus');
+  if (ukFields) ukFields.classList.toggle('hidden', type !== 'uptime-kuma');
 }
 
 function togglePrometheusModeFields() {
@@ -1203,6 +1253,103 @@ async function pingPrometheusServer(id) {
   }
 }
 
+async function checkUptimeKumaCardConnection(id) {
+  const badge = document.getElementById(`conn-status-${id}`);
+  if (!badge) return;
+
+  try {
+    const res = await fetch(`/api/v1/uptime-kuma/configs/${id}/test`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success && result.isConnected) {
+      badge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+      badge.style.color = '#10b981';
+      badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      badge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        CONNECTED
+      `;
+    } else {
+      badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      badge.style.color = '#ef4444';
+      badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      badge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        OFFLINE
+      `;
+    }
+  } catch (error) {
+    badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+    badge.style.color = '#ef4444';
+    badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    badge.innerHTML = 'ERROR';
+  }
+}
+
+async function pingUptimeKumaServer(id) {
+  addLog('Uptime Kuma', `Initiating manual ping to connection ID ${id}...`, 'INFO');
+  try {
+    const res = await fetch(`/api/v1/uptime-kuma/configs/${id}/test`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success && result.isConnected) {
+      alert('Uptime Kuma connection succeeded!');
+      addLog('Uptime Kuma', 'Manual connection check succeeded.', 'SUCCESS');
+    } else {
+      alert('Uptime Kuma connection failed: ' + (result.message || 'Server offline.'));
+      addLog('Uptime Kuma', `Manual connection check failed: ${result.message || 'Offline'}`, 'ERROR');
+    }
+  } catch (err) {
+    alert('API Error: ' + err.message);
+  }
+}
+
+function editUptimeKumaConfigById(id) {
+  if (!uptimeKumaConfigs) return;
+  const c = uptimeKumaConfigs.find(item => item.id === id);
+  if (!c) return;
+
+  if (inputConnectionType) inputConnectionType.value = 'uptime-kuma';
+  if (inputConnectionId) inputConnectionId.value = c.id;
+  if (inputConnectionName) inputConnectionName.value = c.name;
+
+  const urlField = document.getElementById('uptime-kuma-url');
+  const usernameField = document.getElementById('uptime-kuma-username');
+  const passwordField = document.getElementById('uptime-kuma-password');
+
+  if (urlField) urlField.value = c.url;
+  if (usernameField) usernameField.value = c.username || '';
+  if (passwordField) passwordField.value = c.password ? '********' : '';
+
+  toggleConnectionFields();
+
+  const saveText = document.getElementById('btn-save-text');
+  if (saveText) saveText.textContent = 'Update Connection';
+  hideFeedback();
+}
+
+async function deleteUptimeKumaConfig(id) {
+  if (!confirm('Are you sure you want to delete this Uptime Kuma configuration?')) return;
+  addLog('Configuration', 'Deleting Uptime Kuma configuration...', 'INFO');
+  try {
+    const res = await fetch(`/api/v1/uptime-kuma/configs/${id}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Configuration', result.message || 'Uptime Kuma configuration deleted successfully.', 'SUCCESS');
+      await loadSettingsRegistry();
+    } else {
+      addLog('Configuration', `Deletion failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (error) {
+    console.error('Error deleting Uptime Kuma configuration:', error);
+    addLog('Configuration', 'Network error during configuration deletion.', 'ERROR');
+  }
+}
+
 async function saveConnectionConfiguration(event) {
   if (event) event.preventDefault();
 
@@ -1245,6 +1392,32 @@ async function saveConnectionConfiguration(event) {
       } else {
         showFeedback('danger', 'Save Failed', result.message || result.error || 'Failed to save.');
         addLog('Configuration', `Grafana save failed: ${result.message}`, 'ERROR');
+      }
+    } else if (type === 'uptime-kuma') {
+      const url = document.getElementById('uptime-kuma-url')?.value?.trim();
+      const username = document.getElementById('uptime-kuma-username')?.value?.trim();
+      const password = document.getElementById('uptime-kuma-password')?.value;
+
+      if (!url) {
+        showFeedback('danger', 'Form Error', 'Uptime Kuma URL is required.');
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/v1/uptime-kuma/configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, url, username, password })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Saved Successfully', result.message || 'Uptime Kuma configuration saved.');
+        addLog('Configuration', `Uptime Kuma connection saved: ${name}`, 'SUCCESS');
+        clearConnectionForm();
+        await loadSettingsRegistry();
+      } else {
+        showFeedback('danger', 'Save Failed', result.message || result.error || 'Failed to save.');
+        addLog('Configuration', `Uptime Kuma save failed: ${result.message}`, 'ERROR');
       }
     } else {
       const mode = inputPrometheusMode.value;
@@ -1326,6 +1499,38 @@ async function testConnectionConfig() {
       } else {
         showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
         addLog('Grafana API', `Connectivity test failed: ${result.message || 'Unknown error'}`, 'ERROR');
+      }
+    } catch (error) {
+      showFeedback('danger', 'API Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  } else if (type === 'uptime-kuma') {
+    const url = document.getElementById('uptime-kuma-url')?.value?.trim();
+    const username = document.getElementById('uptime-kuma-username')?.value?.trim();
+    const password = document.getElementById('uptime-kuma-password')?.value;
+
+    if (!url) {
+      showFeedback('danger', 'Form Error', 'Uptime Kuma URL is required.');
+      return;
+    }
+
+    setLoading(true, 'test');
+    addLog('Uptime Kuma', `Testing connection to ${url}...`, 'INFO');
+
+    try {
+      const res = await fetch('/api/v1/uptime-kuma/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, username, password })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Test Successful', result.message || 'Connected to Uptime Kuma.');
+        addLog('Uptime Kuma', 'Connection test succeeded.', 'SUCCESS');
+      } else {
+        showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
+        addLog('Uptime Kuma', `Connection test failed: ${result.message || 'Unknown error'}`, 'ERROR');
       }
     } catch (error) {
       showFeedback('danger', 'API Error', error.message);
