@@ -772,8 +772,8 @@ async function loadSettingsRegistry() {
     try {
       const resU = await fetch('/api/v1/uptime-kuma/configs');
       const rU = await resU.json();
-      if (rU.success && Array.isArray(rU.configs)) {
-        uptimeKumaConfigs = rU.configs;
+      if (rU.success && Array.isArray(rU.data)) {
+        uptimeKumaConfigs = rU.data;
       }
     } catch (_) {}
 
