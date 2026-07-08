@@ -71,9 +71,9 @@
         textarea::placeholder { color: var(--text-muted); }
         #custom-pattern { min-height: 80px; flex: 0 0 80px; border-bottom: 1px solid var(--app-border); }
         #pattern { min-height: 60px; flex: 0 0 60px; border-bottom: 1px solid var(--app-border); }
-        #log { flex: 1; min-height: 0; }
+        #log { flex: 1; min-height: 60px; }
 
-        #log-container { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+        #log-container { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; max-height: 200px; }
         #log-container .panel-header { flex-shrink: 0; z-index: 3; }
         #log-container > div { position: relative; flex: 1; min-height: 0; }
         #highlighted-log {
@@ -139,7 +139,7 @@
                 <textarea id="pattern" spellcheck="false" placeholder="%{TIMESTAMP_ISO8601:timestamp} %{GREEDYDATA:message}"></textarea>
             </div>
 
-            <div class="panel flex-1" id="log-container">
+            <div class="panel flex-auto" id="log-container">
                 <div class="panel-header">
                     <span>Log Samples (multi-line)</span>
                     <button class="icon-btn" onclick="document.getElementById('log').value=''; updateHighlight();">Clear</button>
