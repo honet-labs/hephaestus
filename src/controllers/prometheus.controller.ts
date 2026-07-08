@@ -334,8 +334,7 @@ export class PrometheusController {
   public async testConnectionById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const list = await prometheusService.getConfigsList();
-      const target = list.find(c => c.id === id);
+      const target = await prometheusService.getConfigById(id);
       if (!target) {
         return res.status(404).json({
           success: false,

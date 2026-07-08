@@ -131,13 +131,17 @@ export class PrometheusService {
    * Helper to get the config to use for operations.
    * If configId is provided, looks up that specific profile.
    * Otherwise uses the active config.
+   * Returns UNMASKED passwords for actual SSH operations.
    */
   private async getConfigToUse(configId?: string): Promise<PrometheusConfigItem> {
     if (configId) {
-      const list = await this.getConfigsList();
-      const found = list.find(c => c.id === configId);
-      if (!found) throw new Error(`Prometheus config profile '${configId}' not found.`);
-      return found;
+      const res = await query(
+        `SELECT id, name, mode, path, reload_url AS "reloadUrl", ssh_host AS "sshHost", ssh_port AS "sshPort",
+                ssh_user AS "sshUser", ssh_auth AS "sshAuth", ssh_password AS "sshPassword", ssh_key AS "sshKey", is_active AS "isActive"
+         FROM prometheus_configs WHERE id = $1`, [configId]
+      );
+      if (res.rows.length === 0) throw new Error(`Prometheus config profile '${configId}' not found.`);
+      return res.rows[0] as PrometheusConfigItem;
     }
     return config.getActivePrometheusConfig();
   }
@@ -403,6 +407,18 @@ scrape_configs:
   private maskSecret(value: string): string {
     if (!value || value.length <= 4) return "***";
     return value.substring(0, 4) + "***";
+  }
+
+  /**
+   * Retrieves a single config by ID with UNMASKED secrets (for SSH operations).
+   */
+  public async getConfigById(id: string): Promise<PrometheusConfigItem | null> {
+    const res = await query(
+      `SELECT id, name, mode, path, reload_url AS "reloadUrl", ssh_host AS "sshHost", ssh_port AS "sshPort",
+              ssh_user AS "sshUser", ssh_auth AS "sshAuth", ssh_password AS "sshPassword", ssh_key AS "sshKey", is_active AS "isActive"
+       FROM prometheus_configs WHERE id = $1`, [id]
+    );
+    return res.rows.length > 0 ? (res.rows[0] as PrometheusConfigItem) : null;
   }
 
   /**
