@@ -356,6 +356,9 @@ scrape_configs:
         
         let reloaded = false;
         let reloadMsg = "";
+        const sudoPrefix = activeConfig.sshPassword ? `echo "${activeConfig.sshPassword.replace(/"/g, '\\"')}" | sudo -S ` : "sudo ";
+
+        // 1. Try hot-reload first
         try {
           let reloadCmd = `curl -s -X POST http://localhost:9090/-/reload`;
           if (activeConfig.reloadUrl) {
@@ -363,9 +366,18 @@ scrape_configs:
           }
           await this.executeRemoteCommand(conn, reloadCmd);
           reloaded = true;
-          reloadMsg = "Configuration saved and Prometheus reloaded successfully via remote SSH.";
+          reloadMsg = "Configuration saved and Prometheus reloaded successfully.";
         } catch (e: any) {
-          reloadMsg = `Configuration saved, but remote hot-reload failed: ${e.message || e}`;
+          console.log(`[PrometheusService] Hot-reload failed: ${e.message}, trying systemctl restart...`);
+
+          // 2. Fallback: restart service
+          try {
+            await this.executeRemoteCommand(conn, `${sudoPrefix}systemctl restart prometheus`);
+            reloaded = true;
+            reloadMsg = "Configuration saved and Prometheus service restarted successfully.";
+          } catch (restartErr: any) {
+            reloadMsg = `Configuration saved, but reload/restart failed: ${restartErr.message || restartErr}. You may need to restart Prometheus manually.`;
+          }
         }
         
         return {
