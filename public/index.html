@@ -918,6 +918,19 @@
             </button>
           </div>
 
+          <!-- Profile selector -->
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <label style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">Prometheus Instance:</label>
+            <select id="prom-config-profile-select" onchange="onPromConfigProfileChange()" style="flex: 1; min-width: 200px; max-width: 400px; padding: 6px 10px; background: var(--bg-primary); color: var(--text-white); border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px;">
+              <option value="">Loading profiles...</option>
+            </select>
+            <button id="btn-prom-refresh-profiles" class="btn btn-secondary" onclick="loadPromConfigProfiles()" style="padding: 5px 10px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              Refresh
+            </button>
+            <span id="prom-config-profile-mode" style="font-size: 10px; color: var(--text-muted); padding: 2px 8px; background: rgba(88,166,255,0.08); border-radius: 4px;"></span>
+          </div>
+
           <!-- Error alert -->
           <div id="prom-config-error" style="display: none;" class="alert alert-danger">
             <strong>Error:</strong> <span id="prom-config-error-msg"></span>
@@ -926,8 +939,9 @@
           <!-- No connection alert -->
           <div id="prom-config-no-conn" style="display: none; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 16px;">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" style="margin-bottom: 12px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            <h3 style="color: var(--text-white); margin: 0 0 8px 0; font-size: 14px;">No Prometheus Connection</h3>
-            <p style="color: var(--text-muted); margin: 0 0 16px 0; font-size: 12px;">Add a Prometheus connection in the Connections page first.</p>
+            <h3 style="color: var(--text-white); margin: 0 0 8px 0; font-size: 14px;">Unable to Read Configuration</h3>
+            <p style="color: var(--text-muted); margin: 0 0 8px 0; font-size: 12px;">The configuration file could not be read from this Prometheus instance.</p>
+            <p style="color: var(--text-muted); margin: 0 0 16px 0; font-size: 11px;">For SSH mode: verify host, port, user and credentials in Connections. For local mode: ensure the file path exists.</p>
             <button class="btn btn-primary" onclick="navigate('settings')" style="padding: 8px 20px; font-size: 12px;">Go to Connections</button>
           </div>
 
@@ -2274,6 +2288,6 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
-  <script src="js/app.js?v=2.2.0"></script>
+  <script src="js/app.js?v=2.3.0"></script>
 </body>
 </html>

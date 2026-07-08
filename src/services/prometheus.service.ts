@@ -112,11 +112,27 @@ export class PrometheusService {
   }
 
   /**
-   * Reads the current prometheus.yml file.
-   * If it doesn't exist, creates a starter config.
+   * Helper to get the config to use for operations.
+   * If configId is provided, looks up that specific profile.
+   * Otherwise uses the active config.
    */
-  public async readConfig(): Promise<{ path: string; content: string }> {
-    const activeConfig = config.getActivePrometheusConfig();
+  private async getConfigToUse(configId?: string): Promise<PrometheusConfigItem> {
+    if (configId) {
+      const list = await this.getConfigsList();
+      const found = list.find(c => c.id === configId);
+      if (!found) throw new Error(`Prometheus config profile '${configId}' not found.`);
+      return found;
+    }
+    return config.getActivePrometheusConfig();
+  }
+
+  /**
+   * Reads the current prometheus.yml file.
+   * If configId is provided, reads from that specific profile.
+   * If it doesn't exist, creates a starter config (local mode only).
+   */
+  public async readConfig(configId?: string): Promise<{ path: string; content: string }> {
+    const activeConfig = await this.getConfigToUse(configId);
 
     if (activeConfig.mode === "local") {
       const configPath = activeConfig.path;
@@ -165,8 +181,9 @@ scrape_configs:
   /**
    * Validates YAML configuration using js-yaml parser.
    * Runs promtool locally or remotely depending on access mode.
+   * If configId is provided, validates against that profile.
    */
-  public async validateConfig(content: string): Promise<{ valid: boolean; error?: string }> {
+  public async validateConfig(content: string, configId?: string): Promise<{ valid: boolean; error?: string }> {
     // 1. Basic JS-YAML syntax check (always run locally first)
     try {
       yaml.load(content);
@@ -177,7 +194,7 @@ scrape_configs:
       };
     }
 
-    const activeConfig = config.getActivePrometheusConfig();
+    const activeConfig = await this.getConfigToUse(configId);
 
     if (activeConfig.mode === "local") {
       const tempFilePath = path.join(os.tmpdir(), `prometheus-validate-${Date.now()}.yml`);
@@ -250,11 +267,11 @@ scrape_configs:
   /**
    * Validates and saves the Prometheus configuration, then triggers a hot reload.
    */
-  public async saveConfig(content: string): Promise<{ success: boolean; message: string; reloaded: boolean }> {
-    const activeConfig = config.getActivePrometheusConfig();
+  public async saveConfig(content: string, configId?: string): Promise<{ success: boolean; message: string; reloaded: boolean }> {
+    const activeConfig = await this.getConfigToUse(configId);
 
     // Validate first
-    const validation = await this.validateConfig(content);
+    const validation = await this.validateConfig(content, configId);
     if (!validation.valid) {
       return {
         success: false,

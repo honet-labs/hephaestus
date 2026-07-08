@@ -8306,6 +8306,61 @@ window.renderActiveDataChart = renderActiveDataChart;
 let promConfigEditor = null;
 let promConfigOriginalContent = '';
 let promConfigModified = false;
+let promConfigProfiles = [];
+let promConfigSelectedId = null;
+
+async function loadPromConfigProfiles() {
+  const select = document.getElementById('prom-config-profile-select');
+  try {
+    const res = await fetch('/api/v1/prometheus/configs');
+    const result = await res.json();
+    promConfigProfiles = (result.configs || []).map(c => ({
+      id: c.id,
+      name: c.name,
+      mode: c.mode,
+      path: c.path,
+      reloadUrl: c.reloadUrl,
+      isActive: c.isActive
+    }));
+
+    select.innerHTML = '';
+    if (promConfigProfiles.length === 0) {
+      select.innerHTML = '<option value="">No profiles configured</option>';
+      return;
+    }
+
+    promConfigProfiles.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name + ' (' + p.mode + ')';
+      if (p.isActive && !promConfigSelectedId) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    if (promConfigSelectedId) {
+      select.value = promConfigSelectedId;
+    }
+
+    onPromConfigProfileChange();
+  } catch (e) {
+    select.innerHTML = '<option value="">Failed to load profiles</option>';
+  }
+}
+
+function onPromConfigProfileChange() {
+  const select = document.getElementById('prom-config-profile-select');
+  promConfigSelectedId = select.value;
+
+  const profile = promConfigProfiles.find(p => p.id === promConfigSelectedId);
+  const modeEl = document.getElementById('prom-config-profile-mode');
+  if (profile) {
+    modeEl.textContent = profile.mode === 'local' ? 'Local File' : 'SSH Remote';
+  } else {
+    modeEl.textContent = '';
+  }
+
+  loadPrometheusConfig(promConfigSelectedId);
+}
 
 function initPrometheusConfigPage() {
   document.getElementById('prom-config-error').style.display = 'none';
@@ -8316,10 +8371,10 @@ function initPrometheusConfigPage() {
   document.getElementById('prom-config-editor-wrapper').style.display = 'none';
   document.getElementById('prom-config-result').style.display = 'none';
 
-  loadPrometheusConfig();
+  loadPromConfigProfiles();
 }
 
-async function loadPrometheusConfig() {
+async function loadPrometheusConfig(configId) {
   const loadingEl = document.getElementById('prom-config-loading');
   const errorEl = document.getElementById('prom-config-error');
   const noConnEl = document.getElementById('prom-config-no-conn');
@@ -8329,14 +8384,15 @@ async function loadPrometheusConfig() {
   noConnEl.style.display = 'none';
 
   try {
-    const res = await fetch('/api/v1/prometheus/config');
+    const url = configId ? '/api/v1/prometheus/config?configId=' + encodeURIComponent(configId) : '/api/v1/prometheus/config';
+    const res = await fetch(url);
     const result = await res.json();
 
     loadingEl.style.display = 'none';
 
     if (!result.success) {
       const msg = result.message || result.error || 'Failed to load config';
-      if (msg.includes('ECONNREFUSED') || msg.includes('not found') || msg.includes('No active')) {
+      if (msg.includes('ECONNREFUSED') || msg.includes('not found') || msg.includes('No active') || msg.includes('SSH') || msg.includes('not configured')) {
         noConnEl.style.display = 'block';
       } else {
         errorEl.style.display = 'block';
@@ -8360,7 +8416,7 @@ async function loadPrometheusConfig() {
   } catch (error) {
     loadingEl.style.display = 'none';
     const msg = error.message || 'Unknown error';
-    if (msg.includes('fetch') || msg.includes('NetworkError')) {
+    if (msg.includes('fetch') || msg.includes('NetworkError') || msg.includes('Failed to fetch')) {
       noConnEl.style.display = 'block';
     } else {
       errorEl.style.display = 'block';
@@ -8464,7 +8520,7 @@ async function validatePrometheusConfig() {
     const res = await fetch('/api/v1/prometheus/config/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: promConfigEditor.getValue() })
+      body: JSON.stringify({ content: promConfigEditor.getValue(), configId: promConfigSelectedId || undefined })
     });
     const result = await res.json();
 
@@ -8498,7 +8554,7 @@ async function savePrometheusConfig() {
     const res = await fetch('/api/v1/prometheus/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: promConfigEditor.getValue() })
+      body: JSON.stringify({ content: promConfigEditor.getValue(), configId: promConfigSelectedId || undefined })
     });
     const result = await res.json();
 
@@ -8526,6 +8582,6 @@ async function resetPrometheusConfig() {
   if (promConfigModified) {
     if (!confirm('Discard unsaved changes and reload from server?')) return;
   }
-  await loadPrometheusConfig();
+  await loadPrometheusConfig(promConfigSelectedId);
   showPromConfigResult('Configuration reloaded from server.', 'info');
 }

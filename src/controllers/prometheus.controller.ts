@@ -8,10 +8,12 @@ export class PrometheusController {
   /**
    * GET /api/v1/prometheus/config
    * Fetch current Prometheus configuration content.
+   * Optional query param: configId - specific profile to read from
    */
   public async getConfig(req: Request, res: Response) {
     try {
-      const result = await prometheusService.readConfig();
+      const configId = req.query.configId as string | undefined;
+      const result = await prometheusService.readConfig(configId);
       return res.status(200).json({
         success: true,
         path: result.path,
@@ -30,10 +32,11 @@ export class PrometheusController {
   /**
    * POST /api/v1/prometheus/config/validate
    * Dry-run validation of YAML configuration content.
+   * Optional body param: configId - specific profile to validate against
    */
   public async validateConfig(req: Request, res: Response) {
     try {
-      const { content } = req.body;
+      const { content, configId } = req.body;
       if (typeof content !== "string") {
         return res.status(400).json({
           success: false,
@@ -42,7 +45,7 @@ export class PrometheusController {
         });
       }
 
-      const validation = await prometheusService.validateConfig(content);
+      const validation = await prometheusService.validateConfig(content, configId);
       if (validation.valid) {
         return res.status(200).json({
           success: true,
@@ -68,10 +71,11 @@ export class PrometheusController {
   /**
    * POST /api/v1/prometheus/config
    * Validate, save, and reload Prometheus configuration.
+   * Optional body param: configId - specific profile to save to
    */
   public async saveConfig(req: Request, res: Response) {
     try {
-      const { content } = req.body;
+      const { content, configId } = req.body;
       if (typeof content !== "string") {
         return res.status(400).json({
           success: false,
@@ -80,7 +84,7 @@ export class PrometheusController {
         });
       }
 
-      const result = await prometheusService.saveConfig(content);
+      const result = await prometheusService.saveConfig(content, configId);
       if (result.success) {
         await logActivity("Prometheus Config", "Edit Config", "Successfully validated, saved, and reloaded prometheus.yml", "SUCCESS");
         return res.status(200).json(result);
