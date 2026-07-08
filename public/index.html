@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
   <style>
     /* Custom Toggle Switch for Debugging */
     .switch-toggle {
@@ -213,6 +215,12 @@
                 <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
                 <div>
                   <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Uptime Monitor</div>
+                </div>
+              </a>
+              <a href="#prometheus-config" id="menu-prometheus-config" class="menu-item" style="padding: 6px 16px; border-radius: 4px;" onclick="navigate('prometheus-config'); return false;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Prometheus Config</div>
                 </div>
               </a>
             </div>
@@ -898,6 +906,78 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- PAGE: PROMETHEUS CONFIG EDITOR -->
+        <div id="page-prometheus-config" class="page hidden">
+          <div class="page-header">
+            <h2 class="page-title">Prometheus Config</h2>
+            <button class="btn btn-secondary" onclick="navigate('settings')" style="display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              Go to Connections
+            </button>
+          </div>
+
+          <!-- Error alert -->
+          <div id="prom-config-error" style="display: none;" class="alert alert-danger">
+            <strong>Error:</strong> <span id="prom-config-error-msg"></span>
+          </div>
+
+          <!-- No connection alert -->
+          <div id="prom-config-no-conn" style="display: none; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 16px;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" style="margin-bottom: 12px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <h3 style="color: var(--text-white); margin: 0 0 8px 0; font-size: 14px;">No Prometheus Connection</h3>
+            <p style="color: var(--text-muted); margin: 0 0 16px 0; font-size: 12px;">Add a Prometheus connection in the Connections page first.</p>
+            <button class="btn btn-primary" onclick="navigate('settings')" style="padding: 8px 20px; font-size: 12px;">Go to Connections</button>
+          </div>
+
+          <!-- Loading -->
+          <div id="prom-config-loading" class="loading-container" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading configuration...</div>
+          </div>
+
+          <!-- Config info bar -->
+          <div id="prom-config-info" style="display: none; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+              <span style="color: var(--text-muted);">Config file:</span>
+              <code id="prom-config-path" style="color: #58a6ff; background: rgba(88,166,255,0.08); padding: 2px 8px; border-radius: 4px; font-size: 11px;"></code>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="prom-config-status" style="font-size: 11px; color: var(--text-muted);"></span>
+              <span id="prom-config-validation-badge" style="display: none; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;"></span>
+            </div>
+          </div>
+
+          <!-- Editor toolbar -->
+          <div id="prom-config-toolbar" style="display: none; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px 8px 0 0; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: none;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-white);">prometheus.yml</span>
+              <span id="prom-config-modified" style="display: none; font-size: 10px; color: #f59e0b; background: rgba(245,158,11,0.12); padding: 2px 6px; border-radius: 3px;">Modified</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button id="btn-prom-validate" class="btn btn-secondary" onclick="validatePrometheusConfig()" style="padding: 5px 12px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Validate
+              </button>
+              <button id="btn-prom-reset" class="btn btn-secondary" onclick="resetPrometheusConfig()" style="padding: 5px 12px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                Reset
+              </button>
+              <button id="btn-prom-save" class="btn btn-primary" onclick="savePrometheusConfig()" style="padding: 5px 12px; font-size: 11px; height: auto; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Save
+              </button>
+            </div>
+          </div>
+
+          <!-- CodeMirror editor container -->
+          <div id="prom-config-editor-wrapper" style="display: none; border: 1px solid var(--border-color); border-radius: 0 0 8px 8px; overflow: hidden;">
+            <textarea id="prom-config-editor"></textarea>
+          </div>
+
+          <!-- Validation result -->
+          <div id="prom-config-result" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12px;"></div>
         </div>
 
 
@@ -2192,6 +2272,8 @@
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-  <script src="js/app.js?v=2.1.0"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+  <script src="js/app.js?v=2.2.0"></script>
 </body>
 </html>

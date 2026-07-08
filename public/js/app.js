@@ -291,7 +291,7 @@ function initAppOnce() {
 }
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -517,7 +517,7 @@ function toggleMonitoringSubmenu() {
       submenu.style.display = 'flex';
       if (arrow) arrow.style.transform = 'rotate(180deg)';
       const hash = window.location.hash.replace('#', '') || 'overview';
-      if (!['monitoring', 'uptime-monitor'].includes(hash)) {
+      if (!['monitoring', 'uptime-monitor', 'prometheus-config'].includes(hash)) {
         navigate('monitoring');
       }
     } else {
@@ -564,7 +564,7 @@ function showPage(pageId) {
     if (arrow) arrow.style.transform = 'rotate(0deg)';
   }
 
-  const monitoringPages = ['monitoring', 'uptime-monitor'];
+  const monitoringPages = ['monitoring', 'uptime-monitor', 'prometheus-config'];
   const isMonitoringPage = monitoringPages.includes(pageId);
   const monSubmenu = document.getElementById('monitoring-submenu');
   const monParentMenu = document.getElementById('menu-monitoring-parent');
@@ -635,6 +635,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'Uptime Monitor';
     pageDesc.textContent = 'Monitor uptime and availability of services via Uptime Kuma integration.';
     initUptimeMonitorPage();
+  } else if (pageId === 'prometheus-config') {
+    pageTitle.textContent = 'Prometheus Config';
+    pageDesc.textContent = 'Edit and validate prometheus.yml configuration directly from the portal.';
+    initPrometheusConfigPage();
   } else if (pageId === 'snmp-query') {
     pageTitle.textContent = 'SNMP Query Console';
     pageDesc.textContent = 'Perform real-time SNMP GET and WALK queries against target network agents and devices.';
@@ -8294,3 +8298,234 @@ function renderActiveDataChart(data, type, splitMetrics) {
   }
 }
 window.renderActiveDataChart = renderActiveDataChart;
+
+// ==========================================
+// PROMETHEUS CONFIG EDITOR
+// ==========================================
+
+let promConfigEditor = null;
+let promConfigOriginalContent = '';
+let promConfigModified = false;
+
+function initPrometheusConfigPage() {
+  document.getElementById('prom-config-error').style.display = 'none';
+  document.getElementById('prom-config-no-conn').style.display = 'none';
+  document.getElementById('prom-config-loading').style.display = 'none';
+  document.getElementById('prom-config-info').style.display = 'none';
+  document.getElementById('prom-config-toolbar').style.display = 'none';
+  document.getElementById('prom-config-editor-wrapper').style.display = 'none';
+  document.getElementById('prom-config-result').style.display = 'none';
+
+  loadPrometheusConfig();
+}
+
+async function loadPrometheusConfig() {
+  const loadingEl = document.getElementById('prom-config-loading');
+  const errorEl = document.getElementById('prom-config-error');
+  const noConnEl = document.getElementById('prom-config-no-conn');
+
+  loadingEl.style.display = 'flex';
+  errorEl.style.display = 'none';
+  noConnEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/v1/prometheus/config');
+    const result = await res.json();
+
+    loadingEl.style.display = 'none';
+
+    if (!result.success) {
+      const msg = result.message || result.error || 'Failed to load config';
+      if (msg.includes('ECONNREFUSED') || msg.includes('not found') || msg.includes('No active')) {
+        noConnEl.style.display = 'block';
+      } else {
+        errorEl.style.display = 'block';
+        document.getElementById('prom-config-error-msg').textContent = msg;
+      }
+      return;
+    }
+
+    document.getElementById('prom-config-path').textContent = result.path || '/etc/prometheus/prometheus.yml';
+    document.getElementById('prom-config-info').style.display = 'flex';
+    document.getElementById('prom-config-toolbar').style.display = 'flex';
+    document.getElementById('prom-config-editor-wrapper').style.display = 'block';
+
+    promConfigOriginalContent = result.content || '';
+    promConfigModified = false;
+
+    initCodeMirrorEditor(promConfigOriginalContent);
+    updateModifiedBadge();
+    document.getElementById('prom-config-status').textContent = 'Loaded';
+    document.getElementById('prom-config-status').style.color = '#10b981';
+  } catch (error) {
+    loadingEl.style.display = 'none';
+    const msg = error.message || 'Unknown error';
+    if (msg.includes('fetch') || msg.includes('NetworkError')) {
+      noConnEl.style.display = 'block';
+    } else {
+      errorEl.style.display = 'block';
+      document.getElementById('prom-config-error-msg').textContent = msg;
+    }
+  }
+}
+
+function initCodeMirrorEditor(content) {
+  const textarea = document.getElementById('prom-config-editor');
+
+  if (promConfigEditor) {
+    promConfigEditor.toTextArea();
+    promConfigEditor = null;
+  }
+
+  textarea.value = content;
+
+  promConfigEditor = CodeMirror.fromTextArea(textarea, {
+    mode: 'yaml',
+    theme: 'material-darker',
+    lineNumbers: true,
+    lineWrapping: true,
+    tabSize: 2,
+    indentWithTabs: false,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    styleActiveLine: true,
+    foldGutter: true,
+    gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+    extraKeys: {
+      'Tab': function(cm) { cm.replaceSelection('  ', 'end'); }
+    }
+  });
+
+  promConfigEditor.setValue(content);
+  promConfigEditor.clearHistory();
+
+  promConfigEditor.on('change', function() {
+    const current = promConfigEditor.getValue();
+    promConfigModified = (current !== promConfigOriginalContent);
+    updateModifiedBadge();
+  });
+
+  setTimeout(() => promConfigEditor.refresh(), 100);
+}
+
+function updateModifiedBadge() {
+  const badge = document.getElementById('prom-config-modified');
+  if (promConfigModified) {
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function showPromConfigResult(message, type) {
+  const el = document.getElementById('prom-config-result');
+  el.style.display = 'block';
+  el.textContent = message;
+
+  if (type === 'success') {
+    el.style.background = 'rgba(16,185,129,0.12)';
+    el.style.border = '1px solid rgba(16,185,129,0.3)';
+    el.style.color = '#10b981';
+  } else if (type === 'error') {
+    el.style.background = 'rgba(239,68,68,0.12)';
+    el.style.border = '1px solid rgba(239,68,68,0.3)';
+    el.style.color = '#ef4444';
+  } else {
+    el.style.background = 'rgba(245,158,11,0.12)';
+    el.style.border = '1px solid rgba(245,158,11,0.3)';
+    el.style.color = '#f59e0b';
+  }
+
+  setTimeout(() => { el.style.display = 'none'; }, 8000);
+}
+
+function setValidationBadge(valid) {
+  const badge = document.getElementById('prom-config-validation-badge');
+  badge.style.display = 'inline';
+  if (valid) {
+    badge.textContent = 'Valid';
+    badge.style.color = '#10b981';
+    badge.style.background = 'rgba(16,185,129,0.12)';
+  } else {
+    badge.textContent = 'Invalid';
+    badge.style.color = '#ef4444';
+    badge.style.background = 'rgba(239,68,68,0.12)';
+  }
+}
+
+async function validatePrometheusConfig() {
+  if (!promConfigEditor) return;
+  const btn = document.getElementById('btn-prom-validate');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"></circle></svg> Validating...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/v1/prometheus/config/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: promConfigEditor.getValue() })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      showPromConfigResult('Configuration is valid.', 'success');
+      setValidationBadge(true);
+    } else {
+      showPromConfigResult('Validation error: ' + (result.message || result.error), 'error');
+      setValidationBadge(false);
+    }
+  } catch (error) {
+    showPromConfigResult('Validation request failed: ' + error.message, 'error');
+    setValidationBadge(false);
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
+}
+
+async function savePrometheusConfig() {
+  if (!promConfigEditor) return;
+
+  if (!confirm('Save prometheus.yml and reload Prometheus?')) return;
+
+  const btn = document.getElementById('btn-prom-save');
+  const origText = btn.innerHTML;
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"></circle></svg> Saving...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/v1/prometheus/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: promConfigEditor.getValue() })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      promConfigOriginalContent = promConfigEditor.getValue();
+      promConfigModified = false;
+      updateModifiedBadge();
+      const reloadMsg = result.reloaded ? 'Configuration saved and Prometheus reloaded.' : 'Configuration saved, but reload failed (check Prometheus --web.enable-lifecycle).';
+      showPromConfigResult(reloadMsg, 'success');
+      document.getElementById('prom-config-status').textContent = 'Saved ' + new Date().toLocaleTimeString();
+      document.getElementById('prom-config-status').style.color = '#10b981';
+      setValidationBadge(true);
+    } else {
+      showPromConfigResult('Save failed: ' + (result.message || result.error), 'error');
+    }
+  } catch (error) {
+    showPromConfigResult('Save request failed: ' + error.message, 'error');
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
+}
+
+async function resetPrometheusConfig() {
+  if (promConfigModified) {
+    if (!confirm('Discard unsaved changes and reload from server?')) return;
+  }
+  await loadPrometheusConfig();
+  showPromConfigResult('Configuration reloaded from server.', 'info');
+}
