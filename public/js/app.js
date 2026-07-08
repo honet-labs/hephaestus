@@ -122,8 +122,9 @@ window.handleSetupSubmit = async function(event) {
 
 // === UPDATE SYSTEM ===
 async function checkForUpdates() {
-  const status = document.getElementById('update-status');
-  const applyBtn = document.getElementById('update-apply-btn');
+  const status = document.getElementById('system-update-status');
+  const applyBtn = document.getElementById('system-update-apply-btn');
+  if (!status || !applyBtn) return;
   status.textContent = 'Checking for updates...';
   status.style.color = 'var(--text-muted)';
   applyBtn.style.display = 'none';
@@ -136,7 +137,7 @@ async function checkForUpdates() {
     if (data.success && data.hasUpdates) {
       status.textContent = 'Updates available! Click "Apply Update" to install.';
       status.style.color = '#f59e0b';
-      applyBtn.style.display = 'inline-block';
+      applyBtn.style.display = 'inline-flex';
     } else if (data.success) {
       status.textContent = 'System is up to date.';
       status.style.color = '#3fb950';
@@ -153,8 +154,9 @@ async function checkForUpdates() {
 async function applyUpdate() {
   if (!confirm('This will pull the latest code, rebuild, and restart the server. Continue?')) return;
 
-  const status = document.getElementById('update-status');
-  const applyBtn = document.getElementById('update-apply-btn');
+  const status = document.getElementById('system-update-status');
+  const applyBtn = document.getElementById('system-update-apply-btn');
+  if (!status || !applyBtn) return;
   applyBtn.disabled = true;
   applyBtn.textContent = 'Updating...';
   status.textContent = 'Pulling latest code...';
@@ -291,7 +293,7 @@ function initAppOnce() {
 }
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -528,6 +530,102 @@ function toggleMonitoringSubmenu() {
   }
 }
 
+async function loadOverviewData() {
+  try {
+    const res = await fetch('/api/v1/settings/overview');
+    const result = await res.json();
+    if (!result.success) return;
+    const d = result.data;
+
+    // Connection counts
+    document.getElementById('ov-grafana-count').textContent = d.connections?.name === 'Grafana' ? d.connections.count : 0;
+    document.getElementById('ov-prometheus-count').textContent = d.connections?.name === 'Prometheus' ? d.connections.count : 0;
+    document.getElementById('ov-uptime-count').textContent = d.connections?.name === 'Uptime Kuma' ? d.connections.count : 0;
+
+    // Storage status
+    const storageEl = document.getElementById('ov-storage-status');
+    const storageDetail = document.getElementById('ov-storage-detail');
+    if (d.storage?.connected) {
+      storageEl.textContent = 'Connected';
+      storageEl.style.color = '#56d364';
+      storageDetail.textContent = d.storage.engine;
+    } else {
+      storageEl.textContent = 'Disconnected';
+      storageEl.style.color = '#ff7b72';
+      storageDetail.textContent = 'Database unreachable';
+    }
+
+    // Connections list
+    const tbody = document.getElementById('ov-connections-tbody');
+    if (d.totalConnections === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No connections configured</td></tr>';
+    } else {
+      let html = '';
+      // Fetch actual connection lists
+      try {
+        const [resG, resP, resU] = await Promise.all([
+          fetch('/api/v1/settings/grafana/configs'),
+          fetch('/api/v1/prometheus/configs'),
+          fetch('/api/v1/uptime-kuma/configs')
+        ]);
+        const rG = await resG.json();
+        const rP = await resP.json();
+        const rU = await resU.json();
+
+        if (rG.success && Array.isArray(rG.data)) {
+          rG.data.forEach(c => {
+            html += `<tr>
+              <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
+              <td><span class="status-badge" style="background: rgba(88,166,255,0.1); color: #58a6ff;">GRAFANA</span></td>
+              <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.host)}</td>
+              <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
+            </tr>`;
+          });
+        }
+        if (rP.success && Array.isArray(rP.configs)) {
+          rP.configs.forEach(c => {
+            html += `<tr>
+              <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
+              <td><span class="status-badge" style="background: rgba(255,127,80,0.1); color: var(--prometheus-orange);">PROMETHEUS</span></td>
+              <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.sshHost || c.path || '-')}</td>
+              <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
+            </tr>`;
+          });
+        }
+        if (rU.success && Array.isArray(rU.data)) {
+          rU.data.forEach(c => {
+            html += `<tr>
+              <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
+              <td><span class="status-badge" style="background: rgba(86,211,100,0.1); color: #56d364;">UPTIME KUMA</span></td>
+              <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.url)}</td>
+              <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
+            </tr>`;
+          });
+        }
+      } catch (_) {}
+      tbody.innerHTML = html || '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No connections found</td></tr>';
+    }
+
+    // Activity logs
+    const actTbody = document.getElementById('ov-activity-tbody');
+    if (d.recentActivity && d.recentActivity.length > 0) {
+      actTbody.innerHTML = d.recentActivity.map(a => {
+        const statusClass = a.status === 'SUCCESS' ? 'status-success' : a.status === 'ERROR' ? 'status-error' : 'status-default';
+        return `<tr>
+          <td class="font-mono" style="font-size: 11px;">${escapeHtml(a.time)}</td>
+          <td>${escapeHtml(a.module)}</td>
+          <td style="font-size: 11px;">${escapeHtml(a.action)}</td>
+          <td><span class="status-badge ${statusClass}">${escapeHtml(a.status)}</span></td>
+        </tr>`;
+      }).join('');
+    } else {
+      actTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No activity yet</td></tr>';
+    }
+  } catch (err) {
+    console.error('[Overview] Failed to load:', err);
+  }
+}
+
 function showPage(pageId) {
   pages.forEach(p => {
     const pageEl = document.getElementById(`page-${p}`);
@@ -586,7 +684,7 @@ function showPage(pageId) {
     if (monArrow) monArrow.style.transform = 'rotate(0deg)';
   }
 
-  const settingsPages = ['database', 'user-management', 'activity-logs', 'debugging'];
+  const settingsPages = ['database', 'user-management', 'activity-logs', 'debugging', 'system-update'];
   const isSettingsPage = settingsPages.includes(pageId);
   const setSubmenu = document.getElementById('settings-submenu');
   const setParentMenu = document.getElementById('menu-settings-parent');
@@ -613,7 +711,8 @@ function showPage(pageId) {
   
   if (pageId === 'overview') {
     pageTitle.textContent = 'System Overview';
-    pageDesc.textContent = 'Ringkasan status integrasi Grafana dan telemetri metrik real-time.';
+    pageDesc.textContent = 'Ringkasan status integrasi dan konfigurasi portal.';
+    loadOverviewData();
   } else if (pageId === 'settings') {
     pageTitle.textContent = 'Add Connections';
     pageDesc.textContent = 'Manage API and service endpoint connections.';
