@@ -360,9 +360,9 @@ scrape_configs:
 
         // 1. Try hot-reload first
         try {
-          let reloadCmd = `curl -s -X POST http://localhost:9090/-/reload`;
+          let reloadCmd = `curl -sf -X POST http://localhost:9090/-/reload`;
           if (activeConfig.reloadUrl) {
-            reloadCmd = `curl -s -X POST "${activeConfig.reloadUrl}"`;
+            reloadCmd = `curl -sf -X POST "${activeConfig.reloadUrl}"`;
           }
           await this.executeRemoteCommand(conn, reloadCmd);
           reloaded = true;
