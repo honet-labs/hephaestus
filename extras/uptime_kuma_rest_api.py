@@ -34,12 +34,32 @@ class UptimeKumaClient:
         self.heartbeats = {}
         self.last_update = 0
 
+    def _update_monitor_metrics(self, m_id_str, beats):
+        if not beats:
+            return
+        if m_id_str in self.monitors_cache:
+            m = self.monitors_cache[m_id_str]
+            latest_beat = beats[-1]
+            m["status"] = latest_beat.get("status")
+            if latest_beat.get("time"):
+                m["lastCheck"] = latest_beat["time"]
+            
+            valid_pings = [h.get("ping") for h in beats if h.get("ping") is not None]
+            m["avgResponse"] = round(sum(valid_pings) / len(valid_pings), 2) if valid_pings else 0
+            m["msg"] = latest_beat.get("msg", "")
+            
+            total = len(beats)
+            up_count = sum(1 for h in beats if h.get("status") == 1)
+            m["uptime"] = round((up_count / total * 100) if total > 0 else 0, 2)
+
     def connect(self):
         self.sio = socketio.Client()
 
         @self.sio.event
         def connect():
             print(f"Connected to {UPTIME_KUMA_URL}")
+            # Automatically authenticate on connect/reconnect
+            self.authenticate()
 
         @self.sio.event
         def disconnect():
@@ -62,60 +82,50 @@ class UptimeKumaClient:
             for m_id_str, m in self.monitors_cache.items():
                 beats = self.heartbeats.get(m_id_str)
                 if beats:
-                    latest_beat = beats[-1]
-                    m["status"] = latest_beat.get("status")
-                    if latest_beat.get("time"):
-                        m["lastCheck"] = latest_beat["time"]
-                    
-                    valid_pings = [h.get("ping") for h in beats if h.get("ping") is not None]
-                    m["avgResponse"] = round(sum(valid_pings) / len(valid_pings), 2) if valid_pings else 0
-                    m["msg"] = latest_beat.get("msg", "")
-                    
-                    total = len(beats)
-                    up_count = sum(1 for h in beats if h.get("status") == 1)
-                    m["uptime"] = round((up_count / total * 100) if total > 0 else 0, 2)
+                    self._update_monitor_metrics(m_id_str, beats)
 
         @self.sio.on("notificationList")
         def on_notification_list(data):
             self.notifications_cache = data
 
         @self.sio.on("heartbeatList")
-        def on_heartbeat_list(data):
-            print(f"[heartbeatList] Received heartbeat list data")
-            if isinstance(data, list):
-                grouped = {}
-                for beat in data:
-                    mid = str(beat.get("monitorID", ""))
-                    if mid:
-                        if mid not in grouped:
-                            grouped[mid] = []
-                        grouped[mid].append(beat)
-                items = grouped.items()
-            elif isinstance(data, dict):
-                items = data.items()
-            else:
+        def on_heartbeat_list(*args):
+            if not args:
                 return
-
-            for m_id, beats in items:
-                m_id_str = str(m_id)
-                if not beats:
-                    continue
+            
+            print(f"[heartbeatList] Received heartbeat list data. Args count: {len(args)}")
+            
+            # Case 1: Multiple arguments (monitorID, heartbeatList, [overwrite])
+            if len(args) >= 2:
+                monitor_id = args[0]
+                beats = args[1]
+                if not isinstance(beats, list):
+                    return
+                m_id_str = str(monitor_id)
                 self.heartbeats[m_id_str] = beats[-500:]
-                
-                if m_id_str in self.monitors_cache:
-                    m = self.monitors_cache[m_id_str]
-                    latest_beat = beats[-1]
-                    m["status"] = latest_beat.get("status")
-                    if latest_beat.get("time"):
-                        m["lastCheck"] = latest_beat["time"]
-                    
-                    valid_pings = [h.get("ping") for h in beats if h.get("ping") is not None]
-                    m["avgResponse"] = round(sum(valid_pings) / len(valid_pings), 2) if valid_pings else 0
-                    m["msg"] = latest_beat.get("msg", "")
-                    
-                    total = len(beats)
-                    up_count = sum(1 for h in beats if h.get("status") == 1)
-                    m["uptime"] = round((up_count / total * 100) if total > 0 else 0, 2)
+                self._update_monitor_metrics(m_id_str, beats)
+            
+            # Case 2: Single argument (dict or list)
+            elif len(args) == 1:
+                data = args[0]
+                if isinstance(data, dict):
+                    for m_id, beats in data.items():
+                        m_id_str = str(m_id)
+                        if not isinstance(beats, list):
+                            continue
+                        self.heartbeats[m_id_str] = beats[-500:]
+                        self._update_monitor_metrics(m_id_str, beats)
+                elif isinstance(data, list):
+                    grouped = {}
+                    for beat in data:
+                        mid = str(beat.get("monitorID") or beat.get("monitor_id") or "")
+                        if mid:
+                            if mid not in grouped:
+                                grouped[mid] = []
+                            grouped[mid].append(beat)
+                    for m_id_str, beats in grouped.items():
+                        self.heartbeats[m_id_str] = beats[-500:]
+                        self._update_monitor_metrics(m_id_str, beats)
 
         @self.sio.on("heartbeat")
         def on_heartbeat(data):
@@ -137,21 +147,7 @@ class UptimeKumaClient:
                 if len(self.heartbeats[monitor_id]) > 500:
                     self.heartbeats[monitor_id] = self.heartbeats[monitor_id][-500:]
 
-            if monitor_id in self.monitors_cache:
-                m = self.monitors_cache[monitor_id]
-                m["status"] = data.get("status")
-                if data.get("time"):
-                    m["lastCheck"] = data["time"]
-                
-                beats = self.heartbeats[monitor_id]
-                valid_pings = [h.get("ping") for h in beats if h.get("ping") is not None]
-                m["avgResponse"] = round(sum(valid_pings) / len(valid_pings), 2) if valid_pings else 0
-                m["msg"] = data.get("msg", "")
-
-                total = len(beats)
-                up_count = sum(1 for h in beats if h.get("status") == 1)
-                m["uptime"] = round((up_count / total * 100) if total > 0 else 0, 2)
-
+            self._update_monitor_metrics(monitor_id, self.heartbeats[monitor_id])
             print(f"[heartbeat] Monitor {monitor_id}: status={data.get('status')} ping={data.get('ping')}ms")
 
         try:
@@ -286,10 +282,23 @@ connect_to_kuma()
 
 @app.route("/health")
 def health():
+    monitors_info = {}
+    for m_id, m in kuma_client.monitors_cache.items():
+        monitors_info[m_id] = {
+            "name": m.get("name"),
+            "status": m.get("status"),
+            "uptime": m.get("uptime"),
+            "avgResponse": m.get("avgResponse"),
+            "lastCheck": m.get("lastCheck"),
+            "has_heartbeats": m_id in kuma_client.heartbeats
+        }
     return jsonify({
         "status": "ok",
         "connected": kuma_client.sio.connected if kuma_client.sio else False,
         "authenticated": kuma_client.authenticated,
+        "monitors_count": len(kuma_client.monitors_cache),
+        "heartbeats_count": len(kuma_client.heartbeats),
+        "monitors": monitors_info
     })
 
 
