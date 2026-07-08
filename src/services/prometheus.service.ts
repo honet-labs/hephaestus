@@ -98,7 +98,7 @@ export class PrometheusService {
    * Helper to write file content over SFTP.
    * Falls back to sudo tee if SFTP write fails with permission denied.
    */
-  private async writeRemoteFile(conn: Client, remotePath: string, content: string): Promise<void> {
+  private async writeRemoteFile(conn: Client, remotePath: string, content: string, sshPassword?: string): Promise<void> {
     try {
       await new Promise<void>((resolve, reject) => {
         conn.sftp((err, sftp) => {
@@ -114,7 +114,6 @@ export class PrometheusService {
       if (msg.includes("permission denied") || sftpErr.code === 3) {
         console.log(`[PrometheusService] SFTP write denied on ${remotePath}, retrying with sudo cp...`);
         const tmpPath = `/tmp/prometheus-write-${Date.now()}.yml`;
-        // Write to /tmp first (always writable)
         await new Promise<void>((resolve, reject) => {
           conn.sftp((err, sftp) => {
             if (err) return reject(err);
@@ -124,11 +123,14 @@ export class PrometheusService {
             });
           });
         });
-        // Copy to target with sudo
-        await this.executeRemoteCommand(conn, `sudo cp "${tmpPath}" "${remotePath}"`);
+        const sudoPrefix = sshPassword ? `echo "${sshPassword.replace(/"/g, '\\"')}" | sudo -S ` : "sudo ";
+        await this.executeRemoteCommand(conn, `${sudoPrefix}cp "${tmpPath}" "${remotePath}"`);
         await this.executeRemoteCommand(conn, `rm -f "${tmpPath}"`);
         return;
       }
+      throw sftpErr;
+    }
+  }
       throw sftpErr;
     }
   }
@@ -353,7 +355,7 @@ scrape_configs:
       let conn;
       try {
         conn = await this.getSSHConnection(activeConfig);
-        await this.writeRemoteFile(conn, activeConfig.path, content);
+        await this.writeRemoteFile(conn, activeConfig.path, content, activeConfig.sshPassword);
         
         let reloaded = false;
         let reloadMsg = "";
