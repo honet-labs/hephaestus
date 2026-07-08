@@ -20,21 +20,31 @@ router.get("/overview", requireRole("ADMIN"), async (req, res) => {
       query("SELECT module, action, status, TO_CHAR(timestamp, 'HH24:MI:SS') AS time FROM activity_logs ORDER BY timestamp DESC LIMIT 10")
     ]);
 
-    const connections = [
-      ...grafanaCount.rows.map((r: any) => ({ name: "Grafana", type: "Grafana API", count: parseInt(r.count) })),
-      ...prometheusCount.rows.map((r: any) => ({ name: "Prometheus", type: "Prometheus SSH", count: parseInt(r.count) })),
-      ...uptimeCount.rows.map((r: any) => ({ name: "Uptime Kuma", type: "REST API", count: parseInt(r.count) }))
-    ];
+    const gCount = grafanaCount.rows[0] ? parseInt(grafanaCount.rows[0].count) : 0;
+    const pCount = prometheusCount.rows[0] ? parseInt(prometheusCount.rows[0].count) : 0;
+    const uCount = uptimeCount.rows[0] ? parseInt(uptimeCount.rows[0].count) : 0;
+
+    // Fetch actual connection lists
+    const [resG, resP, resU] = await Promise.all([
+      query("SELECT id, name, host, is_active FROM grafana_configs ORDER BY name"),
+      query("SELECT id, name, ssh_host AS \"sshHost\", path, is_active FROM prometheus_configs ORDER BY name"),
+      query("SELECT id, name, url, is_active FROM uptime_kuma_configs ORDER BY name")
+    ]);
 
     return res.status(200).json({
       success: true,
       data: {
-        connections: connections[0] || { name: "Grafana", type: "Grafana API", count: 0 },
-        totalConnections: (grafanaCount.rows[0] ? parseInt(grafanaCount.rows[0].count) : 0)
-          + (prometheusCount.rows[0] ? parseInt(prometheusCount.rows[0].count) : 0)
-          + (uptimeCount.rows[0] ? parseInt(uptimeCount.rows[0].count) : 0),
+        totalConnections: gCount + pCount + uCount,
+        grafanaCount: gCount,
+        prometheusCount: pCount,
+        uptimeCount: uCount,
         storage: { connected: dbCheck.rows.length > 0, engine: "PostgreSQL" },
-        recentActivity: recentActivity.rows
+        recentActivity: recentActivity.rows,
+        connections: [
+          ...resG.rows.map((r: any) => ({ name: r.name, type: "Grafana", endpoint: r.host, isActive: r.is_active })),
+          ...resP.rows.map((r: any) => ({ name: r.name, type: "Prometheus", endpoint: r.sshHost || r.path || "-", isActive: r.is_active })),
+          ...resU.rows.map((r: any) => ({ name: r.name, type: "Uptime Kuma", endpoint: r.url, isActive: r.is_active }))
+        ]
       }
     });
   } catch (err: any) {

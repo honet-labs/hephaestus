@@ -537,12 +537,11 @@ async function loadOverviewData() {
     if (!result.success) return;
     const d = result.data;
 
-    // Connection counts
-    document.getElementById('ov-grafana-count').textContent = d.connections?.name === 'Grafana' ? d.connections.count : 0;
-    document.getElementById('ov-prometheus-count').textContent = d.connections?.name === 'Prometheus' ? d.connections.count : 0;
-    document.getElementById('ov-uptime-count').textContent = d.connections?.name === 'Uptime Kuma' ? d.connections.count : 0;
+    // Stats cards
+    document.getElementById('ov-total-count').textContent = d.totalConnections || 0;
+    document.getElementById('ov-total-detail').textContent = `${d.grafanaCount || 0} Grafana, ${d.prometheusCount || 0} Prometheus, ${d.uptimeCount || 0} Uptime Kuma`;
 
-    // Storage status
+    // Storage
     const storageEl = document.getElementById('ov-storage-status');
     const storageDetail = document.getElementById('ov-storage-detail');
     if (d.storage?.connected) {
@@ -555,55 +554,24 @@ async function loadOverviewData() {
       storageDetail.textContent = 'Database unreachable';
     }
 
+    // Activity count
+    document.getElementById('ov-activity-count').textContent = d.recentActivity?.length || 0;
+
     // Connections list
     const tbody = document.getElementById('ov-connections-tbody');
-    if (d.totalConnections === 0) {
+    if (!d.connections || d.connections.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No connections configured</td></tr>';
     } else {
-      let html = '';
-      // Fetch actual connection lists
-      try {
-        const [resG, resP, resU] = await Promise.all([
-          fetch('/api/v1/settings/grafana/configs'),
-          fetch('/api/v1/prometheus/configs'),
-          fetch('/api/v1/uptime-kuma/configs')
-        ]);
-        const rG = await resG.json();
-        const rP = await resP.json();
-        const rU = await resU.json();
-
-        if (rG.success && Array.isArray(rG.data)) {
-          rG.data.forEach(c => {
-            html += `<tr>
-              <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
-              <td><span class="status-badge" style="background: rgba(88,166,255,0.1); color: #58a6ff;">GRAFANA</span></td>
-              <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.host)}</td>
-              <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
-            </tr>`;
-          });
-        }
-        if (rP.success && Array.isArray(rP.configs)) {
-          rP.configs.forEach(c => {
-            html += `<tr>
-              <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
-              <td><span class="status-badge" style="background: rgba(255,127,80,0.1); color: var(--prometheus-orange);">PROMETHEUS</span></td>
-              <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.sshHost || c.path || '-')}</td>
-              <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
-            </tr>`;
-          });
-        }
-        if (rU.success && Array.isArray(rU.data)) {
-          rU.data.forEach(c => {
-            html += `<tr>
-              <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
-              <td><span class="status-badge" style="background: rgba(86,211,100,0.1); color: #56d364;">UPTIME KUMA</span></td>
-              <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.url)}</td>
-              <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
-            </tr>`;
-          });
-        }
-      } catch (_) {}
-      tbody.innerHTML = html || '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No connections found</td></tr>';
+      tbody.innerHTML = d.connections.map(c => {
+        const typeColors = { 'Grafana': '#58a6ff', 'Prometheus': 'var(--prometheus-orange)', 'Uptime Kuma': '#56d364' };
+        const color = typeColors[c.type] || '#58a6ff';
+        return `<tr>
+          <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
+          <td><span class="status-badge" style="background: ${color}20; color: ${color};">${escapeHtml(c.type).toUpperCase()}</span></td>
+          <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.endpoint || '-')}</td>
+          <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
+        </tr>`;
+      }).join('');
     }
 
     // Activity logs
