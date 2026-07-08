@@ -6228,13 +6228,24 @@ async function populateGrafanaConnectionsForQueryPanel() {
   const select = document.getElementById('query-panel-config-id');
   if (!select) return;
   
-  // Fetch configurations list if empty
+  // Fetch Grafana configurations
   if (grafanaConfigs.length === 0) {
     try {
       const res = await fetch('/api/v1/settings/grafana/configs');
       const r = await res.json();
       if (r.success && Array.isArray(r.data)) {
         grafanaConfigs = r.data;
+      }
+    } catch (_) {}
+  }
+
+  // Fetch Prometheus configurations
+  if (prometheusConfigs.length === 0) {
+    try {
+      const res = await fetch('/api/v1/prometheus/configs');
+      const r = await res.json();
+      if (r.success && Array.isArray(r.configs)) {
+        prometheusConfigs = r.configs;
       }
     } catch (_) {}
   }
@@ -6245,7 +6256,10 @@ async function populateGrafanaConnectionsForQueryPanel() {
     <option value="active">Active Configuration (Default)</option>
   `;
   grafanaConfigs.forEach(c => {
-    select.innerHTML += `<option value="${c.id}">${escapeHtml(c.name)} (${c.host})</option>`;
+    select.innerHTML += `<option value="${c.id}">${escapeHtml(c.name)} (${escapeHtml(c.host)})</option>`;
+  });
+  prometheusConfigs.forEach(c => {
+    select.innerHTML += `<option value="prom-${c.id}">${escapeHtml(c.name)} (Prometheus)</option>`;
   });
   select.innerHTML += `<option value="uptime-kuma">Uptime Kuma (Monitor Status)</option>`;
 }
@@ -6280,6 +6294,14 @@ async function loadGrafanaDatasourcesForPanel() {
     } catch (error) {
       dsSelect.innerHTML = '<option value="">Failed to load monitors</option>';
     }
+    return;
+  }
+
+  // Handle Prometheus direct connection
+  if (configId.startsWith('prom-')) {
+    const promId = configId.replace('prom-', '');
+    const promProfile = prometheusConfigs.find(c => c.id === promId);
+    dsSelect.innerHTML = `<option value="prom-${promId}">${escapeHtml(promProfile ? promProfile.name : 'Prometheus')} (Direct)</option>`;
     return;
   }
   

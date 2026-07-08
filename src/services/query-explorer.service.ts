@@ -206,6 +206,11 @@ export class QueryExplorerService {
       return this.executeUptimeKumaQuery(datasourceUid, timeRangeFrom, timeRangeTo, columns);
     }
 
+    // Handle Direct Prometheus datasource
+    if (datasourceUid.startsWith("prom-")) {
+      return this.executeDirectPrometheusQuery(datasourceUid, timeRangeFrom, timeRangeTo, step, columns);
+    }
+
     const grafanaConfig = config.getGrafanaConfig();
     if (!grafanaConfig.isConfigured) {
       throw new Error("Grafana Integration is not configured. Please configure it in Settings first.");
@@ -343,9 +348,40 @@ export class QueryExplorerService {
   }
 
   /**
-   * Fetches Prometheus metrics metadata via Grafana datasource proxy
+   * Fetches Prometheus metrics metadata via Grafana datasource proxy or direct connection
    */
   public async getMetricsMetadata(datasourceUid: string, queryStr?: string): Promise<any> {
+    // Handle Direct Prometheus connection
+    if (datasourceUid.startsWith("prom-")) {
+      const configId = datasourceUid.replace("prom-", "");
+      const res = await query(`SELECT reload_url AS "reloadUrl" FROM prometheus_configs WHERE id = $1`, [configId]);
+      if (res.rows.length === 0) throw new Error("Prometheus config not found.");
+      const reloadUrl: string = res.rows[0].reloadUrl;
+      const promBaseUrl = reloadUrl.replace(/\/-\/reload\/?$/, "").replace(/\/$/, "");
+
+      const response = await axios.get(`${promBaseUrl}/api/v1/metadata`, { timeout: 10000 });
+      if (response.data && response.data.status === "success") {
+        const allMetadata = response.data.data;
+        const result: any[] = [];
+        const queryLower = queryStr ? queryStr.toLowerCase().trim() : "";
+        let count = 0;
+        for (const metricName of Object.keys(allMetadata)) {
+          if (queryLower && !metricName.toLowerCase().includes(queryLower)) continue;
+          const metaList = allMetadata[metricName];
+          if (Array.isArray(metaList) && metaList.length > 0) {
+            result.push({ metric: metricName, type: metaList[0].type || "unknown", help: metaList[0].help || "No description provided." });
+          } else {
+            result.push({ metric: metricName, type: "unknown", help: "No description provided." });
+          }
+          count++;
+          if (count >= 200) break;
+        }
+        result.sort((a, b) => a.metric.localeCompare(b.metric));
+        return result;
+      }
+      throw new Error("Prometheus returned non-success response status.");
+    }
+
     const grafanaConfig = config.getGrafanaConfig();
     if (!grafanaConfig.isConfigured) {
       throw new Error("Grafana Integration is not configured. Please configure it in Settings first.");
@@ -403,6 +439,84 @@ export class QueryExplorerService {
       console.error(`[QueryExplorer] Failed to fetch metrics metadata:`, err.message);
       throw new Error(`Failed to fetch metadata: ${err.message}`);
     }
+  }
+
+  private async executeDirectPrometheusQuery(
+    datasourceUid: string,
+    timeRangeFrom: string,
+    timeRangeTo: string,
+    step: string,
+    columns: QueryColumn[]
+  ): Promise<any> {
+    const configId = datasourceUid.replace("prom-", "");
+    
+    const res = await query(
+      `SELECT reload_url AS "reloadUrl" FROM prometheus_configs WHERE id = $1`, [configId]
+    );
+    if (res.rows.length === 0) throw new Error("Prometheus config not found.");
+
+    // Extract base URL from reloadUrl (http://host:9090/-/reload → http://host:9090)
+    const reloadUrl: string = res.rows[0].reloadUrl;
+    const promBaseUrl = reloadUrl.replace(/\/-\/reload\/?$/, "").replace(/\/$/, "");
+
+    const start = parseRelativeTime(timeRangeFrom);
+    const end = parseRelativeTime(timeRangeTo);
+
+    let stepInSeconds = parseStepToSeconds(step);
+    const maxDataPoints = 1000;
+    if ((end - start) / stepInSeconds > maxDataPoints) {
+      stepInSeconds = Math.ceil((end - start) / maxDataPoints);
+      step = formatSecondsToStep(stepInSeconds);
+    }
+
+    const dataStore: Record<string, Record<number, Record<string, any>>> = {};
+    const allTimestamps = new Set<number>();
+    const allIps = new Set<string>();
+
+    const queryPromises = columns.map(async (col) => {
+      try {
+        const response = await axios.get(`${promBaseUrl}/api/v1/query_range`, {
+          params: { query: col.query, start, end, step },
+          timeout: 15000
+        });
+
+        if (response.data && response.data.status === "success" && response.data.data.result) {
+          for (const result of response.data.data.result) {
+            const ip = result.metric?.instance || result.metric?.job || "unknown";
+            allIps.add(ip);
+            if (!dataStore[ip]) dataStore[ip] = {};
+
+            for (const [ts, val] of result.values) {
+              const tsNum = typeof ts === "number" ? Math.floor(ts) : parseInt(ts, 10);
+              if (!dataStore[ip][tsNum]) dataStore[ip][tsNum] = {};
+              dataStore[ip][tsNum][col.name] = parseFloat(val);
+              allTimestamps.add(tsNum);
+            }
+          }
+        }
+      } catch (colErr: any) {
+        console.error(`[QueryExplorer] Direct Prometheus query failed for column "${col.name}":`, colErr.message);
+      }
+    });
+
+    await Promise.all(queryPromises);
+
+    const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
+    const rows: any[] = [];
+
+    for (const ip of Array.from(allIps).sort()) {
+      for (const ts of sortedTimestamps) {
+        if (dataStore[ip] && dataStore[ip][ts]) {
+          const row: Record<string, any> = { ip, timestamp: ts, timestampStr: new Date(ts * 1000).toISOString() };
+          for (const col of columns) {
+            row[col.name] = dataStore[ip][ts][col.name] ?? null;
+          }
+          rows.push(row);
+        }
+      }
+    }
+
+    return { ips: Array.from(allIps), timestamps: sortedTimestamps, rows };
   }
 
   private async executeUptimeKumaQuery(
