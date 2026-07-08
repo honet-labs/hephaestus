@@ -15,6 +15,7 @@ import queryExplorerRoutes from "./routes/query-explorer.routes";
 import updateRoutes from "./routes/update.routes";
 import grokDebuggerRoutes from "./routes/grok-debugger.routes";
 import uptimeKumaRoutes from "./routes/uptime-kuma.routes";
+import prometheusRoutes from "./routes/prometheus.routes";
 
 const app = express();
 
@@ -113,6 +114,7 @@ app.use("/api/v1/query-explorer", queryExplorerRoutes);
 app.use("/api/v1/update", updateRoutes);
 app.use("/api/v1/grok-debugger", grokDebuggerRoutes);
 app.use("/api/v1/uptime-kuma", uptimeKumaRoutes);
+app.use("/api/v1/prometheus", prometheusRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
