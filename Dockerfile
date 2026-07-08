@@ -1,6 +1,5 @@
 # Stage 1: Build TypeScript to JavaScript
 FROM node:20-alpine AS builder
-RUN apk add --no-cache git
 WORKDIR /app
 
 # Copy dependency files first for efficient caching

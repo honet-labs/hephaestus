@@ -1,5 +1,66 @@
-import { UptimeKumaClient } from "uptime-kuma-rest-api";
+import axios, { AxiosInstance } from "axios";
 import pool from "../config/db";
+
+// Internal implementation of the UptimeKumaClient mapping the vbsampath/uptime-kuma-rest-api methods
+class UptimeKumaClient {
+  private axiosInstance: AxiosInstance;
+
+  public main = {
+    getEntryPage: async () => {
+      const res = await this.axiosInstance.get("/api/entry-page");
+      return res.data;
+    },
+    getStatus: async (slug: string) => {
+      const res = await this.axiosInstance.get(`/api/status-page/${slug}`);
+      return res.data;
+    },
+    getHeartbeat: async (slug: string) => {
+      const res = await this.axiosInstance.get(`/api/status-page/heartbeat/${slug}`);
+      return res.data;
+    }
+  };
+
+  public badges = {
+    getOverallStatusBadge: async (slug: string) => {
+      const res = await this.axiosInstance.get(`/api/status-page/${slug}/badge`);
+      return res.data;
+    },
+    getMonitorBadge: async (id: number) => {
+      const res = await this.axiosInstance.get(`/api/badge/${id}`);
+      return res.data;
+    },
+    getMonitorUptimeBadge: async (id: number, duration: string) => {
+      const res = await this.axiosInstance.get(`/api/badge/${id}/uptime/${duration}`);
+      return res.data;
+    },
+    getMonitorPingBadge: async (id: number, duration: string) => {
+      const res = await this.axiosInstance.get(`/api/badge/${id}/ping/${duration}`);
+      return res.data;
+    },
+    getMonitorCertificateExpiryBadge: async (id: number) => {
+      const res = await this.axiosInstance.get(`/api/badge/${id}/cert-expiry`);
+      return res.data;
+    }
+  };
+
+  constructor(options: { host: string; authentication?: { username?: string; password?: string } }) {
+    const host = options.host.replace(/\/$/, "");
+    const auth = options.authentication;
+
+    const headers: Record<string, string> = {};
+    if (auth && (auth.username || auth.password)) {
+      const credentials = `${auth.username || ""}:${auth.password || ""}`;
+      const encoded = Buffer.from(credentials).toString("base64");
+      headers["Authorization"] = `Basic ${encoded}`;
+    }
+
+    this.axiosInstance = axios.create({
+      baseURL: host,
+      timeout: 15000,
+      headers
+    });
+  }
+}
 
 interface UptimeKumaConfig {
   id: string;
