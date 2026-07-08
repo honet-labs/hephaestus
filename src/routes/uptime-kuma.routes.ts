@@ -123,7 +123,7 @@ router.get("/monitors/:id/stats", async (req: Request, res: Response) => {
 // Query endpoint for Query Explorer integration
 router.post("/query", requireRole("ADMIN"), async (req: Request, res: Response) => {
   try {
-    const { monitorId, metric, timeRangeFrom, timeRangeTo } = req.body;
+    const { monitorId } = req.body;
 
     const monitors = await uptimeKumaService.getMonitors();
 

@@ -131,9 +131,6 @@ export class PrometheusService {
       throw sftpErr;
     }
   }
-      throw sftpErr;
-    }
-  }
 
   /**
    * Helper to execute remote command
