@@ -12,14 +12,14 @@ import pool, { query } from "../config/db";
 const SSH_IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 export class PrometheusService {
-  private sshConnections = new Map<string, { client: Client; lastUsed: number }>();
+  private sshConnections = new Map<string, { client: Client; lastUsed: number; alive: boolean }>();
 
   private getSSHConnectionKey(activeConfig: any): string {
     return `${activeConfig.sshHost}:${activeConfig.sshPort || 22}:${activeConfig.sshUser}`;
   }
 
-  private isConnectionAlive(entry: { client: Client; lastUsed: number }): boolean {
-    return Date.now() - entry.lastUsed < SSH_IDLE_TIMEOUT_MS;
+  private isConnectionAlive(entry: { client: Client; lastUsed: number; alive: boolean }): boolean {
+    return entry.alive && Date.now() - entry.lastUsed < SSH_IDLE_TIMEOUT_MS;
   }
 
   public async cleanupIdleSshConnections(): Promise<void> {
@@ -31,6 +31,10 @@ export class PrometheusService {
     }
   }
 
+  private removeSSHConnection(key: string): void {
+    this.sshConnections.delete(key);
+  }
+
   private getSSHConnection(activeConfig: any): Promise<Client> {
     const key = this.getSSHConnectionKey(activeConfig);
     const cached = this.sshConnections.get(key);
@@ -39,13 +43,25 @@ export class PrometheusService {
       return Promise.resolve(cached.client);
     }
 
+    // Remove stale entry if exists
+    if (cached) {
+      try { cached.client.end(); } catch (_e) { /* ignore */ }
+      this.sshConnections.delete(key);
+    }
+
     return new Promise((resolve, reject) => {
       const conn = new Client();
       conn.on("ready", () => {
-        this.sshConnections.set(key, { client: conn, lastUsed: Date.now() });
+        this.sshConnections.set(key, { client: conn, lastUsed: Date.now(), alive: true });
         resolve(conn);
       })
-          .on("error", (err) => reject(err))
+          .on("error", (err) => {
+            this.sshConnections.delete(key);
+            reject(err);
+          })
+          .on("close", () => {
+            this.sshConnections.delete(key);
+          })
           .connect({
             host: activeConfig.sshHost,
             port: activeConfig.sshPort || 22,
