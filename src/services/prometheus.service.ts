@@ -35,6 +35,12 @@ export class PrometheusService {
     this.sshConnections.delete(key);
   }
 
+  private closeAndRemoveConnection(conn: Client, activeConfig: any): void {
+    const key = this.getSSHConnectionKey(activeConfig);
+    this.sshConnections.delete(key);
+    try { conn.end(); } catch (_e) { /* ignore */ }
+  }
+
   private getSSHConnection(activeConfig: any): Promise<Client> {
     const key = this.getSSHConnectionKey(activeConfig);
     const cached = this.sshConnections.get(key);
@@ -193,7 +199,7 @@ scrape_configs:
       } catch (err: any) {
         throw new Error(`SSH Read Failed: ${err.message || err}`);
       } finally {
-        if (conn) conn.end();
+        if (conn) this.closeAndRemoveConnection(conn, activeConfig);
       }
     }
   }
@@ -279,7 +285,7 @@ scrape_configs:
           error: `SSH Connection Validation Failed: ${err.message || err}`
         };
       } finally {
-        if (conn) conn.end();
+        if (conn) this.closeAndRemoveConnection(conn, activeConfig);
       }
     }
   }
@@ -351,7 +357,7 @@ scrape_configs:
           reloaded: false
         };
       } finally {
-        if (conn) conn.end();
+        if (conn) this.closeAndRemoveConnection(conn, activeConfig);
       }
     }
   }
@@ -383,7 +389,7 @@ scrape_configs:
         message: `SSH Connection failed: ${err.message || err}`
       };
     } finally {
-      if (conn) conn.end();
+      if (conn) this.closeAndRemoveConnection(conn, activeConfig);
     }
   }
   /**
