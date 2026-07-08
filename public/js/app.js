@@ -387,19 +387,26 @@ function initApp() {
   if (isAppInitialized) return;
   isAppInitialized = true;
 
-  // Set local diagnostic time
-  diagTime.textContent = new Date().toLocaleString();
-  
-  addLog('System', 'Initializing portal and modules...', 'INFO');
-  
-  // Setup hash navigation
+  // Setup hash navigation FIRST - critical for navigation to work
   handleHashNavigation();
   window.addEventListener('hashchange', handleHashNavigation);
 
+  try {
+    if (diagTime) diagTime.textContent = new Date().toLocaleString();
+  } catch (e) {
+    console.warn('[Init] Failed to set diag time:', e);
+  }
+  
+  addLog('System', 'Initializing portal and modules...', 'INFO');
+
   // Initialize unified connection fields visibility
-  toggleConnectionFields();
-  togglePrometheusModeFields();
-  toggleSSHAuthFields();
+  try {
+    toggleConnectionFields();
+    togglePrometheusModeFields();
+    toggleSSHAuthFields();
+  } catch (e) {
+    console.warn('[Init] Failed to init connection fields:', e);
+  }
 
   // Load configuration
   loadGrafanaSettings();
@@ -533,61 +540,72 @@ function toggleMonitoringSubmenu() {
 async function loadOverviewData() {
   try {
     const res = await fetch('/api/v1/settings/overview');
+    if (!res.ok) return;
     const result = await res.json();
     if (!result.success) return;
     const d = result.data;
+    if (!d) return;
 
     // Stats cards
-    document.getElementById('ov-total-count').textContent = d.totalConnections || 0;
-    document.getElementById('ov-total-detail').textContent = `${d.grafanaCount || 0} Grafana, ${d.prometheusCount || 0} Prometheus, ${d.uptimeCount || 0} Uptime Kuma`;
+    const ovTotalCount = document.getElementById('ov-total-count');
+    const ovTotalDetail = document.getElementById('ov-total-detail');
+    if (ovTotalCount) ovTotalCount.textContent = d.totalConnections || 0;
+    if (ovTotalDetail) ovTotalDetail.textContent = `${d.grafanaCount || 0} Grafana, ${d.prometheusCount || 0} Prometheus, ${d.uptimeCount || 0} Uptime Kuma`;
 
     // Storage
     const storageEl = document.getElementById('ov-storage-status');
     const storageDetail = document.getElementById('ov-storage-detail');
-    if (d.storage?.connected) {
-      storageEl.textContent = 'Connected';
-      storageEl.style.color = '#56d364';
-      storageDetail.textContent = d.storage.engine;
-    } else {
-      storageEl.textContent = 'Disconnected';
-      storageEl.style.color = '#ff7b72';
-      storageDetail.textContent = 'Database unreachable';
+    if (storageEl && storageDetail) {
+      if (d.storage?.connected) {
+        storageEl.textContent = 'Connected';
+        storageEl.style.color = '#56d364';
+        storageDetail.textContent = d.storage.engine;
+      } else {
+        storageEl.textContent = 'Disconnected';
+        storageEl.style.color = '#ff7b72';
+        storageDetail.textContent = 'Database unreachable';
+      }
     }
 
     // Activity count
-    document.getElementById('ov-activity-count').textContent = d.recentActivity?.length || 0;
+    const ovActivityCount = document.getElementById('ov-activity-count');
+    if (ovActivityCount) ovActivityCount.textContent = d.recentActivity?.length || 0;
 
     // Connections list
     const tbody = document.getElementById('ov-connections-tbody');
-    if (!d.connections || d.connections.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No connections configured</td></tr>';
-    } else {
-      tbody.innerHTML = d.connections.map(c => {
-        const typeColors = { 'Grafana': '#58a6ff', 'Prometheus': 'var(--prometheus-orange)', 'Uptime Kuma': '#56d364' };
-        const color = typeColors[c.type] || '#58a6ff';
-        return `<tr>
-          <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
-          <td><span class="status-badge" style="background: ${color}20; color: ${color};">${escapeHtml(c.type).toUpperCase()}</span></td>
-          <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.endpoint || '-')}</td>
-          <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
-        </tr>`;
-      }).join('');
+    if (tbody) {
+      if (!d.connections || d.connections.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No connections configured</td></tr>';
+      } else {
+        tbody.innerHTML = d.connections.map(c => {
+          const typeColors = { 'Grafana': '#58a6ff', 'Prometheus': 'var(--prometheus-orange)', 'Uptime Kuma': '#56d364' };
+          const color = typeColors[c.type] || '#58a6ff';
+          return `<tr>
+            <td style="font-weight: 500;">${escapeHtml(c.name)}</td>
+            <td><span class="status-badge" style="background: ${color}20; color: ${color};">${escapeHtml(c.type).toUpperCase()}</span></td>
+            <td class="font-mono" style="font-size: 11px;">${escapeHtml(c.endpoint || '-')}</td>
+            <td><span class="status-badge ${c.isActive ? 'status-success' : 'status-default'}">${c.isActive ? 'ACTIVE' : 'INACTIVE'}</span></td>
+          </tr>`;
+        }).join('');
+      }
     }
 
     // Activity logs
     const actTbody = document.getElementById('ov-activity-tbody');
-    if (d.recentActivity && d.recentActivity.length > 0) {
-      actTbody.innerHTML = d.recentActivity.map(a => {
-        const statusClass = a.status === 'SUCCESS' ? 'status-success' : a.status === 'ERROR' ? 'status-error' : 'status-default';
-        return `<tr>
-          <td class="font-mono" style="font-size: 11px;">${escapeHtml(a.time)}</td>
-          <td>${escapeHtml(a.module)}</td>
-          <td style="font-size: 11px;">${escapeHtml(a.action)}</td>
-          <td><span class="status-badge ${statusClass}">${escapeHtml(a.status)}</span></td>
-        </tr>`;
-      }).join('');
-    } else {
-      actTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No activity yet</td></tr>';
+    if (actTbody) {
+      if (d.recentActivity && d.recentActivity.length > 0) {
+        actTbody.innerHTML = d.recentActivity.map(a => {
+          const statusClass = a.status === 'SUCCESS' ? 'status-success' : a.status === 'ERROR' ? 'status-error' : 'status-default';
+          return `<tr>
+            <td class="font-mono" style="font-size: 11px;">${escapeHtml(a.time)}</td>
+            <td>${escapeHtml(a.module)}</td>
+            <td style="font-size: 11px;">${escapeHtml(a.action)}</td>
+            <td><span class="status-badge ${statusClass}">${escapeHtml(a.status)}</span></td>
+          </tr>`;
+        }).join('');
+      } else {
+        actTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No activity yet</td></tr>';
+      }
     }
   } catch (err) {
     console.error('[Overview] Failed to load:', err);
@@ -738,6 +756,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'Query Data Explorer';
     pageDesc.textContent = 'Fetch and align multi-column metrics grouped by server IP Address from Grafana datasources.';
     initQueryExplorerPage();
+  } else if (pageId === 'system-update') {
+    pageTitle.textContent = 'System Update';
+    pageDesc.textContent = 'Check for and apply portal updates from the remote repository.';
+    checkForUpdates();
   }
 }
 
@@ -5340,7 +5362,7 @@ function toggleSettingsSubmenu() {
       if (arrow) arrow.style.transform = 'rotate(180deg)';
       // Navigate to database if not already on a database/settings page
       const hash = window.location.hash.replace('#', '') || 'overview';
-      if (!['database', 'user-management', 'activity-logs'].includes(hash)) {
+      if (!['database', 'user-management', 'activity-logs', 'debugging', 'system-update'].includes(hash)) {
         navigate('database');
       }
     } else {
