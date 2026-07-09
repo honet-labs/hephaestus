@@ -23,7 +23,8 @@ window.fetch = async function(url, options) {
   try {
     const response = await originalFetch(url, options);
     // If unauthorized, redirect to login screen
-    if (response.status === 401 && !url.includes('/users/login') && !url.includes('/users/session')) {
+    // Skip auto-logout during app initialization to prevent session loss on refresh
+    if (response.status === 401 && !url.includes('/users/login') && !url.includes('/users/session') && !window._appInitializing) {
       if (window.diagLog) window.diagLog('Session expired or unauthorized (401). Redirecting to login...', '#ff7b72');
       showLoginScreen();
     }
@@ -386,6 +387,7 @@ let systemLogs = [];
 function initApp() {
   if (isAppInitialized) return;
   isAppInitialized = true;
+  window._appInitializing = true;
 
   // Setup hash navigation FIRST - critical for navigation to work
   handleHashNavigation();
@@ -434,6 +436,9 @@ function initApp() {
       filterActivityLogs();
     }));
   }
+
+  // Clear initialization flag after fire-and-forget API calls have time to complete
+  setTimeout(() => { window._appInitializing = false; }, 3000);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -561,9 +566,21 @@ function toggleRemoteConfigSubmenu() {
 async function loadOverviewData() {
   try {
     const res = await fetch('/api/v1/settings/overview');
-    if (!res.ok) return;
+    if (!res.ok) {
+      const tbody = document.getElementById('ov-connections-tbody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">Failed to load connections</td></tr>';
+      const actTbody = document.getElementById('ov-activity-tbody');
+      if (actTbody) actTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">Failed to load activity</td></tr>';
+      return;
+    }
     const result = await res.json();
-    if (!result.success) return;
+    if (!result.success) {
+      const tbody = document.getElementById('ov-connections-tbody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No data available</td></tr>';
+      const actTbody = document.getElementById('ov-activity-tbody');
+      if (actTbody) actTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No data available</td></tr>';
+      return;
+    }
     const d = result.data;
     if (!d) return;
 
@@ -630,6 +647,10 @@ async function loadOverviewData() {
     }
   } catch (err) {
     console.error('[Overview] Failed to load:', err);
+    const tbody = document.getElementById('ov-connections-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">Failed to load connections</td></tr>';
+    const actTbody = document.getElementById('ov-activity-tbody');
+    if (actTbody) actTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">Failed to load activity</td></tr>';
   }
 }
 
@@ -853,15 +874,16 @@ async function loadGrafanaConfigsList() {
 async function loadSettingsRegistry() {
   try {
     // 1. Fetch Grafana Active Setting to update Top Overview / Info panel
+    try {
     const resGrafana = await fetch(API_SETTINGS_URL);
     if (resGrafana.ok) {
       const result = await resGrafana.json();
       if (result.success && result.data) {
         const { id, name, host, datasourceUid, isConfigured, maskedToken } = result.data;
         defaultDatasourceUid = datasourceUid || 'bf5jy3ppyomwwd';
-        activeHost.textContent = name ? `${name} (${host})` : (host || 'None (No active config)');
-        activeDatasource.textContent = datasourceUid || 'bf5jy3ppyomwwd';
-        widgetDatasourceUid.textContent = datasourceUid || 'bf5jy3ppyomwwd';
+        if (activeHost) activeHost.textContent = name ? `${name} (${host})` : (host || 'None (No active config)');
+        if (activeDatasource) activeDatasource.textContent = datasourceUid || 'bf5jy3ppyomwwd';
+        if (widgetDatasourceUid) widgetDatasourceUid.textContent = datasourceUid || 'bf5jy3ppyomwwd';
         
         if (isConfigured) {
           activeState.className = 'status-badge status-configured';
@@ -887,6 +909,7 @@ async function loadSettingsRegistry() {
         }
       }
     }
+    } catch (_) {}
 
     // 2. Fetch Grafana Configs List AND Prometheus Configs List
     try {
@@ -1076,6 +1099,9 @@ async function loadSettingsRegistry() {
 
   } catch (error) {
     console.error('Error rendering registry:', error);
+    if (registryCardsContainer) {
+      registryCardsContainer.innerHTML = '<div style="text-align: center; padding: 24px; color: var(--text-muted);">Failed to load connections</div>';
+    }
   }
 }
 
