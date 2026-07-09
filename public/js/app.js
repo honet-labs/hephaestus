@@ -5,7 +5,7 @@ const API_SETTINGS_URL = '/api/v1/settings/grafana';
 // AUTHENTICATION & SESSION MANAGEMENT
 // ==========================================
 
-// Monkeypatch fetch to automatically append Bearer token and handle 401 redirection
+// Monkeypatch fetch to automatically append Bearer token
 const originalFetch = window.fetch;
 window.fetch = async function(url, options) {
   options = options || {};
@@ -20,18 +20,7 @@ window.fetch = async function(url, options) {
     }
   }
   
-  try {
-    const response = await originalFetch(url, options);
-    // If unauthorized, redirect to login screen
-    // Skip auto-logout during app initialization to prevent session loss on refresh
-    if (response.status === 401 && !url.includes('/users/login') && !url.includes('/users/session') && !window._appInitializing) {
-      if (window.diagLog) window.diagLog('Session expired or unauthorized (401). Redirecting to login...', '#ff7b72');
-      showLoginScreen();
-    }
-    return response;
-  } catch (err) {
-    throw err;
-  }
+  return originalFetch(url, options);
 };
 
 function showLoginScreen() {
@@ -387,7 +376,6 @@ let systemLogs = [];
 function initApp() {
   if (isAppInitialized) return;
   isAppInitialized = true;
-  window._appInitializing = true;
 
   // Setup hash navigation FIRST - critical for navigation to work
   handleHashNavigation();
@@ -436,9 +424,6 @@ function initApp() {
       filterActivityLogs();
     }));
   }
-
-  // Clear initialization flag after fire-and-forget API calls have time to complete
-  setTimeout(() => { window._appInitializing = false; }, 3000);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
