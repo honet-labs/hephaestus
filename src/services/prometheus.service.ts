@@ -333,20 +333,33 @@ scrape_configs:
       const configPath = activeConfig.path;
       await fsPromises.writeFile(configPath, content, "utf-8");
 
-      try {
-        await axios.post(activeConfig.reloadUrl, {}, { timeout: 3000 });
-        return {
-          success: true,
-          message: "Configuration saved and Prometheus reloaded successfully.",
-          reloaded: true
-        };
-      } catch (err: any) {
-        return {
-          success: true,
-          message: `Configuration saved successfully, but hot-reload failed: ${err.message || err}. (Ensure Prometheus has --web.enable-lifecycle flag enabled)`,
-          reloaded: false
-        };
+      // Try hot-reload via multiple possible endpoints
+      const reloadUrls = [
+        activeConfig.reloadUrl,
+        "http://localhost:9090/-/reload",
+        "http://host.docker.internal:9090/-/reload"
+      ].filter(Boolean) as string[];
+
+      let lastError = "";
+      for (const url of reloadUrls) {
+        try {
+          await axios.post(url, {}, { timeout: 5000 });
+          return {
+            success: true,
+            message: "Configuration saved and Prometheus reloaded successfully.",
+            reloaded: true
+          };
+        } catch (err: any) {
+          lastError = err.message || String(err);
+          console.log(`[PrometheusService] Hot-reload failed for ${url}: ${lastError}`);
+        }
       }
+
+      return {
+        success: true,
+        message: `Configuration saved, but hot-reload failed (${lastError}). Ensure Prometheus has --web.enable-lifecycle flag enabled, or use SSH mode to allow service restart.`,
+        reloaded: false
+      };
     } else {
       // Remote SSH Mode
       let conn;
