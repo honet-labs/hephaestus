@@ -371,9 +371,9 @@ const infraGrafanaDot = document.getElementById('infra-grafana-dot');
 const diagTime = document.getElementById('diag-time');
 
 // Alerts
-const feedbackAlert = document.getElementById('grafana-feedback');
-const feedbackTitle = document.getElementById('feedback-title');
-const feedbackDesc = document.getElementById('feedback-desc');
+const feedbackAlert = document.getElementById('global-toast');
+const feedbackTitle = document.getElementById('global-toast-title');
+const feedbackDesc = document.getElementById('global-toast-desc');
 
 let defaultDatasourceUid = 'bf5jy3ppyomwwd';
 
@@ -5116,8 +5116,7 @@ async function initDatabasePage() {
   const nameInput = document.getElementById('db-name');
   const sslInput = document.getElementById('db-ssl');
   
-  const feedback = document.getElementById('db-feedback');
-  if (feedback) feedback.classList.add('hidden');
+  hideFeedback();
   
   try {
     const res = await fetch('/api/v1/system/db-config');
@@ -5131,13 +5130,8 @@ async function initDatabasePage() {
         if (nameInput) nameInput.value = data.config.database || '';
         if (sslInput) sslInput.value = data.config.ssl ? 'true' : 'false';
 
-        if (!data.isConnected && feedback) {
-          const title = document.getElementById('db-feedback-title');
-          const desc = document.getElementById('db-feedback-desc');
-          feedback.className = 'alert alert-danger';
-          if (title) title.textContent = 'Database Offline / Error';
-          if (desc) desc.textContent = data.error || 'Server cannot connect to PostgreSQL with the current credentials.';
-          feedback.classList.remove('hidden');
+        if (!data.isConnected) {
+          showFeedback('danger', 'Database Offline / Error', data.error || 'Server cannot connect to PostgreSQL with the current credentials.');
         }
       }
     }
@@ -5159,13 +5153,10 @@ async function saveDbConfiguration(event) {
   
   const btn = document.getElementById('btn-save-db');
   const spinner = document.getElementById('spinner-save-db');
-  const feedback = document.getElementById('db-feedback');
-  const title = document.getElementById('db-feedback-title');
-  const desc = document.getElementById('db-feedback-desc');
   
+  hideFeedback();
   if (btn) btn.disabled = true;
   if (spinner) spinner.classList.remove('hidden');
-  if (feedback) feedback.classList.add('hidden');
   
   try {
     const response = await fetch('/api/v1/system/db-config', {
@@ -5175,42 +5166,30 @@ async function saveDbConfiguration(event) {
     });
     
     const data = await response.json();
-    if (feedback && title && desc) {
-      if (response.ok && data.success) {
-        feedback.className = 'alert alert-success';
-        title.textContent = 'Success';
-        desc.textContent = data.message || 'Database settings updated successfully!';
-        addLog('Database', 'Configuration updated and pool reloaded successfully.', 'SUCCESS');
-        
-        const storageEngine = document.getElementById('infra-storage-engine');
-        if (storageEngine) {
-          storageEngine.className = 'status-text-green';
-          storageEngine.textContent = 'PostgreSQL (Connected)';
-        }
-        
-        loadGrafanaSettings();
-      } else {
-        feedback.className = 'alert alert-danger';
-        title.textContent = 'Error';
-        desc.textContent = data.message || 'Failed to apply configuration.';
-        addLog('Database', `Update failed: ${data.message}`, 'ERROR');
-        
-        const storageEngine = document.getElementById('infra-storage-engine');
-        if (storageEngine) {
-          storageEngine.className = 'status-text-red';
-          storageEngine.textContent = 'PostgreSQL (Offline)';
-        }
+    if (response.ok && data.success) {
+      showFeedback('success', 'Success', data.message || 'Database settings updated successfully!');
+      addLog('Database', 'Configuration updated and pool reloaded successfully.', 'SUCCESS');
+      
+      const storageEngine = document.getElementById('infra-storage-engine');
+      if (storageEngine) {
+        storageEngine.className = 'status-text-green';
+        storageEngine.textContent = 'PostgreSQL (Connected)';
       }
-      feedback.classList.remove('hidden');
+      
+      loadGrafanaSettings();
+    } else {
+      showFeedback('danger', 'Error', data.message || 'Failed to apply configuration.');
+      addLog('Database', `Update failed: ${data.message}`, 'ERROR');
+      
+      const storageEngine = document.getElementById('infra-storage-engine');
+      if (storageEngine) {
+        storageEngine.className = 'status-text-red';
+        storageEngine.textContent = 'PostgreSQL (Offline)';
+      }
     }
   } catch (error) {
     console.error(error);
-    if (feedback && title && desc) {
-      feedback.className = 'alert alert-danger';
-      title.textContent = 'Error';
-      desc.textContent = error.message;
-      feedback.classList.remove('hidden');
-    }
+    showFeedback('danger', 'Error', error.message);
     addLog('Database', `Error: ${error.message}`, 'ERROR');
   } finally {
     if (btn) btn.disabled = false;
@@ -5230,13 +5209,10 @@ async function testDbConfiguration(event) {
 
   const btn = document.getElementById('btn-test-db');
   const spinner = document.getElementById('spinner-test-db');
-  const feedback = document.getElementById('db-feedback');
-  const title = document.getElementById('db-feedback-title');
-  const desc = document.getElementById('db-feedback-desc');
 
+  hideFeedback();
   if (btn) btn.disabled = true;
   if (spinner) spinner.classList.remove('hidden');
-  if (feedback) feedback.classList.add('hidden');
 
   try {
     const response = await fetch('/api/v1/system/db-config/test', {
@@ -5246,28 +5222,16 @@ async function testDbConfiguration(event) {
     });
 
     const data = await response.json();
-    if (feedback && title && desc) {
-      if (response.ok && data.success) {
-        feedback.className = 'alert alert-success';
-        title.textContent = 'Success';
-        desc.textContent = data.message || 'Database connection successful! Configuration is valid.';
-        addLog('Database', 'Test connection succeeded.', 'SUCCESS');
-      } else {
-        feedback.className = 'alert alert-danger';
-        title.textContent = 'Connection Error';
-        desc.textContent = data.message || 'Failed to connect to the database with the provided configuration.';
-        addLog('Database', `Test connection failed: ${data.message || data.error}`, 'ERROR');
-      }
-      feedback.classList.remove('hidden');
+    if (response.ok && data.success) {
+      showFeedback('success', 'Success', data.message || 'Database connection successful! Configuration is valid.');
+      addLog('Database', 'Test connection succeeded.', 'SUCCESS');
+    } else {
+      showFeedback('danger', 'Connection Error', data.message || 'Failed to connect to the database with the provided configuration.');
+      addLog('Database', `Test connection failed: ${data.message || data.error}`, 'ERROR');
     }
   } catch (error) {
     console.error(error);
-    if (feedback && title && desc) {
-      feedback.className = 'alert alert-danger';
-      title.textContent = 'Error';
-      desc.textContent = error.message;
-      feedback.classList.remove('hidden');
-    }
+    showFeedback('danger', 'Error', error.message);
     addLog('Database', `Test connection error: ${error.message}`, 'ERROR');
   } finally {
     if (btn) btn.disabled = false;

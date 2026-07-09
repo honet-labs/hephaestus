@@ -1,9 +1,10 @@
 import { Router, Request, Response } from "express";
 import { grokService } from "../services/grok.service";
+import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
-router.post("/test", async (req: Request, res: Response) => {
+router.post("/test", requireRole("ADMIN"), async (req: Request, res: Response) => {
   try {
     const { pattern, custom_patterns, log } = req.body;
 
@@ -19,9 +20,9 @@ router.post("/test", async (req: Request, res: Response) => {
   }
 });
 
-// Serve the Grok Debugger page
+// Serve the Grok Debugger page (requires auth via authMiddleware)
 router.get("/", (req: Request, res: Response) => {
-  res.sendFile("grok-debugger.html", { root: require("path").join(__dirname, "../../public") });
+  res.sendFile("grok-debugger.html", { root: require("path").join(__dirname, "../../views") });
 });
 
 export default router;
