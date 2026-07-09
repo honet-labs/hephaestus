@@ -14,6 +14,9 @@ const GRAFANA_CONFIGS_FILE = path.join(DB_DIR, "grafana_configs.json");
 const PROMETHEUS_CONFIGS_FILE = path.join(DB_DIR, "prometheus_configs.json");
 const MONITORING_VIEWS_FILE = path.join(DB_DIR, "monitoring_views.json");
 
+// SSL certificate validation: set NODE_TLS_REJECT_UNAUTHORIZED=0 only for dev/self-signed certs
+const SSL_REJECT_UNAUTHORIZED = process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0";
+
 export interface PrometheusConfigItem {
   id: string;
   name: string;
@@ -52,7 +55,7 @@ export const config = {
   allowedOrigins: (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:5173,http://localhost:16754,http://127.0.0.1:3000,http://127.0.0.1:5173,https://hephaestus-tools.honet.web.id")
     .split(",")
     .map(origin => origin.trim()),
-  
+  sslRejectUnauthorized: SSL_REJECT_UNAUTHORIZED,
   dbDir: DB_DIR,
   grafanaConfigFile: GRAFANA_CONFIG_FILE,
   grafanaConfigsFile: GRAFANA_CONFIGS_FILE,

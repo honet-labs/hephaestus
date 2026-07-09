@@ -20,6 +20,6 @@ router.delete("/mibs/:name", requireRole("ADMIN"), SnmpController.deleteMib);
 router.get("/registry", SnmpController.getRegistry);
 
 // Query an SNMP host (GET or WALK)
-router.post("/query", SnmpController.querySnmp);
+router.post("/query", requireRole("ADMIN"), SnmpController.querySnmp);
 
 export default router;

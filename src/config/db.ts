@@ -19,7 +19,7 @@ export function loadDbConfig() {
         user: saved.user || process.env.PGUSER || "postgres",
         password: saved.password || process.env.PGPASSWORD || "postgres",
         database: saved.database || process.env.PGDATABASE || "hephaestus",
-        ssl: saved.ssl ? { rejectUnauthorized: false } : undefined
+        ssl: saved.ssl ? { rejectUnauthorized: config.sslRejectUnauthorized } : undefined
       };
     } catch (err) {
       console.error("[DB] Failed to parse db_config.json, falling back to process.env", err);
@@ -32,7 +32,7 @@ export function loadDbConfig() {
     user: process.env.PGUSER || "postgres",
     password: process.env.PGPASSWORD || "postgres",
     database: process.env.PGDATABASE || "hephaestus",
-    ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
+    ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: config.sslRejectUnauthorized } : undefined,
   };
 }
 

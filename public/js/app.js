@@ -966,8 +966,6 @@ async function loadSettingsRegistry() {
 
     // Render Grafana connections
     grafanaConfigs.forEach(c => {
-      const escapedName = c.name.replace(/'/g, "\\'");
-      const escapedHost = c.host.replace(/'/g, "\\'");
 
       html += `
         <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
@@ -982,27 +980,27 @@ async function loadSettingsRegistry() {
             </div>
             <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
               <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${c.name}</span>
+                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${escapeHtml(c.name)}</span>
                 <span class="status-badge" style="background: rgba(25, 113, 194, 0.15); color: #38bdf8; border: 1px solid rgba(25, 113, 194, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">GRAFANA API</span>
                 ${c.isActive ? '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">ACTIVE</span>' : ''}
               </div>
               <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.host}</span>
+                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(c.host)}</span>
               </div>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
+            <span id="conn-status-${escapeHtml(c.id)}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
               CHECKING...
             </span>
-            <button type="button" class="btn btn-secondary" onclick="viewDatasources('${c.id}', '${escapedName}', '${escapedHost}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">View DS</button>
-            <button type="button" class="btn btn-secondary" onclick="pingServer('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
-            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateGrafanaConfig('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Activate</button>` : ''}
-            <button type="button" class="btn btn-secondary" onclick="editGrafanaConfigById('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+            <button type="button" class="btn btn-secondary" onclick="viewDatasources('${escapeAttr(c.id)}', '${escapeAttr(c.name)}', '${escapeAttr(c.host)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">View DS</button>
+            <button type="button" class="btn btn-secondary" onclick="pingServer('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
+            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateGrafanaConfig('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Activate</button>` : ''}
+            <button type="button" class="btn btn-secondary" onclick="editGrafanaConfigById('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
-            <button type="button" class="btn btn-secondary" onclick="deleteGrafanaConfig('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
+            <button type="button" class="btn btn-secondary" onclick="deleteGrafanaConfig('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -1024,27 +1022,27 @@ async function loadSettingsRegistry() {
             </div>
             <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
               <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${c.name}</span>
+                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${escapeHtml(c.name)}</span>
                 <span class="status-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">PROMETHEUS</span>
-                <span class="status-badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid var(--app-border); font-size: 9px; padding: 1px 4px; line-height: 1;">${c.mode.toUpperCase()}</span>
+                <span class="status-badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid var(--app-border); font-size: 9px; padding: 1px 4px; line-height: 1;">${escapeHtml(c.mode.toUpperCase())}</span>
                 ${c.isActive ? '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">ACTIVE</span>' : ''}
               </div>
               <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.path} ${c.mode === 'ssh' ? `(${c.sshHost})` : ''}</span>
+                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(c.path)} ${c.mode === 'ssh' ? `(${escapeHtml(c.sshHost)})` : ''}</span>
               </div>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
+            <span id="conn-status-${escapeHtml(c.id)}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
               CHECKING...
             </span>
-            <button type="button" class="btn btn-secondary" onclick="pingPrometheusServer('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
-            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activatePrometheusConfig('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Activate</button>` : ''}
-            <button type="button" class="btn btn-secondary" onclick="editPrometheusConfigById('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+            <button type="button" class="btn btn-secondary" onclick="pingPrometheusServer('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
+            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activatePrometheusConfig('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Activate</button>` : ''}
+            <button type="button" class="btn btn-secondary" onclick="editPrometheusConfigById('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
-            <button type="button" class="btn btn-secondary" onclick="deletePrometheusConfig('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
+            <button type="button" class="btn btn-secondary" onclick="deletePrometheusConfig('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -1054,7 +1052,6 @@ async function loadSettingsRegistry() {
 
     // Render Uptime Kuma connections
     uptimeKumaConfigs.forEach(c => {
-      const escapedName = c.name.replace(/'/g, "\\'");
 
       html += `
         <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
@@ -1067,24 +1064,24 @@ async function loadSettingsRegistry() {
             </div>
             <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
               <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${c.name}</span>
+                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${escapeHtml(c.name)}</span>
                 <span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">UPTIME KUMA</span>
               </div>
               <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.url}</span>
+                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(c.url)}</span>
               </div>
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-            <span id="conn-status-${c.id}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
+            <span id="conn-status-${escapeHtml(c.id)}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
               CHECKING...
             </span>
-            <button type="button" class="btn btn-secondary" onclick="pingUptimeKumaServer('${c.id}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
-            <button type="button" class="btn btn-secondary" onclick="editUptimeKumaConfigById('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+            <button type="button" class="btn btn-secondary" onclick="pingUptimeKumaServer('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
+            <button type="button" class="btn btn-secondary" onclick="editUptimeKumaConfigById('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
-            <button type="button" class="btn btn-secondary" onclick="deleteUptimeKumaConfig('${c.id}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
+            <button type="button" class="btn btn-secondary" onclick="deleteUptimeKumaConfig('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -4435,12 +4432,22 @@ function getEmbedUrl(url) {
 
 function escapeHtml(str) {
   if (!str) return '';
-  return str
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function escapeAttr(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 // ===== UPTIME MONITOR =====
@@ -4866,7 +4873,7 @@ function renderImportedMibs(mibs) {
       <td style="padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--text-white);">${escapeHtml(m.name)}</td>
       <td style="padding: 8px 10px; font-size: 11px; font-family: monospace;">${m.nodeCount}</td>
       <td style="padding: 8px 10px; font-size: 11px; text-align: center;">
-        <button class="btn btn-secondary" onclick="deleteImportedMib('${m.name}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: #ff7b72; color: #ff7b72;">Delete</button>
+        <button class="btn btn-secondary" onclick="deleteImportedMib('${escapeAttr(m.name)}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: #ff7b72; color: #ff7b72;">Delete</button>
       </td>
     </tr>
   `).join('');
@@ -4943,7 +4950,7 @@ function filterOidRegistry() {
   pageOids.forEach(oid => {
     const info = snmpOidRegistry[oid];
     html += `
-      <tr style="cursor: pointer;" onclick="inspectOid('${oid}')">
+      <tr style="cursor: pointer;" onclick="inspectOid('${escapeAttr(oid)}')">
         <td style="padding: 8px 10px; font-size: 11px;">
           <div style="font-weight: 600; color: var(--text-white);">${escapeHtml(info.name)}</div>
           <div style="font-family: monospace; font-size: 9.5px; color: var(--text-muted);">${oid}</div>
@@ -4952,7 +4959,7 @@ function filterOidRegistry() {
           <span class="status-badge" style="font-size: 9px; padding: 1px 4px; background: rgba(88,166,255,0.05); color: #58a6ff; border: 1px solid rgba(88,166,255,0.1);">${escapeHtml(info.mib)}</span>
         </td>
         <td style="padding: 8px 10px; font-size: 11px; text-align: center; vertical-align: middle;">
-          <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); selectOidForQuery('${oid}', '${info.name}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: var(--app-border);">Select</button>
+          <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); selectOidForQuery('${escapeAttr(oid)}', '${escapeAttr(info.name)}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: var(--app-border);">Select</button>
         </td>
       </tr>
     `;
@@ -5453,7 +5460,7 @@ async function loadUsersList() {
           const createdAt = u.createdAt || u.created_at;
           const deleteBtn = u.username === 'sysadmin' 
             ? `<button class="btn btn-secondary" disabled style="padding: 2px 8px; font-size: 10.5px; height: auto; opacity: 0.5; cursor: not-allowed; border-color: var(--app-border);">Delete</button>`
-            : `<button class="btn btn-secondary" onclick="deleteUserAccount('${u.id}', '${u.username}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Delete</button>`;
+            : `<button class="btn btn-secondary" onclick="deleteUserAccount('${escapeAttr(u.id)}', '${escapeAttr(u.username)}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Delete</button>`;
 
           return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -5464,7 +5471,7 @@ async function loadUsersList() {
               </td>
               <td style="padding: 10px 12px; font-size: 11px; font-family: monospace; color: var(--text-muted);">${createdAt ? new Date(createdAt).toLocaleString() : '-'}</td>
               <td style="padding: 10px 12px; font-size: 12px; text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
-                <button type="button" class="btn btn-secondary" onclick="openResetPasswordModal('${u.id}', '${u.username}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; border-color: var(--app-border);">Reset Password</button>
+                <button type="button" class="btn btn-secondary" onclick="openResetPasswordModal('${escapeAttr(u.id)}', '${escapeAttr(u.username)}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; border-color: var(--app-border);">Reset Password</button>
                 ${deleteBtn}
               </td>
             </tr>
@@ -5475,7 +5482,7 @@ async function loadUsersList() {
       tbody.innerHTML = `
         <tr>
           <td colspan="5" style="text-align: center; color: #ff7b72; padding: 20px;">
-            Failed to load users: ${data.message || data.error}
+            Failed to load users: ${escapeHtml(data.message || data.error)}
           </td>
         </tr>
       `;
@@ -5484,7 +5491,7 @@ async function loadUsersList() {
     tbody.innerHTML = `
       <tr>
         <td colspan="5" style="text-align: center; color: #ff7b72; padding: 20px;">
-          Failed to fetch users from backend: ${error.message}
+          Failed to fetch users from backend: ${escapeHtml(error.message)}
         </td>
       </tr>
     `;

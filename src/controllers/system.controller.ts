@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { isDbConnected, dbConnectionError, setupPool, initDb, loadDbConfig, ensureDatabaseExists, updateEnvFile, saveDbConfigToFile, logActivity } from "../config/db";
+import config from "../config/env";
 
 function maskPassword(pwd: string): string {
   if (!pwd) return "";
@@ -68,7 +69,7 @@ export class SystemController {
         user: user.trim(),
         password: targetPassword,
         database: database.trim(),
-        ssl: ssl === true || ssl === "true" ? { rejectUnauthorized: false } : undefined
+        ssl: ssl === true || ssl === "true" ? { rejectUnauthorized: config.sslRejectUnauthorized } : undefined
       };
 
       // 1. Setup new Pool and test connection
@@ -149,7 +150,7 @@ export class SystemController {
         user: user.trim(),
         password: targetPassword,
         database: database.trim(),
-        ssl: ssl === true || ssl === "true" ? { rejectUnauthorized: false } : undefined
+        ssl: ssl === true || ssl === "true" ? { rejectUnauthorized: config.sslRejectUnauthorized } : undefined
       };
 
       const { Pool } = require("pg");

@@ -34,12 +34,12 @@ router.delete("/panels/:id", requireRole("ADMIN"), (req, res) => queryExplorerCo
    * @route   POST /api/v1/query-explorer/panels/:id/query
    * @desc    Execute query for a saved panel
    */
-router.post("/panels/:id/query", (req, res) => queryExplorerController.executeQueryForPanel(req, res));
+router.post("/panels/:id/query", requireRole("ADMIN"), (req, res) => queryExplorerController.executeQueryForPanel(req, res));
 
 /**
    * @route   POST /api/v1/query-explorer/query-test
    * @desc    Test query configuration
    */
-router.post("/query-test", (req, res) => queryExplorerController.testQuery(req, res));
+router.post("/query-test", requireRole("ADMIN"), (req, res) => queryExplorerController.testQuery(req, res));
 
 export default router;

@@ -11,6 +11,22 @@ import pool, { query } from "../config/db";
 
 const SSH_IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
+/**
+ * Escape a string for safe use inside double-quoted shell context.
+ * Prevents command injection via shell metacharacters.
+ */
+function shellEscape(s: string): string {
+  return s
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\$/g, "\\$")
+    .replace(/`/g, "\\`")
+    .replace(/!/g, "\\!")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t");
+}
+
 export class PrometheusService {
   private sshConnections = new Map<string, { client: Client; lastUsed: number; alive: boolean }>();
 
@@ -123,7 +139,7 @@ export class PrometheusService {
             });
           });
         });
-        const sudoPrefix = sshPassword ? `echo "${sshPassword.replace(/"/g, '\\"')}" | sudo -S ` : "sudo ";
+        const sudoPrefix = sshPassword ? `echo "${shellEscape(sshPassword)}" | sudo -S ` : "sudo ";
         await this.executeRemoteCommand(conn, `${sudoPrefix}cp "${tmpPath}" "${remotePath}"`);
         await this.executeRemoteCommand(conn, `rm -f "${tmpPath}"`);
         return;
@@ -369,7 +385,7 @@ scrape_configs:
         
         let reloaded = false;
         let reloadMsg = "";
-        const sudoPrefix = activeConfig.sshPassword ? `echo "${activeConfig.sshPassword.replace(/"/g, '\\"')}" | sudo -S ` : "sudo ";
+        const sudoPrefix = activeConfig.sshPassword ? `echo "${shellEscape(activeConfig.sshPassword)}" | sudo -S ` : "sudo ";
 
         // 1. Try hot-reload first
         try {

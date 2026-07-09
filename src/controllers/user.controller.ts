@@ -58,6 +58,17 @@ export class UserController {
       const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
       const targetRole = role || "operator";
 
+      // Validate role: only "ADMIN" or "operator" allowed
+      const allowedRoles = ["ADMIN", "operator"];
+      if (!allowedRoles.includes(targetRole)) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: `Invalid role. Allowed roles: ${allowedRoles.join(", ")}`
+        });
+        return;
+      }
+
       const insertResult = await query(
         `INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id`,
         [username.trim(), email.trim(), passwordHash, targetRole]

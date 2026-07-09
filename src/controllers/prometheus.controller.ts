@@ -138,6 +138,16 @@ export class PrometheusController {
         });
       }
 
+      // Validate path: reject directory traversal attempts
+      const normalizedPath = path.posix.normalize(profile.path);
+      if (normalizedPath.includes("..")) {
+        return res.status(400).json({
+          success: false,
+          error: "Bad Request",
+          message: "Invalid path: directory traversal (..) is not allowed."
+        });
+      }
+
       const item = await prometheusService.saveConfigProfile(profile);
       await logActivity("Prometheus Settings", "Save Profile", `Saved/updated Prometheus profile "${profile.name}" (Mode: ${profile.mode}, Path: ${profile.path})`, "SUCCESS");
       return res.status(200).json({
@@ -300,6 +310,16 @@ export class PrometheusController {
           success: false,
           error: "Bad Request",
           message: "Request body must contain 'mode' and 'path'."
+        });
+      }
+
+      // Validate path: reject directory traversal attempts
+      const normalizedPath = path.posix.normalize(profile.path);
+      if (normalizedPath.includes("..")) {
+        return res.status(400).json({
+          success: false,
+          error: "Bad Request",
+          message: "Invalid path: directory traversal (..) is not allowed."
         });
       }
 

@@ -86,7 +86,7 @@ router.delete("/configs/:id", requireRole("ADMIN"), async (req: Request, res: Re
 });
 
 // List monitors
-router.get("/monitors", async (req: Request, res: Response) => {
+router.get("/monitors", requireRole("ADMIN"), async (req: Request, res: Response) => {
   try {
     const { group, type, status } = req.query;
     const monitors = await uptimeKumaService.getMonitors({
@@ -101,7 +101,7 @@ router.get("/monitors", async (req: Request, res: Response) => {
 });
 
 // Get single monitor
-router.get("/monitors/:id", async (req: Request, res: Response) => {
+router.get("/monitors/:id", requireRole("ADMIN"), async (req: Request, res: Response) => {
   try {
     const monitor = await uptimeKumaService.getMonitorById(parseInt(req.params.id, 10));
     res.status(200).json({ success: true, data: monitor });
@@ -111,7 +111,7 @@ router.get("/monitors/:id", async (req: Request, res: Response) => {
 });
 
 // Get monitor stats
-router.get("/monitors/:id/stats", async (req: Request, res: Response) => {
+router.get("/monitors/:id/stats", requireRole("ADMIN"), async (req: Request, res: Response) => {
   try {
     const stats = await uptimeKumaService.getMonitorStats(parseInt(req.params.id, 10));
     res.status(200).json({ success: true, data: stats });
