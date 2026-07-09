@@ -20,9 +20,4 @@ router.post("/test", requireRole("ADMIN"), async (req: Request, res: Response) =
   }
 });
 
-// Serve the Grok Debugger page (requires auth via authMiddleware)
-router.get("/", (req: Request, res: Response) => {
-  res.sendFile("grok-debugger.html", { root: require("path").join(__dirname, "../../views") });
-});
-
 export default router;

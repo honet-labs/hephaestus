@@ -105,6 +105,11 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
+// Grok Debugger page (no auth middleware - page verifies session via JS)
+app.get("/grok-debugger", (req: Request, res: Response) => {
+  res.sendFile("grok-debugger.html", { root: require("path").join(__dirname, "../views") });
+});
+
 import { authMiddleware } from "./middleware/auth.middleware";
 import setupRoutes from "./routes/setup.routes";
 

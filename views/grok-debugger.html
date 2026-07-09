@@ -190,6 +190,27 @@
     </div>
 
     <script>
+        // Verify session on load
+        (async function() {
+            const token = localStorage.getItem('hephaestus_session_token');
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+            try {
+                const res = await fetch('/api/v1/users/session', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) {
+                    window.location.href = '/';
+                    return;
+                }
+            } catch (e) {
+                window.location.href = '/';
+                return;
+            }
+        })();
+
         const splitter = document.getElementById('drag-splitter');
         const leftPanel = document.getElementById('left-panel');
         const rightPanel = document.getElementById('right-panel');
