@@ -169,7 +169,6 @@
             </span>
             <div>
               <div class="menu-item-title">Overview</div>
-              <div class="menu-item-sub">Grafana status & metrics</div>
             </div>
           </a>
           <a href="#settings" id="menu-settings" class="menu-item">
@@ -178,7 +177,6 @@
             </span>
             <div>
               <div class="menu-item-title">Connections</div>
-              <div class="menu-item-sub">API & server endpoints</div>
             </div>
           </a>
           <a href="#diagnostics" id="menu-diagnostics" class="menu-item">
@@ -187,7 +185,6 @@
             </span>
             <div>
               <div class="menu-item-title">System Diagnostics</div>
-              <div class="menu-item-sub">API endpoints & health</div>
             </div>
           </a>
           <!-- Monitoring Parent Menu -->
@@ -198,7 +195,6 @@
               </span>
               <div style="flex-grow: 1;">
                 <div class="menu-item-title">Monitoring</div>
-                <div class="menu-item-sub">Dashboards & uptime</div>
               </div>
               <span class="menu-arrow" id="menu-monitoring-arrow" style="transition: transform 0.2s; display: flex; align-items: center; color: var(--text-muted);">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -217,6 +213,22 @@
                   <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Uptime Monitor</div>
                 </div>
               </a>
+            </div>
+          </div>
+          <!-- Remote Config Parent Menu -->
+          <div class="menu-item-group" style="display: flex; flex-direction: column;">
+            <a href="javascript:void(0)" id="menu-remote-config-parent" class="menu-item" onclick="toggleRemoteConfigSubmenu()" style="cursor: pointer;">
+              <span class="menu-item-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></circle><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+              </span>
+              <div style="flex-grow: 1;">
+                <div class="menu-item-title">Remote Config</div>
+              </div>
+              <span class="menu-arrow" id="menu-remote-config-arrow" style="transition: transform 0.2s; display: flex; align-items: center; color: var(--text-muted);">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </a>
+            <div id="remote-config-submenu" class="submenu-list hidden" style="padding-left: 20px; display: none; flex-direction: column; gap: 2px; margin-top: 2px;">
               <a href="#prometheus-config" id="menu-prometheus-config" class="menu-item" style="padding: 6px 16px; border-radius: 4px;" onclick="navigate('prometheus-config'); return false;">
                 <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
                 <div>
@@ -231,7 +243,6 @@
             </span>
             <div>
               <div class="menu-item-title">Query Data Explorer</div>
-              <div class="menu-item-sub">Time-series data panels</div>
             </div>
           </a>
           <a href="/grok-debugger.html" target="_blank" class="menu-item">
@@ -240,7 +251,6 @@
             </span>
             <div>
               <div class="menu-item-title">Grok Debugger</div>
-              <div class="menu-item-sub">Test grok patterns</div>
             </div>
           </a>
           <!-- SNMP Explorer Parent Menu -->
@@ -251,7 +261,6 @@
               </span>
               <div style="flex-grow: 1;">
                 <div class="menu-item-title">SNMP Explorer</div>
-                <div class="menu-item-sub">Scan & browse OID/MIBs</div>
               </div>
               <span class="menu-arrow" id="menu-snmp-arrow" style="transition: transform 0.2s; display: flex; align-items: center; color: var(--text-muted);">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -286,7 +295,6 @@
               </span>
               <div style="flex-grow: 1;">
                 <div class="menu-item-title">System Settings</div>
-                <div class="menu-item-sub">Manage portal settings</div>
               </div>
               <span class="menu-arrow" id="menu-settings-arrow" style="transition: transform 0.2s; display: flex; align-items: center; color: var(--text-muted);">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -330,21 +338,6 @@
 
       <!-- Sidebar Footer -->
       <div class="sidebar-footer">
-        <span class="menu-section-title" style="padding: 0 0 4px 0;">INFRASTRUCTURE STATUS</span>
-        <div class="status-list">
-          <div class="status-row">
-            <span>Grafana API</span>
-            <span id="infra-grafana-dot" class="status-dot dot-yellow"></span>
-          </div>
-          <div class="status-row">
-            <span>Storage Engine</span>
-            <span id="infra-storage-engine" class="status-text-blue">PostgreSQL</span>
-          </div>
-          <div class="status-row">
-            <span>Security Mode</span>
-            <span class="status-text-green">ENFORCED</span>
-          </div>
-        </div>
 
         <div class="user-profile" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -2262,6 +2255,6 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
-  <script src="js/app.js?v=2.3.1"></script>
+  <script src="js/app.js?v=2.4.0"></script>
 </body>
 </html>

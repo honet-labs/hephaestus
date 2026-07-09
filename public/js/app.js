@@ -526,8 +526,29 @@ function toggleMonitoringSubmenu() {
       submenu.style.display = 'flex';
       if (arrow) arrow.style.transform = 'rotate(180deg)';
       const hash = window.location.hash.replace('#', '') || 'overview';
-      if (!['monitoring', 'uptime-monitor', 'prometheus-config'].includes(hash)) {
+      if (!['monitoring', 'uptime-monitor'].includes(hash)) {
         navigate('monitoring');
+      }
+    } else {
+      submenu.classList.add('hidden');
+      submenu.style.display = 'none';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
+function toggleRemoteConfigSubmenu() {
+  const submenu = document.getElementById('remote-config-submenu');
+  const arrow = document.getElementById('menu-remote-config-arrow');
+  if (submenu) {
+    const isHidden = submenu.classList.contains('hidden') || submenu.style.display === 'none';
+    if (isHidden) {
+      submenu.classList.remove('hidden');
+      submenu.style.display = 'flex';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+      const hash = window.location.hash.replace('#', '') || 'overview';
+      if (!['prometheus-config'].includes(hash)) {
+        navigate('prometheus-config');
       }
     } else {
       submenu.classList.add('hidden');
@@ -648,7 +669,7 @@ function showPage(pageId) {
     if (arrow) arrow.style.transform = 'rotate(0deg)';
   }
 
-  const monitoringPages = ['monitoring', 'uptime-monitor', 'prometheus-config'];
+  const monitoringPages = ['monitoring', 'uptime-monitor'];
   const isMonitoringPage = monitoringPages.includes(pageId);
   const monSubmenu = document.getElementById('monitoring-submenu');
   const monParentMenu = document.getElementById('menu-monitoring-parent');
@@ -668,6 +689,28 @@ function showPage(pageId) {
     }
     if (monParentMenu) monParentMenu.classList.remove('active');
     if (monArrow) monArrow.style.transform = 'rotate(0deg)';
+  }
+
+  const remoteConfigPages = ['prometheus-config'];
+  const isRemoteConfigPage = remoteConfigPages.includes(pageId);
+  const rcSubmenu = document.getElementById('remote-config-submenu');
+  const rcParentMenu = document.getElementById('menu-remote-config-parent');
+  const rcArrow = document.getElementById('menu-remote-config-arrow');
+
+  if (isRemoteConfigPage) {
+    if (rcSubmenu) {
+      rcSubmenu.classList.remove('hidden');
+      rcSubmenu.style.display = 'flex';
+    }
+    if (rcParentMenu) rcParentMenu.classList.add('active');
+    if (rcArrow) rcArrow.style.transform = 'rotate(180deg)';
+  } else {
+    if (rcSubmenu) {
+      rcSubmenu.classList.add('hidden');
+      rcSubmenu.style.display = 'none';
+    }
+    if (rcParentMenu) rcParentMenu.classList.remove('active');
+    if (rcArrow) rcArrow.style.transform = 'rotate(0deg)';
   }
 
   const settingsPages = ['database', 'user-management', 'activity-logs', 'debugging', 'system-update'];
