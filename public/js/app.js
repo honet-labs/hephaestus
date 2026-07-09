@@ -250,25 +250,50 @@ window.handleLogout = async function() {
 
 async function checkSession() {
   const token = localStorage.getItem('hephaestus_session_token');
+  console.log('[Session] Token from localStorage:', token ? `exists (${token.length} chars)` : 'MISSING');
   if (!token) {
     showLoginScreen();
     return;
   }
   
-  try {
-    const res = await originalFetch('/api/v1/users/session', {
-      headers: {
-        'Authorization': `Bearer ${token}`
+  const MAX_RETRIES = 2;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[Session] Attempt ${attempt}/${MAX_RETRIES}: calling /api/v1/users/session`);
+      const res = await originalFetch('/api/v1/users/session', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      console.log(`[Session] Response status: ${res.status}`);
+      const data = await res.json();
+      console.log('[Session] Response data:', JSON.stringify(data));
+      if (res.ok && data.success) {
+        console.log('[Session] Valid session, showing main app');
+        showMainApp(data.user);
+        return;
       }
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      showMainApp(data.user);
-    } else {
+      if (res.status === 401) {
+        console.log('[Session] 401 Unauthorized - token expired or invalid');
+        showLoginScreen();
+        return;
+      }
+      console.log(`[Session] Non-401 error (${res.status}), retrying...`);
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 500 * attempt));
+        continue;
+      }
       showLoginScreen();
+      return;
+    } catch (err) {
+      console.error(`[Session] Network error on attempt ${attempt}:`, err.message || err);
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 500 * attempt));
+        continue;
+      }
+      showLoginScreen();
+      return;
     }
-  } catch (_) {
-    showLoginScreen();
   }
 }
 
@@ -361,7 +386,7 @@ function debounce(fn, delay = 300) {
 }
 
 
-const logsTbody = document.getElementById('logs-tbody');
+const logsTbody = document.getElementById('activity-logs-tbody');
 
 // Dynamic Datasources Panel elements
 const datasourcesPanel = document.getElementById('datasources-panel');
@@ -844,7 +869,7 @@ function renderLogs() {
       </tr>
     `;
   });
-  logsTbody.innerHTML = html;
+  if (logsTbody) logsTbody.innerHTML = html;
 }
 
 // 2. Load active configurations

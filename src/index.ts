@@ -69,6 +69,15 @@ app.set("trust proxy", 1);
 // 1c. Rate Limiting
 app.use("/api/v1", globalLimiter);
 
+// 1d. Prevent caching of API responses (critical for Cloudflare Tunnel)
+app.use("/api/v1", (_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  next();
+});
+
 // 2. Request parsing middlewares
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false }));

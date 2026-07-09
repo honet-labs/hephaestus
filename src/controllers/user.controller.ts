@@ -533,6 +533,7 @@ export class UserController {
   public async getSession(req: Request, res: Response): Promise<void> {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("[Session] No token provided");
       res.status(401).json({
         success: false,
         error: "Unauthorized",
@@ -553,6 +554,15 @@ export class UserController {
       );
 
       if (sessionRes.rowCount === 0) {
+        const existsRes = await query(
+          `SELECT user_id, expires_at FROM user_sessions WHERE token = $1`,
+          [tokenHash]
+        );
+        if (existsRes.rowCount! > 0) {
+          console.log(`[Session] Token found but expired. expires_at: ${existsRes.rows[0].expires_at}, now: ${new Date().toISOString()}`);
+        } else {
+          console.log(`[Session] Token not found in database (hash: ${tokenHash.substring(0, 8)}...)`);
+        }
         res.status(401).json({
           success: false,
           error: "Unauthorized",
@@ -561,6 +571,7 @@ export class UserController {
         return;
       }
 
+      console.log(`[Session] Valid session for user: ${sessionRes.rows[0].username}`);
       res.status(200).json({
         success: true,
         user: sessionRes.rows[0]
