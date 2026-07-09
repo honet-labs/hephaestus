@@ -286,9 +286,12 @@
             statusEl.textContent = 'Processing...';
 
             try {
+                const token = localStorage.getItem('hephaestus_session_token');
+                const headers = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = 'Bearer ' + token;
                 const res = await fetch('/api/v1/grok-debugger/test', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     body: JSON.stringify({ pattern, custom_patterns: custom, log })
                 });
                 const data = await res.json();
