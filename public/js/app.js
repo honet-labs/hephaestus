@@ -402,7 +402,7 @@ function initAppOnce() {
 }
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'dataprepper-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -656,7 +656,7 @@ function toggleRemoteConfigSubmenu() {
       submenu.style.display = 'flex';
       if (arrow) arrow.style.transform = 'rotate(180deg)';
       const hash = window.location.hash.replace('#', '') || 'overview';
-      if (!['prometheus-config'].includes(hash)) {
+      if (!['prometheus-config', 'dataprepper-config'].includes(hash)) {
         navigate('prometheus-config');
       }
     } else {
@@ -816,7 +816,7 @@ function showPage(pageId) {
     if (monArrow) monArrow.style.transform = 'rotate(0deg)';
   }
 
-  const remoteConfigPages = ['prometheus-config'];
+  const remoteConfigPages = ['prometheus-config', 'dataprepper-config'];
   const isRemoteConfigPage = remoteConfigPages.includes(pageId);
   const rcSubmenu = document.getElementById('remote-config-submenu');
   const rcParentMenu = document.getElementById('menu-remote-config-parent');
@@ -892,6 +892,10 @@ function showPage(pageId) {
     pageTitle.textContent = 'Prometheus Config';
     pageDesc.textContent = 'Edit and validate prometheus.yml configuration directly from the portal.';
     initPrometheusConfigPage();
+  } else if (pageId === 'dataprepper-config') {
+    pageTitle.textContent = 'Data Prepper Pipelines';
+    pageDesc.textContent = 'Edit and validate Data Prepper pipeline YAML files.';
+    initDpConfigPage();
   } else if (pageId === 'snmp-query') {
     pageTitle.textContent = 'SNMP Query Console';
     pageDesc.textContent = 'Perform real-time SNMP GET and WALK queries against target network agents and devices.';
@@ -8840,4 +8844,290 @@ async function resetPrometheusConfig() {
   }
   await loadPrometheusConfig(promConfigSelectedId);
   showPromConfigResult('Configuration reloaded from server.', 'info');
+}
+
+// ==================== DATA PREPPER PIPELINES ====================
+
+let dpConfigSelectedId = '';
+let dpConfigOriginalContent = '';
+let dpConfigModified = false;
+let dpConfigCm = null;
+let dpCurrentFilename = '';
+
+function initDpConfigPage() {
+  document.getElementById('dp-config-error').style.display = 'none';
+  document.getElementById('dp-config-loading').style.display = 'none';
+  document.getElementById('dp-config-info').style.display = 'none';
+  document.getElementById('dp-config-toolbar').style.display = 'none';
+  document.getElementById('dp-config-editor-wrapper').style.display = 'none';
+  document.getElementById('dp-config-result').style.display = 'none';
+  dpConfigSelectedId = '';
+  dpCurrentFilename = '';
+  loadDpConfigProfiles();
+}
+
+async function loadDpConfigProfiles() {
+  const select = document.getElementById('dp-config-profile-select');
+  select.innerHTML = '<option value="">Loading profiles...</option>';
+  try {
+    const res = await fetch('/api/v1/dataprepper/configs', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token') }
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to load');
+    const configs = data.data || [];
+    select.innerHTML = '';
+    if (configs.length === 0) {
+      select.innerHTML = '<option value="">No profiles configured</option>';
+      loadDpPipelineFiles();
+      return;
+    }
+    configs.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name + ' (' + c.mode.toUpperCase() + ')' + (c.isActive ? ' [ACTIVE]' : '');
+      if (c.isActive) opt.selected = true;
+      select.appendChild(opt);
+    });
+    dpConfigSelectedId = configs.find(c => c.isActive)?.id || configs[0]?.id || '';
+    const active = configs.find(c => c.isActive) || configs[0];
+    document.getElementById('dp-config-profile-mode').textContent = active ? active.mode.toUpperCase() : '';
+    loadDpPipelineFiles();
+  } catch (e) {
+    select.innerHTML = '<option value="">Failed to load profiles</option>';
+  }
+}
+
+function onDpConfigProfileChange() {
+  const select = document.getElementById('dp-config-profile-select');
+  dpConfigSelectedId = select.value;
+  const opt = select.options[select.selectedIndex];
+  document.getElementById('dp-config-profile-mode').textContent = opt ? (opt.textContent.includes('LOCAL') ? 'LOCAL' : opt.textContent.includes('SSH') ? 'SSH') : '';
+  loadDpPipelineFiles();
+}
+
+async function loadDpPipelineFiles() {
+  const fileSelect = document.getElementById('dp-file-select');
+  const loadingEl = document.getElementById('dp-config-loading');
+  const errorEl = document.getElementById('dp-config-error');
+
+  fileSelect.innerHTML = '<option value="">Loading pipeline files...</option>';
+  loadingEl.style.display = 'flex';
+  errorEl.style.display = 'none';
+
+  try {
+    const url = dpConfigSelectedId ? '/api/v1/dataprepper/pipelines?configId=' + encodeURIComponent(dpConfigSelectedId) : '/api/v1/dataprepper/pipelines';
+    const res = await fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token') }
+    });
+    const data = await res.json();
+    loadingEl.style.display = 'none';
+
+    if (!data.success) throw new Error(data.error || 'Failed to load');
+
+    const files = data.data?.files || [];
+    const dir = data.data?.dir || '/opt/data-prepper/pipelines';
+    document.getElementById('dp-config-dir').textContent = dir;
+    document.getElementById('dp-file-info').textContent = files.length + ' file(s) found';
+
+    fileSelect.innerHTML = '<option value="">Select a pipeline file...</option>';
+    files.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f;
+      fileSelect.appendChild(opt);
+    });
+
+    if (files.length === 0) {
+      document.getElementById('dp-config-info').style.display = 'flex';
+      document.getElementById('dp-config-toolbar').style.display = 'none';
+      document.getElementById('dp-config-editor-wrapper').style.display = 'none';
+    }
+  } catch (e) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    document.getElementById('dp-config-error-msg').textContent = e.message;
+    fileSelect.innerHTML = '<option value="">Failed to load files</option>';
+  }
+}
+
+function onDpFileChange() {
+  const fileSelect = document.getElementById('dp-file-select');
+  const filename = fileSelect.value;
+  if (!filename) {
+    document.getElementById('dp-config-toolbar').style.display = 'none';
+    document.getElementById('dp-config-editor-wrapper').style.display = 'none';
+    document.getElementById('dp-config-info').style.display = 'none';
+    return;
+  }
+  dpCurrentFilename = filename;
+  loadDpPipelineContent(filename);
+}
+
+async function loadDpPipelineContent(filename) {
+  const loadingEl = document.getElementById('dp-config-loading');
+  const errorEl = document.getElementById('dp-config-error');
+
+  loadingEl.style.display = 'flex';
+  errorEl.style.display = 'none';
+
+  try {
+    const url = '/api/v1/dataprepper/pipeline?filename=' + encodeURIComponent(filename) + (dpConfigSelectedId ? '&configId=' + encodeURIComponent(dpConfigSelectedId) : '');
+    const res = await fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token') }
+    });
+    const result = await res.json();
+    loadingEl.style.display = 'none';
+
+    if (!result.success) throw new Error(result.error || 'Failed to load');
+
+    document.getElementById('dp-config-filename').textContent = filename;
+    document.getElementById('dp-config-info').style.display = 'flex';
+    document.getElementById('dp-config-toolbar').style.display = 'flex';
+    document.getElementById('dp-config-editor-wrapper').style.display = 'block';
+
+    dpConfigOriginalContent = result.data?.content || '';
+    dpConfigModified = false;
+
+    initDpCodeMirrorEditor(dpConfigOriginalContent);
+    updateDpModifiedBadge();
+    document.getElementById('dp-config-status').textContent = 'Loaded';
+    document.getElementById('dp-config-status').style.color = '#10b981';
+    document.getElementById('dp-config-result').style.display = 'none';
+  } catch (e) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    document.getElementById('dp-config-error-msg').textContent = e.message;
+  }
+}
+
+function initDpCodeMirrorEditor(content) {
+  const textarea = document.getElementById('dp-config-editor');
+  if (typeof CodeMirror !== 'undefined') {
+    if (dpConfigCm) dpConfigCm.toTextArea();
+    dpConfigCm = CodeMirror.fromTextArea(textarea, {
+      mode: 'yaml',
+      theme: 'dracula',
+      lineNumbers: true,
+      lineWrapping: true,
+      tabSize: 2,
+      indentWithTabs: false,
+      autoCloseBrackets: true,
+      matchBrackets: true
+    });
+    dpConfigCm.setValue(content || '');
+    dpConfigCm.on('change', () => {
+      const current = dpConfigCm.getValue();
+      dpConfigModified = (current !== dpConfigOriginalContent);
+      updateDpModifiedBadge();
+    });
+    setTimeout(() => dpConfigCm.refresh(), 100);
+  } else {
+    textarea.value = content || '';
+    textarea.oninput = () => {
+      dpConfigModified = (textarea.value !== dpConfigOriginalContent);
+      updateDpModifiedBadge();
+    };
+  }
+}
+
+function updateDpModifiedBadge() {
+  const badge = document.getElementById('dp-config-modified');
+  if (badge) badge.style.display = dpConfigModified ? 'inline-block' : 'none';
+}
+
+async function validateDpPipeline() {
+  const content = dpConfigCm ? dpConfigCm.getValue() : document.getElementById('dp-config-editor').value;
+  const resultEl = document.getElementById('dp-config-result');
+  const badgeEl = document.getElementById('dp-config-validation-badge');
+
+  try {
+    const res = await fetch('/api/v1/dataprepper/pipeline/validate', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token'),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ content })
+    });
+    const data = await res.json();
+    if (data.success && data.data?.valid) {
+      const names = data.data.pipelineNames || [];
+      resultEl.style.display = 'block';
+      resultEl.style.background = 'rgba(16,185,129,0.1)';
+      resultEl.style.border = '1px solid rgba(16,185,129,0.3)';
+      resultEl.style.color = '#10b981';
+      resultEl.innerHTML = '<strong>Valid YAML</strong>' + (names.length ? ' — Pipelines: ' + names.map(n => '<code>' + escapeHtml(n) + '</code>').join(', ') : '');
+      badgeEl.style.display = 'inline-block';
+      badgeEl.style.background = 'rgba(16,185,129,0.15)';
+      badgeEl.style.color = '#10b981';
+      badgeEl.textContent = 'VALID';
+    } else {
+      resultEl.style.display = 'block';
+      resultEl.style.background = 'rgba(239,68,68,0.1)';
+      resultEl.style.border = '1px solid rgba(239,68,68,0.3)';
+      resultEl.style.color = '#ef4444';
+      resultEl.innerHTML = '<strong>Validation Failed:</strong> ' + escapeHtml(data.data?.error || 'Unknown error');
+      badgeEl.style.display = 'inline-block';
+      badgeEl.style.background = 'rgba(239,68,68,0.15)';
+      badgeEl.style.color = '#ef4444';
+      badgeEl.textContent = 'INVALID';
+    }
+  } catch (e) {
+    resultEl.style.display = 'block';
+    resultEl.style.background = 'rgba(239,68,68,0.1)';
+    resultEl.style.border = '1px solid rgba(239,68,68,0.3)';
+    resultEl.style.color = '#ef4444';
+    resultEl.innerHTML = 'Validate request failed: ' + escapeHtml(e.message);
+  }
+}
+
+async function saveDpPipeline() {
+  if (!dpCurrentFilename) return;
+  const content = dpConfigCm ? dpConfigCm.getValue() : document.getElementById('dp-config-editor').value;
+  const btn = document.querySelector('#dp-config-toolbar .btn-primary');
+  const resultEl = document.getElementById('dp-config-result');
+  const origText = btn.innerHTML;
+
+  btn.innerHTML = '<span class="spinner" style="margin-right: 4px;"></span> Saving...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/v1/dataprepper/pipeline', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token'),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ filename: dpCurrentFilename, content, configId: dpConfigSelectedId || undefined })
+    });
+    const data = await res.json();
+    if (data.success) {
+      dpConfigOriginalContent = content;
+      dpConfigModified = false;
+      updateDpModifiedBadge();
+      resultEl.style.display = 'block';
+      resultEl.style.background = 'rgba(16,185,129,0.1)';
+      resultEl.style.border = '1px solid rgba(16,185,129,0.3)';
+      resultEl.style.color = '#10b981';
+      resultEl.textContent = data.message || 'Pipeline file saved successfully.';
+      document.getElementById('dp-config-status').textContent = 'Saved';
+      document.getElementById('dp-config-status').style.color = '#10b981';
+    } else {
+      resultEl.style.display = 'block';
+      resultEl.style.background = 'rgba(239,68,68,0.1)';
+      resultEl.style.border = '1px solid rgba(239,68,68,0.3)';
+      resultEl.style.color = '#ef4444';
+      resultEl.innerHTML = '<strong>Save failed:</strong> ' + escapeHtml(data.message || data.error || 'Unknown error');
+    }
+  } catch (e) {
+    resultEl.style.display = 'block';
+    resultEl.style.background = 'rgba(239,68,68,0.1)';
+    resultEl.style.border = '1px solid rgba(239,68,68,0.3)';
+    resultEl.style.color = '#ef4444';
+    resultEl.innerHTML = 'Save request failed: ' + escapeHtml(e.message);
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
 }

@@ -424,6 +424,23 @@ export async function initDb() {
       password TEXT NOT NULL,
       is_active BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 13. DataPrepperConfigs - Data Prepper pipeline connection profiles
+    `CREATE TABLE IF NOT EXISTS dataprepper_configs (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      mode VARCHAR(10) NOT NULL DEFAULT 'local',
+      pipelines_dir TEXT NOT NULL DEFAULT '/opt/data-prepper/pipelines',
+      reload_url TEXT,
+      ssh_host VARCHAR(255),
+      ssh_port INTEGER DEFAULT 22,
+      ssh_user VARCHAR(255),
+      ssh_auth VARCHAR(20) DEFAULT 'password',
+      ssh_password TEXT,
+      ssh_key TEXT,
+      is_active BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
