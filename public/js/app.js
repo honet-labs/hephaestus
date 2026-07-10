@@ -9314,14 +9314,14 @@ function showNewDpFileModal() {
   const modal = document.getElementById('modal-new-dp-file');
   const input = document.getElementById('new-dp-filename');
   const errorEl = document.getElementById('new-dp-filename-error');
-  if (modal) modal.style.display = 'flex';
+  if (modal) modal.classList.add('active');
   if (input) { input.value = ''; input.focus(); }
   if (errorEl) errorEl.style.display = 'none';
 }
 
 function closeNewDpFileModal() {
   const modal = document.getElementById('modal-new-dp-file');
-  if (modal) modal.style.display = 'none';
+  if (modal) modal.classList.remove('active');
 }
 
 async function submitNewDpFile() {
