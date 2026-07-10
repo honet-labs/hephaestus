@@ -30,6 +30,9 @@
   --btn-primary-bg: #1971c2;
   --btn-primary-color: #ffffff;
   --btn-primary-hover: #1864ab;
+  --dp-select-bg: #161b22;
+  --dp-select-hover: #21262d;
+  --dp-select-border: #30363d;
 }
 
 body {
@@ -1049,5 +1052,19 @@ tr:hover td {
   border-left: 2px solid var(--prometheus-orange) !important;
   border-top-left-radius: 0 !important;
   border-bottom-left-radius: 0 !important;
+}
+
+#dp-file-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+#dp-file-dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+#dp-file-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+#dp-file-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
 }
 

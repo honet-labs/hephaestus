@@ -9231,12 +9231,48 @@ function onDpConfigProfileChange() {
   loadDpPipelineFiles();
 }
 
+let dpFileDropdownFiles = [];
+
+function toggleDpFileDropdown() {
+  const menu = document.getElementById('dp-file-dropdown-menu');
+  if (menu.style.display === 'none' || !menu.style.display) {
+    menu.style.display = 'block';
+    document.addEventListener('click', closeDpFileDropdownOutside);
+  } else {
+    menu.style.display = 'none';
+    document.removeEventListener('click', closeDpFileDropdownOutside);
+  }
+}
+
+function closeDpFileDropdownOutside(e) {
+  const dropdown = document.getElementById('dp-file-dropdown');
+  if (dropdown && !dropdown.contains(e.target)) {
+    document.getElementById('dp-file-dropdown-menu').style.display = 'none';
+    document.removeEventListener('click', closeDpFileDropdownOutside);
+  }
+}
+
+function selectDpFile(filename) {
+  dpCurrentFilename = filename;
+  document.getElementById('dp-file-dropdown-label').textContent = filename || 'Select a pipeline file...';
+  document.getElementById('dp-file-dropdown-menu').style.display = 'none';
+  document.removeEventListener('click', closeDpFileDropdownOutside);
+  if (filename) {
+    loadDpPipelineContent(filename);
+  } else {
+    document.getElementById('dp-config-toolbar').style.display = 'none';
+    document.getElementById('dp-config-editor-wrapper').style.display = 'none';
+    document.getElementById('dp-config-info').style.display = 'none';
+  }
+}
+
 async function loadDpPipelineFiles() {
-  const fileSelect = document.getElementById('dp-file-select');
+  const menu = document.getElementById('dp-file-dropdown-menu');
+  const label = document.getElementById('dp-file-dropdown-label');
   const loadingEl = document.getElementById('dp-config-loading');
   const errorEl = document.getElementById('dp-config-error');
 
-  fileSelect.innerHTML = '<option value="">Loading pipeline files...</option>';
+  label.textContent = 'Loading pipeline files...';
   loadingEl.style.display = 'flex';
   errorEl.style.display = 'none';
 
@@ -9254,13 +9290,24 @@ async function loadDpPipelineFiles() {
     const dir = data.data?.dir || '/opt/data-prepper/pipelines';
     document.getElementById('dp-config-dir').textContent = dir;
     document.getElementById('dp-file-info').textContent = files.length + ' file(s) found';
+    dpFileDropdownFiles = files;
 
-    fileSelect.innerHTML = '<option value="">Select a pipeline file...</option>';
+    label.textContent = 'Select a pipeline file...';
+    menu.innerHTML = '';
+
+    const defaultItem = document.createElement('div');
+    defaultItem.textContent = 'Select a pipeline file...';
+    defaultItem.style.cssText = 'padding: 8px 12px; color: #8b949e; font-size: 12px; cursor: default;';
+    menu.appendChild(defaultItem);
+
     files.forEach(f => {
-      const opt = document.createElement('option');
-      opt.value = f;
-      opt.textContent = f;
-      fileSelect.appendChild(opt);
+      const item = document.createElement('div');
+      item.textContent = f;
+      item.style.cssText = 'padding: 8px 12px; color: #e6edf3; font-size: 12px; cursor: pointer;';
+      item.onmouseenter = function() { this.style.background = '#21262d'; };
+      item.onmouseleave = function() { this.style.background = 'transparent'; };
+      item.onclick = function() { selectDpFile(f); };
+      menu.appendChild(item);
     });
 
     if (files.length === 0) {
@@ -9272,20 +9319,19 @@ async function loadDpPipelineFiles() {
     loadingEl.style.display = 'none';
     errorEl.style.display = 'block';
     document.getElementById('dp-config-error-msg').textContent = e.message;
-    fileSelect.innerHTML = '<option value="">Failed to load files</option>';
+    label.textContent = 'Failed to load files';
+    menu.innerHTML = '';
   }
 }
 
 function onDpFileChange() {
-  const fileSelect = document.getElementById('dp-file-select');
-  const filename = fileSelect.value;
+  const filename = dpCurrentFilename;
   if (!filename) {
     document.getElementById('dp-config-toolbar').style.display = 'none';
     document.getElementById('dp-config-editor-wrapper').style.display = 'none';
     document.getElementById('dp-config-info').style.display = 'none';
     return;
   }
-  dpCurrentFilename = filename;
   loadDpPipelineContent(filename);
 }
 
@@ -9498,13 +9544,11 @@ async function submitNewDpFile() {
     filename += '.yml';
   }
 
-  const existingOptions = document.getElementById('dp-file-select').options;
-  for (let i = 0; i < existingOptions.length; i++) {
-    if (existingOptions[i].value === filename) {
-      errorEl.textContent = 'A file with this name already exists.';
-      errorEl.style.display = 'block';
-      return;
-    }
+  const existingOptions = dpFileDropdownFiles || [];
+  if (existingOptions.includes(filename)) {
+    errorEl.textContent = 'A file with this name already exists.';
+    errorEl.style.display = 'block';
+    return;
   }
 
   const templateContent =
@@ -9548,9 +9592,7 @@ my-pipeline:
     closeNewDpFileModal();
     await loadDpPipelineFiles();
 
-    const fileSelect = document.getElementById('dp-file-select');
-    fileSelect.value = filename;
-    onDpFileChange();
+    selectDpFile(filename);
   } catch (e) {
     errorEl.textContent = e.message;
     errorEl.style.display = 'block';
