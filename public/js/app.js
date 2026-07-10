@@ -9227,7 +9227,7 @@ function onDpConfigProfileChange() {
   const select = document.getElementById('dp-config-profile-select');
   dpConfigSelectedId = select.value;
   const opt = select.options[select.selectedIndex];
-  document.getElementById('dp-config-profile-mode').textContent = opt ? (opt.textContent.includes('LOCAL') ? 'LOCAL' : opt.textContent.includes('SSH') ? 'SSH') : '';
+  document.getElementById('dp-config-profile-mode').textContent = opt ? (opt.textContent.includes('LOCAL') ? 'LOCAL' : opt.textContent.includes('SSH') ? 'SSH' : '') : '';
   loadDpPipelineFiles();
 }
 
