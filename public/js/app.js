@@ -1011,25 +1011,20 @@ async function loadSettingsRegistry() {
         if (widgetDatasourceUid) widgetDatasourceUid.textContent = datasourceUid || 'bf5jy3ppyomwwd';
         
         if (isConfigured) {
-          activeState.className = 'status-badge status-configured';
-          activeState.innerHTML = '● Custom Config';
-          widgetGrafanaStatus.textContent = 'Connected';
-          widgetGrafanaStatus.style.color = '#56d364';
-          widgetGrafanaSub.textContent = name || host;
-          infraGrafanaDot.className = 'status-dot dot-green';
+          if (activeState) { activeState.className = 'status-badge status-configured'; activeState.innerHTML = '● Custom Config'; }
+          if (widgetGrafanaStatus) { widgetGrafanaStatus.textContent = 'Connected'; widgetGrafanaStatus.style.color = '#56d364'; }
+          if (widgetGrafanaSub) widgetGrafanaSub.textContent = name || host;
+          if (infraGrafanaDot) infraGrafanaDot.className = 'status-dot dot-green';
         } else {
-          activeState.className = 'status-badge status-default';
-          activeState.innerHTML = '● Default Env';
+          if (activeState) { activeState.className = 'status-badge status-default'; activeState.innerHTML = '● Default Env'; }
           if (host) {
-            widgetGrafanaStatus.textContent = 'Connected';
-            widgetGrafanaStatus.style.color = '#e3b341';
-            widgetGrafanaSub.textContent = 'Using .env configuration';
-            infraGrafanaDot.className = 'status-dot dot-green';
+            if (widgetGrafanaStatus) { widgetGrafanaStatus.textContent = 'Connected'; widgetGrafanaStatus.style.color = '#e3b341'; }
+            if (widgetGrafanaSub) widgetGrafanaSub.textContent = 'Using .env configuration';
+            if (infraGrafanaDot) infraGrafanaDot.className = 'status-dot dot-green';
           } else {
-            widgetGrafanaStatus.textContent = 'Offline';
-            widgetGrafanaStatus.style.color = '#ff7b72';
-            widgetGrafanaSub.textContent = 'Configuration required';
-            infraGrafanaDot.className = 'status-dot dot-yellow';
+            if (widgetGrafanaStatus) { widgetGrafanaStatus.textContent = 'Offline'; widgetGrafanaStatus.style.color = '#ff7b72'; }
+            if (widgetGrafanaSub) widgetGrafanaSub.textContent = 'Configuration required';
+            if (infraGrafanaDot) infraGrafanaDot.className = 'status-dot dot-yellow';
           }
         }
       }
@@ -7067,10 +7062,6 @@ window.addEventListener('click', function() {
   }
 });
 
-function exportActivePanelToExcel() {
-  if (!activeQueryPanelId) return;
-  exportPanelToExcel(activeQueryPanelId);
-}
 
 function exportPanelToExcel(panelId) {
   const data = panelQueryCache[panelId];
