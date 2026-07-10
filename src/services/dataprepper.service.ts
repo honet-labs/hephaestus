@@ -45,7 +45,7 @@ export class DataPrepperService {
     }
 
     if (existing) {
-      try { existing.client.end(); } catch { /* ignore */ }
+      try { existing.client.end(); } catch (_e) { /* ignore */ }
       this.sshConnections.delete(key);
     }
 
@@ -93,7 +93,7 @@ export class DataPrepperService {
 
   closeAndRemoveConnection(conn: Client, cfg: any) {
     const key = this.getSSHConnectionKey(cfg);
-    try { conn.end(); } catch { /* ignore */ }
+    try { conn.end(); } catch (_e) { /* ignore */ }
     this.sshConnections.delete(key);
   }
 
@@ -101,13 +101,13 @@ export class DataPrepperService {
     const now = Date.now();
     for (const [key, entry] of this.sshConnections.entries()) {
       if (now - entry.lastUsed > SSH_IDLE_TIMEOUT_MS) {
-        try { entry.client.end(); } catch { /* ignore */ }
+        try { entry.client.end(); } catch (_e) { /* ignore */ }
         this.sshConnections.delete(key);
       }
     }
   }
 
-  async stopIdleSshScanner() { /* placeholder */ }
+  async stopIdleSshScanner() { /* placeholder */ void 0; }
 
   private readRemoteFile(conn: Client, remotePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -239,7 +239,7 @@ export class DataPrepperService {
       const dir = cfg.pipelinesDir;
       try {
         await fsPromises.access(dir);
-      } catch {
+      } catch (_e) {
         await fsPromises.mkdir(dir, { recursive: true });
       }
       const entries = await fsPromises.readdir(dir);
@@ -274,11 +274,11 @@ export class DataPrepperService {
 
     if (cfg.mode === "local") {
       const dir = cfg.pipelinesDir;
-      try { await fsPromises.access(dir); } catch { await fsPromises.mkdir(dir, { recursive: true }); }
+      try { await fsPromises.access(dir); } catch (_e) { await fsPromises.mkdir(dir, { recursive: true }); }
       try {
         const content = await fsPromises.readFile(filePath, "utf-8");
         return { path: filePath, content };
-      } catch {
+      } catch (_e) {
         return { path: filePath, content: "# Data Prepper Pipeline Configuration\n" };
       }
     } else {
@@ -287,7 +287,7 @@ export class DataPrepperService {
         conn = await this.getSSHConnection(cfg);
         const content = await this.readRemoteFile(conn, filePath);
         return { path: filePath, content };
-      } catch {
+      } catch (_e) {
         return { path: filePath, content: "# Data Prepper Pipeline Configuration\n" };
       } finally {
         if (conn) this.closeAndRemoveConnection(conn, cfg);
@@ -317,7 +317,7 @@ export class DataPrepperService {
 
     if (cfg.mode === "local") {
       const dir = cfg.pipelinesDir;
-      try { await fsPromises.access(dir); } catch { await fsPromises.mkdir(dir, { recursive: true }); }
+      try { await fsPromises.access(dir); } catch (_e) { await fsPromises.mkdir(dir, { recursive: true }); }
       await fsPromises.writeFile(filePath, content, "utf-8");
       return { success: true, message: `Pipeline file "${filename}" saved successfully.` };
     } else {
