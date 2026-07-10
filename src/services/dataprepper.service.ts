@@ -1,11 +1,9 @@
 import { promises as fsPromises } from "fs";
-import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import yaml from "js-yaml";
 import { Client } from "ssh2";
-import config from "../config/env";
-import pool, { query } from "../config/db";
+import { query } from "../config/db";
 
 const SSH_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -47,7 +45,7 @@ export class DataPrepperService {
     }
 
     if (existing) {
-      try { existing.client.end(); } catch {}
+      try { existing.client.end(); } catch { /* ignore */ }
       this.sshConnections.delete(key);
     }
 
@@ -95,7 +93,7 @@ export class DataPrepperService {
 
   closeAndRemoveConnection(conn: Client, cfg: any) {
     const key = this.getSSHConnectionKey(cfg);
-    try { conn.end(); } catch {}
+    try { conn.end(); } catch { /* ignore */ }
     this.sshConnections.delete(key);
   }
 
@@ -103,7 +101,7 @@ export class DataPrepperService {
     const now = Date.now();
     for (const [key, entry] of this.sshConnections.entries()) {
       if (now - entry.lastUsed > SSH_IDLE_TIMEOUT_MS) {
-        try { entry.client.end(); } catch {}
+        try { entry.client.end(); } catch { /* ignore */ }
         this.sshConnections.delete(key);
       }
     }

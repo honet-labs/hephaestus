@@ -407,6 +407,7 @@ const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring',
 // Global Connection registry caches
 let grafanaConfigs = [];
 let prometheusConfigs = [];
+let dataprepperConfigs = [];
 let uptimeKumaConfigs = [];
 
 // DOM elements
@@ -429,6 +430,7 @@ const inputConnectionName = document.getElementById('connection-name');
 
 const grafanaFields = document.getElementById('grafana-fields');
 const prometheusFields = document.getElementById('prometheus-fields');
+const dataprepperFields = document.getElementById('dataprepper-fields');
 
 const inputPrometheusMode = document.getElementById('prometheus-mode');
 const inputPrometheusPath = document.getElementById('prometheus-path');
@@ -443,6 +445,20 @@ const inputPrometheusSshKey = document.getElementById('prometheus-ssh-key');
 
 const sshPasswordGroup = document.getElementById('ssh-password-group');
 const sshKeyGroup = document.getElementById('ssh-key-group');
+
+const inputDataprepperMode = document.getElementById('dataprepper-mode');
+const inputDataprepperPipelinesDir = document.getElementById('dataprepper-pipelines-dir');
+const inputDataprepperReloadUrl = document.getElementById('dataprepper-reload-url');
+const dataprepperSshFields = document.getElementById('dataprepper-ssh-fields');
+const inputDataprepperSshHost = document.getElementById('dataprepper-ssh-host');
+const inputDataprepperSshPort = document.getElementById('dataprepper-ssh-port');
+const inputDataprepperSshUser = document.getElementById('dataprepper-ssh-user');
+const inputDataprepperSshAuth = document.getElementById('dataprepper-ssh-auth');
+const inputDataprepperSshPassword = document.getElementById('dataprepper-ssh-password');
+const inputDataprepperSshKey = document.getElementById('dataprepper-ssh-key');
+
+const dataprepperSshPasswordGroup = document.getElementById('dataprepper-ssh-password-group');
+const dataprepperSshKeyGroup = document.getElementById('dataprepper-ssh-key-group');
 
 const btnTest = document.getElementById('btn-test-grafana');
 const btnSave = document.getElementById('btn-save-grafana');
@@ -1038,6 +1054,14 @@ async function loadSettingsRegistry() {
     } catch (_) {}
 
     try {
+      const resD = await fetch('/api/v1/dataprepper/configs');
+      const rD = await resD.json();
+      if (rD.success && Array.isArray(rD.data)) {
+        dataprepperConfigs = rD.data;
+      }
+    } catch (_) {}
+
+    try {
       const resU = await fetch('/api/v1/uptime-kuma/configs');
       const rU = await resU.json();
       if (rU.success && Array.isArray(rU.data)) {
@@ -1046,7 +1070,7 @@ async function loadSettingsRegistry() {
     } catch (_) {}
 
     // 3. Render list in registry-cards-container
-    const totalCount = grafanaConfigs.length + prometheusConfigs.length + uptimeKumaConfigs.length;
+    const totalCount = grafanaConfigs.length + prometheusConfigs.length + dataprepperConfigs.length + uptimeKumaConfigs.length;
     const headerTitle = document.getElementById('registry-header-title');
     if (headerTitle) {
       headerTitle.textContent = `Active Registry (${totalCount})`;
@@ -1149,6 +1173,46 @@ async function loadSettingsRegistry() {
       `;
     });
 
+    // Render Data Prepper connections
+    dataprepperConfigs.forEach(c => {
+      html += `
+        <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+            <div style="width: 36px; height: 36px; background: rgba(86, 211, 100, 0.1); border: 1px solid rgba(86, 211, 100, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #56d364; flex-shrink: 0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+              </svg>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${escapeHtml(c.name)}</span>
+                <span class="status-badge" style="background: rgba(86, 211, 100, 0.15); color: #56d364; border: 1px solid rgba(86, 211, 100, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">DATA PREPPER</span>
+                <span class="status-badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid var(--app-border); font-size: 9px; padding: 1px 4px; line-height: 1;">${escapeHtml(c.mode.toUpperCase())}</span>
+                ${c.isActive ? '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">ACTIVE</span>' : ''}
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(c.pipelinesDir)} ${c.mode === 'ssh' ? `(${escapeHtml(c.sshHost)})` : ''}</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <span id="conn-status-${escapeHtml(c.id)}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
+              CHECKING...
+            </span>
+            <button type="button" class="btn btn-secondary" onclick="pingDataprepperServer('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
+            ${!c.isActive ? `<button type="button" class="btn btn-secondary" onclick="activateDataprepperConfig('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Activate</button>` : ''}
+            <button type="button" class="btn btn-secondary" onclick="editDataprepperConfigById('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="deleteDataprepperConfig('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
     // Render Uptime Kuma connections
     uptimeKumaConfigs.forEach(c => {
 
@@ -1197,6 +1261,10 @@ async function loadSettingsRegistry() {
 
     prometheusConfigs.forEach(c => {
       checkPrometheusCardConnection(c.id);
+    });
+
+    dataprepperConfigs.forEach(c => {
+      checkDataprepperCardConnection(c.id);
     });
 
     uptimeKumaConfigs.forEach(c => {
@@ -1273,6 +1341,7 @@ function toggleConnectionFields() {
   const type = document.getElementById('connection-type')?.value;
   const grafanaFields = document.getElementById('grafana-fields');
   const prometheusFields = document.getElementById('prometheus-fields');
+  const dataprepperFields = document.getElementById('dataprepper-fields');
   const ukFields = document.getElementById('uptime-kuma-fields');
   
   if (grafanaFields) {
@@ -1282,6 +1351,10 @@ function toggleConnectionFields() {
   if (prometheusFields) {
     if (type === 'prometheus') { prometheusFields.classList.remove('hidden'); prometheusFields.style.display = 'flex'; }
     else { prometheusFields.classList.add('hidden'); prometheusFields.style.display = 'none'; }
+  }
+  if (dataprepperFields) {
+    if (type === 'dataprepper') { dataprepperFields.classList.remove('hidden'); dataprepperFields.style.display = 'flex'; }
+    else { dataprepperFields.classList.add('hidden'); dataprepperFields.style.display = 'none'; }
   }
   if (ukFields) {
     if (type === 'uptime-kuma') { ukFields.classList.remove('hidden'); ukFields.style.display = 'flex'; }
@@ -1311,6 +1384,28 @@ function toggleSSHAuthFields() {
   }
 }
 
+function toggleDataprepperModeFields() {
+  if (!inputDataprepperMode || !dataprepperSshFields) return;
+  const mode = inputDataprepperMode.value;
+  if (mode === 'local') {
+    dataprepperSshFields.classList.add('hidden');
+  } else {
+    dataprepperSshFields.classList.remove('hidden');
+  }
+}
+
+function toggleDataprepperSSHAuthFields() {
+  if (!inputDataprepperSshAuth || !dataprepperSshPasswordGroup || !dataprepperSshKeyGroup) return;
+  const auth = inputDataprepperSshAuth.value;
+  if (auth === 'password') {
+    dataprepperSshPasswordGroup.classList.remove('hidden');
+    dataprepperSshKeyGroup.classList.add('hidden');
+  } else {
+    dataprepperSshPasswordGroup.classList.add('hidden');
+    dataprepperSshKeyGroup.classList.remove('hidden');
+  }
+}
+
 function clearConnectionForm() {
   if (inputConnectionId) inputConnectionId.value = '';
   if (inputConnectionName) inputConnectionName.value = '';
@@ -1328,9 +1423,21 @@ function clearConnectionForm() {
   if (inputPrometheusSshPassword) inputPrometheusSshPassword.value = '';
   if (inputPrometheusSshKey) inputPrometheusSshKey.value = '';
 
+  if (inputDataprepperMode) inputDataprepperMode.value = 'local';
+  if (inputDataprepperPipelinesDir) inputDataprepperPipelinesDir.value = '/opt/data-prepper/pipelines';
+  if (inputDataprepperReloadUrl) inputDataprepperReloadUrl.value = '';
+  if (inputDataprepperSshHost) inputDataprepperSshHost.value = '';
+  if (inputDataprepperSshPort) inputDataprepperSshPort.value = '22';
+  if (inputDataprepperSshUser) inputDataprepperSshUser.value = '';
+  if (inputDataprepperSshAuth) inputDataprepperSshAuth.value = 'password';
+  if (inputDataprepperSshPassword) inputDataprepperSshPassword.value = '';
+  if (inputDataprepperSshKey) inputDataprepperSshKey.value = '';
+
   toggleConnectionFields();
   togglePrometheusModeFields();
   toggleSSHAuthFields();
+  toggleDataprepperModeFields();
+  toggleDataprepperSSHAuthFields();
 
   const saveText = document.getElementById('btn-save-text');
   if (saveText) saveText.textContent = '+ Register Endpoint';
@@ -1530,6 +1637,135 @@ async function pingPrometheusServer(id) {
   }
 }
 
+async function checkDataprepperCardConnection(id) {
+  const badge = document.getElementById(`conn-status-${id}`);
+  if (!badge) return;
+
+  try {
+    const res = await fetch(`/api/v1/dataprepper/configs/${id}/test`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success && result.isConnected) {
+      badge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+      badge.style.color = '#10b981';
+      badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      badge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        CONNECTED
+      `;
+    } else {
+      badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      badge.style.color = '#ef4444';
+      badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      badge.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        OFFLINE
+      `;
+    }
+  } catch (error) {
+    badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+    badge.style.color = '#ef4444';
+    badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    badge.innerHTML = 'ERROR';
+  }
+}
+
+async function pingDataprepperServer(id) {
+  addLog('DataPrepper', `Initiating manual ping to connection ID ${id}...`, 'INFO');
+  try {
+    const res = await fetch(`/api/v1/dataprepper/configs/${id}/test`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success && result.isConnected) {
+      alert('Koneksi Data Prepper Sukses!');
+      addLog('DataPrepper', 'Manual connection check succeeded.', 'SUCCESS');
+    } else {
+      alert('Koneksi Data Prepper Gagal: ' + (result.message || 'Server offline.'));
+      addLog('DataPrepper', `Manual connection check failed: ${result.message || 'Offline'}`, 'ERROR');
+    }
+  } catch (err) {
+    alert('API Error: ' + err.message);
+  }
+}
+
+async function activateDataprepperConfig(id) {
+  addLog('Configuration', 'Activating Data Prepper configuration...', 'INFO');
+  try {
+    const res = await fetch(`/api/v1/dataprepper/configs/${id}/activate`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Configuration', result.message || 'Data Prepper configuration activated successfully.', 'SUCCESS');
+      
+      // If we are currently on the dataprepper-config page, reload the page content
+      const currentHash = window.location.hash;
+      if (currentHash === '#dataprepper-config') {
+        if (typeof initDpConfigPage === 'function') {
+          initDpConfigPage();
+        }
+      }
+      
+      await loadSettingsRegistry();
+    } else {
+      addLog('Configuration', `Activation failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (error) {
+    console.error('Error activating configuration:', error);
+    addLog('Configuration', 'Network error during configuration activation.', 'ERROR');
+  }
+}
+
+async function deleteDataprepperConfig(id) {
+  if (!confirm('Apakah Anda yakin ingin menghapus konfigurasi Data Prepper ini?')) return;
+  addLog('Configuration', 'Deleting Data Prepper configuration...', 'INFO');
+  try {
+    const res = await fetch(`/api/v1/dataprepper/configs/${id}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Configuration', result.message || 'Data Prepper configuration deleted successfully.', 'SUCCESS');
+      await loadSettingsRegistry();
+    } else {
+      addLog('Configuration', `Deletion failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (error) {
+    console.error('Error deleting configuration:', error);
+    addLog('Configuration', 'Network error during configuration deletion.', 'ERROR');
+  }
+}
+
+function editDataprepperConfigById(id) {
+  if (!dataprepperConfigs) return;
+  const c = dataprepperConfigs.find(item => item.id === id);
+  if (!c) return;
+
+  if (inputConnectionType) inputConnectionType.value = 'dataprepper';
+  if (inputConnectionId) inputConnectionId.value = c.id;
+  if (inputConnectionName) inputConnectionName.value = c.name;
+
+  if (inputDataprepperMode) inputDataprepperMode.value = c.mode;
+  if (inputDataprepperPipelinesDir) inputDataprepperPipelinesDir.value = c.pipelinesDir;
+  if (inputDataprepperReloadUrl) inputDataprepperReloadUrl.value = c.reloadUrl || '';
+  if (inputDataprepperSshHost) inputDataprepperSshHost.value = c.sshHost || '';
+  if (inputDataprepperSshPort) inputDataprepperSshPort.value = c.sshPort || '22';
+  if (inputDataprepperSshUser) inputDataprepperSshUser.value = c.sshUser || '';
+  if (inputDataprepperSshAuth) inputDataprepperSshAuth.value = c.sshAuth || 'password';
+  if (inputDataprepperSshPassword) inputDataprepperSshPassword.value = c.sshPassword ? '********' : '';
+  if (inputDataprepperSshKey) inputDataprepperSshKey.value = c.sshKey || '';
+
+  toggleConnectionFields();
+  toggleDataprepperModeFields();
+  toggleDataprepperSSHAuthFields();
+
+  const saveText = document.getElementById('btn-save-text');
+  if (saveText) saveText.textContent = 'Update Connection';
+  hideFeedback();
+}
+
 async function checkUptimeKumaCardConnection(id) {
   const badge = document.getElementById(`conn-status-${id}`);
   if (!badge) return;
@@ -1696,6 +1932,48 @@ async function saveConnectionConfiguration(event) {
         showFeedback('danger', 'Save Failed', result.message || result.error || 'Failed to save.');
         addLog('Configuration', `Uptime Kuma save failed: ${result.message}`, 'ERROR');
       }
+    } else if (type === 'dataprepper') {
+      const mode = inputDataprepperMode.value;
+      const pipelinesDir = inputDataprepperPipelinesDir.value.trim();
+      const reloadUrl = inputDataprepperReloadUrl.value.trim();
+      const sshHost = inputDataprepperSshHost.value.trim();
+      const sshPort = parseInt(inputDataprepperSshPort.value.trim() || '22', 10);
+      const sshUser = inputDataprepperSshUser.value.trim();
+      const sshAuth = inputDataprepperSshAuth.value;
+      let sshPassword = inputDataprepperSshPassword.value;
+      const sshKey = inputDataprepperSshKey.value;
+
+      if (!pipelinesDir) {
+        showFeedback('danger', 'Form Error', 'Pipelines directory is required.');
+        setLoading(false);
+        return;
+      }
+
+      if (mode === 'ssh' && (!sshHost || !sshUser)) {
+        showFeedback('danger', 'Form Error', 'SSH host and user are required.');
+        setLoading(false);
+        return;
+      }
+
+      if (sshPassword === '********') {
+        sshPassword = undefined;
+      }
+
+      const res = await fetch('/api/v1/dataprepper/configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, mode, pipelinesDir, reloadUrl, sshHost, sshPort, sshUser, sshAuth, sshPassword, sshKey })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Saved Successfully', result.message || 'Data Prepper connection saved.');
+        addLog('Configuration', `Data Prepper connection saved: ${name}`, 'SUCCESS');
+        clearConnectionForm();
+        await loadSettingsRegistry();
+      } else {
+        showFeedback('danger', 'Save Failed', result.message || result.error || 'Failed to save.');
+        addLog('Configuration', `Data Prepper save failed: ${result.message}`, 'ERROR');
+      }
     } else {
       const mode = inputPrometheusMode.value;
       const path = inputPrometheusPath.value.trim();
@@ -1808,6 +2086,53 @@ async function testConnectionConfig() {
       } else {
         showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
         addLog('Uptime Kuma', `Connection test failed: ${result.message || 'Unknown error'}`, 'ERROR');
+      }
+    } catch (error) {
+      showFeedback('danger', 'API Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  } else if (type === 'dataprepper') {
+    const mode = inputDataprepperMode.value;
+    const pipelinesDir = inputDataprepperPipelinesDir.value.trim();
+    const reloadUrl = inputDataprepperReloadUrl.value.trim();
+    const sshHost = inputDataprepperSshHost.value.trim();
+    const sshPort = parseInt(inputDataprepperSshPort.value.trim() || '22', 10);
+    const sshUser = inputDataprepperSshUser.value.trim();
+    const sshAuth = inputDataprepperSshAuth.value;
+    let sshPassword = inputDataprepperSshPassword.value;
+    const sshKey = inputDataprepperSshKey.value;
+
+    if (!pipelinesDir) {
+      showFeedback('danger', 'Form Error', 'Pipelines directory is required.');
+      return;
+    }
+
+    if (mode === 'ssh' && (!sshHost || !sshUser)) {
+      showFeedback('danger', 'Form Error', 'SSH host and user are required.');
+      return;
+    }
+
+    if (sshPassword === '********') {
+      sshPassword = undefined;
+    }
+
+    setLoading(true, 'test');
+    addLog('DataPrepper', `Testing Data Prepper connection...`, 'INFO');
+
+    try {
+      const res = await fetch('/api/v1/dataprepper/configs/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, pipelinesDir, reloadUrl, sshHost, sshPort, sshUser, sshAuth, sshPassword, sshKey })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Test Successful', result.message || 'Connection test succeeded.');
+        addLog('DataPrepper', 'Connection test succeeded.', 'SUCCESS');
+      } else {
+        showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
+        addLog('DataPrepper', `Connection test failed: ${result.message}`, 'ERROR');
       }
     } catch (error) {
       showFeedback('danger', 'API Error', error.message);

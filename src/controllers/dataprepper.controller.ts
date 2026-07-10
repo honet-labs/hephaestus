@@ -1,8 +1,19 @@
 import { Request, Response } from "express";
+import fs from "fs";
+import path from "path";
 import { dataprepperService } from "../services/dataprepper.service";
 import { logActivity } from "../config/db";
 
 export class DataPrepperController {
+  private checkLocalWriteable(dirPath: string): { writeable: boolean; message: string } {
+    try {
+      fs.accessSync(dirPath, fs.constants.W_OK);
+      return { writeable: true, message: `Local directory ${dirPath} is writeable.` };
+    } catch (err: any) {
+      return { writeable: false, message: `Local directory is not writeable: ${err.message}` };
+    }
+  }
+
   /**
    * GET /api/v1/dataprepper/pipelines — List pipeline files
    */
@@ -89,6 +100,19 @@ export class DataPrepperController {
       if (!profile.name || !profile.mode) {
         return res.status(400).json({ success: false, error: "name and mode are required." });
       }
+
+      if (profile.id) {
+        const existing = await dataprepperService.getConfigById(profile.id);
+        if (existing) {
+          if (!profile.sshPassword || profile.sshPassword === "********") {
+            profile.sshPassword = existing.sshPassword;
+          }
+          if (!profile.sshKey || profile.sshKey === "********") {
+            profile.sshKey = existing.sshKey;
+          }
+        }
+      }
+
       const item = await dataprepperService.saveConfigProfile(profile);
       await logActivity("DataPrepper Settings", "Save Profile", `Saved DataPrepper profile "${item.name}" (Mode: ${item.mode})`, "SUCCESS");
       return res.status(200).json({ success: true, message: "Profile saved.", config: item });
@@ -139,6 +163,54 @@ export class DataPrepperController {
       return res.status(200).json({ success: true, isConnected: result.success, message: result.message });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/dataprepper/configs/test — Test connection parameters before saving
+   */
+  public async testConnection(req: Request, res: Response) {
+    try {
+      const profile = req.body;
+      if (!profile.mode || !profile.pipelinesDir) {
+        return res.status(400).json({
+          success: false,
+          error: "Bad Request",
+          message: "Request body must contain 'mode' and 'pipelinesDir'."
+        });
+      }
+
+      const normalizedPath = path.posix.normalize(profile.pipelinesDir);
+      if (normalizedPath.includes("..")) {
+        return res.status(400).json({
+          success: false,
+          error: "Bad Request",
+          message: "Invalid path: directory traversal (..) is not allowed."
+        });
+      }
+
+      if (profile.mode === "local") {
+        const check = this.checkLocalWriteable(profile.pipelinesDir);
+        return res.status(200).json({
+          success: check.writeable,
+          isConnected: check.writeable,
+          message: check.message
+        });
+      } else {
+        const result = await dataprepperService.testSSHConnection(profile);
+        return res.status(200).json({
+          success: result.success,
+          isConnected: result.success,
+          message: result.message
+        });
+      }
+    } catch (err: any) {
+      console.error("[DataPrepperController] Error testing connection:", err);
+      return res.status(500).json({
+        success: false,
+        error: "Internal Server Error",
+        message: err.message
+      });
     }
   }
 }

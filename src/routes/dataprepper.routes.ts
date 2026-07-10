@@ -16,5 +16,6 @@ router.post("/configs", requireRole("ADMIN"), (req, res) => dataprepperControlle
 router.delete("/configs/:id", requireRole("ADMIN"), (req, res) => dataprepperController.deleteConfigProfile(req, res));
 router.post("/configs/:id/activate", requireRole("ADMIN"), (req, res) => dataprepperController.activateConfigProfile(req, res));
 router.post("/configs/:id/test", requireRole("ADMIN"), (req, res) => dataprepperController.testConnectionById(req, res));
+router.post("/configs/test", requireRole("ADMIN"), (req, res) => dataprepperController.testConnection(req, res));
 
 export default router;
