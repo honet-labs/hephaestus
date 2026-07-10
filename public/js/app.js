@@ -344,7 +344,6 @@ window.handleLogout = async function() {
 
 async function checkSession() {
   const token = localStorage.getItem('hephaestus_session_token');
-  console.log('[Session] Token from localStorage:', token ? `exists (${token.length} chars)` : 'MISSING');
   if (!token) {
     showLoginScreen();
     return;
@@ -353,26 +352,20 @@ async function checkSession() {
   const MAX_RETRIES = 2;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`[Session] Attempt ${attempt}/${MAX_RETRIES}: calling /api/v1/users/session`);
       const res = await originalFetch('/api/v1/users/session', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      console.log(`[Session] Response status: ${res.status}`);
       const data = await res.json();
-      console.log('[Session] Response data:', JSON.stringify(data));
       if (res.ok && data.success) {
-        console.log('[Session] Valid session, showing main app');
         showMainApp(data.user);
         return;
       }
       if (res.status === 401) {
-        console.log('[Session] 401 Unauthorized - token expired or invalid');
         showLoginScreen();
         return;
       }
-      console.log(`[Session] Non-401 error (${res.status}), retrying...`);
       if (attempt < MAX_RETRIES) {
         await new Promise(r => setTimeout(r, 500 * attempt));
         continue;
@@ -380,7 +373,6 @@ async function checkSession() {
       showLoginScreen();
       return;
     } catch (err) {
-      console.error(`[Session] Network error on attempt ${attempt}:`, err.message || err);
       if (attempt < MAX_RETRIES) {
         await new Promise(r => setTimeout(r, 500 * attempt));
         continue;
