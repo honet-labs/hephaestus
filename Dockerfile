@@ -41,6 +41,7 @@ COPY --from=builder /app/dist ./dist
 
 # Copy static Web UI files
 COPY public/ ./public
+COPY views/ ./views
 
 # Create persistent data directory for fallback db.json storage (if used)
 RUN mkdir -p /app/data && chown -R appuser:appgroup /app
