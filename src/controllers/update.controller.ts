@@ -23,11 +23,20 @@ export class UpdateController {
   }
 
   /**
+   * Validate GitHub token format to prevent command injection.
+   * GitHub tokens have specific prefixes: ghp_, github_pat_, gho_, ghu_, ghs_, ghr_
+   */
+  private validateGithubToken(token: string): boolean {
+    return /^[a-zA-Z0-9_]+$/.test(token) && /^gh[pousr]_|^github_pat_/.test(token);
+  }
+
+  /**
    * Build a git command that uses the GitHub token for authentication.
    * Uses http.extraHeader to avoid leaking token in remote URL or logs.
    */
   private gitAuth_cmd(token: string, cmd: string): string {
     if (!token) return cmd;
+    // Token is validated before calling this, safe to interpolate
     return `git -c http.extraHeader="Authorization: token ${token}" ${cmd}`;
   }
 
@@ -45,7 +54,11 @@ export class UpdateController {
 
   public async checkForUpdates(req: Request, res: Response): Promise<void> {
     try {
-      const token = await this.getGithubToken();
+      let token = await this.getGithubToken();
+      // Validate token format to prevent command injection
+      if (token && !this.validateGithubToken(token)) {
+        token = ""; // Ignore invalid token
+      }
       const remoteUrl = await this.getRemoteUrl();
       const fetchCmd = this.gitAuth_cmd(token, "fetch origin");
       const statusCmd = this.gitAuth_cmd(token, "status -uno");
@@ -74,7 +87,11 @@ export class UpdateController {
     const cwd = path.resolve(__dirname, "../..");
 
     try {
-      const token = await this.getGithubToken();
+      let token = await this.getGithubToken();
+      // Validate token format to prevent command injection
+      if (token && !this.validateGithubToken(token)) {
+        token = ""; // Ignore invalid token
+      }
       const pullCmd = this.gitAuth_cmd(token, "pull origin main");
 
       await logActivity("System", "Update Started", "System update initiated from WebUI", "SUCCESS");

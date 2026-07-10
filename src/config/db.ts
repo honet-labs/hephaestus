@@ -1,6 +1,7 @@
 import { Pool, Client } from "pg";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import config, { updateActiveGrafanaCache, updateActivePrometheusCache } from "./env";
 
 export let isDbConnected = false;
@@ -8,16 +9,77 @@ export let dbConnectionError: string | null = null;
 let activePool: Pool;
 let activeDbConfig: any;
 
+// Encryption helpers for DB password at rest
+const ALGORITHM = "aes-256-gcm";
+const SALT_LEN = 16;
+const IV_LEN = 12;
+const KEY_LEN = 32;
+const KEY_FILE = path.join(config.dbDir, ".encryption_key");
+
+function getEncryptionKey(): Buffer {
+  const envKey = process.env.ENCRYPTION_KEY;
+  if (envKey) {
+    return crypto.scryptSync(envKey, "hephaestus-db-salt", KEY_LEN);
+  }
+  // Derive or load a persistent key from disk
+  try {
+    if (fs.existsSync(KEY_FILE)) {
+      return Buffer.from(fs.readFileSync(KEY_FILE, "utf-8"), "hex");
+    }
+  } catch { /* ignore */ }
+  // Generate new key and persist
+  const newKey = crypto.randomBytes(KEY_LEN);
+  try {
+    fs.mkdirSync(path.dirname(KEY_FILE), { recursive: true });
+    fs.writeFileSync(KEY_FILE, newKey.toString("hex"), { mode: 0o600 });
+  } catch { /* best effort */ }
+  return newKey;
+}
+
+function encryptText(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(IV_LEN);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  let encrypted = cipher.update(plaintext, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  const authTag = cipher.getAuthTag();
+  // Format: iv:authTag:ciphertext (all hex)
+  return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
+}
+
+function decryptText(encryptedStr: string): string {
+  // If not in expected format, return as-is (plaintext fallback)
+  const parts = encryptedStr.split(":");
+  if (parts.length !== 3) return encryptedStr;
+  try {
+    const key = getEncryptionKey();
+    const iv = Buffer.from(parts[0], "hex");
+    const authTag = Buffer.from(parts[1], "hex");
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(parts[2], "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch {
+    // Decryption failed — might be old plaintext, return as-is
+    return encryptedStr;
+  }
+}
+
 export function loadDbConfig() {
   const dbConfigPath = path.join(config.dbDir, "db_config.json");
   if (fs.existsSync(dbConfigPath)) {
     try {
       const saved = JSON.parse(fs.readFileSync(dbConfigPath, "utf-8"));
+      // Decrypt password if it was encrypted
+      const password = saved.password
+        ? (saved.encrypted ? decryptText(saved.password) : saved.password)
+        : (process.env.PGPASSWORD || "postgres");
       return {
         host: saved.host || process.env.PGHOST || "localhost",
         port: parseInt(saved.port || process.env.PGPORT || "5432", 10),
         user: saved.user || process.env.PGUSER || "postgres",
-        password: saved.password || process.env.PGPASSWORD || "postgres",
+        password,
         database: saved.database || process.env.PGDATABASE || "hephaestus",
         ssl: saved.ssl ? { rejectUnauthorized: config.sslRejectUnauthorized } : undefined
       };
@@ -44,9 +106,10 @@ export function saveDbConfigToFile(newConfig: any) {
       host: newConfig.host,
       port: newConfig.port,
       user: newConfig.user,
-      password: newConfig.password,
+      password: newConfig.password ? encryptText(newConfig.password) : "",
       database: newConfig.database,
-      ssl: !!newConfig.ssl
+      ssl: !!newConfig.ssl,
+      encrypted: true
     }, null, 2), "utf-8");
     console.log(`[DB] Saved database configuration to persistent storage: ${dbConfigPath}`);
   } catch (err: any) {

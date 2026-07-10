@@ -111,11 +111,20 @@ router.post("/github-token", requireRole("ADMIN"), async (req, res) => {
       await query("DELETE FROM app_config WHERE key = $1", ["github_token"]);
       return res.status(200).json({ success: true, message: "GitHub token removed." });
     }
+    // Validate token format (alphanumeric + underscores, must start with known prefix)
+    const trimmed = token.trim();
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmed) || !/^gh[pousr]_|^github_pat_/.test(trimmed)) {
+      return res.status(400).json({
+        success: false,
+        error: "Bad Request",
+        message: "Invalid GitHub token format. Token must be alphanumeric and start with ghp_, github_pat_, gho_, ghu_, ghs_, or ghr_."
+      });
+    }
     // Upsert token
     await query(
       `INSERT INTO app_config (key, value) VALUES ($1, $2)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
-      ["github_token", token.trim()]
+      ["github_token", trimmed]
     );
     return res.status(200).json({ success: true, message: "GitHub token saved." });
   } catch (err: any) {

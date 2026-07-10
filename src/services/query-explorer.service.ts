@@ -3,6 +3,43 @@ import axios from "axios";
 import config from "../config/env";
 import { query } from "../config/db";
 
+/**
+ * Validate datasourceUid format to prevent SSRF/path traversal.
+ * Allows: alphanumeric, hyphens, underscores, and "prom-" prefix.
+ */
+function validateDatasourceUid(uid: string): void {
+  if (!uid || !/^[a-zA-Z0-9_\-]+$/.test(uid)) {
+    throw new Error("Invalid datasource UID format.");
+  }
+}
+
+/**
+ * Validate that a URL points to a public/allowed host, not internal networks.
+ */
+function validateUrlNotInternal(urlStr: string): void {
+  try {
+    const url = new URL(urlStr);
+    const hostname = url.hostname;
+    // Block private/internal IP ranges
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.") ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("169.254.") ||
+      hostname.endsWith(".local") ||
+      hostname.endsWith(".internal")
+    ) {
+      throw new Error("Requests to internal/private network addresses are not allowed.");
+    }
+  } catch (e: any) {
+    if (e.message.includes("not allowed")) throw e;
+    throw new Error("Invalid URL format.");
+  }
+}
+
 export interface QueryColumn {
   name: string;
   query: string;
@@ -230,6 +267,7 @@ export class QueryExplorerService {
     }
     
     // Build Grafana Datasource Proxy Query URL
+    validateDatasourceUid(datasourceUid);
     const proxyUrl = `${grafanaConfig.host}/api/datasources/proxy/uid/${datasourceUid}/api/v1/query_range`;
     
     console.log(`[QueryExplorer] Target Proxy URL: ${proxyUrl}`);
@@ -358,6 +396,7 @@ export class QueryExplorerService {
       if (res.rows.length === 0) throw new Error("Prometheus config not found.");
       const reloadUrl: string = res.rows[0].reloadUrl;
       const promBaseUrl = reloadUrl.replace(/\/-\/reload\/?$/, "").replace(/\/$/, "");
+      validateUrlNotInternal(promBaseUrl);
 
       const response = await axios.get(`${promBaseUrl}/api/v1/metadata`, { timeout: 10000 });
       if (response.data && response.data.status === "success") {
@@ -388,6 +427,7 @@ export class QueryExplorerService {
     }
     
     const proxyUrl = `${grafanaConfig.host}/api/datasources/proxy/uid/${datasourceUid}/api/v1/metadata`;
+    validateDatasourceUid(datasourceUid);
     console.log(`[QueryExplorer] Fetching metadata from proxy: ${proxyUrl}`);
     
     try {
@@ -458,6 +498,7 @@ export class QueryExplorerService {
     // Extract base URL from reloadUrl (http://host:9090/-/reload → http://host:9090)
     const reloadUrl: string = res.rows[0].reloadUrl;
     const promBaseUrl = reloadUrl.replace(/\/-\/reload\/?$/, "").replace(/\/$/, "");
+    validateUrlNotInternal(promBaseUrl);
 
     const start = parseRelativeTime(timeRangeFrom);
     const end = parseRelativeTime(timeRangeTo);

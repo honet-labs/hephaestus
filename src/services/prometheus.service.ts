@@ -133,8 +133,8 @@ export class PrometheusService {
           });
         });
         const sudoPrefix = sshPassword ? `echo ${shellEscape(sshPassword)} | sudo -S ` : "sudo ";
-        await this.executeRemoteCommand(conn, `${sudoPrefix}cp "${tmpPath}" "${remotePath}"`);
-        await this.executeRemoteCommand(conn, `rm -f "${tmpPath}"`);
+        await this.executeRemoteCommand(conn, `${sudoPrefix}cp ${shellEscape(tmpPath)} ${shellEscape(remotePath)}`);
+        await this.executeRemoteCommand(conn, `rm -f ${shellEscape(tmpPath)}`);
         return;
       }
       throw sftpErr;
@@ -384,7 +384,7 @@ scrape_configs:
         try {
           let reloadCmd = `curl -sf -X POST http://localhost:9090/-/reload`;
           if (activeConfig.reloadUrl) {
-            reloadCmd = `curl -sf -X POST "${activeConfig.reloadUrl}"`;
+            reloadCmd = `curl -sf -X POST ${shellEscape(activeConfig.reloadUrl)}`;
           }
           await this.executeRemoteCommand(conn, reloadCmd);
           reloaded = true;

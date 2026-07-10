@@ -5382,8 +5382,8 @@ async function viewDatasources(configId, configName, configHost) {
               <span class="status-badge" style="font-size: 9px; padding: 1px 4px; background: rgba(245,158,11,0.05); color: #f59e0b; border: 1px solid rgba(245,158,11,0.1);">${escapeHtml(ds.type)}</span>
             </td>
             <td style="padding: 10px 12px; font-size: 11px; font-family: monospace; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <span>${ds.uid}</span>
-              <button type="button" class="btn btn-secondary" onclick="copyTextToClipboard('${ds.uid}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: var(--app-border);">Copy</button>
+              <span>${escapeHtml(ds.uid)}</span>
+              <button type="button" class="btn btn-secondary" onclick="copyTextToClipboard('${escapeAttr(ds.uid)}')" style="padding: 2px 6px; font-size: 10px; height: auto; border-color: var(--app-border);">Copy</button>
             </td>
           </tr>
         `).join('');
@@ -5392,7 +5392,7 @@ async function viewDatasources(configId, configName, configHost) {
       tbody.innerHTML = `
         <tr>
           <td colspan="3" style="text-align: center; color: #ff7b72; padding: 20px;">
-            Failed to load datasources: ${data.message || data.error}
+            Failed to load datasources: ${escapeHtml(data.message || data.error)}
           </td>
         </tr>
       `;
@@ -6289,8 +6289,8 @@ function renderActiveDataTable(data) {
       : 'background: rgba(0,0,0,0.3); border: 1px solid var(--app-border); border-bottom: 1px solid var(--app-border); color: var(--text-muted); margin-bottom: 0; border-top-left-radius: 4px; border-top-right-radius: 4px; padding: 5px 16px; font-size: 11px; cursor: pointer;';
     
     sheetsBarHtml += `
-      <button type="button" class="${btnClass}" data-ip="${ip}" onclick="switchQueryExplorerSheet('${ip}')" style="${activeStyle}">
-        ${ip}
+      <button type="button" class="${btnClass}" data-ip="${escapeAttr(ip)}" onclick="switchQueryExplorerSheet('${escapeAttr(ip)}')" style="${activeStyle}">
+        ${escapeHtml(ip)}
       </button>
     `;
   });
@@ -6305,7 +6305,7 @@ function renderActiveDataTable(data) {
   
   ips.forEach((ip, ipIdx) => {
     const isFirstIp = ipIdx === 0;
-    const tableId = `sheet-table-${ip.replace(/\./g, '_')}`;
+    const tableId = `sheet-table-${ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
     const tableClass = isFirstIp ? 'query-explorer-sheet-table' : 'query-explorer-sheet-table hidden';
     
     let rowsHtml = '';
@@ -6337,13 +6337,13 @@ function renderActiveDataTable(data) {
           }
         }
         
-        colsHtml += `<td style="padding: 8px; font-family: monospace; ${valStyle}">${displayVal}</td>`;
+        colsHtml += `<td style="padding: 8px; font-family: monospace; ${valStyle}">${escapeHtml(displayVal)}</td>`;
       });
       
       rowsHtml += `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 11.5px;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-          <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${row.timestampStr}</td>
-          <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${ip}</td>
+          <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${escapeHtml(row.timestampStr)}</td>
+          <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${escapeHtml(ip)}</td>
           ${colsHtml}
         </tr>
       `;
