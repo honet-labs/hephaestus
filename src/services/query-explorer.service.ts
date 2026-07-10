@@ -8,7 +8,7 @@ import { query } from "../config/db";
  * Allows: alphanumeric, hyphens, underscores, and "prom-" prefix.
  */
 function validateDatasourceUid(uid: string): void {
-  if (!uid || !/^[a-zA-Z0-9_\-]+$/.test(uid)) {
+  if (!uid || !/^[a-zA-Z0-9_-]+$/.test(uid)) {
     throw new Error("Invalid datasource UID format.");
   }
 }

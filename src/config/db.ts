@@ -11,7 +11,6 @@ let activeDbConfig: any;
 
 // Encryption helpers for DB password at rest
 const ALGORITHM = "aes-256-gcm";
-const SALT_LEN = 16;
 const IV_LEN = 12;
 const KEY_LEN = 32;
 const KEY_FILE = path.join(config.dbDir, ".encryption_key");
