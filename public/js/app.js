@@ -9332,13 +9332,19 @@ function initDpCodeMirrorEditor(content) {
     if (dpConfigCm) dpConfigCm.toTextArea();
     dpConfigCm = CodeMirror.fromTextArea(textarea, {
       mode: 'yaml',
-      theme: 'dracula',
+      theme: 'material-darker',
       lineNumbers: true,
       lineWrapping: true,
       tabSize: 2,
       indentWithTabs: false,
       autoCloseBrackets: true,
-      matchBrackets: true
+      matchBrackets: true,
+      styleActiveLine: true,
+      foldGutter: true,
+      gutters: ['CodeMirror-linenumbers', 'CodeMirror-foldgutter'],
+      extraKeys: {
+        'Tab': function(cm) { cm.replaceSelection('  ', 'end'); }
+      }
     });
     dpConfigCm.setValue(content || '');
     dpConfigCm.on('change', () => {
