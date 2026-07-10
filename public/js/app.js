@@ -9462,3 +9462,97 @@ async function saveDpPipeline() {
     btn.disabled = false;
   }
 }
+
+function showNewDpFileModal() {
+  const modal = document.getElementById('modal-new-dp-file');
+  const input = document.getElementById('new-dp-filename');
+  const errorEl = document.getElementById('new-dp-filename-error');
+  if (modal) modal.style.display = 'flex';
+  if (input) { input.value = ''; input.focus(); }
+  if (errorEl) errorEl.style.display = 'none';
+}
+
+function closeNewDpFileModal() {
+  const modal = document.getElementById('modal-new-dp-file');
+  if (modal) modal.style.display = 'none';
+}
+
+async function submitNewDpFile() {
+  const input = document.getElementById('new-dp-filename');
+  const errorEl = document.getElementById('new-dp-filename-error');
+  let filename = (input ? input.value : '').trim();
+
+  if (!filename) {
+    errorEl.textContent = 'Filename is required.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
+    errorEl.textContent = 'Invalid filename: path separators and .. are not allowed.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (!filename.endsWith('.yml') && !filename.endsWith('.yaml')) {
+    filename += '.yml';
+  }
+
+  const existingOptions = document.getElementById('dp-file-select').options;
+  for (let i = 0; i < existingOptions.length; i++) {
+    if (existingOptions[i].value === filename) {
+      errorEl.textContent = 'A file with this name already exists.';
+      errorEl.style.display = 'block';
+      return;
+    }
+  }
+
+  const templateContent =
+`# Data Prepper Pipeline Configuration
+# Created via Hephaestus Web UI
+# https://opensearch.org/docs/latest/data-prepper/pipelines/
+
+my-pipeline:
+  source:
+    http:
+      port: 2021
+
+  buffer:
+    bounded_blocking:
+      buffer_size: 10000
+      batch_size: 1000
+
+  sink:
+    - opensearch:
+        hosts: ["https://localhost:9200"]
+        username: admin
+        password: admin
+`;
+
+  try {
+    const res = await fetch('/api/v1/dataprepper/pipeline', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token')
+      },
+      body: JSON.stringify({
+        filename: filename,
+        content: templateContent,
+        configId: dpConfigSelectedId || undefined
+      })
+    });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || result.message || 'Failed to create file');
+
+    closeNewDpFileModal();
+    await loadDpPipelineFiles();
+
+    const fileSelect = document.getElementById('dp-file-select');
+    fileSelect.value = filename;
+    onDpFileChange();
+  } catch (e) {
+    errorEl.textContent = e.message;
+    errorEl.style.display = 'block';
+  }
+}
