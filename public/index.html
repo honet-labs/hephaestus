@@ -1272,6 +1272,22 @@
             </div>
             <div style="display: flex; flex-direction: column; gap: 12px;">
               <p style="font-size: 12px; color: var(--text-muted); margin: 0;">Check for and apply portal updates from the remote Git repository.</p>
+
+              <!-- GitHub Token Section -->
+              <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  <span style="font-size: 12px; font-weight: 600; color: var(--text-white);">GitHub Authentication</span>
+                </div>
+                <p style="font-size: 11px; color: var(--text-muted); margin: 0;">Optional. Required for private repositories or to avoid API rate limits. Token needs <code style="background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 3px;">repo</code> scope.</p>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <input type="password" id="github-token-input" placeholder="ghp_xxxxxxxxxxxx" style="flex: 1; padding: 6px 10px; font-size: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-white); font-family: monospace;" />
+                  <button class="btn btn-secondary" onclick="saveGithubToken()" style="padding: 6px 12px; font-size: 11px; white-space: nowrap;">Save Token</button>
+                  <button class="btn btn-secondary" onclick="removeGithubToken()" style="padding: 6px 12px; font-size: 11px; white-space: nowrap; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Remove</button>
+                </div>
+                <div id="github-token-status" style="font-size: 11px; color: var(--text-muted);"></div>
+              </div>
+
               <div style="display: flex; gap: 10px; align-items: center;">
                 <button class="btn btn-primary" onclick="checkForUpdates()" id="btn-check-update" style="display: inline-flex; align-items: center; gap: 6px;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
@@ -2261,6 +2277,6 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
-  <script src="js/app.js?v=2.6.0"></script>
+  <script src="js/app.js?v=2.7.0"></script>
 </body>
 </html>

@@ -82,4 +82,45 @@ router.delete("/grafana/configs/:id", requireRole("ADMIN"), (req, res) => settin
 router.post("/grafana/configs/:id/activate", requireRole("ADMIN"), (req, res) => settingsController.activateConfig(req, res));
 router.post("/grafana/configs/:id/test", requireRole("ADMIN"), (req, res) => settingsController.testConfigConnection(req, res));
 
+/**
+ * @route   GET /api/v1/settings/github-token
+ * @desc    Get GitHub token status (masked)
+ * @access  Admin
+ */
+router.get("/github-token", requireRole("ADMIN"), async (req, res) => {
+  try {
+    const result = await query("SELECT value FROM app_config WHERE key = $1", ["github_token"]);
+    const token = result.rows.length > 0 ? result.rows[0].value : "";
+    const masked = token ? (token.substring(0, 4) + "****" + token.substring(token.length - 4)) : "";
+    return res.status(200).json({ success: true, configured: !!token, masked });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * @route   POST /api/v1/settings/github-token
+ * @desc    Save or delete GitHub token
+ * @access  Admin
+ */
+router.post("/github-token", requireRole("ADMIN"), async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token || !token.trim()) {
+      // Delete token
+      await query("DELETE FROM app_config WHERE key = $1", ["github_token"]);
+      return res.status(200).json({ success: true, message: "GitHub token removed." });
+    }
+    // Upsert token
+    await query(
+      `INSERT INTO app_config (key, value) VALUES ($1, $2)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+      ["github_token", token.trim()]
+    );
+    return res.status(200).json({ success: true, message: "GitHub token saved." });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;

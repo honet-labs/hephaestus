@@ -125,11 +125,15 @@ async function checkForUpdates() {
     });
     const data = await res.json();
     if (data.success && data.hasUpdates) {
-      status.textContent = 'Updates available! Click "Apply Update" to install.';
+      let msg = 'Updates available! Click "Apply Update" to install.';
+      if (data.remote) msg += ` (Remote: ${data.remote})`;
+      status.textContent = msg;
       status.style.color = '#f59e0b';
       applyBtn.style.display = 'inline-flex';
     } else if (data.success) {
-      status.textContent = 'System is up to date.';
+      let msg = 'System is up to date.';
+      if (data.remote) msg += ` (Remote: ${data.remote})`;
+      status.textContent = msg;
       status.style.color = '#3fb950';
     } else {
       status.textContent = 'Could not check for updates: ' + (data.message || 'Unknown error');
@@ -138,6 +142,96 @@ async function checkForUpdates() {
   } catch (e) {
     status.textContent = 'Failed to check updates: ' + e.message;
     status.style.color = '#ff7b72';
+  }
+}
+
+async function loadGithubToken() {
+  const statusEl = document.getElementById('github-token-status');
+  const inputEl = document.getElementById('github-token-input');
+  if (!statusEl || !inputEl) return;
+  try {
+    const res = await fetch('/api/v1/settings/github-token', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token') }
+    });
+    const data = await res.json();
+    if (data.success && data.configured) {
+      statusEl.textContent = 'Token configured: ' + data.masked;
+      statusEl.style.color = '#3fb950';
+      inputEl.value = '';
+      inputEl.placeholder = 'Token configured. Enter new token to replace.';
+    } else {
+      statusEl.textContent = 'No token configured.';
+      statusEl.style.color = 'var(--text-muted)';
+    }
+  } catch (e) {
+    statusEl.textContent = 'Failed to load token status.';
+    statusEl.style.color = '#ff7b72';
+  }
+}
+
+async function saveGithubToken() {
+  const inputEl = document.getElementById('github-token-input');
+  const statusEl = document.getElementById('github-token-status');
+  if (!inputEl || !statusEl) return;
+  const token = inputEl.value.trim();
+  if (!token) {
+    statusEl.textContent = 'Please enter a token.';
+    statusEl.style.color = '#ff7b72';
+    return;
+  }
+  try {
+    const res = await fetch('/api/v1/settings/github-token', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token'),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    if (data.success) {
+      statusEl.textContent = 'Token saved successfully.';
+      statusEl.style.color = '#3fb950';
+      inputEl.value = '';
+      loadGithubToken();
+    } else {
+      statusEl.textContent = 'Failed to save: ' + (data.message || data.error);
+      statusEl.style.color = '#ff7b72';
+    }
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = '#ff7b72';
+  }
+}
+
+async function removeGithubToken() {
+  const statusEl = document.getElementById('github-token-status');
+  const inputEl = document.getElementById('github-token-input');
+  if (!statusEl) return;
+  try {
+    const res = await fetch('/api/v1/settings/github-token', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token'),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ token: '' })
+    });
+    const data = await res.json();
+    if (data.success) {
+      statusEl.textContent = 'Token removed.';
+      statusEl.style.color = 'var(--text-muted)';
+      if (inputEl) {
+        inputEl.value = '';
+        inputEl.placeholder = 'ghp_xxxxxxxxxxxx';
+      }
+    } else {
+      statusEl.textContent = 'Failed to remove: ' + (data.message || data.error);
+      statusEl.style.color = '#ff7b72';
+    }
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = '#ff7b72';
   }
 }
 
@@ -834,6 +928,7 @@ function showPage(pageId) {
     pageTitle.textContent = 'System Update';
     pageDesc.textContent = 'Check for and apply portal updates from the remote repository.';
     checkForUpdates();
+    loadGithubToken();
   }
 }
 
