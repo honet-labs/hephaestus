@@ -394,7 +394,7 @@ function initAppOnce() {
 }
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'dataprepper-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'dataprepper-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update', 'backup-db-configs', 'backup-destinations', 'backup-run', 'backup-history'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -868,6 +868,20 @@ function showPage(pageId) {
     if (setArrow) setArrow.style.transform = 'rotate(0deg)';
   }
 
+  const isBackupPage = backupPages.includes(pageId);
+  const bkSubmenu = document.getElementById('backup-submenu');
+  const bkParentMenu = document.getElementById('menu-backup-parent');
+  const bkArrow = document.getElementById('menu-backup-arrow');
+  if (isBackupPage) {
+    if (bkSubmenu) { bkSubmenu.classList.remove('hidden'); bkSubmenu.style.display = 'flex'; }
+    if (bkParentMenu) bkParentMenu.classList.add('active');
+    if (bkArrow) bkArrow.style.transform = 'rotate(180deg)';
+  } else {
+    if (bkSubmenu) { bkSubmenu.classList.add('hidden'); bkSubmenu.style.display = 'none'; }
+    if (bkParentMenu) bkParentMenu.classList.remove('active');
+    if (bkArrow) bkArrow.style.transform = 'rotate(0deg)';
+  }
+
   // Update header descriptions
   activeModuleName.textContent = pageId.toUpperCase();
   
@@ -941,6 +955,22 @@ function showPage(pageId) {
     pageDesc.textContent = 'Check for and apply portal updates from the remote repository.';
     checkForUpdates();
     loadGithubToken();
+  } else if (pageId === 'backup-db-configs') {
+    pageTitle.textContent = 'Database Connections';
+    pageDesc.textContent = 'Manage database connections for backup operations.';
+    loadBackupDbConfigs();
+  } else if (pageId === 'backup-destinations') {
+    pageTitle.textContent = 'Backup Destinations';
+    pageDesc.textContent = 'Configure storage destinations for backup files.';
+    loadBackupDestinations();
+  } else if (pageId === 'backup-run') {
+    pageTitle.textContent = 'Run Backup';
+    pageDesc.textContent = 'Execute a database backup to a configured destination.';
+    loadBackupRunForm();
+  } else if (pageId === 'backup-history') {
+    pageTitle.textContent = 'Backup History';
+    pageDesc.textContent = 'View past backup execution results.';
+    loadBackupHistory();
   }
 }
 
@@ -9409,4 +9439,458 @@ my-pipeline:
     errorEl.textContent = e.message;
     errorEl.style.display = 'block';
   }
+}
+
+// ==========================================
+// BACKUP MANAGER
+// ==========================================
+
+const backupPages = ['backup-db-configs', 'backup-destinations', 'backup-run', 'backup-history'];
+
+function toggleBackupSubmenu() {
+  const submenu = document.getElementById('backup-submenu');
+  const arrow = document.getElementById('menu-backup-arrow');
+  if (submenu) {
+    const isHidden = submenu.classList.contains('hidden') || submenu.style.display === 'none';
+    if (isHidden) {
+      submenu.classList.remove('hidden');
+      submenu.style.display = 'flex';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+      const hash = window.location.hash.replace('#', '') || 'overview';
+      if (!backupPages.includes(hash)) {
+        navigate('backup-db-configs');
+      }
+    } else {
+      submenu.classList.add('hidden');
+      submenu.style.display = 'none';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove('active');
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// ---- Database Connections ----
+let backupDbConfigs = [];
+
+async function loadBackupDbConfigs() {
+  const container = document.getElementById('backup-db-list');
+  container.innerHTML = '<div class="loading-container" style="display: flex;"><div class="loading-spinner"></div><div class="loading-text">Loading connections...</div></div>';
+  try {
+    const res = await fetch('/api/v1/backup/db-configs');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    backupDbConfigs = data.data || [];
+    renderBackupDbConfigs();
+  } catch (e) {
+    container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderBackupDbConfigs() {
+  const container = document.getElementById('backup-db-list');
+  if (backupDbConfigs.length === 0) {
+    container.innerHTML = '<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg><p>No database connections configured.</p><p style="font-size: 11px;">Click "Add Database" to create a connection for backup operations.</p></div>';
+    return;
+  }
+  const typeIcons = { postgresql: '#336791', mysql: '#4479a1', mariadb: '#003545', sqlserver: '#cc2927' };
+  let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+  backupDbConfigs.forEach(c => {
+    const color = typeIcons[c.dbType] || '#58a6ff';
+    html += `
+      <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+          <div style="width: 36px; height: 36px; background: ${color}15; border: 1px solid ${color}30; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: ${color}; flex-shrink: 0; font-size: 10px; font-weight: bold;">${c.dbType.toUpperCase().substring(0,3)}</div>
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-weight: 600; color: var(--text-white); font-size: 13px;">${escapeHtml(c.name)}</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${escapeHtml(c.host)}:${c.port} / ${escapeHtml(c.databaseName)}</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span class="status-badge" style="background: ${color}15; color: ${color}; border: 1px solid ${color}30; font-size: 9px;">${escapeHtml(c.dbType.toUpperCase())}</span>
+          ${c.sshHost ? '<span class="status-badge" style="background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); font-size: 9px;">SSH</span>' : ''}
+          <button class="btn btn-secondary" onclick="editBackupDbConfig('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Edit</button>
+          <button class="btn btn-danger" onclick="deleteBackupDbConfig('${escapeAttr(c.id)}', '${escapeAttr(c.name)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Del</button>
+        </div>
+      </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function showAddBackupDbModal() {
+  document.getElementById('backup-db-id').value = '';
+  document.getElementById('backup-db-name').value = '';
+  document.getElementById('backup-db-type').value = 'postgresql';
+  document.getElementById('backup-db-host').value = '';
+  document.getElementById('backup-db-port').value = '5432';
+  document.getElementById('backup-db-username').value = '';
+  document.getElementById('backup-db-password').value = '';
+  document.getElementById('backup-db-database').value = '';
+  document.getElementById('backup-db-ssh-host').value = '';
+  document.getElementById('backup-db-ssh-port').value = '22';
+  document.getElementById('backup-db-ssh-user').value = '';
+  document.getElementById('backup-db-ssh-auth').value = 'password';
+  document.getElementById('backup-db-ssh-password').value = '';
+  document.getElementById('backup-db-ssh-key').value = '';
+  document.getElementById('backup-db-test-result').style.display = 'none';
+  document.getElementById('backup-db-modal-title').textContent = 'Add Database Connection';
+  document.getElementById('modal-backup-db').classList.add('active');
+}
+
+function editBackupDbConfig(id) {
+  const c = backupDbConfigs.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('backup-db-id').value = c.id;
+  document.getElementById('backup-db-name').value = c.name;
+  document.getElementById('backup-db-type').value = c.dbType;
+  document.getElementById('backup-db-host').value = c.host;
+  document.getElementById('backup-db-port').value = c.port;
+  document.getElementById('backup-db-username').value = c.username;
+  document.getElementById('backup-db-password').value = '';
+  document.getElementById('backup-db-password').placeholder = 'Enter to change';
+  document.getElementById('backup-db-database').value = c.databaseName;
+  document.getElementById('backup-db-ssh-host').value = c.sshHost || '';
+  document.getElementById('backup-db-ssh-port').value = c.sshPort || 22;
+  document.getElementById('backup-db-ssh-user').value = c.sshUser || '';
+  document.getElementById('backup-db-ssh-auth').value = c.sshAuth || 'password';
+  document.getElementById('backup-db-ssh-password').value = '';
+  document.getElementById('backup-db-ssh-key').value = '';
+  document.getElementById('backup-db-test-result').style.display = 'none';
+  document.getElementById('backup-db-modal-title').textContent = 'Edit Database Connection';
+  document.getElementById('modal-backup-db').classList.add('active');
+}
+
+async function saveBackupDbConfig() {
+  const id = document.getElementById('backup-db-id').value;
+  const body = {
+    id: id || undefined,
+    name: document.getElementById('backup-db-name').value.trim(),
+    dbType: document.getElementById('backup-db-type').value,
+    host: document.getElementById('backup-db-host').value.trim(),
+    port: document.getElementById('backup-db-port').value,
+    username: document.getElementById('backup-db-username').value.trim(),
+    password: document.getElementById('backup-db-password').value,
+    databaseName: document.getElementById('backup-db-database').value.trim(),
+    sshHost: document.getElementById('backup-db-ssh-host').value.trim() || undefined,
+    sshPort: document.getElementById('backup-db-ssh-port').value || undefined,
+    sshUser: document.getElementById('backup-db-ssh-user').value.trim() || undefined,
+    sshAuth: document.getElementById('backup-db-ssh-auth').value,
+    sshPassword: document.getElementById('backup-db-ssh-password').value || undefined,
+    sshKey: document.getElementById('backup-db-ssh-key').value || undefined,
+  };
+  if (!body.name || !body.host || !body.username || !body.databaseName) {
+    alert('Please fill in all required fields.'); return;
+  }
+  if (!id && !body.password) { alert('Password is required.'); return; }
+
+  try {
+    const res = await fetch('/api/v1/backup/db-configs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    closeModal('modal-backup-db');
+    loadBackupDbConfigs();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function deleteBackupDbConfig(id, name) {
+  if (!confirm(`Delete database connection "${name}"?`)) return;
+  try {
+    await fetch(`/api/v1/backup/db-configs/${id}`, { method: 'DELETE' });
+    loadBackupDbConfigs();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function testBackupDbConnection() {
+  const resultEl = document.getElementById('backup-db-test-result');
+  resultEl.style.display = 'block';
+  resultEl.style.background = 'rgba(88,166,255,0.1)';
+  resultEl.style.border = '1px solid rgba(88,166,255,0.3)';
+  resultEl.style.color = '#58a6ff';
+  resultEl.textContent = 'Testing connection...';
+  const body = {
+    name: document.getElementById('backup-db-name').value.trim(),
+    dbType: document.getElementById('backup-db-type').value,
+    host: document.getElementById('backup-db-host').value.trim(),
+    port: document.getElementById('backup-db-port').value,
+    username: document.getElementById('backup-db-username').value.trim(),
+    password: document.getElementById('backup-db-password').value || 'test',
+    databaseName: document.getElementById('backup-db-database').value.trim(),
+    sshHost: document.getElementById('backup-db-ssh-host').value.trim() || undefined,
+    sshPort: document.getElementById('backup-db-ssh-port').value || undefined,
+    sshUser: document.getElementById('backup-db-ssh-user').value.trim() || undefined,
+    sshAuth: document.getElementById('backup-db-ssh-auth').value,
+    sshPassword: document.getElementById('backup-db-ssh-password').value || undefined,
+    sshKey: document.getElementById('backup-db-ssh-key').value || undefined,
+  };
+  try {
+    const res = await fetch('/api/v1/backup/db-configs/test', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    resultEl.style.background = data.success ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
+    resultEl.style.borderColor = data.success ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+    resultEl.style.color = data.success ? '#10b981' : '#ef4444';
+    resultEl.textContent = data.message || data.error;
+  } catch (e) {
+    resultEl.style.background = 'rgba(239,68,68,0.1)';
+    resultEl.style.borderColor = 'rgba(239,68,68,0.3)';
+    resultEl.style.color = '#ef4444';
+    resultEl.textContent = 'Test failed: ' + e.message;
+  }
+}
+
+// ---- Backup Destinations ----
+let backupDestinations = [];
+
+async function loadBackupDestinations() {
+  const container = document.getElementById('backup-dest-list');
+  container.innerHTML = '<div class="loading-container" style="display: flex;"><div class="loading-spinner"></div><div class="loading-text">Loading destinations...</div></div>';
+  try {
+    const res = await fetch('/api/v1/backup/destinations');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    backupDestinations = data.data || [];
+    renderBackupDestinations();
+  } catch (e) {
+    container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderBackupDestinations() {
+  const container = document.getElementById('backup-dest-list');
+  if (backupDestinations.length === 0) {
+    container.innerHTML = '<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><p>No backup destinations configured.</p></div>';
+    return;
+  }
+  const typeLabels = { local: 'Local Disk', r2: 'Cloudflare R2', gdrive: 'Google Drive', nas: 'NAS (SSH)' };
+  const typeColors = { local: '#10b981', r2: '#f59e0b', gdrive: '#4285f4', nas: '#8b5cf6' };
+  let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+  backupDestinations.forEach(d => {
+    const color = typeColors[d.destType] || '#58a6ff';
+    const detail = d.destType === 'local' ? (d.config.path || '/opt/backups') : d.destType === 'r2' ? (d.config.bucket || '-') : d.destType === 'gdrive' ? (d.config.folderId || 'Root') : (d.config.host || '-');
+    html += `
+      <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+          <div style="width: 36px; height: 36px; background: ${color}15; border: 1px solid ${color}30; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: ${color}; flex-shrink: 0; font-size: 10px; font-weight: bold;">${d.destType.toUpperCase().substring(0,3)}</div>
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-weight: 600; color: var(--text-white); font-size: 13px;">${escapeHtml(d.name)}</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${escapeHtml(detail)}</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span class="status-badge" style="background: ${color}15; color: ${color}; border: 1px solid ${color}30; font-size: 9px;">${escapeHtml(typeLabels[d.destType] || d.destType)}</span>
+          <button class="btn btn-secondary" onclick="editBackupDest('${escapeAttr(d.id)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Edit</button>
+          <button class="btn btn-danger" onclick="deleteBackupDest('${escapeAttr(d.id)}', '${escapeAttr(d.name)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Del</button>
+        </div>
+      </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function showAddBackupDestModal() {
+  document.getElementById('backup-dest-id').value = '';
+  document.getElementById('backup-dest-name').value = '';
+  document.getElementById('backup-dest-type').value = 'local';
+  document.getElementById('backup-dest-local-path').value = '/opt/backups';
+  document.getElementById('backup-dest-r2-account-id').value = '';
+  document.getElementById('backup-dest-r2-bucket').value = '';
+  document.getElementById('backup-dest-r2-access-key').value = '';
+  document.getElementById('backup-dest-r2-secret-key').value = '';
+  document.getElementById('backup-dest-gdrive-token').value = '';
+  document.getElementById('backup-dest-gdrive-folder').value = '';
+  document.getElementById('backup-dest-nas-host').value = '';
+  document.getElementById('backup-dest-nas-port').value = '22';
+  document.getElementById('backup-dest-nas-user').value = '';
+  document.getElementById('backup-dest-nas-password').value = '';
+  document.getElementById('backup-dest-nas-path').value = '/backups';
+  document.getElementById('backup-dest-modal-title').textContent = 'Add Destination';
+  onBackupDestTypeChange();
+  document.getElementById('modal-backup-dest').classList.add('active');
+}
+
+function editBackupDest(id) {
+  const d = backupDestinations.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('backup-dest-id').value = d.id;
+  document.getElementById('backup-dest-name').value = d.name;
+  document.getElementById('backup-dest-type').value = d.destType;
+  document.getElementById('backup-dest-local-path').value = d.config.path || '';
+  document.getElementById('backup-dest-r2-account-id').value = d.config.accountId || '';
+  document.getElementById('backup-dest-r2-bucket').value = d.config.bucket || '';
+  document.getElementById('backup-dest-r2-access-key').value = d.config.accessKeyId || '';
+  document.getElementById('backup-dest-r2-secret-key').value = '';
+  document.getElementById('backup-dest-r2-secret-key').placeholder = 'Enter to change';
+  document.getElementById('backup-dest-gdrive-token').value = '';
+  document.getElementById('backup-dest-gdrive-token').placeholder = 'Enter to change';
+  document.getElementById('backup-dest-gdrive-folder').value = d.config.folderId || '';
+  document.getElementById('backup-dest-nas-host').value = d.config.host || '';
+  document.getElementById('backup-dest-nas-port').value = d.config.port || 22;
+  document.getElementById('backup-dest-nas-user').value = d.config.username || '';
+  document.getElementById('backup-dest-nas-password').value = '';
+  document.getElementById('backup-dest-nas-path').value = d.config.path || '';
+  document.getElementById('backup-dest-modal-title').textContent = 'Edit Destination';
+  onBackupDestTypeChange();
+  document.getElementById('modal-backup-dest').classList.add('active');
+}
+
+function onBackupDestTypeChange() {
+  const type = document.getElementById('backup-dest-type').value;
+  document.querySelectorAll('.dest-config-section').forEach(el => el.style.display = 'none');
+  const configMap = { local: 'dest-local-config', r2: 'dest-r2-config', gdrive: 'dest-gdrive-config', nas: 'dest-nas-config' };
+  const el = document.getElementById(configMap[type]);
+  if (el) el.style.display = 'block';
+}
+
+async function saveBackupDestination() {
+  const id = document.getElementById('backup-dest-id').value;
+  const type = document.getElementById('backup-dest-type').value;
+  let config = {};
+  if (type === 'local') {
+    config = { path: document.getElementById('backup-dest-local-path').value.trim() || '/opt/backups' };
+  } else if (type === 'r2') {
+    config = { accountId: document.getElementById('backup-dest-r2-account-id').value.trim(), bucket: document.getElementById('backup-dest-r2-bucket').value.trim(), accessKeyId: document.getElementById('backup-dest-r2-access-key').value.trim(), secretAccessKey: document.getElementById('backup-dest-r2-secret-key').value };
+  } else if (type === 'gdrive') {
+    config = { accessToken: document.getElementById('backup-dest-gdrive-token').value, folderId: document.getElementById('backup-dest-gdrive-folder').value.trim() };
+  } else if (type === 'nas') {
+    config = { host: document.getElementById('backup-dest-nas-host').value.trim(), port: parseInt(document.getElementById('backup-dest-nas-port').value), username: document.getElementById('backup-dest-nas-user').value.trim(), sshAuth: document.getElementById('backup-dest-nas-auth').value, password: document.getElementById('backup-dest-nas-password').value, sshKey: document.getElementById('backup-dest-nas-key').value, path: document.getElementById('backup-dest-nas-path').value.trim() };
+  }
+  const body = { id: id || undefined, name: document.getElementById('backup-dest-name').value.trim(), destType: type, config };
+  if (!body.name) { alert('Name is required.'); return; }
+  try {
+    const res = await fetch('/api/v1/backup/destinations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    closeModal('modal-backup-dest');
+    loadBackupDestinations();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function deleteBackupDest(id, name) {
+  if (!confirm(`Delete destination "${name}"?`)) return;
+  try {
+    await fetch(`/api/v1/backup/destinations/${id}`, { method: 'DELETE' });
+    loadBackupDestinations();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---- Run Backup ----
+async function loadBackupRunForm() {
+  try {
+    const [dbRes, destRes] = await Promise.all([
+      fetch('/api/v1/backup/db-configs').then(r => r.json()),
+      fetch('/api/v1/backup/destinations').then(r => r.json())
+    ]);
+    const dbSelect = document.getElementById('backup-run-db');
+    const destSelect = document.getElementById('backup-run-dest');
+    dbSelect.innerHTML = '';
+    destSelect.innerHTML = '';
+    if (dbRes.success && dbRes.data.length) {
+      dbRes.data.forEach(c => { dbSelect.innerHTML += `<option value="${escapeAttr(c.id)}">${escapeHtml(c.name)} (${c.dbType.toUpperCase()})</option>`; });
+    } else {
+      dbSelect.innerHTML = '<option value="">No databases configured</option>';
+    }
+    if (destRes.success && destRes.data.length) {
+      destRes.data.forEach(d => { destSelect.innerHTML += `<option value="${escapeAttr(d.id)}">${escapeHtml(d.name)} (${d.destType.toUpperCase()})</option>`; });
+    } else {
+      destSelect.innerHTML = '<option value="">No destinations configured</option>';
+    }
+  } catch (e) {}
+}
+
+async function runBackupNow() {
+  const dbConfigId = document.getElementById('backup-run-db').value;
+  const destinationId = document.getElementById('backup-run-dest').value;
+  const resultEl = document.getElementById('backup-run-result');
+  const btn = document.getElementById('backup-run-btn');
+  if (!dbConfigId || !destinationId) { alert('Please select both database and destination.'); return; }
+  btn.innerHTML = '<span class="spinner" style="margin-right: 4px;"></span> Backing up...';
+  btn.disabled = true;
+  resultEl.style.display = 'block';
+  resultEl.style.background = 'rgba(88,166,255,0.1)';
+  resultEl.style.border = '1px solid rgba(88,166,255,0.3)';
+  resultEl.style.color = '#58a6ff';
+  resultEl.textContent = 'Backup in progress...';
+  try {
+    const res = await fetch('/api/v1/backup/run', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dbConfigId, destinationId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      resultEl.style.background = 'rgba(16,185,129,0.1)';
+      resultEl.style.borderColor = 'rgba(16,185,129,0.3)';
+      resultEl.style.color = '#10b981';
+      resultEl.innerHTML = `<strong>Backup Successful</strong><br>${escapeHtml(data.message)}<br>File: ${escapeHtml(data.data.filename)} (${formatBytes(data.data.fileSize)})`;
+    } else {
+      throw new Error(data.error || 'Backup failed');
+    }
+  } catch (e) {
+    resultEl.style.background = 'rgba(239,68,68,0.1)';
+    resultEl.style.borderColor = 'rgba(239,68,68,0.3)';
+    resultEl.style.color = '#ef4444';
+    resultEl.innerHTML = `<strong>Backup Failed</strong><br>${escapeHtml(e.message)}`;
+  } finally {
+    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Start Backup';
+    btn.disabled = false;
+  }
+}
+
+// ---- Backup History ----
+async function loadBackupHistory() {
+  const tbody = document.getElementById('backup-history-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading...</td></tr>';
+  try {
+    const res = await fetch('/api/v1/backup/history');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    const history = data.data || [];
+    if (history.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">No backup history yet.</td></tr>';
+      return;
+    }
+    const statusColors = { success: '#10b981', failed: '#ef4444', running: '#58a6ff' };
+    tbody.innerHTML = history.map(h => {
+      const color = statusColors[h.status] || '#58a6ff';
+      const time = h.startedAt ? new Date(h.startedAt).toLocaleString() : '-';
+      return `<tr>
+        <td class="font-mono" style="font-size: 11px;">${time}</td>
+        <td>${escapeHtml(h.dbName)}</td>
+        <td><span class="status-badge" style="font-size: 9px;">${escapeHtml(h.dbType.toUpperCase())}</span></td>
+        <td><span class="status-badge" style="font-size: 9px;">${escapeHtml(h.destType.toUpperCase())}</span></td>
+        <td class="font-mono" style="font-size: 11px;">${escapeHtml(h.filename)}</td>
+        <td>${formatBytes(h.fileSize)}</td>
+        <td><span class="status-badge" style="background: ${color}20; color: ${color}; border: 1px solid ${color}40; font-size: 9px;">${escapeHtml(h.status.toUpperCase())}</span></td>
+        <td>${h.status === 'failed' ? `<button class="btn btn-danger" onclick="deleteBackupHistory('${escapeAttr(h.id)}')" style="padding: 2px 6px; font-size: 10px;">Del</button>` : ''}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ef4444; padding: 20px;">${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+async function deleteBackupHistory(id) {
+  try {
+    await fetch(`/api/v1/backup/history/${id}`, { method: 'DELETE' });
+    loadBackupHistory();
+  } catch (e) { alert('Error: ' + e.message); }
 }

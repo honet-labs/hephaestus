@@ -35,7 +35,7 @@ function getEncryptionKey(): Buffer {
   return newKey;
 }
 
-function encryptText(plaintext: string): string {
+export function encryptText(plaintext: string): string {
   const key = getEncryptionKey();
   const iv = crypto.randomBytes(IV_LEN);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
@@ -46,7 +46,7 @@ function encryptText(plaintext: string): string {
   return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
 }
 
-function decryptText(encryptedStr: string): string {
+export function decryptText(encryptedStr: string): string {
   // If not in expected format, return as-is (plaintext fallback)
   const parts = encryptedStr.split(":");
   if (parts.length !== 3) return encryptedStr;
@@ -441,6 +441,51 @@ export async function initDb() {
       ssh_key TEXT,
       is_active BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 14. BackupDatabaseConfigs - Database connections for backup
+    `CREATE TABLE IF NOT EXISTS backup_database_configs (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      db_type VARCHAR(50) NOT NULL,
+      host VARCHAR(255) NOT NULL,
+      port INTEGER NOT NULL,
+      username VARCHAR(255) NOT NULL,
+      password TEXT NOT NULL,
+      database_name VARCHAR(255) NOT NULL,
+      ssh_host VARCHAR(255),
+      ssh_port INTEGER DEFAULT 22,
+      ssh_user VARCHAR(255),
+      ssh_auth VARCHAR(20) DEFAULT 'password',
+      ssh_password TEXT,
+      ssh_key TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 15. BackupDestinations - Storage destinations for backups
+    `CREATE TABLE IF NOT EXISTS backup_destinations (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      dest_type VARCHAR(50) NOT NULL,
+      config JSONB NOT NULL DEFAULT '{}',
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 16. BackupHistory - Backup execution history
+    `CREATE TABLE IF NOT EXISTS backup_history (
+      id VARCHAR(50) PRIMARY KEY,
+      db_config_id VARCHAR(50) REFERENCES backup_database_configs(id) ON DELETE SET NULL,
+      destination_id VARCHAR(50) REFERENCES backup_destinations(id) ON DELETE SET NULL,
+      db_name VARCHAR(255) NOT NULL,
+      db_type VARCHAR(50) NOT NULL,
+      dest_type VARCHAR(50) NOT NULL,
+      filename VARCHAR(500) NOT NULL,
+      file_size BIGINT DEFAULT 0,
+      status VARCHAR(50) NOT NULL DEFAULT 'running',
+      error_message TEXT,
+      started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      completed_at TIMESTAMP
     );`
   ];
 

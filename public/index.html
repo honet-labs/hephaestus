@@ -339,6 +339,46 @@
               </a>
             </div>
           </div>
+          <!-- Backup Manager Parent Menu -->
+          <div class="menu-item-group" style="display: flex; flex-direction: column;">
+            <a href="javascript:void(0)" id="menu-backup-parent" class="menu-item" onclick="toggleBackupSubmenu()" style="cursor: pointer;">
+              <span class="menu-item-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              </span>
+              <div style="flex-grow: 1;">
+                <div class="menu-item-title">Backup Manager</div>
+              </div>
+              <span class="menu-arrow" id="menu-backup-arrow" style="transition: transform 0.2s; display: flex; align-items: center; color: var(--text-muted);">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </a>
+            <div id="backup-submenu" class="submenu-list hidden" style="padding-left: 20px; display: none; flex-direction: column; gap: 2px; margin-top: 2px;">
+              <a href="#backup-db-configs" id="menu-backup-db-configs" class="menu-item" style="padding: 6px 16px; border-radius: 4px;" onclick="navigate('backup-db-configs'); return false;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Database Connections</div>
+                </div>
+              </a>
+              <a href="#backup-destinations" id="menu-backup-destinations" class="menu-item" style="padding: 6px 16px; border-radius: 4px;" onclick="navigate('backup-destinations'); return false;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Backup Destinations</div>
+                </div>
+              </a>
+              <a href="#backup-run" id="menu-backup-run" class="menu-item" style="padding: 6px 16px; border-radius: 4px;" onclick="navigate('backup-run'); return false;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Run Backup</div>
+                </div>
+              </a>
+              <a href="#backup-history" id="menu-backup-history" class="menu-item" style="padding: 6px 16px; border-radius: 4px;" onclick="navigate('backup-history'); return false;">
+                <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
+                <div>
+                  <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Backup History</div>
+                </div>
+              </a>
+            </div>
+          </div>
         </nav>
       </div>
 
@@ -1124,7 +1164,311 @@
           </div>
         </div>
 
+        <!-- PAGE: BACKUP DATABASE CONNECTIONS -->
+        <div id="page-backup-db-configs" class="hidden">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">Database Connections</h2>
+              <p class="page-title-desc">Manage database connections for backup operations.</p>
+            </div>
+            <button class="btn btn-primary" onclick="showAddBackupDbModal()" style="font-size: 11px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Database
+            </button>
+          </div>
+          <div id="backup-db-list">
+            <div class="loading-container" style="display: flex;"><div class="loading-spinner"></div><div class="loading-text">Loading connections...</div></div>
+          </div>
+        </div>
 
+        <!-- PAGE: BACKUP DESTINATIONS -->
+        <div id="page-backup-destinations" class="hidden">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">Backup Destinations</h2>
+              <p class="page-title-desc">Configure storage destinations for backup files.</p>
+            </div>
+            <button class="btn btn-primary" onclick="showAddBackupDestModal()" style="font-size: 11px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Destination
+            </button>
+          </div>
+          <div id="backup-dest-list">
+            <div class="loading-container" style="display: flex;"><div class="loading-spinner"></div><div class="loading-text">Loading destinations...</div></div>
+          </div>
+        </div>
+
+        <!-- PAGE: RUN BACKUP -->
+        <div id="page-backup-run" class="hidden">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">Run Backup</h2>
+              <p class="page-title-desc">Execute a database backup to a configured destination.</p>
+            </div>
+          </div>
+          <div class="panel" style="max-width: 600px;">
+            <div class="panel-header"><h3 class="panel-title">Backup Configuration</h3></div>
+            <div class="form-group">
+              <label>Source Database</label>
+              <select id="backup-run-db" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
+                <option value="">Loading databases...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Destination</label>
+              <select id="backup-run-dest" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
+                <option value="">Loading destinations...</option>
+              </select>
+            </div>
+            <div id="backup-run-result" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12px;"></div>
+            <div style="margin-top: 16px;">
+              <button class="btn btn-primary" id="backup-run-btn" onclick="runBackupNow()" style="font-size: 11px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Start Backup
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: BACKUP HISTORY -->
+        <div id="page-backup-history" class="hidden">
+          <div class="page-header">
+            <div>
+              <h2 class="page-title">Backup History</h2>
+              <p class="page-title-desc">View past backup execution results.</p>
+            </div>
+            <button class="btn btn-secondary" onclick="loadBackupHistory()" style="font-size: 11px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              Refresh
+            </button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Database</th>
+                  <th>Type</th>
+                  <th>Destination</th>
+                  <th>Filename</th>
+                  <th>Size</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="backup-history-tbody">
+                <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MODAL: ADD/EDIT DATABASE CONNECTION -->
+        <div id="modal-backup-db" class="modal-overlay">
+          <div class="modal-dialog" style="max-width: 520px;">
+            <div class="modal-header">
+              <h3 class="modal-title" id="backup-db-modal-title">Add Database Connection</h3>
+              <button class="modal-close" onclick="closeModal('modal-backup-db')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+              <input type="hidden" id="backup-db-id">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Connection Name</label>
+                  <input type="text" id="backup-db-name" placeholder="Production MySQL">
+                </div>
+                <div class="form-group">
+                  <label>Database Type</label>
+                  <select id="backup-db-type" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; width: 100%;">
+                    <option value="postgresql">PostgreSQL</option>
+                    <option value="mysql">MySQL</option>
+                    <option value="mariadb">MariaDB</option>
+                    <option value="sqlserver">SQL Server</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                  <label>Host</label>
+                  <input type="text" id="backup-db-host" placeholder="192.168.1.100">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label>Port</label>
+                  <input type="number" id="backup-db-port" placeholder="5432">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Username</label>
+                  <input type="text" id="backup-db-username" placeholder="admin">
+                </div>
+                <div class="form-group">
+                  <label>Password</label>
+                  <input type="password" id="backup-db-password" placeholder="••••••">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Database Name</label>
+                <input type="text" id="backup-db-database" placeholder="mydb">
+              </div>
+              <div style="border-top: 1px solid var(--app-border); margin: 16px 0; padding-top: 16px;">
+                <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 8px; display: block;">SSH Access (Optional — for remote dump)</label>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>SSH Host</label>
+                    <input type="text" id="backup-db-ssh-host" placeholder="Same as DB host">
+                  </div>
+                  <div class="form-group">
+                    <label>SSH Port</label>
+                    <input type="number" id="backup-db-ssh-port" value="22">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>SSH User</label>
+                    <input type="text" id="backup-db-ssh-user" placeholder="root">
+                  </div>
+                  <div class="form-group">
+                    <label>SSH Auth</label>
+                    <select id="backup-db-ssh-auth" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; width: 100%;">
+                      <option value="password">Password</option>
+                      <option value="key">Private Key</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group" id="backup-db-ssh-password-group">
+                  <label>SSH Password</label>
+                  <input type="password" id="backup-db-ssh-password">
+                </div>
+                <div class="form-group" id="backup-db-ssh-key-group" style="display: none;">
+                  <label>SSH Private Key</label>
+                  <textarea id="backup-db-ssh-key" rows="3" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; font-family: monospace;"></textarea>
+                </div>
+              </div>
+              <div id="backup-db-test-result" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12px;"></div>
+            </div>
+            <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: space-between; gap: 10px;">
+              <button class="btn btn-secondary" onclick="testBackupDbConnection()" style="padding: 8px 16px; font-size: 12px; height: auto;">Test Connection</button>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeModal('modal-backup-db')" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
+                <button class="btn btn-primary" onclick="saveBackupDbConfig()" style="padding: 8px 16px; font-size: 12px; height: auto;">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL: ADD/EDIT BACKUP DESTINATION -->
+        <div id="modal-backup-dest" class="modal-overlay">
+          <div class="modal-dialog" style="max-width: 520px;">
+            <div class="modal-header">
+              <h3 class="modal-title" id="backup-dest-modal-title">Add Destination</h3>
+              <button class="modal-close" onclick="closeModal('modal-backup-dest')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+              <input type="hidden" id="backup-dest-id">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Destination Name</label>
+                  <input type="text" id="backup-dest-name" placeholder="Local Backup Disk">
+                </div>
+                <div class="form-group">
+                  <label>Type</label>
+                  <select id="backup-dest-type" onchange="onBackupDestTypeChange()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; width: 100%;">
+                    <option value="local">Local Disk</option>
+                    <option value="r2">Cloudflare R2</option>
+                    <option value="gdrive">Google Drive</option>
+                    <option value="nas">NAS (SMB/SSH)</option>
+                  </select>
+                </div>
+              </div>
+              <!-- Local Disk Config -->
+              <div id="dest-local-config" class="dest-config-section">
+                <div class="form-group">
+                  <label>Backup Path</label>
+                  <input type="text" id="backup-dest-local-path" placeholder="/opt/backups">
+                </div>
+              </div>
+              <!-- R2 Config -->
+              <div id="dest-r2-config" class="dest-config-section" style="display: none;">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Account ID</label>
+                    <input type="text" id="backup-dest-r2-account-id" placeholder="your-account-id">
+                  </div>
+                  <div class="form-group">
+                    <label>Bucket</label>
+                    <input type="text" id="backup-dest-r2-bucket" placeholder="my-backup-bucket">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Access Key ID</label>
+                    <input type="text" id="backup-dest-r2-access-key" placeholder="Access Key ID">
+                  </div>
+                  <div class="form-group">
+                    <label>Secret Access Key</label>
+                    <input type="password" id="backup-dest-r2-secret-key" placeholder="Secret Access Key">
+                  </div>
+                </div>
+              </div>
+              <!-- Google Drive Config -->
+              <div id="dest-gdrive-config" class="dest-config-section" style="display: none;">
+                <div class="form-group">
+                  <label>Access Token (OAuth)</label>
+                  <input type="password" id="backup-dest-gdrive-token" placeholder="ya29...">
+                  <span class="form-help">Generate via Google OAuth 2.0 with drive.file scope.</span>
+                </div>
+                <div class="form-group">
+                  <label>Folder ID (Optional)</label>
+                  <input type="text" id="backup-dest-gdrive-folder" placeholder="1BxiMVs0XRA5nFMdKvBdB...">
+                  <span class="form-help">Leave empty to save in root of Drive.</span>
+                </div>
+              </div>
+              <!-- NAS Config -->
+              <div id="dest-nas-config" class="dest-config-section" style="display: none;">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>NAS Host</label>
+                    <input type="text" id="backup-dest-nas-host" placeholder="192.168.1.200">
+                  </div>
+                  <div class="form-group">
+                    <label>SSH Port</label>
+                    <input type="number" id="backup-dest-nas-port" value="22">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="backup-dest-nas-user" placeholder="admin">
+                  </div>
+                  <div class="form-group">
+                    <label>Auth</label>
+                    <select id="backup-dest-nas-auth" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; width: 100%;">
+                      <option value="password">Password</option>
+                      <option value="key">Private Key</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group" id="dest-nas-password-group">
+                  <label>Password</label>
+                  <input type="password" id="backup-dest-nas-password">
+                </div>
+                <div class="form-group" id="dest-nas-key-group" style="display: none;">
+                  <label>Private Key</label>
+                  <textarea id="backup-dest-nas-key" rows="3" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; font-family: monospace;"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Backup Path</label>
+                  <input type="text" id="backup-dest-nas-path" placeholder="/backups">
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="btn btn-secondary" onclick="closeModal('modal-backup-dest')" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
+              <button class="btn btn-primary" onclick="saveBackupDestination()" style="padding: 8px 16px; font-size: 12px; height: auto;">Save</button>
+            </div>
+          </div>
+        </div>
 
         <!-- PAGE 4: DIAGNOSTICS -->
         <div id="page-diagnostics" class="main-grid hidden">
@@ -2459,6 +2803,6 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
-  <script src="js/app.js?v=3.6.0"></script>
+  <script src="js/app.js?v=4.0.0"></script>
 </body>
 </html>

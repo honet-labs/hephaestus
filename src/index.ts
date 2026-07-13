@@ -17,6 +17,7 @@ import grokDebuggerRoutes from "./routes/grok-debugger.routes";
 import uptimeKumaRoutes from "./routes/uptime-kuma.routes";
 import prometheusRoutes from "./routes/prometheus.routes";
 import dataprepperRoutes from "./routes/dataprepper.routes";
+import backupRoutes from "./routes/backup.routes";
 
 const app = express();
 
@@ -131,6 +132,7 @@ app.use("/api/v1/grok-debugger", grokDebuggerRoutes);
 app.use("/api/v1/uptime-kuma", uptimeKumaRoutes);
 app.use("/api/v1/prometheus", prometheusRoutes);
 app.use("/api/v1/dataprepper", dataprepperRoutes);
+app.use("/api/v1/backup", backupRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
