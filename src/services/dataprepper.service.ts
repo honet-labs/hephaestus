@@ -1,6 +1,7 @@
 import { promises as fsPromises } from "fs";
 import path from "path";
 import crypto from "crypto";
+import axios from "axios";
 import yaml from "js-yaml";
 import { Client } from "ssh2";
 import { query } from "../config/db";
@@ -296,14 +297,14 @@ export class DataPrepperService {
   }
 
   /**
-   * Save a pipeline YAML file.
+   * Save a pipeline YAML file and trigger Data Prepper reload.
    */
-  public async savePipelineFile(filename: string, content: string, configId?: string): Promise<{ success: boolean; message: string }> {
+  public async savePipelineFile(filename: string, content: string, configId?: string): Promise<{ success: boolean; message: string; reloaded: boolean }> {
     // Validate YAML
     try {
       yaml.load(content);
     } catch (e: any) {
-      return { success: false, message: `Invalid YAML: ${e.message}` };
+      return { success: false, message: `Invalid YAML: ${e.message}`, reloaded: false };
     }
 
     const cfg = await this.getConfigToUse(configId);
@@ -312,20 +313,76 @@ export class DataPrepperService {
     // Security: prevent path traversal
     const normalized = path.posix.normalize(filename);
     if (normalized.includes("..") || path.isAbsolute(filename)) {
-      return { success: false, message: "Invalid filename: path traversal is not allowed." };
+      return { success: false, message: "Invalid filename: path traversal is not allowed.", reloaded: false };
     }
 
     if (cfg.mode === "local") {
       const dir = cfg.pipelinesDir;
       try { await fsPromises.access(dir); } catch (_e) { await fsPromises.mkdir(dir, { recursive: true }); }
       await fsPromises.writeFile(filePath, content, "utf-8");
-      return { success: true, message: `Pipeline file "${filename}" saved successfully.` };
+
+      // Try hot-reload via reload URL or common Data Prepper endpoints
+      const reloadUrls = [
+        cfg.reloadUrl,
+        "http://localhost:4900/_restart",
+        "http://localhost:2021/_reload"
+      ].filter(Boolean) as string[];
+
+      let reloaded = false;
+      let lastError = "";
+      for (const url of reloadUrls) {
+        try {
+          await axios.post(url, {}, { timeout: 5000 });
+          reloaded = true;
+          console.log(`[DataPrepperService] Hot-reload succeeded via ${url}`);
+          break;
+        } catch (err: any) {
+          lastError = err.message || String(err);
+          console.log(`[DataPrepperService] Hot-reload failed for ${url}: ${lastError}`);
+        }
+      }
+
+      if (reloaded) {
+        return { success: true, message: `Pipeline file "${filename}" saved and Data Prepper reloaded successfully.`, reloaded: true };
+      } else {
+        return { success: true, message: `Pipeline file "${filename}" saved. Reload failed (${lastError}). Data Prepper may need manual restart.`, reloaded: false };
+      }
     } else {
+      // Remote SSH Mode
       let conn;
       try {
         conn = await this.getSSHConnection(cfg);
         await this.writeRemoteFile(conn, filePath, content, cfg.sshPassword);
-        return { success: true, message: `Pipeline file "${filename}" saved successfully.` };
+
+        let reloaded = false;
+        let reloadMsg = "";
+        const sudoPrefix = cfg.sshPassword ? `echo ${shellEscape(cfg.sshPassword)} | sudo -S ` : "sudo ";
+
+        // 1. Try hot-reload first
+        try {
+          let reloadCmd = `curl -sf -X POST http://localhost:4900/_restart`;
+          if (cfg.reloadUrl) {
+            reloadCmd = `curl -sf -X POST ${shellEscape(cfg.reloadUrl)}`;
+          }
+          await this.executeRemoteCommand(conn, reloadCmd);
+          reloaded = true;
+          reloadMsg = `Pipeline file "${filename}" saved and Data Prepper reloaded successfully.`;
+        } catch (e: any) {
+          console.log(`[DataPrepperService] Hot-reload failed: ${e.message}, trying systemctl restart...`);
+
+          // 2. Fallback: restart service
+          try {
+            await this.executeRemoteCommand(conn, `${sudoPrefix}systemctl restart data-prepper`);
+            reloaded = true;
+            reloadMsg = `Pipeline file "${filename}" saved and Data Prepper service restarted successfully.`;
+          } catch (restartErr: any) {
+            reloadMsg = `Pipeline file "${filename}" saved, but reload/restart failed: ${restartErr.message || restartErr}. You may need to restart Data Prepper manually.`;
+          }
+        }
+
+        return { success: true, message: reloadMsg, reloaded };
+      } catch (err: any) {
+        return { success: false, message: `SSH Save Failed: ${err.message || err}`, reloaded: false };
       } finally {
         if (conn) this.closeAndRemoveConnection(conn, cfg);
       }

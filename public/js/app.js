@@ -9285,12 +9285,12 @@ async function saveDpPipeline() {
       dpConfigModified = false;
       updateDpModifiedBadge();
       resultEl.style.display = 'block';
-      resultEl.style.background = 'rgba(16,185,129,0.1)';
-      resultEl.style.border = '1px solid rgba(16,185,129,0.3)';
-      resultEl.style.color = '#10b981';
+      resultEl.style.background = data.reloaded ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)';
+      resultEl.style.border = data.reloaded ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(245,158,11,0.3)';
+      resultEl.style.color = data.reloaded ? '#10b981' : '#f59e0b';
       resultEl.textContent = data.message || 'Pipeline file saved successfully.';
-      document.getElementById('dp-config-status').textContent = 'Saved';
-      document.getElementById('dp-config-status').style.color = '#10b981';
+      document.getElementById('dp-config-status').textContent = data.reloaded ? 'Saved & Reloaded' : 'Saved (Reload needed)';
+      document.getElementById('dp-config-status').style.color = data.reloaded ? '#10b981' : '#f59e0b';
     } else {
       resultEl.style.display = 'block';
       resultEl.style.background = 'rgba(239,68,68,0.1)';
@@ -9394,6 +9394,17 @@ my-pipeline:
     await loadDpPipelineFiles();
 
     selectDpFile(filename);
+
+    if (result.reloaded === false && result.message) {
+      const resultEl = document.getElementById('dp-config-result');
+      if (resultEl) {
+        resultEl.style.display = 'block';
+        resultEl.style.background = 'rgba(245,158,11,0.1)';
+        resultEl.style.border = '1px solid rgba(245,158,11,0.3)';
+        resultEl.style.color = '#f59e0b';
+        resultEl.textContent = result.message;
+      }
+    }
   } catch (e) {
     errorEl.textContent = e.message;
     errorEl.style.display = 'block';

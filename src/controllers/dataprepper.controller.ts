@@ -55,7 +55,8 @@ export class DataPrepperController {
       }
       const result = await dataprepperService.savePipelineFile(filename, content, configId);
       if (result.success) {
-        await logActivity("DataPrepper Settings", "Save Pipeline", `Saved pipeline file "${filename}"`, "SUCCESS");
+        const reloadStatus = result.reloaded ? " | Reloaded" : " | Manual restart needed";
+        await logActivity("DataPrepper Settings", "Save Pipeline", `Saved pipeline file "${filename}"${reloadStatus}`, result.reloaded ? "SUCCESS" : "WARNING");
       }
       return res.status(200).json(result);
     } catch (err: any) {
