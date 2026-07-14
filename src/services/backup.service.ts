@@ -63,7 +63,7 @@ class BackupService {
       return existing.conn;
     }
     if (existing) {
-      try { existing.conn.end(); } catch (_) {}
+      try { existing.conn.end(); } catch (_) { /* ignore close error */ }
       this.sshConnections.delete(key);
     }
     const conn = await new Promise<Client>((resolve, reject) => {
@@ -90,7 +90,7 @@ class BackupService {
     const key = this.getSshKey(cfg);
     const entry = this.sshConnections.get(key);
     if (entry) {
-      try { entry.conn.end(); } catch (_) {}
+      try { entry.conn.end(); } catch (_) { /* ignore close error */ }
       this.sshConnections.delete(key);
     }
   }
@@ -156,7 +156,6 @@ class BackupService {
 
     const fields: string[] = [];
     const values: any[] = [];
-    let idx = 1;
 
     const upsert = async () => {
       const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(", ");
@@ -166,7 +165,6 @@ class BackupService {
           [...values, id]
         );
       } else {
-        const cols = ["id", ...fields.map((_, i) => `$${i + 1}`)];
         const valPlaceholders = fields.map((_, i) => `$${i + 2}`);
         await query(
           `INSERT INTO backup_database_configs (id, ${fields.join(", ")}) VALUES ($1, ${valPlaceholders.join(", ")})`,
@@ -400,9 +398,9 @@ class BackupService {
     const r = res.rows[0] as BackupDbConfig;
     // Decrypt passwords
     const { decryptText } = await import("../config/db");
-    try { r.password = decryptText(r.password); } catch (_) {}
-    if (r.sshPassword) try { r.sshPassword = decryptText(r.sshPassword); } catch (_) {}
-    if (r.sshKey) try { r.sshKey = decryptText(r.sshKey); } catch (_) {}
+    try { r.password = decryptText(r.password); } catch (_) { /* already-encrypted */ }
+    if (r.sshPassword) try { r.sshPassword = decryptText(r.sshPassword); } catch (_) { /* already-encrypted */ }
+    if (r.sshKey) try { r.sshKey = decryptText(r.sshKey); } catch (_) { /* already-encrypted */ }
     return r;
   }
 
@@ -415,13 +413,13 @@ class BackupService {
     const cfg = typeof r.config === "string" ? JSON.parse(r.config) : r.config;
     // Decrypt secrets
     if (cfg.secretAccessKey) {
-      try { const { decryptText } = await import("../config/db"); cfg.secretAccessKey = decryptText(cfg.secretAccessKey); } catch (_) {}
+      try { const { decryptText } = await import("../config/db"); cfg.secretAccessKey = decryptText(cfg.secretAccessKey); } catch (_) { /* already-encrypted */ }
     }
     if (cfg.accessToken) {
-      try { const { decryptText } = await import("../config/db"); cfg.accessToken = decryptText(cfg.accessToken); } catch (_) {}
+      try { const { decryptText } = await import("../config/db"); cfg.accessToken = decryptText(cfg.accessToken); } catch (_) { /* already-encrypted */ }
     }
     if (cfg.password) {
-      try { const { decryptText } = await import("../config/db"); cfg.password = decryptText(cfg.password); } catch (_) {}
+      try { const { decryptText } = await import("../config/db"); cfg.password = decryptText(cfg.password); } catch (_) { /* already-encrypted */ }
     }
     return { ...r, config: cfg };
   }
@@ -497,8 +495,6 @@ class BackupService {
       conn = await this.getSshConnection(cfg);
       const remotePath = `/tmp/${filename}`;
       let dumpCmd: string;
-
-      const sudoPrefix = cfg.sshPassword ? `echo ${shellEscape(cfg.sshPassword)} | sudo -S ` : "sudo ";
 
       switch (cfg.dbType) {
         case "postgresql":
