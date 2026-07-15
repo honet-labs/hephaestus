@@ -18,6 +18,7 @@ import uptimeKumaRoutes from "./routes/uptime-kuma.routes";
 import prometheusRoutes from "./routes/prometheus.routes";
 import dataprepperRoutes from "./routes/dataprepper.routes";
 import backupRoutes from "./routes/backup.routes";
+import remoteHostRoutes from "./routes/remote-host.routes";
 
 const app = express();
 
@@ -133,6 +134,7 @@ app.use("/api/v1/uptime-kuma", uptimeKumaRoutes);
 app.use("/api/v1/prometheus", prometheusRoutes);
 app.use("/api/v1/dataprepper", dataprepperRoutes);
 app.use("/api/v1/backup", backupRoutes);
+app.use("/api/v1/remote-host", remoteHostRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
@@ -156,6 +158,7 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
 
 // Start listening
 let server: any;
+let wss: any;
 initDb()
   .then(async () => {
     if (isDbConnected) {
@@ -204,6 +207,49 @@ initDb()
       console.log(`📡 Listening on http://localhost:${config.port}`);
       console.log(`🔒 Allowed CORS origins: ${config.allowedOrigins.join(", ")}`);
       console.log(`📊 Target Grafana: ${activeGrafana.host}`);
+
+      // WebSocket server for Remote Host terminal (attached to same HTTP server)
+      const { WebSocketServer } = require("ws");
+      wss = new WebSocketServer({ server, path: "/ws/remote-host" });
+
+      wss.on("connection", async (ws: any, req: any) => {
+        const url = new URL(req.url, `http://${req.headers.host}`);
+        const token = url.searchParams.get("token");
+        const hostConfigId = url.searchParams.get("hostId");
+        const cols = parseInt(url.searchParams.get("cols") || "80", 10);
+        const rows = parseInt(url.searchParams.get("rows") || "24", 10);
+
+        if (!token || !hostConfigId) {
+          ws.send(JSON.stringify({ type: "error", message: "Missing token or hostId." }));
+          ws.close();
+          return;
+        }
+
+        // Verify session token
+        try {
+          const crypto = require("crypto");
+          const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+          const { pool } = require("./config/db");
+          const sessionRes = await pool.query(
+            "SELECT user_id FROM user_sessions WHERE token = $1 AND expires_at > NOW()",
+            [tokenHash]
+          );
+          if (sessionRes.rows.length === 0) {
+            ws.send(JSON.stringify({ type: "error", message: "Invalid session." }));
+            ws.close();
+            return;
+          }
+        } catch (err: any) {
+          ws.send(JSON.stringify({ type: "error", message: `Auth error: ${err.message}` }));
+          ws.close();
+          return;
+        }
+
+        const { remoteHostService } = require("./services/remote-host.service");
+        remoteHostService.handleWebSocket(ws, hostConfigId, cols, rows);
+      });
+
+      console.log(`🔌 WebSocket server for Remote Host terminal started on /ws/remote-host`);
     });
   });
 

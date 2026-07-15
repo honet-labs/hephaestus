@@ -499,6 +499,19 @@ export async function initDb() {
       last_run TIMESTAMP,
       next_run TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 18. RemoteHostConfigs - SSH host configurations for terminal access
+    `CREATE TABLE IF NOT EXISTS remote_host_configs (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      host VARCHAR(255) NOT NULL,
+      port INTEGER DEFAULT 22,
+      username VARCHAR(255) NOT NULL,
+      auth_type VARCHAR(20) DEFAULT 'password',
+      password TEXT,
+      ssh_key TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
