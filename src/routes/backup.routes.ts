@@ -22,4 +22,11 @@ router.post("/run", requireRole("ADMIN"), (req, res) => backupController.runBack
 router.get("/history", requireRole("ADMIN"), (req, res) => backupController.getHistory(req, res));
 router.delete("/history/:id", requireRole("ADMIN"), (req, res) => backupController.deleteHistory(req, res));
 
+// Schedules
+router.get("/schedules", requireRole("ADMIN"), (req, res) => backupController.getSchedules(req, res));
+router.post("/schedules", requireRole("ADMIN"), (req, res) => backupController.saveSchedule(req, res));
+router.delete("/schedules/:id", requireRole("ADMIN"), (req, res) => backupController.deleteSchedule(req, res));
+router.post("/schedules/:id/toggle", requireRole("ADMIN"), (req, res) => backupController.toggleSchedule(req, res));
+router.post("/schedules/:id/run", requireRole("ADMIN"), (req, res) => backupController.runScheduleNow(req, res));
+
 export default router;

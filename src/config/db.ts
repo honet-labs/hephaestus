@@ -486,6 +486,19 @@ export async function initDb() {
       error_message TEXT,
       started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       completed_at TIMESTAMP
+    );`,
+
+    // 17. BackupSchedules - Automated backup scheduling
+    `CREATE TABLE IF NOT EXISTS backup_schedules (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      db_config_id VARCHAR(50) REFERENCES backup_database_configs(id) ON DELETE CASCADE,
+      destination_id VARCHAR(50) REFERENCES backup_destinations(id) ON DELETE CASCADE,
+      cron_expression VARCHAR(100) NOT NULL,
+      is_active BOOLEAN DEFAULT true,
+      last_run TIMESTAMP,
+      next_run TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
@@ -530,7 +543,9 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp DESC);`,
     `CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);`,
     `CREATE INDEX IF NOT EXISTS idx_query_panels_created_at ON query_panels(created_at DESC);`,
-    `CREATE INDEX IF NOT EXISTS idx_uptime_kuma_configs_is_active ON uptime_kuma_configs(is_active) WHERE is_active = true;`
+    `CREATE INDEX IF NOT EXISTS idx_uptime_kuma_configs_is_active ON uptime_kuma_configs(is_active) WHERE is_active = true;`,
+    `CREATE INDEX IF NOT EXISTS idx_backup_schedules_is_active ON backup_schedules(is_active) WHERE is_active = true;`,
+    `CREATE INDEX IF NOT EXISTS idx_backup_history_started_at ON backup_history(started_at DESC);`
   ];
   await Promise.all(indexQueries.map(q => pool.query(q)));
 

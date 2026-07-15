@@ -1,6 +1,7 @@
 import { Client } from "ssh2";
 import { query, encryptText } from "../config/db";
 import crypto from "crypto";
+import cron from "node-cron";
 
 function shellEscape(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'";
@@ -44,6 +45,18 @@ export interface BackupHistoryEntry {
   errorMessage?: string;
   startedAt: string;
   completedAt?: string;
+}
+
+export interface BackupSchedule {
+  id: string;
+  name: string;
+  dbConfigId: string;
+  destinationId: string;
+  cronExpression: string;
+  isActive: boolean;
+  lastRun?: string;
+  nextRun?: string;
+  createdAt: string;
 }
 
 class BackupService {
@@ -649,6 +662,131 @@ class BackupService {
 
   public async deleteHistory(id: string): Promise<void> {
     await query("DELETE FROM backup_history WHERE id = $1", [id]);
+  }
+
+  // ---- Schedule CRUD ----
+  private cronJobs: Map<string, cron.ScheduledTask> = new Map();
+
+  public async getSchedules(): Promise<BackupSchedule[]> {
+    const res = await query(
+      `SELECT id, name, db_config_id AS "dbConfigId", destination_id AS "destinationId",
+              cron_expression AS "cronExpression", is_active AS "isActive",
+              last_run AS "lastRun", next_run AS "nextRun", created_at AS "createdAt"
+       FROM backup_schedules ORDER BY created_at DESC`
+    );
+    return res.rows;
+  }
+
+  public async getScheduleById(id: string): Promise<BackupSchedule | null> {
+    const res = await query(
+      `SELECT id, name, db_config_id AS "dbConfigId", destination_id AS "destinationId",
+              cron_expression AS "cronExpression", is_active AS "isActive",
+              last_run AS "lastRun", next_run AS "nextRun", created_at AS "createdAt"
+       FROM backup_schedules WHERE id = $1`, [id]
+    );
+    return res.rows.length > 0 ? res.rows[0] : null;
+  }
+
+  public async saveSchedule(schedule: { id?: string; name: string; dbConfigId: string; destinationId: string; cronExpression: string; isActive?: boolean }): Promise<BackupSchedule> {
+    const id = schedule.id || `bsch-${crypto.randomUUID().slice(0, 8)}`;
+    const existing = await this.getScheduleById(id);
+
+    if (existing) {
+      await query(
+        `UPDATE backup_schedules SET name = $1, db_config_id = $2, destination_id = $3,
+         cron_expression = $4, is_active = $5 WHERE id = $6`,
+        [schedule.name, schedule.dbConfigId, schedule.destinationId, schedule.cronExpression, schedule.isActive !== false, id]
+      );
+    } else {
+      await query(
+        `INSERT INTO backup_schedules (id, name, db_config_id, destination_id, cron_expression, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, schedule.name, schedule.dbConfigId, schedule.destinationId, schedule.cronExpression, schedule.isActive !== false]
+      );
+    }
+
+    // Reload cron job for this schedule
+    this.reloadCronJob(id);
+
+    return (await this.getScheduleById(id))!;
+  }
+
+  public async deleteSchedule(id: string): Promise<void> {
+    // Stop cron job if running
+    const job = this.cronJobs.get(id);
+    if (job) {
+      job.stop();
+      this.cronJobs.delete(id);
+    }
+    await query("DELETE FROM backup_schedules WHERE id = $1", [id]);
+  }
+
+  public async toggleSchedule(id: string, isActive: boolean): Promise<BackupSchedule> {
+    await query("UPDATE backup_schedules SET is_active = $1 WHERE id = $2", [isActive, id]);
+    if (isActive) {
+      this.reloadCronJob(id);
+    } else {
+      const job = this.cronJobs.get(id);
+      if (job) {
+        job.stop();
+        this.cronJobs.delete(id);
+      }
+    }
+    return (await this.getScheduleById(id))!;
+  }
+
+  public async runScheduleNow(id: string): Promise<BackupHistoryEntry> {
+    const schedule = await this.getScheduleById(id);
+    if (!schedule) throw new Error("Schedule not found.");
+    const result = await this.executeBackup(schedule.dbConfigId, schedule.destinationId);
+    await query("UPDATE backup_schedules SET last_run = NOW() WHERE id = $1", [id]);
+    return result;
+  }
+
+  // ---- Cron Scheduler ----
+  private async reloadCronJob(scheduleId: string): void {
+    // Stop existing job
+    const existing = this.cronJobs.get(scheduleId);
+    if (existing) {
+      existing.stop();
+      this.cronJobs.delete(scheduleId);
+    }
+
+    const schedule = await this.getScheduleById(scheduleId);
+    if (!schedule || !schedule.isActive) return;
+
+    // Validate cron expression
+    if (!cron.validate(schedule.cronExpression)) {
+      console.error(`[Backup] Invalid cron expression for schedule ${scheduleId}: ${schedule.cronExpression}`);
+      return;
+    }
+
+    const task = cron.schedule(schedule.cronExpression, async () => {
+      console.log(`[Backup] Running scheduled backup: ${schedule.name} (${schedule.id})`);
+      try {
+        await this.executeBackup(schedule.dbConfigId, schedule.destinationId);
+        await query("UPDATE backup_schedules SET last_run = NOW() WHERE id = $1", [schedule.id]);
+        console.log(`[Backup] Scheduled backup completed: ${schedule.name}`);
+      } catch (err: any) {
+        console.error(`[Backup] Scheduled backup failed: ${schedule.name} - ${err.message}`);
+      }
+    });
+
+    this.cronJobs.set(scheduleId, task);
+    console.log(`[Backup] Cron job started for schedule: ${schedule.name} (${schedule.cronExpression})`);
+  }
+
+  public async initScheduler(): Promise<void> {
+    console.log("[Backup] Initializing backup scheduler...");
+    const schedules = await this.getSchedules();
+    let activeCount = 0;
+    for (const s of schedules) {
+      if (s.isActive) {
+        await this.reloadCronJob(s.id);
+        activeCount++;
+      }
+    }
+    console.log(`[Backup] Scheduler initialized. ${activeCount} active schedule(s).`);
   }
 }
 

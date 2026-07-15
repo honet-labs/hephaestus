@@ -183,6 +183,13 @@ initDb()
       } catch (err: any) {
         console.error("⚠️  [Uptime Kuma] Error loading configs:", err.message);
       }
+
+      try {
+        const { backupService } = require("./services/backup.service");
+        await backupService.initScheduler();
+      } catch (err: any) {
+        console.error("⚠️  [Backup] Error initializing scheduler:", err.message);
+      }
     } else {
       console.warn("⚠️  [SNMP] Database is not connected. Skipping MIB auto-sync.");
     }

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { backupService } from "../services/backup.service";
 import { logActivity } from "../config/db";
+import cron from "node-cron";
 
 class BackupController {
   // ---- Database Config ----
@@ -113,6 +114,64 @@ class BackupController {
     try {
       await backupService.deleteHistory(req.params.id);
       return res.json({ success: true, message: "History entry deleted." });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // ---- Schedules ----
+  public async getSchedules(req: Request, res: Response) {
+    try {
+      const schedules = await backupService.getSchedules();
+      return res.json({ success: true, data: schedules });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  public async saveSchedule(req: Request, res: Response) {
+    try {
+      const { id, name, dbConfigId, destinationId, cronExpression, isActive } = req.body;
+      if (!name || !dbConfigId || !destinationId || !cronExpression) {
+        return res.status(400).json({ success: false, error: "Missing required fields." });
+      }
+      if (!cron.validate(cronExpression)) {
+        return res.status(400).json({ success: false, error: "Invalid cron expression." });
+      }
+      const schedule = await backupService.saveSchedule({ id, name, dbConfigId, destinationId, cronExpression, isActive });
+      await logActivity("Backup", "Save Schedule", `Saved backup schedule "${name}" (${cronExpression})`, "SUCCESS");
+      return res.json({ success: true, data: schedule, message: `Schedule "${name}" saved.` });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  public async deleteSchedule(req: Request, res: Response) {
+    try {
+      await backupService.deleteSchedule(req.params.id);
+      await logActivity("Backup", "Delete Schedule", `Deleted backup schedule ${req.params.id}`, "SUCCESS");
+      return res.json({ success: true, message: "Schedule deleted." });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  public async toggleSchedule(req: Request, res: Response) {
+    try {
+      const { isActive } = req.body;
+      const schedule = await backupService.toggleSchedule(req.params.id, isActive);
+      await logActivity("Backup", "Toggle Schedule", `Schedule "${schedule.name}" ${isActive ? "enabled" : "disabled"}`, "SUCCESS");
+      return res.json({ success: true, data: schedule });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  public async runScheduleNow(req: Request, res: Response) {
+    try {
+      const result = await backupService.runScheduleNow(req.params.id);
+      await logActivity("Backup", "Run Schedule", `Manual run: ${result.filename} (${result.status})`, result.status === "success" ? "SUCCESS" : "ERROR");
+      return res.json({ success: true, data: result, message: `Backup ${result.status}: ${result.filename}` });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err.message });
     }

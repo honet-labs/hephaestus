@@ -965,7 +965,7 @@ function showPage(pageId) {
     loadBackupDestinations();
   } else if (pageId === 'backup-run') {
     pageTitle.textContent = 'Run Backup';
-    pageDesc.textContent = 'Execute a database backup to a configured destination.';
+    pageDesc.textContent = 'Execute backups manually or configure automated schedules.';
     loadBackupRunForm();
   } else if (pageId === 'backup-history') {
     pageTitle.textContent = 'Backup History';
@@ -9814,6 +9814,7 @@ async function loadBackupRunForm() {
     } else {
       destSelect.innerHTML = '<option value="">No destinations configured</option>';
     }
+    loadBackupSchedules();
   } catch (e) {}
 }
 
@@ -9894,3 +9895,219 @@ async function deleteBackupHistory(id) {
     loadBackupHistory();
   } catch (e) { alert('Error: ' + e.message); }
 }
+
+// ---- Backup Schedules ----
+let backupSchedules = [];
+
+async function loadBackupSchedules() {
+  const container = document.getElementById('backup-schedule-list');
+  if (!container) return;
+  container.innerHTML = '<div class="loading-container" style="display: flex;"><div class="loading-spinner"></div><div class="loading-text">Loading schedules...</div></div>';
+  try {
+    const res = await fetch('/api/v1/backup/schedules');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    backupSchedules = data.data || [];
+    renderBackupSchedules();
+  } catch (e) {
+    container.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderBackupSchedules() {
+  const container = document.getElementById('backup-schedule-list');
+  if (backupSchedules.length === 0) {
+    container.innerHTML = '<div class="empty-state"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><p>No backup schedules configured.</p><p style="font-size: 11px;">Create a schedule to automate your backups.</p></div>';
+    return;
+  }
+  let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+  backupSchedules.forEach(s => {
+    const dbConf = backupDbConfigs.find(c => c.id === s.dbConfigId);
+    const destConf = backupDestinations.find(d => d.id === s.destinationId);
+    const dbName = dbConf ? dbConf.name : s.dbConfigId;
+    const destName = destConf ? destConf.name : s.destinationId;
+    const lastRun = s.lastRun ? new Date(s.lastRun).toLocaleString() : 'Never';
+    const activeColor = s.isActive ? '#10b981' : '#6b7280';
+    html += `
+      <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px; opacity: ${s.isActive ? '1' : '0.6'};">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+          <div style="width: 36px; height: 36px; background: ${activeColor}15; border: 1px solid ${activeColor}30; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: ${activeColor}; flex-shrink: 0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-weight: 600; color: var(--text-white); font-size: 13px;">${escapeHtml(s.name)}</span>
+            <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">
+              ${escapeHtml(s.cronExpression)} &middot; ${escapeHtml(dbName)} &rarr; ${escapeHtml(destName)}
+            </span>
+            <span style="font-size: 10px; color: var(--text-muted);">Last run: ${lastRun}</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span class="status-badge" style="background: ${activeColor}15; color: ${activeColor}; border: 1px solid ${activeColor}30; font-size: 9px;">${s.isActive ? 'ACTIVE' : 'PAUSED'}</span>
+          <button class="btn btn-secondary" onclick="toggleBackupSchedule('${escapeAttr(s.id)}', ${!s.isActive})" style="padding: 4px 8px; font-size: 10px; height: 24px;" title="${s.isActive ? 'Pause' : 'Resume'}">
+            ${s.isActive ? 'Pause' : 'Resume'}
+          </button>
+          <button class="btn btn-secondary" onclick="runBackupScheduleNow('${escapeAttr(s.id)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;" title="Run Now">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          </button>
+          <button class="btn btn-secondary" onclick="editBackupSchedule('${escapeAttr(s.id)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Edit</button>
+          <button class="btn btn-danger" onclick="deleteBackupSchedule('${escapeAttr(s.id)}', '${escapeAttr(s.name)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Del</button>
+        </div>
+      </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+async function saveQuickBackupAsSchedule() {
+  const dbConfigId = document.getElementById('backup-run-db').value;
+  const destinationId = document.getElementById('backup-run-dest').value;
+  if (!dbConfigId || !destinationId) { alert('Select database and destination first.'); return; }
+  const dbConf = backupDbConfigs.find(c => c.id === dbConfigId);
+  const destConf = backupDestinations.find(d => d.id === destinationId);
+  const defaultName = dbConf && destConf ? `${dbConf.name} → ${destConf.name}` : 'New Schedule';
+
+  document.getElementById('backup-schedule-id').value = '';
+  document.getElementById('backup-schedule-name').value = defaultName;
+  document.getElementById('backup-schedule-cron').value = '0 2 * * *';
+  document.getElementById('backup-schedule-modal-title').textContent = 'Add Backup Schedule';
+
+  await loadBackupScheduleSelectors();
+  document.getElementById('backup-schedule-db').value = dbConfigId;
+  document.getElementById('backup-schedule-dest').value = destinationId;
+  updateBackupCronPreview();
+  document.getElementById('modal-backup-schedule').classList.add('active');
+}
+
+function showAddBackupScheduleModal() {
+  document.getElementById('backup-schedule-id').value = '';
+  document.getElementById('backup-schedule-name').value = '';
+  document.getElementById('backup-schedule-cron').value = '0 2 * * *';
+  document.getElementById('backup-schedule-modal-title').textContent = 'Add Backup Schedule';
+  loadBackupScheduleSelectors().then(() => {
+    document.getElementById('backup-schedule-db').value = '';
+    document.getElementById('backup-schedule-dest').value = '';
+  });
+  updateBackupCronPreview();
+  document.getElementById('modal-backup-schedule').classList.add('active');
+}
+
+async function loadBackupScheduleSelectors() {
+  const [dbRes, destRes] = await Promise.all([
+    fetch('/api/v1/backup/db-configs').then(r => r.json()),
+    fetch('/api/v1/backup/destinations').then(r => r.json())
+  ]);
+  const dbSelect = document.getElementById('backup-schedule-db');
+  const destSelect = document.getElementById('backup-schedule-dest');
+  dbSelect.innerHTML = '<option value="">Select database...</option>';
+  destSelect.innerHTML = '<option value="">Select destination...</option>';
+  if (dbRes.success && dbRes.data.length) {
+    dbRes.data.forEach(c => { dbSelect.innerHTML += `<option value="${escapeAttr(c.id)}">${escapeHtml(c.name)} (${c.dbType.toUpperCase()})</option>`; });
+  }
+  if (destRes.success && destRes.data.length) {
+    destRes.data.forEach(d => { destSelect.innerHTML += `<option value="${escapeAttr(d.id)}">${escapeHtml(d.name)} (${d.destType.toUpperCase()})</option>`; });
+  }
+}
+
+function editBackupSchedule(id) {
+  const s = backupSchedules.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('backup-schedule-id').value = s.id;
+  document.getElementById('backup-schedule-name').value = s.name;
+  document.getElementById('backup-schedule-cron').value = s.cronExpression;
+  document.getElementById('backup-schedule-modal-title').textContent = 'Edit Backup Schedule';
+  loadBackupScheduleSelectors().then(() => {
+    document.getElementById('backup-schedule-db').value = s.dbConfigId;
+    document.getElementById('backup-schedule-dest').value = s.destinationId;
+  });
+  updateBackupCronPreview();
+  document.getElementById('modal-backup-schedule').classList.add('active');
+}
+
+async function saveBackupSchedule() {
+  const id = document.getElementById('backup-schedule-id').value;
+  const body = {
+    id: id || undefined,
+    name: document.getElementById('backup-schedule-name').value.trim(),
+    dbConfigId: document.getElementById('backup-schedule-db').value,
+    destinationId: document.getElementById('backup-schedule-dest').value,
+    cronExpression: document.getElementById('backup-schedule-cron').value.trim(),
+  };
+  if (!body.name || !body.dbConfigId || !body.destinationId || !body.cronExpression) {
+    alert('Please fill in all fields.'); return;
+  }
+  try {
+    const res = await fetch('/api/v1/backup/schedules', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    closeModal('modal-backup-schedule');
+    loadBackupSchedules();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function deleteBackupSchedule(id, name) {
+  if (!confirm(`Delete schedule "${name}"?`)) return;
+  try {
+    await fetch(`/api/v1/backup/schedules/${id}`, { method: 'DELETE' });
+    loadBackupSchedules();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function toggleBackupSchedule(id, isActive) {
+  try {
+    await fetch(`/api/v1/backup/schedules/${id}/toggle`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive })
+    });
+    loadBackupSchedules();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function runBackupScheduleNow(id) {
+  if (!confirm('Run this backup now?')) return;
+  try {
+    const res = await fetch(`/api/v1/backup/schedules/${id}/run`, { method: 'POST' });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    alert(`Backup completed: ${data.data.filename}`);
+    loadBackupSchedules();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+function setBackupCronPreset(expr) {
+  document.getElementById('backup-schedule-cron').value = expr;
+  updateBackupCronPreview();
+}
+
+function updateBackupCronPreview() {
+  const expr = document.getElementById('backup-schedule-cron').value.trim();
+  const previewEl = document.getElementById('backup-schedule-cron-preview');
+  if (!previewEl) return;
+  if (!expr) { previewEl.textContent = ''; return; }
+  const parts = expr.split(/\s+/);
+  if (parts.length !== 5) { previewEl.textContent = 'Invalid cron format'; previewEl.style.color = '#ef4444'; return; }
+  const [min, hour, dom, mon, dow] = parts;
+  let desc = 'Runs ';
+  if (min === '*' && hour === '*') desc += 'every minute';
+  else if (min === '*' && hour !== '*') desc += `every minute past hour ${hour}`;
+  else if (min !== '*' && hour === '*') desc += `at minute ${min} every hour`;
+  else desc += `at ${hour.padStart(2, '0')}:${min.padStart(2, '0')}`;
+
+  if (dom !== '*' && mon === '*' && dow === '*') desc += `, every day ${dom} of month`;
+  else if (dom === '*' && mon === '*' && dow === '0') desc += ' every Sunday';
+  else if (dom === '*' && mon === '*' && dow === '1') desc += ' every Monday';
+  else if (dom === '*' && mon === '*' && dow === '*') desc += ' every day';
+  else if (dom !== '*' && mon !== '*') desc += ` on ${mon}/${dom}`;
+  else desc += ` (dom=${dom} mon=${mon} dow=${dow})`;
+
+  previewEl.textContent = desc;
+  previewEl.style.color = 'var(--text-muted)';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const cronInput = document.getElementById('backup-schedule-cron');
+  if (cronInput) cronInput.addEventListener('input', updateBackupCronPreview);
+});

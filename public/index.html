@@ -1203,11 +1203,17 @@
           <div class="page-header">
             <div>
               <h2 class="page-title">Run Backup</h2>
-              <p class="page-title-desc">Execute a database backup to a configured destination.</p>
+              <p class="page-title-desc">Execute backups manually or configure automated schedules.</p>
             </div>
+            <button class="btn btn-primary" onclick="showAddBackupScheduleModal()" style="font-size: 11px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Schedule
+            </button>
           </div>
-          <div class="panel" style="max-width: 600px;">
-            <div class="panel-header"><h3 class="panel-title">Backup Configuration</h3></div>
+
+          <!-- Quick Backup -->
+          <div class="panel" style="max-width: 600px; margin-bottom: 20px;">
+            <div class="panel-header"><h3 class="panel-title">Quick Backup</h3></div>
             <div class="form-group">
               <label>Source Database</label>
               <select id="backup-run-db" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
@@ -1221,11 +1227,29 @@
               </select>
             </div>
             <div id="backup-run-result" style="display: none; margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12px;"></div>
-            <div style="margin-top: 16px;">
+            <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center;">
               <button class="btn btn-primary" id="backup-run-btn" onclick="runBackupNow()" style="font-size: 11px;">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 Start Backup
               </button>
+              <button class="btn btn-secondary" onclick="saveQuickBackupAsSchedule()" style="font-size: 11px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Save as Schedule
+              </button>
+            </div>
+          </div>
+
+          <!-- Scheduled Backups -->
+          <div class="panel" style="max-width: 800px;">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 class="panel-title">Scheduled Backups</h3>
+              <button class="btn btn-secondary" onclick="loadBackupSchedules()" style="font-size: 10px; padding: 4px 10px;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                Refresh
+              </button>
+            </div>
+            <div id="backup-schedule-list">
+              <div class="loading-container" style="display: flex;"><div class="loading-spinner"></div><div class="loading-text">Loading schedules...</div></div>
             </div>
           </div>
         </div>
@@ -1466,6 +1490,52 @@
             <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
               <button class="btn btn-secondary" onclick="closeModal('modal-backup-dest')" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
               <button class="btn btn-primary" onclick="saveBackupDestination()" style="padding: 8px 16px; font-size: 12px; height: auto;">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL: ADD/EDIT BACKUP SCHEDULE -->
+        <div id="modal-backup-schedule" class="modal-overlay">
+          <div class="modal-dialog" style="max-width: 480px;">
+            <div class="modal-header">
+              <h3 class="modal-title" id="backup-schedule-modal-title">Add Backup Schedule</h3>
+              <button class="modal-close" onclick="closeModal('modal-backup-schedule')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+              <input type="hidden" id="backup-schedule-id">
+              <div class="form-group">
+                <label>Schedule Name</label>
+                <input type="text" id="backup-schedule-name" placeholder="Daily Production Backup">
+              </div>
+              <div class="form-group">
+                <label>Source Database</label>
+                <select id="backup-schedule-db" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
+                  <option value="">Select database...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Destination</label>
+                <select id="backup-schedule-dest" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
+                  <option value="">Select destination...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Cron Expression</label>
+                <input type="text" id="backup-schedule-cron" placeholder="0 2 * * *" style="font-family: monospace;">
+                <span class="form-help">Format: minute hour day month weekday. Example: <code>0 2 * * *</code> = every day at 2 AM</span>
+              </div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                <button class="btn btn-secondary" onclick="setBackupCronPreset('0 2 * * *')" style="font-size: 10px; padding: 3px 8px;">Daily 2AM</button>
+                <button class="btn btn-secondary" onclick="setBackupCronPreset('0 0 * * 0')" style="font-size: 10px; padding: 3px 8px;">Weekly Sun</button>
+                <button class="btn btn-secondary" onclick="setBackupCronPreset('0 0 1 * *')" style="font-size: 10px; padding: 3px 8px;">Monthly 1st</button>
+                <button class="btn btn-secondary" onclick="setBackupCronPreset('0 */6 * * *')" style="font-size: 10px; padding: 3px 8px;">Every 6h</button>
+                <button class="btn btn-secondary" onclick="setBackupCronPreset('*/30 * * * *')" style="font-size: 10px; padding: 3px 8px;">Every 30m</button>
+              </div>
+              <div id="backup-schedule-cron-preview" style="margin-top: 10px; font-size: 11px; color: var(--text-muted);"></div>
+            </div>
+            <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="btn btn-secondary" onclick="closeModal('modal-backup-schedule')" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
+              <button class="btn btn-primary" onclick="saveBackupSchedule()" style="padding: 8px 16px; font-size: 12px; height: auto;">Save</button>
             </div>
           </div>
         </div>
@@ -2803,6 +2873,6 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
-  <script src="js/app.js?v=4.0.0"></script>
+  <script src="js/app.js?v=4.1.0"></script>
 </body>
 </html>
