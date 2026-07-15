@@ -100,7 +100,7 @@ class RemoteHostService {
       let termStream: any = null;
 
       ssh.on("ready", () => {
-        ssh.shell({ term: "xterm-256color", cols, rows }, (err: Error | null, stream: any) => {
+        ssh.shell({ term: "xterm-256color", cols, rows } as any, (err: any, stream: any) => {
           if (err) {
             ws.send(JSON.stringify({ type: "error", message: `Shell error: ${err.message}` }));
             ws.close();
