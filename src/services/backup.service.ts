@@ -515,7 +515,7 @@ class BackupService {
 
       // Download the dump file
       const content = await new Promise<string>((resolve, reject) => {
-        conn!.sftp((err, sftp) => {
+        conn!.sftp((err: Error | null, sftp: any) => {
           if (err) return reject(err);
           const chunks: Buffer[] = [];
           const stream = sftp.createReadStream(remotePath);
