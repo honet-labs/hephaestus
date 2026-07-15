@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { query, logActivity } from "../config/db";
+import { loginLimiter } from "../middleware/rate-limit.middleware";
 
 const router = Router();
 
@@ -17,13 +18,13 @@ router.get("/status", async (req: Request, res: Response) => {
       const count = parseInt(countResult.rows[0].count, 10);
       res.status(200).json({ success: true, needsSetup: count === 0 });
     } catch {
-      res.status(500).json({ success: false, error: "Database not ready", message: error.message });
+      res.status(500).json({ success: false, error: "Database not ready", message: "Database not ready" });
     }
   }
 });
 
 // Create first admin user (only works when setup not completed)
-router.post("/create-admin", async (req: Request, res: Response) => {
+router.post("/create-admin", loginLimiter, async (req: Request, res: Response) => {
   try {
     // Check setup not already completed
     const configCheck = await query("SELECT value FROM app_config WHERE key = 'setup_completed'");
@@ -68,7 +69,7 @@ router.post("/create-admin", async (req: Request, res: Response) => {
     res.status(201).json({ success: true, message: "Admin user created successfully. You can now login." });
   } catch (error: any) {
     console.error("[SetupController] Error creating admin:", error);
-    res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+    res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to create admin user" });
   }
 });
 

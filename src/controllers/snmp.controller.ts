@@ -11,7 +11,7 @@ export class SnmpController {
       const presets = snmpService.getPresetMibs();
       res.status(200).json({ success: true, presets });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to fetch SNMP presets" });
     }
   }
 
@@ -20,7 +20,7 @@ export class SnmpController {
       const mibs = await snmpService.getImportedMibs();
       res.status(200).json({ success: true, mibs });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to fetch imported MIBs" });
     }
   }
 
@@ -44,7 +44,7 @@ export class SnmpController {
       res.status(201).json({ success: true, message: `MIB '${mibName}' imported successfully.`, data: result });
     } catch (error: any) {
       await logActivity("SNMP", "Import MIB", `Failed to import MIB "${mibName}": ${error.message}`, "ERROR");
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to import MIB" });
     }
   }
 
@@ -61,7 +61,7 @@ export class SnmpController {
       }
     } catch (error: any) {
       await logActivity("SNMP", "Delete MIB", `Error deleting MIB "${name}": ${error.message}`, "ERROR");
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to delete MIB" });
     }
   }
 
@@ -70,7 +70,7 @@ export class SnmpController {
       const registry = await snmpService.getOidRegistry();
       res.status(200).json({ success: true, registry });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to fetch OID registry" });
     }
   }
 
@@ -118,7 +118,7 @@ export class SnmpController {
         queriedOperation: targetOperation
       });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "SNMP Query Failed", message: error.message });
+      res.status(500).json({ success: false, error: "SNMP Query Failed", message: "SNMP query failed" });
     }
   }
 }

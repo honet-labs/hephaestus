@@ -1004,9 +1004,9 @@ function renderLogs() {
     html += `
       <tr>
         <td class="font-mono" style="color: var(--text-muted);">${log.time}</td>
-        <td style="font-weight: 600;">${log.module}</td>
-        <td>${log.message}</td>
-        <td><span class="status-badge ${badgeClass}">${log.status}</span></td>
+        <td style="font-weight: 600;">${escapeHtml(log.module)}</td>
+        <td>${escapeHtml(log.message)}</td>
+        <td><span class="status-badge ${badgeClass}">${escapeHtml(log.status)}</span></td>
       </tr>
     `;
   });
@@ -4709,6 +4709,7 @@ function escapeAttr(str) {
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'")
     .replace(/"/g, '&quot;')
+    .replace(/`/g, '\\`')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
@@ -5013,8 +5014,8 @@ function renderPresetMibs(presets) {
   const container = document.getElementById('presets-container');
   if (!container) return;
   container.innerHTML = presets.map(p => `
-    <button type="button" class="btn btn-secondary" onclick="importMibPreset('${p.name}')" id="btn-preset-${p.name}" style="padding: 4px 8px; font-size: 11px; height: auto; border-color: var(--app-border); margin: 2px;">
-      <span>${p.name}</span>
+    <button type="button" class="btn btn-secondary" onclick="importMibPreset('${escapeAttr(p.name)}')" id="btn-preset-${escapeAttr(p.name)}" style="padding: 4px 8px; font-size: 11px; height: auto; border-color: var(--app-border); margin: 2px;">
+      <span>${escapeHtml(p.name)}</span>
     </button>
   `).join('');
 }
@@ -5900,7 +5901,7 @@ async function loadRolesList() {
           const isDefault = r.isDefault || r.is_default;
           const deleteBtn = isDefault
             ? `<button class="btn btn-secondary" disabled style="padding: 2px 8px; font-size: 10.5px; height: auto; opacity: 0.5; cursor: not-allowed; border-color: var(--app-border);">Delete</button>`
-            : `<button class="btn btn-secondary" onclick="deleteSystemRole('${r.id}', '${escapeHtml(r.name)}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Delete</button>`;
+            : `<button class="btn btn-secondary" onclick="deleteSystemRole('${r.id}', '${escapeAttr(r.name)}')" style="padding: 2px 8px; font-size: 10.5px; height: auto; color: #ff7b72; border-color: rgba(255,123,114,0.2);">Delete</button>`;
 
           return `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">

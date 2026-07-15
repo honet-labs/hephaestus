@@ -255,7 +255,9 @@
       }
 
       try {
-        const response = await fetch(`/api/v1/monitoring-views`);
+        const response = await fetch(`/api/v1/monitoring-views`, {
+          headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('hephaestus_session_token') || '') }
+        });
         const result = await response.json();
         
         if (response.ok && result.success) {

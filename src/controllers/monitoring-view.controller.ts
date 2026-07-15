@@ -56,7 +56,7 @@ export class MonitoringViewController {
       const views = await this.getViewsList();
       res.status(200).json({ success: true, data: views });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to fetch monitoring views" });
     }
   };
 
@@ -107,7 +107,7 @@ export class MonitoringViewController {
 
       res.status(201).json({ success: true, data: newItem });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to save monitoring view" });
     }
   };
 
@@ -164,7 +164,7 @@ export class MonitoringViewController {
 
       res.status(200).json({ success: true, data: updatedItem });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to update monitoring view" });
     }
   };
 
@@ -192,7 +192,7 @@ export class MonitoringViewController {
 
       res.status(200).json({ success: true, message: "Monitoring view deleted successfully." });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "Internal Server Error", message: error.message });
+      res.status(500).json({ success: false, error: "Internal Server Error", message: "Failed to delete monitoring view" });
     }
   };
 }

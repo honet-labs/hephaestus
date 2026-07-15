@@ -152,7 +152,7 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({
     success: false,
     error: "Internal Server Error",
-    message: err.message || "An unexpected error occurred on the server."
+    message: "An unexpected error occurred on the server."
   });
 });
 
@@ -210,9 +210,28 @@ initDb()
 
       // WebSocket server for Remote Host terminal (attached to same HTTP server)
       const { WebSocketServer } = require("ws");
+      const MAX_WS_CONNECTIONS = 10;
+      let wsConnectionCount = 0;
       wss = new WebSocketServer({ server, path: "/ws/remote-host" });
 
       wss.on("connection", async (ws: any, req: any) => {
+        // Origin validation — prevent Cross-Site WebSocket Hijacking
+        const origin = req.headers.origin;
+        if (origin && !config.allowedOrigins.includes(origin)) {
+          ws.send(JSON.stringify({ type: "error", message: "Origin not allowed." }));
+          ws.close();
+          return;
+        }
+
+        // Connection limit
+        if (wsConnectionCount >= MAX_WS_CONNECTIONS) {
+          ws.send(JSON.stringify({ type: "error", message: "Too many connections." }));
+          ws.close();
+          return;
+        }
+        wsConnectionCount++;
+        ws.on("close", () => { wsConnectionCount--; });
+
         const url = new URL(req.url, `http://${req.headers.host}`);
         const token = url.searchParams.get("token");
         const hostConfigId = url.searchParams.get("hostId");

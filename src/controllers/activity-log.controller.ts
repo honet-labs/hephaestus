@@ -74,7 +74,7 @@ export class ActivityLogController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to fetch activity logs"
       });
     }
   }
@@ -94,7 +94,7 @@ export class ActivityLogController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to clear activity logs"
       });
     }
   }

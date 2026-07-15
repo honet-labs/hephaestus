@@ -21,7 +21,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to fetch users"
       });
     }
   }
@@ -93,7 +93,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to create user"
       });
     }
   }
@@ -144,7 +144,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to delete user"
       });
     }
   }
@@ -179,6 +179,9 @@ export class UserController {
 
       await query("UPDATE users SET password = $1 WHERE id = $2", [passwordHash, id]);
 
+      // Invalidate all sessions for this user
+      await query("DELETE FROM user_sessions WHERE user_id = $1", [id]);
+
       await logActivity(
         "User Management", 
         "Reset Password", 
@@ -195,7 +198,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to reset password"
       });
     }
   }
@@ -215,7 +218,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to fetch roles"
       });
     }
   }
@@ -270,7 +273,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to create role"
       });
     }
   }
@@ -330,7 +333,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to delete role"
       });
     }
   }
@@ -405,7 +408,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to login"
       });
     }
   }
@@ -454,7 +457,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to logout"
       });
     }
   }
@@ -519,6 +522,12 @@ export class UserController {
         [passwordHash, session.user_id]
       );
 
+      // Invalidate all other sessions for this user (keep current session)
+      await query(
+        "DELETE FROM user_sessions WHERE user_id = $1 AND token != $2",
+        [session.user_id, tokenHash]
+      );
+
       await logActivity(
         "Authentication",
         "Change Password",
@@ -535,7 +544,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to change password"
       });
     }
   }
@@ -592,7 +601,7 @@ export class UserController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message
+        message: "Failed to get session"
       });
     }
   }
