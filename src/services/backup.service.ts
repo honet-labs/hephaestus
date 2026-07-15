@@ -744,7 +744,7 @@ class BackupService {
   }
 
   // ---- Cron Scheduler ----
-  private async reloadCronJob(scheduleId: string): void {
+  private async reloadCronJob(scheduleId: string): Promise<void> {
     // Stop existing job
     const existing = this.cronJobs.get(scheduleId);
     if (existing) {
