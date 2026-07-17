@@ -49,8 +49,12 @@ class RemoteHostService {
 
   public async saveConfig(cfg: Partial<RemoteHostConfig> & { id?: string }): Promise<RemoteHostConfig> {
     const id = cfg.id || `rhc-${crypto.randomUUID().slice(0, 8)}`;
-    const encryptedPassword = cfg.password && cfg.password !== "********" ? encryptText(cfg.password) : undefined;
-    const encryptedKey = cfg.sshKey && cfg.sshKey !== "********" ? encryptText(cfg.sshKey) : undefined;
+    const hasPassword = cfg.password !== undefined && cfg.password !== null && cfg.password !== "" && cfg.password !== "********";
+    const hasKey = cfg.sshKey !== undefined && cfg.sshKey !== null && cfg.sshKey !== "" && cfg.sshKey !== "********";
+    const encryptedPassword = hasPassword ? encryptText(cfg.password!) : undefined;
+    const encryptedKey = hasKey ? encryptText(cfg.sshKey!) : undefined;
+
+    console.log(`[RemoteHost] saveConfig id=${id} hasPassword=${hasPassword} hasKey=${hasKey} authType=${cfg.authType}`);
 
     const existing = await this.getConfigById(id);
     if (existing) {
@@ -65,6 +69,7 @@ class RemoteHostService {
       if (encryptedKey !== undefined) { fields.push("ssh_key"); values.push(encryptedKey); }
       if (cfg.groupName !== undefined) { fields.push("group_name"); values.push(cfg.groupName); }
       if (cfg.tags !== undefined) { fields.push("tags"); values.push(cfg.tags); }
+      console.log(`[RemoteHost] UPDATE fields: [${fields.join(", ")}]`);
       if (fields.length > 0) {
         const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(", ");
         await query(
@@ -73,6 +78,7 @@ class RemoteHostService {
         );
       }
     } else {
+      console.log(`[RemoteHost] INSERT new config id=${id}`);
       await query(
         `INSERT INTO remote_host_configs (id, name, host, port, username, auth_type, password, ssh_key, group_name, tags)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
@@ -95,16 +101,21 @@ class RemoteHostService {
     const r = res.rows[0];
     const { decryptText } = await import("../config/db");
     if (r.password) {
+      const rawLen = r.password.length;
       const decrypted = decryptText(r.password);
-      if (decrypted === r.password && r.password !== "") {
-        console.warn(`[RemoteHost] Password decryption returned raw value for host "${r.name}" — stored value may not be encrypted or key mismatch.`);
+      const match = decrypted === r.password;
+      console.log(`[RemoteHost] getRawConfig host="${r.name}" password_rawLen=${rawLen} decrypted_match=${match} decrypted_len=${decrypted.length}`);
+      if (match && r.password !== "") {
+        console.warn(`[RemoteHost] ⚠ Password NOT decrypted for "${r.name}" — key mismatch or not encrypted!`);
       }
       r.password = decrypted;
+    } else {
+      console.warn(`[RemoteHost] ⚠ No password stored for host "${r.name}" (authType=${r.authType})`);
     }
     if (r.sshKey) {
       const decrypted = decryptText(r.sshKey);
       if (decrypted === r.sshKey && r.sshKey !== "") {
-        console.warn(`[RemoteHost] SSH key decryption returned raw value for host "${r.name}" — stored value may not be encrypted or key mismatch.`);
+        console.warn(`[RemoteHost] SSH key decryption returned raw value for host "${r.name}"`);
       }
       r.sshKey = decrypted;
     }
@@ -118,6 +129,8 @@ class RemoteHostService {
         ws.close();
         return;
       }
+
+      console.log(`[RemoteHost] WS connect id=${cfg.id} host=${cfg.host} user=${cfg.username} authType=${cfg.authType} hasPassword=${!!cfg.password} hasKey=${!!cfg.sshKey}`);
 
       const ssh = new Client();
       let termStream: any = null;

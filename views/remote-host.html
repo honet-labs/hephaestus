@@ -163,11 +163,12 @@
         }
         .tab-bar::-webkit-scrollbar { height: 0; }
         .tab-home {
-            padding: 5px 10px; font-size: 11px; cursor: pointer; display: flex;
-            align-items: center; gap: 4px; color: var(--text-muted); border-right: 1px solid var(--app-border);
+            padding: 5px 12px; font-size: 11px; cursor: pointer; display: flex;
+            align-items: center; gap: 5px; color: var(--text-muted); border-right: 1px solid var(--app-border);
             transition: all 0.15s; white-space: nowrap; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .tab-home:hover { color: var(--text-white); background: #333333; }
+        .tab-home:hover { color: var(--prometheus-orange); background: #333333; }
+        .tab-home.active-view { color: var(--prometheus-orange); border-bottom: 2px solid var(--prometheus-orange); }
         .tab-home svg { width: 14px; height: 14px; }
         .tab {
             padding: 5px 12px; font-size: 11px; cursor: pointer; white-space: nowrap;
@@ -500,7 +501,7 @@
 
         // ---- Terminal View ----
         function showTerminalView() { document.getElementById('home-view').classList.add('hidden'); document.getElementById('terminal-view').classList.add('active'); }
-        function showHomeView() { document.getElementById('home-view').classList.remove('hidden'); document.getElementById('terminal-view').classList.remove('active'); renderHome(); }
+        function showHomeView() { document.getElementById('home-view').classList.remove('hidden'); document.getElementById('terminal-view').classList.remove('active'); renderHome(); renderTabs(); }
 
         function connectToServer(serverId) {
             const existing = tabs.find(t => t.serverId === serverId);
@@ -579,7 +580,8 @@
 
         function renderTabs() {
             const bar = document.getElementById('tab-bar');
-            let html = '<div class="tab-home" id="tab-home-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Servers</div>';
+            const homeActive = !document.getElementById('home-view').classList.contains('hidden');
+            let html = '<div class="tab-home' + (homeActive ? ' active-view' : '') + '" id="tab-home-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Servers</div>';
             tabs.forEach(t => {
                 html += '<div class="tab' + (t.id === activeTabId ? ' active' : '') + '" data-tab="' + t.id + '"><span class="tab-dot ' + t.status + '"></span><span style="overflow:hidden;text-overflow:ellipsis;">' + esc(t.serverName) + '</span><span class="tab-close" data-close="' + t.id + '">&times;</span></div>';
             });
@@ -593,6 +595,18 @@
             if (homeBtn) { showHomeView(); return; }
             const tab = e.target.closest('.tab');
             if (tab) switchTab(tab.dataset.tab);
+        });
+
+        // ---- Keyboard shortcuts ----
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (!document.getElementById('home-view').classList.contains('hidden')) return;
+                if (tabs.length > 0 && activeTabId) {
+                    const tab = tabs.find(t => t.id === activeTabId);
+                    if (tab && tab.term) tab.term.blur();
+                }
+                showHomeView();
+            }
         });
 
         // ---- Modal ----
@@ -655,8 +669,8 @@
                 port: parseInt(document.getElementById('srv-port').value, 10) || 22,
                 username: document.getElementById('srv-username').value.trim(),
                 authType: document.getElementById('srv-auth').value,
-                password: document.getElementById('srv-password').value || undefined,
-                sshKey: document.getElementById('srv-key').value || undefined,
+                password: document.getElementById('srv-password').value,
+                sshKey: document.getElementById('srv-key').value,
                 groupName: document.getElementById('srv-group').value.trim() || 'Default',
                 tags: document.getElementById('srv-tags').value.split(',').map(t => t.trim()).filter(Boolean),
             };
