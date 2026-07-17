@@ -18,8 +18,9 @@
             --red: #ef4444;
             --yellow: #f59e0b;
             --card: #2e2e2e;
+            --card-hover: #363636;
             --hover: #333333;
-            --radius: 6px;
+            --radius: 8px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -36,130 +37,165 @@
         /* Header */
         .header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 16px; background: var(--topbar); border-bottom: 1px solid var(--border);
-            flex-shrink: 0; height: 44px;
+            padding: 0 16px; background: var(--topbar); border-bottom: 1px solid var(--border);
+            flex-shrink: 0; height: 42px;
         }
-        .header-left { display: flex; align-items: center; gap: 12px; }
-        .header h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--text); }
-        .header h1 svg { width: 18px; height: 18px; color: var(--accent); }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header h1 { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--text); }
+        .header h1 svg { width: 16px; height: 16px; color: var(--accent); }
         .header-right { display: flex; align-items: center; gap: 10px; }
         .back-link {
-            color: var(--text-muted); text-decoration: none; font-size: 12px;
+            color: var(--text-muted); text-decoration: none; font-size: 11px;
             padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius);
             transition: all 0.2s;
         }
         .back-link:hover { color: var(--text); border-color: var(--text-muted); }
-        .user-info { font-size: 11px; color: var(--text-muted); }
 
-        /* Main Layout */
-        .main { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+        /* Search Bar */
+        .search-bar {
+            padding: 12px 20px; flex-shrink: 0;
+        }
+        .search-bar input {
+            width: 100%; background: var(--card); border: 1px solid var(--border);
+            color: var(--text); padding: 10px 14px; border-radius: var(--radius);
+            font-size: 13px; outline: none; transition: border-color 0.2s;
+        }
+        .search-bar input::placeholder { color: var(--text-muted); }
+        .search-bar input:focus { border-color: var(--accent); }
 
-        /* Sidebar */
-        .sidebar {
-            width: 240px; min-width: 240px; background: var(--sidebar-bg);
-            border-right: 1px solid var(--border); display: flex; flex-direction: column;
-            overflow: hidden;
+        /* Toolbar */
+        .toolbar {
+            display: flex; align-items: center; padding: 0 20px; gap: 12px;
+            flex-shrink: 0; margin-bottom: 8px;
         }
-        .sidebar-header {
-            padding: 10px 12px; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
+        .btn-new-host {
+            background: var(--accent); color: #fff; border: none; padding: 7px 14px;
+            border-radius: var(--radius); font-size: 12px; cursor: pointer; font-weight: 500;
+            display: flex; align-items: center; gap: 6px; transition: opacity 0.2s;
         }
-        .sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
-        .btn-add {
-            background: var(--accent); color: #fff; border: none; padding: 4px 10px;
-            border-radius: var(--radius); font-size: 11px; cursor: pointer; font-weight: 500;
-            display: flex; align-items: center; gap: 4px; transition: opacity 0.2s;
+        .btn-new-host:hover { opacity: 0.85; }
+        .toolbar-tabs { display: flex; gap: 2px; }
+        .toolbar-tab {
+            padding: 6px 14px; font-size: 12px; cursor: pointer; color: var(--text-muted);
+            border: 1px solid transparent; border-radius: var(--radius); transition: all 0.15s;
+            display: flex; align-items: center; gap: 6px; background: none;
         }
-        .btn-add:hover { opacity: 0.85; }
-        .sidebar-search {
-            padding: 8px 12px; border-bottom: 1px solid var(--border);
+        .toolbar-tab:hover { color: var(--text); background: var(--card); }
+        .toolbar-tab.active { color: var(--text); background: var(--card); border-color: var(--border); }
+        .toolbar-tab svg { width: 14px; height: 14px; }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1; overflow-y: auto; padding: 0 20px 20px;
         }
-        .sidebar-search input {
-            width: 100%; background: var(--bg); border: 1px solid var(--border);
-            color: var(--text); padding: 6px 10px; border-radius: var(--radius);
-            font-size: 12px; outline: none;
-        }
-        .sidebar-search input:focus { border-color: var(--accent); }
-        .sidebar-list {
-            flex: 1; overflow-y: auto; padding: 8px 0;
-        }
-        .sidebar-list::-webkit-scrollbar { width: 6px; }
-        .sidebar-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        .group-label {
-            padding: 6px 12px; font-size: 10px; font-weight: 600;
-            text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;
-            cursor: pointer; display: flex; align-items: center; gap: 6px;
-        }
-        .group-label:hover { color: var(--text); }
-        .group-arrow { transition: transform 0.2s; font-size: 8px; }
-        .group-arrow.collapsed { transform: rotate(-90deg); }
-        .server-item {
-            padding: 8px 12px 8px 24px; cursor: pointer; display: flex;
-            align-items: center; gap: 10px; transition: background 0.15s;
-            border-left: 2px solid transparent;
-        }
-        .server-item:hover { background: var(--hover); }
-        .server-item.active { background: var(--hover); border-left-color: var(--accent); }
-        .server-dot {
-            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-            background: var(--text-muted);
-        }
-        .server-dot.connected { background: var(--green); }
-        .server-dot.error { background: var(--red); }
-        .server-info { min-width: 0; flex: 1; }
-        .server-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .server-detail { font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .server-actions {
-            display: none; gap: 2px; flex-shrink: 0;
-        }
-        .server-item:hover .server-actions { display: flex; }
-        .server-actions button {
-            background: none; border: none; color: var(--text-muted); cursor: pointer;
-            padding: 2px; border-radius: 3px; display: flex; align-items: center;
-        }
-        .server-actions button:hover { color: var(--text); background: var(--border); }
-        .tag-badge {
-            display: inline-block; padding: 1px 5px; border-radius: 3px;
-            font-size: 9px; background: rgba(88,166,255,0.15); color: var(--accent);
-            border: 1px solid rgba(88,166,255,0.3); margin-left: 4px;
+        .main-content::-webkit-scrollbar { width: 6px; }
+        .main-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Section Headers */
+        .section-label {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            color: var(--text-muted); letter-spacing: 0.5px; margin: 16px 0 10px;
         }
 
-        /* Content Area */
-        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+        /* Groups Grid */
+        .groups-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px; margin-bottom: 8px;
+        }
+        .group-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 14px 16px; cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .group-card:hover { background: var(--card-hover); border-color: var(--text-muted); }
+        .group-card.active { border-color: var(--accent); background: rgba(25,113,194,0.1); }
+        .group-icon {
+            width: 38px; height: 38px; border-radius: 8px; display: flex;
+            align-items: center; justify-content: center; flex-shrink: 0;
+            background: rgba(25,113,194,0.15); color: var(--accent);
+        }
+        .group-icon svg { width: 18px; height: 18px; }
+        .group-info { min-width: 0; }
+        .group-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .group-count { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+        /* Hosts Grid */
+        .hosts-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 10px;
+        }
+        .host-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 14px 16px; cursor: pointer; transition: all 0.15s;
+            display: flex; align-items: center; gap: 12px; position: relative;
+        }
+        .host-card:hover { background: var(--card-hover); border-color: var(--text-muted); }
+        .host-card.selected { border-color: var(--accent); }
+        .host-card.active-session { border-color: var(--green); }
+        .host-avatar {
+            width: 40px; height: 40px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; flex-shrink: 0;
+            font-size: 16px; font-weight: 700; color: #fff;
+        }
+        .host-avatar.docker { background: #2496ed; }
+        .host-avatar.linux { background: #f0c040; color: #333; }
+        .host-avatar.server { background: #10b981; }
+        .host-avatar.default { background: #6366f1; }
+        .host-info { min-width: 0; flex: 1; }
+        .host-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .host-detail { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .host-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+        .host-tag {
+            display: inline-block; padding: 1px 6px; border-radius: 4px;
+            font-size: 9px; background: rgba(25,113,194,0.12); color: var(--accent);
+            border: 1px solid rgba(25,113,194,0.25);
+        }
+        .host-actions {
+            display: none; position: absolute; top: 8px; right: 8px; gap: 2px;
+        }
+        .host-card:hover .host-actions { display: flex; }
+        .host-actions button {
+            background: var(--bg); border: 1px solid var(--border); color: var(--text-muted);
+            cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center;
+            transition: all 0.15s;
+        }
+        .host-actions button:hover { color: var(--text); border-color: var(--text-muted); }
+        .host-actions button.delete-btn:hover { color: var(--red); border-color: var(--red); }
+
+        /* Terminal View (hidden by default) */
+        .terminal-view { display: none; flex-direction: column; flex: 1; min-height: 0; }
+        .terminal-view.active { display: flex; }
+        .home-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+        .home-view.hidden { display: none; }
 
         /* Tab Bar */
         .tab-bar {
             display: flex; align-items: center; background: var(--sidebar-bg);
-            border-bottom: 1px solid var(--border); padding: 0 8px; height: 36px;
+            border-bottom: 1px solid var(--border); padding: 0 8px; height: 34px;
             flex-shrink: 0; overflow-x: auto;
         }
         .tab-bar::-webkit-scrollbar { height: 0; }
         .tab {
-            padding: 6px 14px; font-size: 12px; cursor: pointer; white-space: nowrap;
+            padding: 5px 12px; font-size: 11px; cursor: pointer; white-space: nowrap;
             border-right: 1px solid var(--border); display: flex; align-items: center;
             gap: 6px; color: var(--text-muted); transition: all 0.15s; position: relative;
+            max-width: 180px;
         }
         .tab:hover { color: var(--text); background: var(--hover); }
-        .tab.active {
-            color: var(--text); background: var(--bg);
-            border-bottom: 2px solid var(--accent);
-        }
+        .tab.active { color: var(--text); background: var(--bg); border-bottom: 2px solid var(--accent); }
         .tab-close {
             font-size: 14px; line-height: 1; opacity: 0; transition: opacity 0.15s;
             cursor: pointer; color: var(--text-muted); padding: 0 2px;
         }
         .tab:hover .tab-close, .tab.active .tab-close { opacity: 0.6; }
         .tab-close:hover { opacity: 1 !important; color: var(--red); }
-        .tab-add {
-            padding: 4px 8px; cursor: pointer; color: var(--text-muted);
-            font-size: 16px; line-height: 1; transition: color 0.15s;
-        }
-        .tab-add:hover { color: var(--accent); }
+        .tab-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .tab-dot.connected { background: var(--green); }
+        .tab-dot.error { background: var(--red); }
+        .tab-dot.connecting { background: var(--yellow); }
 
         /* Terminal Container */
-        .terminal-wrapper {
-            flex: 1; position: relative; overflow: hidden;
-        }
+        .terminal-wrapper { flex: 1; position: relative; overflow: hidden; }
         .terminal-container {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             display: none; padding: 4px;
@@ -174,14 +210,13 @@
         .terminal-status.connecting { color: var(--yellow); }
         .terminal-status.error { color: var(--red); }
 
-        /* Welcome Screen */
-        .welcome {
-            flex: 1; display: flex; flex-direction: column; align-items: center;
-            justify-content: center; color: var(--text-muted); gap: 12px;
+        /* Empty State */
+        .empty-state {
+            padding: 60px 20px; text-align: center; color: var(--text-muted);
         }
-        .welcome svg { width: 48px; height: 48px; opacity: 0.3; }
-        .welcome h2 { font-size: 16px; font-weight: 500; color: var(--text); }
-        .welcome p { font-size: 12px; }
+        .empty-state svg { width: 48px; height: 48px; opacity: 0.3; margin-bottom: 12px; }
+        .empty-state h3 { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+        .empty-state p { font-size: 12px; }
 
         /* Modal */
         .modal-overlay {
@@ -193,7 +228,7 @@
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         .modal-dialog {
             background: var(--card); border: 1px solid var(--border);
-            border-radius: 8px; width: 440px; max-height: 90vh; overflow-y: auto;
+            border-radius: 10px; width: 460px; max-height: 90vh; overflow-y: auto;
         }
         .modal-header {
             padding: 14px 18px; border-bottom: 1px solid var(--border);
@@ -208,7 +243,7 @@
         .modal-body { padding: 18px; }
         .modal-footer {
             padding: 12px 18px; border-top: 1px solid var(--border);
-            display: flex; justify-content: flex-end; gap: 8px;
+            display: flex; justify-content: flex-end; gap: 8px; align-items: center;
         }
         .form-group { margin-bottom: 12px; }
         .form-group label {
@@ -217,7 +252,7 @@
         }
         .form-group input, .form-group select, .form-group textarea {
             width: 100%; background: var(--bg); border: 1px solid var(--border);
-            color: var(--text); padding: 7px 10px; border-radius: var(--radius);
+            color: var(--text); padding: 8px 10px; border-radius: var(--radius);
             font-size: 12px; outline: none;
         }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
@@ -225,7 +260,6 @@
         }
         .form-row { display: flex; gap: 10px; }
         .form-row .form-group { flex: 1; }
-        .form-help { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
         .btn {
             padding: 6px 14px; border-radius: var(--radius); font-size: 12px;
             cursor: pointer; border: 1px solid var(--border); font-weight: 500;
@@ -237,12 +271,22 @@
         .btn-secondary:hover { background: var(--hover); }
         .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
         .btn-danger:hover { opacity: 0.85; }
+        .btn-sm { padding: 4px 10px; font-size: 11px; }
 
-        /* Empty state */
-        .empty-terminal {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; color: var(--text-muted);
+        /* Context Menu */
+        .context-menu {
+            position: fixed; background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 4px; z-index: 999; min-width: 160px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3); display: none;
         }
+        .context-menu.show { display: block; }
+        .context-menu-item {
+            padding: 7px 12px; font-size: 12px; cursor: pointer; border-radius: 4px;
+            display: flex; align-items: center; gap: 8px; color: var(--text);
+        }
+        .context-menu-item:hover { background: var(--hover); }
+        .context-menu-item.danger { color: var(--red); }
+        .context-menu-item svg { width: 14px; height: 14px; }
     </style>
 </head>
 <body>
@@ -250,44 +294,32 @@
         <div class="header-left">
             <h1>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                Remote Host Terminal
+                Remote Host
             </h1>
         </div>
         <div class="header-right">
-            <span class="user-info" id="user-info"></span>
             <a href="/" class="back-link">Back to Portal</a>
         </div>
     </div>
 
-    <div class="main">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <span class="sidebar-title">Servers</span>
-                <button class="btn-add" onclick="showAddModal()">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    VPS
-                </button>
-            </div>
-            <div class="sidebar-search">
-                <input type="text" placeholder="Search servers..." id="search-input" oninput="filterServers()">
-            </div>
-            <div class="sidebar-list" id="server-list"></div>
+    <!-- HOME VIEW -->
+    <div class="home-view" id="home-view">
+        <div class="search-bar">
+            <input type="text" placeholder="Find a host or ssh user@hostname..." id="search-input" oninput="renderHome()">
         </div>
+        <div class="toolbar">
+            <button class="btn-new-host" onclick="showAddModal()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                New host
+            </button>
+        </div>
+        <div class="main-content" id="main-content"></div>
+    </div>
 
-        <!-- Content -->
-        <div class="content">
-            <div class="tab-bar" id="tab-bar">
-                <div class="tab-add" onclick="addNewTab()" title="New tab">+</div>
-            </div>
-            <div class="terminal-wrapper" id="terminal-wrapper">
-                <div class="welcome" id="welcome-screen">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                    <h2>Remote Host Terminal</h2>
-                    <p>Select a server from the sidebar or click + to add one</p>
-                </div>
-            </div>
-        </div>
+    <!-- TERMINAL VIEW -->
+    <div class="terminal-view" id="terminal-view">
+        <div class="tab-bar" id="tab-bar"></div>
+        <div class="terminal-wrapper" id="terminal-wrapper"></div>
     </div>
 
     <!-- MODAL: Add/Edit Server -->
@@ -345,8 +377,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <div style="flex:1;">
-                    <button class="btn btn-secondary" id="test-conn-btn" onclick="testConnection()" style="font-size:11px;">
+                <div style="flex:1; display:flex; align-items:center;">
+                    <button class="btn btn-secondary btn-sm" id="test-conn-btn" onclick="testConnection()">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                         Test Connection
                     </button>
@@ -358,6 +390,22 @@
         </div>
     </div>
 
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" onclick="ctxConnect()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            Connect
+        </div>
+        <div class="context-menu-item" onclick="ctxEdit()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Edit
+        </div>
+        <div class="context-menu-item danger" onclick="ctxDelete()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Delete
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
     <script>
@@ -365,15 +413,16 @@
         let servers = [];
         let tabs = [];
         let activeTabId = null;
+        let activeGroupFilter = null;
+        let ctxServerId = null;
         let sessionToken = localStorage.getItem('hephaestus_session_token');
 
-        // ---- Init ----
         if (!sessionToken) { window.location.href = '/'; }
-        document.getElementById('user-info').textContent = 'Session active';
 
+        // ---- Init ----
         async function init() {
             await loadServers();
-            renderServerList();
+            renderHome();
         }
 
         // ---- API ----
@@ -390,71 +439,164 @@
             if (data.success) servers = data.data || [];
         }
 
-        function renderServerList() {
-            const list = document.getElementById('server-list');
+        // ---- Render Home (Termius-like) ----
+        function renderHome() {
+            const container = document.getElementById('main-content');
             const search = document.getElementById('search-input').value.toLowerCase();
+
+            let filtered = servers;
+            if (search) {
+                filtered = servers.filter(s =>
+                    s.name.toLowerCase().includes(search) ||
+                    s.host.toLowerCase().includes(search) ||
+                    s.username.toLowerCase().includes(search) ||
+                    (s.groupName || '').toLowerCase().includes(search) ||
+                    (s.tags || []).some(t => t.toLowerCase().includes(search))
+                );
+            }
+
             const groups = {};
-            servers.forEach(s => {
-                if (search && !s.name.toLowerCase().includes(search) && !s.host.toLowerCase().includes(search) && !(s.groupName||'').toLowerCase().includes(search)) return;
+            filtered.forEach(s => {
                 const g = s.groupName || 'Default';
                 if (!groups[g]) groups[g] = [];
                 groups[g].push(s);
             });
+
+            const groupNames = Object.keys(groups).sort();
+            const totalHosts = filtered.length;
+
             let html = '';
-            Object.keys(groups).sort().forEach(g => {
-                html += `<div class="group-label" onclick="toggleGroup(this)">
-                    <span class="group-arrow">▼</span> ${esc(g)} <span style="color:var(--text-muted);font-size:9px;">(${groups[g].length})</span>
-                </div>`;
-                html += `<div class="group-items">`;
-                groups[g].forEach(s => {
-                    const isActive = tabs.some(t => t.serverId === s.id);
-                    html += `<div class="server-item ${isActive ? 'active' : ''}" ondblclick="connectToServer('${s.id}')" data-id="${s.id}">
-                        <div class="server-dot ${isActive ? 'connected' : ''}"></div>
-                        <div class="server-info">
-                            <div class="server-name">${esc(s.name)}</div>
-                            <div class="server-detail">${esc(s.username)}@${esc(s.host)}:${s.port}</div>
-                        </div>
-                        ${(s.tags||[]).map(t => `<span class="tag-badge">${esc(t)}</span>`).join('')}
-                        <div class="server-actions">
-                            <button onclick="event.stopPropagation(); editServer('${s.id}')" title="Edit">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                            <button onclick="event.stopPropagation(); deleteServer('${s.id}','${esc(s.name)}')" title="Delete">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
-                        </div>
-                    </div>`;
+
+            // Groups Section
+            if (groupNames.length > 0) {
+                html += `<div class="section-label">Groups</div>`;
+                html += `<div class="groups-grid">`;
+                groupNames.forEach(g => {
+                    const isActive = activeGroupFilter === g;
+                    html += `
+                        <div class="group-card ${isActive ? 'active' : ''}" onclick="toggleGroupFilter('${esc(g)}')" ondblclick="connectToGroup('${esc(g)}')">
+                            <div class="group-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                            </div>
+                            <div class="group-info">
+                                <div class="group-name">${esc(g)}</div>
+                                <div class="group-count">${groups[g].length} Host${groups[g].length > 1 ? 's' : ''}</div>
+                            </div>
+                        </div>`;
                 });
                 html += `</div>`;
-            });
-            if (!html) html = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">No servers found</div>';
-            list.innerHTML = html;
+            }
+
+            // Hosts Section
+            const hostsToShow = activeGroupFilter ? (groups[activeGroupFilter] || []) : filtered;
+            const hostsLabel = activeGroupFilter ? `Hosts — ${activeGroupFilter}` : 'Hosts';
+
+            if (hostsToShow.length > 0) {
+                html += `<div class="section-label">${esc(hostsLabel)} <span style="font-weight:400; text-transform:none;">(${hostsToShow.length})</span></div>`;
+                html += `<div class="hosts-grid">`;
+                hostsToShow.forEach(s => {
+                    const hasSession = tabs.some(t => t.serverId === s.id);
+                    const avatarClass = getAvatarClass(s);
+                    const initials = getInitials(s.name);
+                    const tags = (s.tags || []);
+                    html += `
+                        <div class="host-card ${hasSession ? 'active-session' : ''}" data-id="${s.id}"
+                             ondblclick="connectToServer('${s.id}')"
+                             oncontextmenu="showContextMenu(event, '${s.id}')">
+                            <div class="host-avatar ${avatarClass}">${initials}</div>
+                            <div class="host-info">
+                                <div class="host-name">${esc(s.name)}</div>
+                                <div class="host-detail">ssh, ${esc(s.username)}, ${esc(s.host)}:${s.port}</div>
+                                ${tags.length > 0 ? `<div class="host-tags">${tags.map(t => `<span class="host-tag">${esc(t)}</span>`).join('')}</div>` : ''}
+                            </div>
+                            <div class="host-actions">
+                                <button onclick="event.stopPropagation(); editServer('${s.id}')" title="Edit">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                                <button class="delete-btn" onclick="event.stopPropagation(); deleteServer('${s.id}','${esc(s.name)}')" title="Delete">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </div>
+                        </div>`;
+                });
+                html += `</div>`;
+            }
+
+            if (!html) {
+                html = `<div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <h3>${search ? 'No hosts found' : 'No hosts yet'}</h3>
+                    <p>${search ? 'Try a different search term' : 'Click "New host" to add a server'}</p>
+                </div>`;
+            }
+
+            container.innerHTML = html;
+
             // Update group suggestions
             const dl = document.getElementById('group-suggestions');
-            dl.innerHTML = [...new Set(servers.map(s => s.groupName || 'Default'))].map(g => `<option value="${esc(g)}">`).join('');
+            if (dl) dl.innerHTML = [...new Set(servers.map(s => s.groupName || 'Default'))].map(g => `<option value="${esc(g)}">`).join('');
         }
 
-        function filterServers() { renderServerList(); }
-        function toggleGroup(el) {
-            const items = el.nextElementSibling;
-            const arrow = el.querySelector('.group-arrow');
-            if (items.style.display === 'none') {
-                items.style.display = 'block';
-                arrow.classList.remove('collapsed');
-            } else {
-                items.style.display = 'none';
-                arrow.classList.add('collapsed');
-            }
+        function getAvatarClass(s) {
+            const name = (s.name || '').toLowerCase();
+            const host = (s.host || '').toLowerCase();
+            if (name.includes('docker') || host.includes('docker')) return 'docker';
+            if (s.username === 'root') return 'linux';
+            return 'server';
         }
 
-        // ---- Tabs ----
-        function addNewTab() {
-            const tabId = 'tab-' + Date.now();
-            const tab = { id: tabId, serverId: null, serverName: 'New Tab', ws: null, term: null, fitAddon: null, status: 'disconnected' };
-            tabs.push(tab);
-            createTerminalContainer(tab);
-            renderTabs();
-            switchTab(tabId);
+        function getInitials(name) {
+            if (!name) return '?';
+            const parts = name.split(/[\s_\-]+/);
+            if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        function toggleGroupFilter(group) {
+            activeGroupFilter = activeGroupFilter === group ? null : group;
+            renderHome();
+        }
+
+        function connectToGroup(group) {
+            activeGroupFilter = group;
+            renderHome();
+            const hosts = servers.filter(s => (s.groupName || 'Default') === group);
+            if (hosts.length > 0) connectToServer(hosts[0].id);
+        }
+
+        // ---- Context Menu ----
+        function showContextMenu(ev, serverId) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ctxServerId = serverId;
+            const menu = document.getElementById('context-menu');
+            menu.style.left = ev.clientX + 'px';
+            menu.style.top = ev.clientY + 'px';
+            menu.classList.add('show');
+        }
+        function hideContextMenu() {
+            document.getElementById('context-menu').classList.remove('show');
+            ctxServerId = null;
+        }
+        document.addEventListener('click', hideContextMenu);
+        function ctxConnect() { if (ctxServerId) connectToServer(ctxServerId); hideContextMenu(); }
+        function ctxEdit() { if (ctxServerId) editServer(ctxServerId); hideContextMenu(); }
+        function ctxDelete() {
+            if (!ctxServerId) return;
+            const s = servers.find(x => x.id === ctxServerId);
+            if (s) deleteServer(ctxServerId, s.name);
+            hideContextMenu();
+        }
+
+        // ---- Terminal Tabs ----
+        function showTerminalView() {
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('terminal-view').classList.add('active');
+        }
+
+        function showHomeView() {
+            document.getElementById('home-view').classList.remove('hidden');
+            document.getElementById('terminal-view').classList.remove('active');
         }
 
         function connectToServer(serverId) {
@@ -466,9 +608,11 @@
             const tab = { id: tabId, serverId, serverName: srv.name, ws: null, term: null, fitAddon: null, status: 'connecting' };
             tabs.push(tab);
             createTerminalContainer(tab);
+            showTerminalView();
             renderTabs();
             switchTab(tabId);
             startSSH(tab, srv);
+            renderHome();
         }
 
         function createTerminalContainer(tab) {
@@ -508,17 +652,20 @@
                         statusEl.textContent = `${msg.username}@${msg.host}`;
                         statusEl.className = 'terminal-status connected';
                         tab.term.focus();
-                        renderServerList();
+                        renderTabs();
+                        renderHome();
                     } else if (msg.type === 'disconnected') {
                         tab.status = 'disconnected';
                         statusEl.textContent = 'Disconnected';
                         statusEl.className = 'terminal-status error';
                         tab.ws = null;
+                        renderTabs();
                     } else if (msg.type === 'error') {
                         tab.status = 'error';
                         statusEl.textContent = msg.message;
                         statusEl.className = 'terminal-status error';
                         tab.ws = null;
+                        renderTabs();
                     }
                 } catch(_) {}
             };
@@ -527,7 +674,8 @@
                 statusEl.textContent = 'Connection closed';
                 statusEl.className = 'terminal-status error';
                 tab.ws = null;
-                renderServerList();
+                renderTabs();
+                renderHome();
             };
             tab.ws.onerror = () => {
                 tab.status = 'error';
@@ -553,8 +701,6 @@
                 if (el) el.classList.toggle('active', t.id === tabId);
             });
             const activeTab = tabs.find(t => t.id === tabId);
-            const welcome = document.getElementById('welcome-screen');
-            welcome.style.display = tabs.length === 0 ? 'flex' : 'none';
             if (activeTab && activeTab.fitAddon) {
                 setTimeout(() => activeTab.fitAddon.fit(), 50);
                 if (activeTab.term) activeTab.term.focus();
@@ -573,11 +719,11 @@
             if (el) el.remove();
             tabs.splice(idx, 1);
             if (activeTabId === tabId) {
-                switchTab(tabs.length > 0 ? tabs[Math.min(idx, tabs.length - 1)].id : null);
+                if (tabs.length > 0) switchTab(tabs[Math.min(idx, tabs.length - 1)].id);
+                else showHomeView();
             }
-            if (tabs.length === 0) document.getElementById('welcome-screen').style.display = 'flex';
             renderTabs();
-            renderServerList();
+            renderHome();
         }
 
         function renderTabs() {
@@ -585,13 +731,12 @@
             let html = '';
             tabs.forEach(t => {
                 const isActive = t.id === activeTabId;
-                const icon = t.status === 'connected' ? '🟢' : t.status === 'error' ? '🔴' : '🟡';
                 html += `<div class="tab ${isActive ? 'active' : ''}" onclick="switchTab('${t.id}')">
-                    <span>${icon}</span> ${esc(t.serverName)}
+                    <span class="tab-dot ${t.status}"></span>
+                    <span style="overflow:hidden;text-overflow:ellipsis;">${esc(t.serverName)}</span>
                     <span class="tab-close" onclick="closeTab('${t.id}', event)">&times;</span>
                 </div>`;
             });
-            html += `<div class="tab-add" onclick="addNewTab()" title="New tab">+</div>`;
             bar.innerHTML = html;
         }
 
@@ -660,14 +805,14 @@
             if (!data.success) { alert(data.error); return; }
             closeModal();
             await loadServers();
-            renderServerList();
+            renderHome();
         }
 
         async function deleteServer(id, name) {
             if (!confirm(`Delete server "${name}"?`)) return;
             await api('DELETE', '/api/v1/remote-host/configs/' + id);
             await loadServers();
-            renderServerList();
+            renderHome();
         }
 
         async function testConnection() {
@@ -706,6 +851,14 @@
 
         // ---- Helpers ----
         function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        // ---- Keyboard ----
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                hideContextMenu();
+            }
+        });
 
         // ---- Resize ----
         window.addEventListener('resize', () => {
