@@ -58,6 +58,16 @@ if [ ! -f .env ] && [ -f .env.example ]; then
     cp .env.example .env
 fi
 
+# 3b. Ensure ENCRYPTION_KEY exists in .env (critical for DB password encryption persistence)
+if [ -f .env ]; then
+    if ! grep -q "^ENCRYPTION_KEY=" .env; then
+        echo -e "${YELLOW}Generating persistent ENCRYPTION_KEY for .env...${NC}"
+        NEW_KEY=$(openssl rand -hex 32)
+        echo "ENCRYPTION_KEY=${NEW_KEY}" >> .env
+        echo -e "${GREEN}ENCRYPTION_KEY added to .env${NC}"
+    fi
+fi
+
 # 4. Stop and remove legacy standalone container if it exists
 echo -e "${YELLOW}[3/6] Cleaning up legacy standalone containers...${NC}"
 if docker ps -a --format '{{.Names}}' | grep -Eq "^hephaestus-backend$"; then

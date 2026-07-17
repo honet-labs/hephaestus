@@ -15,28 +15,37 @@ const IV_LEN = 12;
 const KEY_LEN = 32;
 const KEY_FILE = path.join(config.dbDir, ".encryption_key");
 
+let _cachedKey: Buffer | null = null;
+
 function getEncryptionKey(): Buffer {
+  if (_cachedKey) return _cachedKey;
+
   const envKey = process.env.ENCRYPTION_KEY;
   if (envKey) {
     console.log(`[Crypto] Using ENCRYPTION_KEY env var (scrypt derivation)`);
-    return crypto.scryptSync(envKey, "hephaestus-db-salt", KEY_LEN);
+    _cachedKey = crypto.scryptSync(envKey, "hephaestus-db-salt", KEY_LEN);
+    return _cachedKey;
   }
   // Derive or load a persistent key from disk
   try {
     if (fs.existsSync(KEY_FILE)) {
       const raw = fs.readFileSync(KEY_FILE, "utf-8").trim();
-      console.log(`[Crypto] Using key file: ${KEY_FILE} (${raw.length} hex chars)`);
-      return Buffer.from(raw, "hex");
+      console.log(`[Crypto] Loaded key from ${KEY_FILE} (${raw.length} hex chars)`);
+      _cachedKey = Buffer.from(raw, "hex");
+      return _cachedKey;
     }
   } catch (e) { console.error(`[Crypto] Failed to read key file:`, e); }
   // Generate new key and persist
   console.log(`[Crypto] Generating NEW encryption key at ${KEY_FILE}`);
-  const newKey = crypto.randomBytes(KEY_LEN);
+  _cachedKey = crypto.randomBytes(KEY_LEN);
   try {
     fs.mkdirSync(path.dirname(KEY_FILE), { recursive: true });
-    fs.writeFileSync(KEY_FILE, newKey.toString("hex"), { mode: 0o600 });
-  } catch { /* best effort */ }
-  return newKey;
+    fs.writeFileSync(KEY_FILE, _cachedKey.toString("hex"), { mode: 0o600 });
+    console.log(`[Crypto] Key saved to ${KEY_FILE}`);
+  } catch (e: any) {
+    console.error(`[Crypto] Failed to write key file: ${e.message} — key cached in memory only`);
+  }
+  return _cachedKey;
 }
 
 export function encryptText(plaintext: string): string {
