@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Remote Host - Hephaestus</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             color-scheme: dark;
@@ -154,11 +151,6 @@
         .host-actions button:hover { color: var(--text-white); border-color: var(--text-muted); }
         .host-actions button.delete-btn:hover { color: var(--error); border-color: var(--error); }
 
-        .home-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-        .home-view.hidden { display: none; }
-        .terminal-view { display: none; flex-direction: column; flex: 1; min-height: 0; }
-        .terminal-view.active { display: flex; }
-
         .tab-bar {
             display: none; align-items: center; background: var(--app-topbar);
             border-bottom: 1px solid var(--app-border); padding: 0 4px; height: 34px;
@@ -174,6 +166,12 @@
         .tab-home:hover { color: var(--prometheus-orange); background: #333333; }
         .tab-home.active-view { color: var(--prometheus-orange); border-bottom: 2px solid var(--prometheus-orange); }
         .tab-home svg { width: 14px; height: 14px; }
+        .tab-add {
+            padding: 5px 10px; font-size: 14px; cursor: pointer; display: flex;
+            align-items: center; color: var(--text-muted); border-right: 1px solid var(--app-border);
+            transition: all 0.15s; font-weight: 600;
+        }
+        .tab-add:hover { color: var(--prometheus-orange); background: #333333; }
         .tab {
             padding: 5px 12px; font-size: 11px; cursor: pointer; white-space: nowrap;
             border-right: 1px solid var(--app-border); display: flex; align-items: center;
@@ -193,10 +191,22 @@
         .tab-dot.error { background: var(--error); }
         .tab-dot.connecting { background: var(--warning); }
 
+        .content-area { flex: 1; position: relative; overflow: hidden; min-height: 0; }
+        .home-view {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .home-view.hidden { display: none; }
+        .terminal-view {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: none; flex-direction: column;
+        }
+        .terminal-view.active { display: flex; }
+
         .terminal-wrapper { flex: 1; position: relative; overflow: hidden; }
         .terminal-container {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            display: none; padding: 4px;
+            display: none;
         }
         .terminal-container.active { display: block; }
         .terminal-status {
@@ -281,23 +291,25 @@
         </div>
     </div>
 
-    <div class="home-view" id="home-view">
-        <div class="search-bar">
-            <input type="text" placeholder="Find a host or ssh user@hostname..." id="search-input">
-        </div>
-        <div class="toolbar">
-            <button class="btn btn-primary" id="btn-new-host">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                New host
-            </button>
-        </div>
-        <div class="main-content" id="main-content"></div>
-    </div>
-
     <div class="tab-bar" id="tab-bar"></div>
 
-    <div class="terminal-view" id="terminal-view">
-        <div class="terminal-wrapper" id="terminal-wrapper"></div>
+    <div class="content-area">
+        <div class="home-view" id="home-view">
+            <div class="search-bar">
+                <input type="text" placeholder="Find a host or ssh user@hostname..." id="search-input">
+            </div>
+            <div class="toolbar">
+                <button class="btn btn-primary" id="btn-new-host">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    New host
+                </button>
+            </div>
+            <div class="main-content" id="main-content"></div>
+        </div>
+
+        <div class="terminal-view" id="terminal-view">
+            <div class="terminal-wrapper" id="terminal-wrapper"></div>
+        </div>
     </div>
 
     <div id="modal-server" class="modal-overlay">
@@ -372,6 +384,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
             Connect
         </div>
+        <div class="context-menu-item" data-action="connect-duplicate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line><rect x="6" y="2" width="4" height="4" rx="1"></rect></svg>
+            Duplicate Tab
+        </div>
         <div class="context-menu-item" data-action="edit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             Edit
@@ -385,136 +401,120 @@
     <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
     <script>
-        let servers = [];
-        let tabs = [];
-        let activeTabId = null;
-        let activeGroupFilter = null;
-        let ctxServerId = null;
-        const sessionToken = localStorage.getItem('hephaestus_session_token');
-        if (!sessionToken) window.location.href = '/';
+    (function() {
+        var servers = [];
+        var tabs = [];
+        var activeTabId = null;
+        var activeGroupFilter = null;
+        var ctxServerId = null;
+        var sessionToken = localStorage.getItem('hephaestus_session_token');
+        if (!sessionToken) { window.location.href = '/'; return; }
 
-        // ---- Helpers ----
+        var TERMINAL_FONT = '14px "Consolas", "Liberation Mono", Menlo, "Courier New", monospace';
+
         function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
-
         function getAvatarClass(s) {
-            const n = (s.name || '').toLowerCase();
-            if (n.includes('docker')) return 'docker';
+            var n = (s.name || '').toLowerCase();
+            if (n.indexOf('docker') !== -1) return 'docker';
             if (s.username === 'root') return 'linux';
             return 'server';
         }
         function getInitials(name) {
             if (!name) return '?';
-            const p = name.split(/[\s_\-]+/);
+            var p = name.split(/[\s_\-]+/);
             return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
         }
+        function getTabLabel(serverName, serverId) {
+            var count = 0;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].serverId === serverId) count++; }
+            if (count <= 1) return serverName;
+            return serverName + ' (' + count + ')';
+        }
 
-        // ---- API ----
-        async function api(method, url, body) {
-            const opts = { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionToken } };
+        function api(method, url, body) {
+            var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionToken } };
             if (body) opts.body = JSON.stringify(body);
-            const res = await fetch(url, opts);
-            return res.json();
+            return fetch(url, opts).then(function(r) { return r.json(); });
         }
-        async function loadServers() {
-            const data = await api('GET', '/api/v1/remote-host/configs');
-            if (data.success) servers = data.data || [];
+        function loadServers() {
+            return api('GET', '/api/v1/remote-host/configs').then(function(data) {
+                if (data.success) servers = data.data || [];
+            }).catch(function() { servers = []; });
         }
 
-        // ---- Render Home ----
         function renderHome() {
-            const container = document.getElementById('main-content');
-            const search = (document.getElementById('search-input').value || '').toLowerCase();
-            let filtered = servers;
+            var container = document.getElementById('main-content');
+            var search = (document.getElementById('search-input').value || '').toLowerCase();
+            var filtered = servers;
             if (search) {
-                filtered = servers.filter(s =>
-                    s.name.toLowerCase().includes(search) || s.host.toLowerCase().includes(search) ||
-                    s.username.toLowerCase().includes(search) || (s.groupName || '').toLowerCase().includes(search) ||
-                    (s.tags || []).some(t => t.toLowerCase().includes(search))
-                );
+                filtered = servers.filter(function(s) {
+                    return s.name.toLowerCase().indexOf(search) !== -1 || s.host.toLowerCase().indexOf(search) !== -1 ||
+                        s.username.toLowerCase().indexOf(search) !== -1 || (s.groupName || '').toLowerCase().indexOf(search) !== -1 ||
+                        (s.tags || []).some(function(t) { return t.toLowerCase().indexOf(search) !== -1; });
+                });
             }
-            const groups = {};
-            filtered.forEach(s => { const g = s.groupName || 'Default'; (groups[g] = groups[g] || []).push(s); });
-            const groupNames = Object.keys(groups).sort();
-            let html = '';
+            var groups = {};
+            filtered.forEach(function(s) { var g = s.groupName || 'Default'; if (!groups[g]) groups[g] = []; groups[g].push(s); });
+            var groupNames = Object.keys(groups).sort();
+            var html = '';
 
             if (groupNames.length > 0) {
                 html += '<div class="section-label">Groups</div><div class="groups-grid">';
-                groupNames.forEach(g => {
-                    const isActive = activeGroupFilter === g;
-                    html += `<div class="group-card${isActive ? ' active' : ''}" data-group="${esc(g)}">
-                        <div class="group-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
-                        <div class="group-info"><div class="group-name">${esc(g)}</div><div class="group-count">${groups[g].length} Host${groups[g].length > 1 ? 's' : ''}</div></div>
-                    </div>`;
+                groupNames.forEach(function(g) {
+                    var isActive = activeGroupFilter === g;
+                    html += '<div class="group-card' + (isActive ? ' active' : '') + '" data-group="' + esc(g) + '">' +
+                        '<div class="group-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>' +
+                        '<div class="group-info"><div class="group-name">' + esc(g) + '</div><div class="group-count">' + groups[g].length + ' Host' + (groups[g].length > 1 ? 's' : '') + '</div></div></div>';
                 });
                 html += '</div>';
             }
 
-            const hostsToShow = activeGroupFilter ? (groups[activeGroupFilter] || []) : filtered;
-            const hostsLabel = activeGroupFilter ? 'Hosts \u2014 ' + activeGroupFilter : 'Hosts';
+            var hostsToShow = activeGroupFilter ? (groups[activeGroupFilter] || []) : filtered;
+            var hostsLabel = activeGroupFilter ? 'Hosts \u2014 ' + activeGroupFilter : 'Hosts';
             if (hostsToShow.length > 0) {
-                html += `<div class="section-label">${esc(hostsLabel)} <span style="font-weight:400;text-transform:none;">(${hostsToShow.length})</span></div><div class="hosts-grid">`;
-                hostsToShow.forEach(s => {
-                    const hasSession = tabs.some(t => t.serverId === s.id);
-                    const tags = (s.tags || []);
-                    html += `<div class="host-card${hasSession ? ' active-session' : ''}" data-id="${esc(s.id)}">
-                        <div class="host-avatar ${getAvatarClass(s)}">${getInitials(s.name)}</div>
-                        <div class="host-info">
-                            <div class="host-name">${esc(s.name)}</div>
-                            <div class="host-detail">ssh, ${esc(s.username)}, ${esc(s.host)}:${s.port}</div>
-                            ${tags.length > 0 ? '<div class="host-tags">' + tags.map(t => '<span class="host-tag">' + esc(t) + '</span>').join('') + '</div>' : ''}
-                        </div>
-                        <div class="host-actions">
-                            <button class="edit-btn" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                            <button class="delete-btn" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
-                        </div>
-                    </div>`;
+                html += '<div class="section-label">' + esc(hostsLabel) + ' <span style="font-weight:400;text-transform:none;">(' + hostsToShow.length + ')</span></div><div class="hosts-grid">';
+                hostsToShow.forEach(function(s) {
+                    var hasSession = tabs.some(function(t) { return t.serverId === s.id; });
+                    var tags = (s.tags || []);
+                    html += '<div class="host-card' + (hasSession ? ' active-session' : '') + '" data-id="' + esc(s.id) + '">' +
+                        '<div class="host-avatar ' + getAvatarClass(s) + '">' + getInitials(s.name) + '</div>' +
+                        '<div class="host-info">' +
+                            '<div class="host-name">' + esc(s.name) + '</div>' +
+                            '<div class="host-detail">ssh, ' + esc(s.username) + ', ' + esc(s.host) + ':' + s.port + '</div>' +
+                            (tags.length > 0 ? '<div class="host-tags">' + tags.map(function(t) { return '<span class="host-tag">' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
+                        '</div>' +
+                        '<div class="host-actions">' +
+                            '<button class="edit-btn" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>' +
+                            '<button class="delete-btn" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>' +
+                        '</div></div>';
                 });
                 html += '</div>';
             }
-            if (!html) html = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg><h3>${search ? 'No hosts found' : 'No hosts yet'}</h3><p>${search ? 'Try a different search term' : 'Click "New host" to add a server'}</p></div>`;
+            if (!html) html = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg><h3>' + (search ? 'No hosts found' : 'No hosts yet') + '</h3><p>' + (search ? 'Try a different search term' : 'Click "New host" to add a server') + '</p></div>';
             container.innerHTML = html;
-            const dl = document.getElementById('group-suggestions');
-            if (dl) dl.innerHTML = [...new Set(servers.map(s => s.groupName || 'Default'))].map(g => '<option value="' + esc(g) + '">').join('');
+            var dl = document.getElementById('group-suggestions');
+            if (dl) dl.innerHTML = Array.from(new Set(servers.map(function(s) { return s.groupName || 'Default'; }))).map(function(g) { return '<option value="' + esc(g) + '">'; }).join('');
         }
 
-        // ---- Event Delegation ----
-        document.getElementById('main-content').addEventListener('click', (e) => {
-            const groupCard = e.target.closest('.group-card');
-            if (groupCard) {
-                const g = groupCard.dataset.group;
-                if (g) { activeGroupFilter = activeGroupFilter === g ? null : g; renderHome(); }
-                return;
-            }
-            const hostCard = e.target.closest('.host-card');
-            if (hostCard) {
-                if (e.target.closest('.edit-btn')) { editServer(hostCard.dataset.id); return; }
-                if (e.target.closest('.delete-btn')) { const s = servers.find(x => x.id === hostCard.dataset.id); if (s) deleteServer(s.id, s.name); return; }
-                connectToServer(hostCard.dataset.id);
-                return;
-            }
-        });
-        document.getElementById('main-content').addEventListener('dblclick', (e) => {
-            const groupCard = e.target.closest('.group-card');
-            if (groupCard) {
-                const g = groupCard.dataset.group;
-                if (g) { activeGroupFilter = g; renderHome(); const hosts = servers.filter(s => (s.groupName || 'Default') === g); if (hosts.length) connectToServer(hosts[0].id); }
-            }
-        });
+        function isHomeVisible() { return !document.getElementById('home-view').classList.contains('hidden'); }
 
-        document.getElementById('search-input').addEventListener('input', renderHome);
-        document.getElementById('btn-new-host').addEventListener('click', showAddModal);
-
-        // ---- Terminal View ----
-        function showTerminalView() { document.getElementById('home-view').classList.add('hidden'); document.getElementById('terminal-view').classList.add('active'); }
-        function showHomeView() { document.getElementById('home-view').classList.remove('hidden'); document.getElementById('terminal-view').classList.remove('active'); renderHome(); renderTabs(); }
+        function showTerminalView() {
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('terminal-view').classList.add('active');
+        }
+        function showHomeView() {
+            document.getElementById('home-view').classList.remove('hidden');
+            document.getElementById('terminal-view').classList.remove('active');
+            renderHome();
+            renderTabs();
+        }
 
         function connectToServer(serverId) {
-            const existing = tabs.find(t => t.serverId === serverId);
-            if (existing) { switchTab(existing.id); return; }
-            const srv = servers.find(s => s.id === serverId);
+            var srv = null;
+            for (var i = 0; i < servers.length; i++) { if (servers[i].id === serverId) { srv = servers[i]; break; } }
             if (!srv) return;
-            const tabId = 'tab-' + Date.now();
-            const tab = { id: tabId, serverId, serverName: srv.name, ws: null, term: null, fitAddon: null, status: 'connecting' };
+            var tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
+            var tab = { id: tabId, serverId: serverId, serverName: srv.name, ws: null, term: null, fitAddon: null, status: 'connecting', containerEl: null, statusEl: null };
             tabs.push(tab);
             createTerminalContainer(tab);
             showTerminalView();
@@ -524,27 +524,32 @@
         }
 
         function createTerminalContainer(tab) {
-            const wrapper = document.getElementById('terminal-wrapper');
-            const div = document.createElement('div');
+            var wrapper = document.getElementById('terminal-wrapper');
+            var div = document.createElement('div');
             div.className = 'terminal-container';
             div.id = 'term-' + tab.id;
-            div.innerHTML = '<div class="terminal-status connecting" id="status-' + tab.id + '">Connecting...</div>';
+            var statusDiv = document.createElement('div');
+            statusDiv.className = 'terminal-status connecting';
+            statusDiv.id = 'status-' + tab.id;
+            statusDiv.textContent = 'Connecting...';
+            div.appendChild(statusDiv);
             wrapper.appendChild(div);
+            tab.containerEl = div;
+            tab.statusEl = statusDiv;
         }
 
         function startSSH(tab, srv) {
-            const statusEl = document.getElementById('status-' + tab.id);
-            const container = document.getElementById('term-' + tab.id);
+            var container = tab.containerEl;
+            var statusEl = tab.statusEl;
 
-            const createTerminal = () => {
+            function createTerminal() {
                 tab.term = new Terminal({
                     cursorBlink: true,
                     fontSize: 14,
-                    fontFamily: '"JetBrains Mono", "Cascadia Code", "Fira Code", "SF Mono", "Menlo", "Consolas", "Liberation Mono", monospace',
+                    fontFamily: 'Consolas, "Liberation Mono", Menlo, "Courier New", monospace',
                     fontWeight: '400',
                     letterSpacing: 0,
-                    lineHeight: 1.2,
-                    allowProposedApi: true,
+                    lineHeight: 1,
                     theme: {
                         background: '#1a1a1a',
                         foreground: '#e0e0e0',
@@ -568,60 +573,86 @@
                         brightCyan: '#22d3ee',
                         brightWhite: '#f9fafb'
                     },
-                    convertEol: true,
-                    scrollback: 10000
+                    scrollback: 10000,
+                    convertEol: false
                 });
                 tab.fitAddon = new FitAddon.FitAddon();
                 tab.term.loadAddon(tab.fitAddon);
                 tab.term.open(container);
-                tab.fitAddon.fit();
-                connectSSH(tab, srv);
-            };
 
-            if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(createTerminal);
-            } else {
-                createTerminal();
+                setTimeout(function() {
+                    try { tab.fitAddon.fit(); } catch(e) {}
+                    connectSSH(tab, srv);
+                }, 50);
             }
+
+            var ro = new ResizeObserver(function(entries) {
+                for (var i = 0; i < entries.length; i++) {
+                    var rect = entries[i].contentRect;
+                    if (rect.width > 0 && rect.height > 0) {
+                        ro.disconnect();
+                        createTerminal();
+                        return;
+                    }
+                }
+            });
+            ro.observe(container);
         }
 
         function connectSSH(tab, srv) {
-            const statusEl = document.getElementById('status-' + tab.id);
-            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const url = protocol + '//' + location.host + '/ws/remote-host?token=' + encodeURIComponent(sessionToken) + '&hostId=' + encodeURIComponent(srv.id) + '&cols=' + tab.term.cols + '&rows=' + tab.term.rows;
+            var statusEl = tab.statusEl;
+            var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            var url = protocol + '//' + location.host + '/ws/remote-host?token=' + encodeURIComponent(sessionToken) + '&hostId=' + encodeURIComponent(srv.id) + '&cols=' + tab.term.cols + '&rows=' + tab.term.rows;
             tab.ws = new WebSocket(url);
-            tab.ws.onmessage = (ev) => {
+            tab.ws.onmessage = function(ev) {
                 try {
-                    const msg = JSON.parse(ev.data);
+                    var msg = JSON.parse(ev.data);
                     if (msg.type === 'data') { tab.term.write(msg.data); }
-                    else if (msg.type === 'connected') { tab.status = 'connected'; statusEl.textContent = msg.username + '@' + msg.host; statusEl.className = 'terminal-status connected'; tab.term.focus(); renderTabs(); }
-                    else if (msg.type === 'disconnected') { tab.status = 'disconnected'; statusEl.textContent = 'Disconnected'; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); }
-                    else if (msg.type === 'error') { tab.status = 'error'; statusEl.textContent = msg.message; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); }
-                } catch(_) {}
+                    else if (msg.type === 'connected') {
+                        tab.status = 'connected';
+                        statusEl.textContent = msg.username + '@' + msg.host;
+                        statusEl.className = 'terminal-status connected';
+                        tab.term.focus();
+                        renderTabs();
+                        renderHome();
+                    }
+                    else if (msg.type === 'disconnected') { tab.status = 'disconnected'; statusEl.textContent = 'Disconnected'; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); renderHome(); }
+                    else if (msg.type === 'error') { tab.status = 'error'; statusEl.textContent = msg.message; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); renderHome(); }
+                } catch(_){}
             };
-            tab.ws.onclose = () => { tab.status = 'disconnected'; statusEl.textContent = 'Connection closed'; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); };
-            tab.ws.onerror = () => { tab.status = 'error'; statusEl.textContent = 'Connection error'; statusEl.className = 'terminal-status error'; };
-            tab.term.onData((data) => { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'input', data })); });
-            tab.term.onResize(({ cols, rows }) => { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'resize', cols, rows })); });
+            tab.ws.onclose = function() { tab.status = 'disconnected'; statusEl.textContent = 'Connection closed'; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); renderHome(); };
+            tab.ws.onerror = function() { tab.status = 'error'; statusEl.textContent = 'Connection error'; statusEl.className = 'terminal-status error'; };
+            tab.term.onData(function(data) { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'input', data: data })); });
+            tab.term.onResize(function(dim) { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'resize', cols: dim.cols, rows: dim.rows })); });
         }
 
         function switchTab(tabId) {
             activeTabId = tabId;
             showTerminalView();
-            tabs.forEach(t => { const el = document.getElementById('term-' + t.id); if (el) el.classList.toggle('active', t.id === tabId); });
-            const at = tabs.find(t => t.id === tabId);
-            if (at && at.fitAddon) { setTimeout(() => at.fitAddon.fit(), 50); if (at.term) at.term.focus(); }
+            for (var i = 0; i < tabs.length; i++) {
+                var el = document.getElementById('term-' + tabs[i].id);
+                if (el) {
+                    if (tabs[i].id === tabId) el.classList.add('active');
+                    else el.classList.remove('active');
+                }
+            }
+            var at = null;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { at = tabs[i]; break; } }
+            if (at && at.fitAddon) {
+                setTimeout(function() { try { at.fitAddon.fit(); } catch(e) {} if (at.term) at.term.focus(); }, 50);
+            }
             renderTabs();
         }
 
         function closeTab(tabId, ev) {
             if (ev) ev.stopPropagation();
-            const idx = tabs.findIndex(t => t.id === tabId);
+            var idx = -1;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { idx = i; break; } }
             if (idx === -1) return;
-            const tab = tabs[idx];
-            if (tab.ws) { try { tab.ws.send(JSON.stringify({ type: 'disconnect' })); } catch(_) {} tab.ws.close(); }
+            var tab = tabs[idx];
+            if (tab.ws) { try { tab.ws.send(JSON.stringify({ type: 'disconnect' })); } catch(_){} tab.ws.close(); }
             if (tab.term) tab.term.dispose();
-            const el = document.getElementById('term-' + tab.id);
+            var el = document.getElementById('term-' + tab.id);
             if (el) el.remove();
             tabs.splice(idx, 1);
             if (activeTabId === tabId) {
@@ -632,39 +663,19 @@
         }
 
         function renderTabs() {
-            const bar = document.getElementById('tab-bar');
-            if (tabs.length === 0) { bar.classList.remove('visible'); return; }
+            var bar = document.getElementById('tab-bar');
+            if (tabs.length === 0) { bar.classList.remove('visible'); bar.innerHTML = ''; return; }
             bar.classList.add('visible');
-            const homeActive = !document.getElementById('home-view').classList.contains('hidden');
-            let html = '<div class="tab-home' + (homeActive ? ' active-view' : '') + '" id="tab-home-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Servers</div>';
-            tabs.forEach(t => {
+            var homeActive = isHomeVisible();
+            var html = '<div class="tab-home' + (homeActive ? ' active-view' : '') + '" id="tab-home-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Servers</div>';
+            html += '<div class="tab-add" id="tab-add-btn" title="New connection">+</div>';
+            for (var i = 0; i < tabs.length; i++) {
+                var t = tabs[i];
                 html += '<div class="tab' + (t.id === activeTabId ? ' active' : '') + '" data-tab="' + t.id + '"><span class="tab-dot ' + t.status + '"></span><span style="overflow:hidden;text-overflow:ellipsis;">' + esc(t.serverName) + '</span><span class="tab-close" data-close="' + t.id + '">&times;</span></div>';
-            });
+            }
             bar.innerHTML = html;
         }
 
-        document.getElementById('tab-bar').addEventListener('click', (e) => {
-            const closeBtn = e.target.closest('.tab-close');
-            if (closeBtn) { closeTab(closeBtn.dataset.close, e); return; }
-            const homeBtn = e.target.closest('.tab-home');
-            if (homeBtn) { showHomeView(); return; }
-            const tab = e.target.closest('.tab');
-            if (tab) switchTab(tab.dataset.tab);
-        });
-
-        // ---- Keyboard shortcuts ----
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (!document.getElementById('home-view').classList.contains('hidden')) return;
-                if (tabs.length > 0 && activeTabId) {
-                    const tab = tabs.find(t => t.id === activeTabId);
-                    if (tab && tab.term) tab.term.blur();
-                }
-                showHomeView();
-            }
-        });
-
-        // ---- Modal ----
         function showAddModal() {
             document.getElementById('srv-id').value = '';
             document.getElementById('srv-name').value = '';
@@ -684,7 +695,8 @@
         }
 
         function editServer(id) {
-            const s = servers.find(x => x.id === id);
+            var s = null;
+            for (var i = 0; i < servers.length; i++) { if (servers[i].id === id) { s = servers[i]; break; } }
             if (!s) return;
             document.getElementById('srv-id').value = s.id;
             document.getElementById('srv-name').value = s.name;
@@ -705,19 +717,14 @@
 
         function closeModal() { document.getElementById('modal-server').classList.remove('active'); }
         function onAuthChange() {
-            const t = document.getElementById('srv-auth').value;
+            var t = document.getElementById('srv-auth').value;
             document.getElementById('srv-password-group').style.display = t === 'password' ? 'block' : 'none';
             document.getElementById('srv-key-group').style.display = t === 'key' ? 'block' : 'none';
         }
 
-        document.getElementById('modal-close-btn').addEventListener('click', closeModal);
-        document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
-        document.getElementById('modal-save-btn').addEventListener('click', saveServer);
-        document.getElementById('srv-auth').addEventListener('change', onAuthChange);
-
-        async function saveServer() {
-            const id = document.getElementById('srv-id').value;
-            const body = {
+        function saveServer() {
+            var id = document.getElementById('srv-id').value;
+            var body = {
                 id: id || undefined,
                 name: document.getElementById('srv-name').value.trim(),
                 host: document.getElementById('srv-host').value.trim(),
@@ -727,82 +734,129 @@
                 password: document.getElementById('srv-password').value,
                 sshKey: document.getElementById('srv-key').value,
                 groupName: document.getElementById('srv-group').value.trim() || 'Default',
-                tags: document.getElementById('srv-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+                tags: document.getElementById('srv-tags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean)
             };
             if (!body.name || !body.host || !body.username) { alert('Fill in all required fields.'); return; }
             if (!id && body.authType === 'password' && !body.password) { alert('Password is required.'); return; }
-            const data = await api('POST', '/api/v1/remote-host/configs', body);
-            if (!data.success) { alert(data.error); return; }
-            closeModal();
-            await loadServers();
-            renderHome();
+            api('POST', '/api/v1/remote-host/configs', body).then(function(data) {
+                if (!data.success) { alert(data.error); return; }
+                closeModal();
+                loadServers().then(function() { renderHome(); renderTabs(); });
+            });
         }
 
-        async function deleteServer(id, name) {
+        function deleteServer(id, name) {
             if (!confirm('Delete server "' + name + '"?')) return;
-            await api('DELETE', '/api/v1/remote-host/configs/' + id);
-            await loadServers();
-            renderHome();
+            api('DELETE', '/api/v1/remote-host/configs/' + id).then(function() {
+                loadServers().then(function() { renderHome(); renderTabs(); });
+            });
         }
 
-        document.getElementById('test-conn-btn').addEventListener('click', async function() {
-            const btn = this;
-            const result = document.getElementById('test-conn-result');
+        function showContextMenu(ev, serverId) {
+            ev.preventDefault(); ev.stopPropagation();
+            ctxServerId = serverId;
+            var menu = document.getElementById('context-menu');
+            menu.style.left = ev.clientX + 'px'; menu.style.top = ev.clientY + 'px';
+            menu.classList.add('show');
+        }
+        function hideContextMenu() { document.getElementById('context-menu').classList.remove('show'); ctxServerId = null; }
+
+        document.getElementById('main-content').addEventListener('click', function(e) {
+            var groupCard = e.target.closest('.group-card');
+            if (groupCard) {
+                var g = groupCard.dataset.group;
+                if (g) { activeGroupFilter = activeGroupFilter === g ? null : g; renderHome(); }
+                return;
+            }
+            var hostCard = e.target.closest('.host-card');
+            if (hostCard) {
+                if (e.target.closest('.edit-btn')) { editServer(hostCard.dataset.id); return; }
+                if (e.target.closest('.delete-btn')) { var s = null; for (var i = 0; i < servers.length; i++) { if (servers[i].id === hostCard.dataset.id) { s = servers[i]; break; } } if (s) deleteServer(s.id, s.name); return; }
+                connectToServer(hostCard.dataset.id);
+                return;
+            }
+        });
+        document.getElementById('main-content').addEventListener('dblclick', function(e) {
+            var groupCard = e.target.closest('.group-card');
+            if (groupCard) {
+                var g = groupCard.dataset.group;
+                if (g) { activeGroupFilter = g; renderHome(); var hosts = servers.filter(function(s) { return (s.groupName || 'Default') === g; }); if (hosts.length) connectToServer(hosts[0].id); }
+            }
+        });
+        document.getElementById('main-content').addEventListener('contextmenu', function(e) {
+            var hostCard = e.target.closest('.host-card');
+            if (hostCard) showContextMenu(e, hostCard.dataset.id);
+        });
+        document.getElementById('search-input').addEventListener('input', renderHome);
+        document.getElementById('btn-new-host').addEventListener('click', showAddModal);
+
+        document.getElementById('tab-bar').addEventListener('click', function(e) {
+            var closeBtn = e.target.closest('.tab-close');
+            if (closeBtn) { closeTab(closeBtn.dataset.close, e); return; }
+            var homeBtn = e.target.closest('.tab-home');
+            if (homeBtn) { showHomeView(); return; }
+            var addBtn = e.target.closest('.tab-add');
+            if (addBtn) { showHomeView(); return; }
+            var tab = e.target.closest('.tab');
+            if (tab) switchTab(tab.dataset.tab);
+        });
+
+        document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+        document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+        document.getElementById('modal-save-btn').addEventListener('click', saveServer);
+        document.getElementById('srv-auth').addEventListener('change', onAuthChange);
+
+        document.getElementById('test-conn-btn').addEventListener('click', function() {
+            var btn = this;
+            var result = document.getElementById('test-conn-result');
             btn.disabled = true; btn.textContent = 'Testing...'; result.textContent = ''; result.style.color = '';
-            const body = {
+            var body = {
                 host: document.getElementById('srv-host').value.trim(),
                 port: document.getElementById('srv-port').value,
                 username: document.getElementById('srv-username').value.trim(),
                 authType: document.getElementById('srv-auth').value,
                 password: document.getElementById('srv-password').value,
-                sshKey: document.getElementById('srv-key').value,
+                sshKey: document.getElementById('srv-key').value
             };
             if (!body.host || !body.username) {
-                result.textContent = 'Host and username are required.'; result.style.color = 'var(--red)';
+                result.textContent = 'Host and username are required.'; result.style.color = 'var(--error)';
                 btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Test Connection';
                 return;
             }
-            try {
-                const data = await api('POST', '/api/v1/remote-host/test-connection', body);
-                result.textContent = data.message; result.style.color = data.success ? 'var(--green)' : 'var(--red)';
-            } catch (e) { result.textContent = 'Request failed.'; result.style.color = 'var(--red)'; }
+            api('POST', '/api/v1/remote-host/test-connection', body).then(function(data) {
+                result.textContent = data.message; result.style.color = data.success ? 'var(--success)' : 'var(--error)';
+            }).catch(function() { result.textContent = 'Request failed.'; result.style.color = 'var(--error)'; });
             btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Test Connection';
         });
 
-        // ---- Context Menu ----
-        function showContextMenu(ev, serverId) {
-            ev.preventDefault(); ev.stopPropagation();
-            ctxServerId = serverId;
-            const menu = document.getElementById('context-menu');
-            menu.style.left = ev.clientX + 'px'; menu.style.top = ev.clientY + 'px';
-            menu.classList.add('show');
-        }
-        function hideContextMenu() { document.getElementById('context-menu').classList.remove('show'); ctxServerId = null; }
-        document.addEventListener('click', hideContextMenu);
-        document.getElementById('context-menu').addEventListener('click', (e) => {
-            const item = e.target.closest('.context-menu-item');
+        document.getElementById('context-menu').addEventListener('click', function(e) {
+            var item = e.target.closest('.context-menu-item');
             if (!item || !ctxServerId) return;
-            const action = item.dataset.action;
+            var action = item.dataset.action;
             if (action === 'connect') connectToServer(ctxServerId);
+            else if (action === 'connect-duplicate') connectToServer(ctxServerId);
             else if (action === 'edit') editServer(ctxServerId);
-            else if (action === 'delete') { const s = servers.find(x => x.id === ctxServerId); if (s) deleteServer(s.id, s.name); }
+            else if (action === 'delete') { var s = null; for (var i = 0; i < servers.length; i++) { if (servers[i].id === ctxServerId) { s = servers[i]; break; } } if (s) deleteServer(s.id, s.name); }
             hideContextMenu();
         });
-        document.getElementById('main-content').addEventListener('contextmenu', (e) => {
-            const hostCard = e.target.closest('.host-card');
-            if (hostCard) showContextMenu(e, hostCard.dataset.id);
+        document.addEventListener('click', function(e) { if (!e.target.closest('.context-menu')) hideContextMenu(); });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+                hideContextMenu();
+                if (!isHomeVisible()) showHomeView();
+            }
+        });
+        window.addEventListener('resize', function() {
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].fitAddon) try { tabs[i].fitAddon.fit(); } catch(e) {} }
         });
 
-        // ---- Keyboard ----
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); hideContextMenu(); } });
-        window.addEventListener('resize', () => { tabs.forEach(t => { if (t.fitAddon) t.fitAddon.fit(); }); });
-
-        // ---- Init ----
-        async function init() {
-            await loadServers();
+        loadServers().then(function() {
             renderHome();
-        }
-        init();
+            renderTabs();
+        });
+    })();
     </script>
 </body>
 </html>
