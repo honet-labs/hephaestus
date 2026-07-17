@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Host - Hephaestus</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --sidebar-bg: #161b22;
+            --topbar: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d29922;
+            --card: #1c2128;
+            --hover: #21262d;
+            --radius: 6px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
+
+        /* Header */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 16px; background: var(--topbar); border-bottom: 1px solid var(--border);
+            flex-shrink: 0; height: 44px;
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--text); }
+        .header h1 svg { width: 18px; height: 18px; color: var(--accent); }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .back-link {
+            color: var(--text-muted); text-decoration: none; font-size: 12px;
+            padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius);
+            transition: all 0.2s;
+        }
+        .back-link:hover { color: var(--text); border-color: var(--text-muted); }
+        .user-info { font-size: 11px; color: var(--text-muted); }
+
+        /* Main Layout */
+        .main { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px; min-width: 240px; background: var(--sidebar-bg);
+            border-right: 1px solid var(--border); display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-header {
+            padding: 10px 12px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+        .btn-add {
+            background: var(--accent); color: #fff; border: none; padding: 4px 10px;
+            border-radius: var(--radius); font-size: 11px; cursor: pointer; font-weight: 500;
+            display: flex; align-items: center; gap: 4px; transition: opacity 0.2s;
+        }
+        .btn-add:hover { opacity: 0.85; }
+        .sidebar-search {
+            padding: 8px 12px; border-bottom: 1px solid var(--border);
+        }
+        .sidebar-search input {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            color: var(--text); padding: 6px 10px; border-radius: var(--radius);
+            font-size: 12px; outline: none;
+        }
+        .sidebar-search input:focus { border-color: var(--accent); }
+        .sidebar-list {
+            flex: 1; overflow-y: auto; padding: 8px 0;
+        }
+        .sidebar-list::-webkit-scrollbar { width: 6px; }
+        .sidebar-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .group-label {
+            padding: 6px 12px; font-size: 10px; font-weight: 600;
+            text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;
+            cursor: pointer; display: flex; align-items: center; gap: 6px;
+        }
+        .group-label:hover { color: var(--text); }
+        .group-arrow { transition: transform 0.2s; font-size: 8px; }
+        .group-arrow.collapsed { transform: rotate(-90deg); }
+        .server-item {
+            padding: 8px 12px 8px 24px; cursor: pointer; display: flex;
+            align-items: center; gap: 10px; transition: background 0.15s;
+            border-left: 2px solid transparent;
+        }
+        .server-item:hover { background: var(--hover); }
+        .server-item.active { background: var(--hover); border-left-color: var(--accent); }
+        .server-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+            background: var(--text-muted);
+        }
+        .server-dot.connected { background: var(--green); }
+        .server-dot.error { background: var(--red); }
+        .server-info { min-width: 0; flex: 1; }
+        .server-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .server-detail { font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .server-actions {
+            display: none; gap: 2px; flex-shrink: 0;
+        }
+        .server-item:hover .server-actions { display: flex; }
+        .server-actions button {
+            background: none; border: none; color: var(--text-muted); cursor: pointer;
+            padding: 2px; border-radius: 3px; display: flex; align-items: center;
+        }
+        .server-actions button:hover { color: var(--text); background: var(--border); }
+        .tag-badge {
+            display: inline-block; padding: 1px 5px; border-radius: 3px;
+            font-size: 9px; background: rgba(88,166,255,0.15); color: var(--accent);
+            border: 1px solid rgba(88,166,255,0.3); margin-left: 4px;
+        }
+
+        /* Content Area */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        /* Tab Bar */
+        .tab-bar {
+            display: flex; align-items: center; background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border); padding: 0 8px; height: 36px;
+            flex-shrink: 0; overflow-x: auto;
+        }
+        .tab-bar::-webkit-scrollbar { height: 0; }
+        .tab {
+            padding: 6px 14px; font-size: 12px; cursor: pointer; white-space: nowrap;
+            border-right: 1px solid var(--border); display: flex; align-items: center;
+            gap: 6px; color: var(--text-muted); transition: all 0.15s; position: relative;
+        }
+        .tab:hover { color: var(--text); background: var(--hover); }
+        .tab.active {
+            color: var(--text); background: var(--bg);
+            border-bottom: 2px solid var(--accent);
+        }
+        .tab-close {
+            font-size: 14px; line-height: 1; opacity: 0; transition: opacity 0.15s;
+            cursor: pointer; color: var(--text-muted); padding: 0 2px;
+        }
+        .tab:hover .tab-close, .tab.active .tab-close { opacity: 0.6; }
+        .tab-close:hover { opacity: 1 !important; color: var(--red); }
+        .tab-add {
+            padding: 4px 8px; cursor: pointer; color: var(--text-muted);
+            font-size: 16px; line-height: 1; transition: color 0.15s;
+        }
+        .tab-add:hover { color: var(--accent); }
+
+        /* Terminal Container */
+        .terminal-wrapper {
+            flex: 1; position: relative; overflow: hidden;
+        }
+        .terminal-container {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: none; padding: 4px;
+        }
+        .terminal-container.active { display: block; }
+        .terminal-status {
+            position: absolute; top: 8px; right: 12px; font-size: 10px;
+            padding: 2px 8px; border-radius: 4px; z-index: 10;
+            background: rgba(13,17,23,0.8);
+        }
+        .terminal-status.connected { color: var(--green); }
+        .terminal-status.connecting { color: var(--yellow); }
+        .terminal-status.error { color: var(--red); }
+
+        /* Welcome Screen */
+        .welcome {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; color: var(--text-muted); gap: 12px;
+        }
+        .welcome svg { width: 48px; height: 48px; opacity: 0.3; }
+        .welcome h2 { font-size: 16px; font-weight: 500; color: var(--text); }
+        .welcome p { font-size: 12px; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: flex; align-items: center;
+            justify-content: center; z-index: 1000; opacity: 0;
+            pointer-events: none; transition: opacity 0.2s;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-dialog {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 8px; width: 440px; max-height: 90vh; overflow-y: auto;
+        }
+        .modal-header {
+            padding: 14px 18px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h3 { font-size: 14px; font-weight: 600; }
+        .modal-close {
+            background: none; border: none; color: var(--text-muted); font-size: 20px;
+            cursor: pointer; line-height: 1;
+        }
+        .modal-close:hover { color: var(--text); }
+        .modal-body { padding: 18px; }
+        .modal-footer {
+            padding: 12px 18px; border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 8px;
+        }
+        .form-group { margin-bottom: 12px; }
+        .form-group label {
+            display: block; font-size: 11px; font-weight: 500; color: var(--text-muted);
+            margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            color: var(--text); padding: 7px 10px; border-radius: var(--radius);
+            font-size: 12px; outline: none;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--accent);
+        }
+        .form-row { display: flex; gap: 10px; }
+        .form-row .form-group { flex: 1; }
+        .form-help { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+        .btn {
+            padding: 6px 14px; border-radius: var(--radius); font-size: 12px;
+            cursor: pointer; border: 1px solid var(--border); font-weight: 500;
+            transition: all 0.15s;
+        }
+        .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn-primary:hover { opacity: 0.85; }
+        .btn-secondary { background: var(--card); color: var(--text); }
+        .btn-secondary:hover { background: var(--hover); }
+        .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
+        .btn-danger:hover { opacity: 0.85; }
+
+        /* Empty state */
+        .empty-terminal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                Remote Host Terminal
+            </h1>
+        </div>
+        <div class="header-right">
+            <span class="user-info" id="user-info"></span>
+            <a href="/" class="back-link">Back to Portal</a>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Servers</span>
+                <button class="btn-add" onclick="showAddModal()">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    VPS
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" placeholder="Search servers..." id="search-input" oninput="filterServers()">
+            </div>
+            <div class="sidebar-list" id="server-list"></div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="tab-bar" id="tab-bar">
+                <div class="tab-add" onclick="addNewTab()" title="New tab">+</div>
+            </div>
+            <div class="terminal-wrapper" id="terminal-wrapper">
+                <div class="welcome" id="welcome-screen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    <h2>Remote Host Terminal</h2>
+                    <p>Select a server from the sidebar or click + to add one</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Add/Edit Server -->
+    <div id="modal-server" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Server</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="srv-id">
+                <div class="form-group">
+                    <label>Server Name</label>
+                    <input type="text" id="srv-name" placeholder="My Production Server">
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:2;">
+                        <label>Host / IP</label>
+                        <input type="text" id="srv-host" placeholder="192.168.1.100">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Port</label>
+                        <input type="number" id="srv-port" value="22">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="srv-username" placeholder="root">
+                </div>
+                <div class="form-group">
+                    <label>Auth Type</label>
+                    <select id="srv-auth" onchange="onAuthChange()">
+                        <option value="password">Password</option>
+                        <option value="key">Private Key</option>
+                    </select>
+                </div>
+                <div class="form-group" id="srv-password-group">
+                    <label>Password</label>
+                    <input type="password" id="srv-password" placeholder="Enter password">
+                </div>
+                <div class="form-group" id="srv-key-group" style="display:none;">
+                    <label>Private Key</label>
+                    <textarea id="srv-key" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Group</label>
+                        <input type="text" id="srv-group" placeholder="Default" list="group-suggestions">
+                        <datalist id="group-suggestions"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label>Tags (comma separated)</label>
+                        <input type="text" id="srv-tags" placeholder="production, web">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveServer()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+    <script>
+        // ---- State ----
+        let servers = [];
+        let tabs = [];
+        let activeTabId = null;
+        let sessionToken = localStorage.getItem('hephaestus_session_token');
+
+        // ---- Init ----
+        if (!sessionToken) { window.location.href = '/'; }
+        document.getElementById('user-info').textContent = 'Session active';
+
+        async function init() {
+            await loadServers();
+            renderServerList();
+        }
+
+        // ---- API ----
+        async function api(method, url, body) {
+            const opts = { method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionToken } };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(url, opts);
+            return res.json();
+        }
+
+        // ---- Servers ----
+        async function loadServers() {
+            const data = await api('GET', '/api/v1/remote-host/configs');
+            if (data.success) servers = data.data || [];
+        }
+
+        function renderServerList() {
+            const list = document.getElementById('server-list');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const groups = {};
+            servers.forEach(s => {
+                if (search && !s.name.toLowerCase().includes(search) && !s.host.toLowerCase().includes(search) && !(s.groupName||'').toLowerCase().includes(search)) return;
+                const g = s.groupName || 'Default';
+                if (!groups[g]) groups[g] = [];
+                groups[g].push(s);
+            });
+            let html = '';
+            Object.keys(groups).sort().forEach(g => {
+                html += `<div class="group-label" onclick="toggleGroup(this)">
+                    <span class="group-arrow">▼</span> ${esc(g)} <span style="color:var(--text-muted);font-size:9px;">(${groups[g].length})</span>
+                </div>`;
+                html += `<div class="group-items">`;
+                groups[g].forEach(s => {
+                    const isActive = tabs.some(t => t.serverId === s.id);
+                    html += `<div class="server-item ${isActive ? 'active' : ''}" ondblclick="connectToServer('${s.id}')" data-id="${s.id}">
+                        <div class="server-dot ${isActive ? 'connected' : ''}"></div>
+                        <div class="server-info">
+                            <div class="server-name">${esc(s.name)}</div>
+                            <div class="server-detail">${esc(s.username)}@${esc(s.host)}:${s.port}</div>
+                        </div>
+                        ${(s.tags||[]).map(t => `<span class="tag-badge">${esc(t)}</span>`).join('')}
+                        <div class="server-actions">
+                            <button onclick="event.stopPropagation(); editServer('${s.id}')" title="Edit">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button onclick="event.stopPropagation(); deleteServer('${s.id}','${esc(s.name)}')" title="Delete">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+            });
+            if (!html) html = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">No servers found</div>';
+            list.innerHTML = html;
+            // Update group suggestions
+            const dl = document.getElementById('group-suggestions');
+            dl.innerHTML = [...new Set(servers.map(s => s.groupName || 'Default'))].map(g => `<option value="${esc(g)}">`).join('');
+        }
+
+        function filterServers() { renderServerList(); }
+        function toggleGroup(el) {
+            const items = el.nextElementSibling;
+            const arrow = el.querySelector('.group-arrow');
+            if (items.style.display === 'none') {
+                items.style.display = 'block';
+                arrow.classList.remove('collapsed');
+            } else {
+                items.style.display = 'none';
+                arrow.classList.add('collapsed');
+            }
+        }
+
+        // ---- Tabs ----
+        function addNewTab() {
+            const tabId = 'tab-' + Date.now();
+            const tab = { id: tabId, serverId: null, serverName: 'New Tab', ws: null, term: null, fitAddon: null, status: 'disconnected' };
+            tabs.push(tab);
+            createTerminalContainer(tab);
+            renderTabs();
+            switchTab(tabId);
+        }
+
+        function connectToServer(serverId) {
+            const existing = tabs.find(t => t.serverId === serverId);
+            if (existing) { switchTab(existing.id); return; }
+            const srv = servers.find(s => s.id === serverId);
+            if (!srv) return;
+            const tabId = 'tab-' + Date.now();
+            const tab = { id: tabId, serverId, serverName: srv.name, ws: null, term: null, fitAddon: null, status: 'connecting' };
+            tabs.push(tab);
+            createTerminalContainer(tab);
+            renderTabs();
+            switchTab(tabId);
+            startSSH(tab, srv);
+        }
+
+        function createTerminalContainer(tab) {
+            const wrapper = document.getElementById('terminal-wrapper');
+            const div = document.createElement('div');
+            div.className = 'terminal-container';
+            div.id = 'term-' + tab.id;
+            div.innerHTML = `<div class="terminal-status connecting" id="status-${tab.id}">Connecting...</div>`;
+            wrapper.appendChild(div);
+        }
+
+        function startSSH(tab, srv) {
+            const statusEl = document.getElementById('status-' + tab.id);
+            const container = document.getElementById('term-' + tab.id);
+
+            tab.term = new Terminal({
+                cursorBlink: true, fontSize: 13,
+                fontFamily: '"Cascadia Code","Fira Code","JetBrains Mono",monospace',
+                theme: { background: '#0d1117', foreground: '#c9d1d9', cursor: '#58a6ff', selectionBackground: '#264f78' },
+                convertEol: true,
+            });
+            tab.fitAddon = new FitAddon.FitAddon();
+            tab.term.loadAddon(tab.fitAddon);
+            tab.term.open(container);
+            tab.fitAddon.fit();
+
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const url = `${protocol}//${location.host}/ws/remote-host?token=${encodeURIComponent(sessionToken)}&hostId=${srv.id}&cols=${tab.term.cols}&rows=${tab.term.rows}`;
+
+            tab.ws = new WebSocket(url);
+            tab.ws.onmessage = (ev) => {
+                try {
+                    const msg = JSON.parse(ev.data);
+                    if (msg.type === 'data') { tab.term.write(msg.data); }
+                    else if (msg.type === 'connected') {
+                        tab.status = 'connected';
+                        statusEl.textContent = `${msg.username}@${msg.host}`;
+                        statusEl.className = 'terminal-status connected';
+                        tab.term.focus();
+                        renderServerList();
+                    } else if (msg.type === 'disconnected') {
+                        tab.status = 'disconnected';
+                        statusEl.textContent = 'Disconnected';
+                        statusEl.className = 'terminal-status error';
+                        tab.ws = null;
+                    } else if (msg.type === 'error') {
+                        tab.status = 'error';
+                        statusEl.textContent = msg.message;
+                        statusEl.className = 'terminal-status error';
+                        tab.ws = null;
+                    }
+                } catch(_) {}
+            };
+            tab.ws.onclose = () => {
+                tab.status = 'disconnected';
+                statusEl.textContent = 'Connection closed';
+                statusEl.className = 'terminal-status error';
+                tab.ws = null;
+                renderServerList();
+            };
+            tab.ws.onerror = () => {
+                tab.status = 'error';
+                statusEl.textContent = 'Connection error';
+                statusEl.className = 'terminal-status error';
+            };
+            tab.term.onData((data) => {
+                if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
+                    tab.ws.send(JSON.stringify({ type: 'input', data }));
+                }
+            });
+            tab.term.onResize(({ cols, rows }) => {
+                if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
+                    tab.ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+                }
+            });
+        }
+
+        function switchTab(tabId) {
+            activeTabId = tabId;
+            tabs.forEach(t => {
+                const el = document.getElementById('term-' + t.id);
+                if (el) el.classList.toggle('active', t.id === tabId);
+            });
+            const activeTab = tabs.find(t => t.id === tabId);
+            const welcome = document.getElementById('welcome-screen');
+            welcome.style.display = tabs.length === 0 ? 'flex' : 'none';
+            if (activeTab && activeTab.fitAddon) {
+                setTimeout(() => activeTab.fitAddon.fit(), 50);
+                if (activeTab.term) activeTab.term.focus();
+            }
+            renderTabs();
+        }
+
+        function closeTab(tabId, ev) {
+            if (ev) ev.stopPropagation();
+            const idx = tabs.findIndex(t => t.id === tabId);
+            if (idx === -1) return;
+            const tab = tabs[idx];
+            if (tab.ws) { tab.ws.send(JSON.stringify({ type: 'disconnect' })); tab.ws.close(); }
+            if (tab.term) tab.term.dispose();
+            const el = document.getElementById('term-' + tab.id);
+            if (el) el.remove();
+            tabs.splice(idx, 1);
+            if (activeTabId === tabId) {
+                switchTab(tabs.length > 0 ? tabs[Math.min(idx, tabs.length - 1)].id : null);
+            }
+            if (tabs.length === 0) document.getElementById('welcome-screen').style.display = 'flex';
+            renderTabs();
+            renderServerList();
+        }
+
+        function renderTabs() {
+            const bar = document.getElementById('tab-bar');
+            let html = '';
+            tabs.forEach(t => {
+                const isActive = t.id === activeTabId;
+                const icon = t.status === 'connected' ? '🟢' : t.status === 'error' ? '🔴' : '🟡';
+                html += `<div class="tab ${isActive ? 'active' : ''}" onclick="switchTab('${t.id}')">
+                    <span>${icon}</span> ${esc(t.serverName)}
+                    <span class="tab-close" onclick="closeTab('${t.id}', event)">&times;</span>
+                </div>`;
+            });
+            html += `<div class="tab-add" onclick="addNewTab()" title="New tab">+</div>`;
+            bar.innerHTML = html;
+        }
+
+        // ---- Modal ----
+        function showAddModal() {
+            document.getElementById('srv-id').value = '';
+            document.getElementById('srv-name').value = '';
+            document.getElementById('srv-host').value = '';
+            document.getElementById('srv-port').value = '22';
+            document.getElementById('srv-username').value = '';
+            document.getElementById('srv-auth').value = 'password';
+            document.getElementById('srv-password').value = '';
+            document.getElementById('srv-key').value = '';
+            document.getElementById('srv-group').value = 'Default';
+            document.getElementById('srv-tags').value = '';
+            document.getElementById('modal-title').textContent = 'Add Server';
+            onAuthChange();
+            document.getElementById('modal-server').classList.add('active');
+        }
+
+        function editServer(id) {
+            const s = servers.find(x => x.id === id);
+            if (!s) return;
+            document.getElementById('srv-id').value = s.id;
+            document.getElementById('srv-name').value = s.name;
+            document.getElementById('srv-host').value = s.host;
+            document.getElementById('srv-port').value = s.port;
+            document.getElementById('srv-username').value = s.username;
+            document.getElementById('srv-auth').value = s.authType;
+            document.getElementById('srv-password').value = '';
+            document.getElementById('srv-password').placeholder = 'Enter to change';
+            document.getElementById('srv-key').value = '';
+            document.getElementById('srv-group').value = s.groupName || 'Default';
+            document.getElementById('srv-tags').value = (s.tags || []).join(', ');
+            document.getElementById('modal-title').textContent = 'Edit Server';
+            onAuthChange();
+            document.getElementById('modal-server').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('modal-server').classList.remove('active'); }
+        function onAuthChange() {
+            const t = document.getElementById('srv-auth').value;
+            document.getElementById('srv-password-group').style.display = t === 'password' ? 'block' : 'none';
+            document.getElementById('srv-key-group').style.display = t === 'key' ? 'block' : 'none';
+        }
+
+        async function saveServer() {
+            const id = document.getElementById('srv-id').value;
+            const body = {
+                id: id || undefined,
+                name: document.getElementById('srv-name').value.trim(),
+                host: document.getElementById('srv-host').value.trim(),
+                port: document.getElementById('srv-port').value,
+                username: document.getElementById('srv-username').value.trim(),
+                authType: document.getElementById('srv-auth').value,
+                password: document.getElementById('srv-password').value,
+                sshKey: document.getElementById('srv-key').value,
+                groupName: document.getElementById('srv-group').value.trim() || 'Default',
+                tags: document.getElementById('srv-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+            };
+            if (!body.name || !body.host || !body.username) { alert('Fill in all required fields.'); return; }
+            if (!id && body.authType === 'password' && !body.password) { alert('Password is required.'); return; }
+            const data = await api('POST', '/api/v1/remote-host/configs', body);
+            if (!data.success) { alert(data.error); return; }
+            closeModal();
+            await loadServers();
+            renderServerList();
+        }
+
+        async function deleteServer(id, name) {
+            if (!confirm(`Delete server "${name}"?`)) return;
+            await api('DELETE', '/api/v1/remote-host/configs/' + id);
+            await loadServers();
+            renderServerList();
+        }
+
+        // ---- Helpers ----
+        function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        // ---- Resize ----
+        window.addEventListener('resize', () => {
+            tabs.forEach(t => { if (t.fitAddon) t.fitAddon.fit(); });
+        });
+
+        init();
+    </script>
+</body>
+</html>

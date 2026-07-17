@@ -14,13 +14,14 @@ class RemoteHostController {
 
   public async saveConfig(req: Request, res: Response) {
     try {
-      const { id, name, host, port, username, authType, password, sshKey } = req.body;
+      const { id, name, host, port, username, authType, password, sshKey, groupName, tags } = req.body;
       if (!name || !host || !username) {
         return res.status(400).json({ success: false, error: "Missing required fields." });
       }
       const cfg = await remoteHostService.saveConfig({
         id, name, host, port: port ? parseInt(port, 10) : 22,
         username, authType: authType || "password", password, sshKey,
+        groupName: groupName || "Default", tags: tags || [],
       });
       await logActivity("RemoteHost", "Save Config", `Saved host config "${name}" (${host})`, "SUCCESS");
       return res.json({ success: true, data: cfg, message: `Host "${name}" saved.` });

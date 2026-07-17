@@ -1,4 +1,4 @@
-// Endpoints
+﻿// Endpoints
 const API_SETTINGS_URL = '/api/v1/settings/grafana';
 
 // ==========================================
@@ -394,7 +394,7 @@ function initAppOnce() {
 }
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'dataprepper-config', 'remote-host', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update', 'backup-db-configs', 'backup-destinations', 'backup-run', 'backup-history'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'dataprepper-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update', 'backup-db-configs', 'backup-destinations', 'backup-run', 'backup-history'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -664,7 +664,7 @@ function toggleRemoteConfigSubmenu() {
       submenu.style.display = 'flex';
       if (arrow) arrow.style.transform = 'rotate(180deg)';
       const hash = window.location.hash.replace('#', '') || 'overview';
-      if (!['prometheus-config', 'dataprepper-config', 'remote-host'].includes(hash)) {
+      if (!['prometheus-config', 'dataprepper-config'].includes(hash)) {
         navigate('prometheus-config');
       }
     } else {
@@ -824,7 +824,7 @@ function showPage(pageId) {
     if (monArrow) monArrow.style.transform = 'rotate(0deg)';
   }
 
-  const remoteConfigPages = ['prometheus-config', 'dataprepper-config', 'remote-host'];
+  const remoteConfigPages = ['prometheus-config', 'dataprepper-config'];
   const isRemoteConfigPage = remoteConfigPages.includes(pageId);
   const rcSubmenu = document.getElementById('remote-config-submenu');
   const rcParentMenu = document.getElementById('menu-remote-config-parent');
@@ -918,10 +918,6 @@ function showPage(pageId) {
     pageTitle.textContent = 'Data Prepper Pipelines';
     pageDesc.textContent = 'Edit and validate Data Prepper pipeline YAML files.';
     initDpConfigPage();
-  } else if (pageId === 'remote-host') {
-    pageTitle.textContent = 'Remote Host';
-    pageDesc.textContent = 'SSH terminal access to remote servers.';
-    loadRemoteHostPage();
   } else if (pageId === 'snmp-query') {
     pageTitle.textContent = 'SNMP Query Console';
     pageDesc.textContent = 'Perform real-time SNMP GET and WALK queries against target network agents and devices.';
@@ -1037,12 +1033,12 @@ async function loadSettingsRegistry() {
         if (widgetDatasourceUid) widgetDatasourceUid.textContent = datasourceUid || 'bf5jy3ppyomwwd';
         
         if (isConfigured) {
-          if (activeState) { activeState.className = 'status-badge status-configured'; activeState.innerHTML = '● Custom Config'; }
+          if (activeState) { activeState.className = 'status-badge status-configured'; activeState.innerHTML = 'â— Custom Config'; }
           if (widgetGrafanaStatus) { widgetGrafanaStatus.textContent = 'Connected'; widgetGrafanaStatus.style.color = '#56d364'; }
           if (widgetGrafanaSub) widgetGrafanaSub.textContent = name || host;
           if (infraGrafanaDot) infraGrafanaDot.className = 'status-dot dot-green';
         } else {
-          if (activeState) { activeState.className = 'status-badge status-default'; activeState.innerHTML = '● Default Env'; }
+          if (activeState) { activeState.className = 'status-badge status-default'; activeState.innerHTML = 'â— Default Env'; }
           if (host) {
             if (widgetGrafanaStatus) { widgetGrafanaStatus.textContent = 'Connected'; widgetGrafanaStatus.style.color = '#e3b341'; }
             if (widgetGrafanaSub) widgetGrafanaSub.textContent = 'Using .env configuration';
@@ -4876,18 +4872,18 @@ async function testUptimeKumaConnection() {
     const result = await res.json();
 
     if (result.connected) {
-      resultEl.textContent = '✓ Connected!';
+      resultEl.textContent = 'âœ“ Connected!';
       resultEl.style.color = '#10b981';
     } else {
-      resultEl.textContent = '✗ ' + (result.message || 'Failed');
+      resultEl.textContent = 'âœ— ' + (result.message || 'Failed');
       resultEl.style.color = '#ef4444';
     }
   } catch (error) {
-    resultEl.textContent = '✗ ' + error.message;
+    resultEl.textContent = 'âœ— ' + error.message;
     resultEl.style.color = '#ef4444';
   } finally {
     btn.disabled = false;
-    btn.textContent = '🔌 Test Connection';
+    btn.textContent = 'ðŸ”Œ Test Connection';
   }
 }
 
@@ -8457,7 +8453,7 @@ function renderActiveDataChart(data, type, splitMetrics) {
   const chronologicalRows = [...rows].reverse();
   
   if (splitMetrics) {
-    // Render one chart per column/metric — applies to ALL chart types
+    // Render one chart per column/metric â€” applies to ALL chart types
     columns.forEach(col => {
       const chartWrapper = document.createElement('div');
       chartWrapper.style.marginBottom = '24px';
@@ -9270,7 +9266,7 @@ async function validateDpPipeline() {
       resultEl.style.background = 'rgba(16,185,129,0.1)';
       resultEl.style.border = '1px solid rgba(16,185,129,0.3)';
       resultEl.style.color = '#10b981';
-      resultEl.innerHTML = '<strong>Valid YAML</strong>' + (names.length ? ' — Pipelines: ' + names.map(n => '<code>' + escapeHtml(n) + '</code>').join(', ') : '');
+      resultEl.innerHTML = '<strong>Valid YAML</strong>' + (names.length ? ' â€” Pipelines: ' + names.map(n => '<code>' + escapeHtml(n) + '</code>').join(', ') : '');
       badgeEl.style.display = 'inline-block';
       badgeEl.style.background = 'rgba(16,185,129,0.15)';
       badgeEl.style.color = '#10b981';
@@ -9970,7 +9966,7 @@ async function saveQuickBackupAsSchedule() {
   if (!dbConfigId || !destinationId) { alert('Select database and destination first.'); return; }
   const dbConf = backupDbConfigs.find(c => c.id === dbConfigId);
   const destConf = backupDestinations.find(d => d.id === destinationId);
-  const defaultName = dbConf && destConf ? `${dbConf.name} → ${destConf.name}` : 'New Schedule';
+  const defaultName = dbConf && destConf ? `${dbConf.name} â†’ ${destConf.name}` : 'New Schedule';
 
   document.getElementById('backup-schedule-id').value = '';
   document.getElementById('backup-schedule-name').value = defaultName;
@@ -10116,284 +10112,3 @@ document.addEventListener('DOMContentLoaded', () => {
   const cronInput = document.getElementById('backup-schedule-cron');
   if (cronInput) cronInput.addEventListener('input', updateBackupCronPreview);
 });
-
-// ==========================================
-// REMOTE HOST TERMINAL
-// ==========================================
-
-let remoteHostConfigs = [];
-let remoteHostWs = null;
-let remoteHostTerm = null;
-let remoteHostFitAddon = null;
-
-async function loadRemoteHostPage() {
-  await loadRemoteHostConfigs();
-  renderRemoteHostCards();
-}
-
-async function loadRemoteHostConfigs() {
-  try {
-    const res = await fetch('/api/v1/remote-host/configs');
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error);
-    remoteHostConfigs = data.data || [];
-    populateRemoteHostSelect();
-  } catch (e) {
-    console.error('Failed to load remote host configs:', e);
-  }
-}
-
-function populateRemoteHostSelect() {
-  const select = document.getElementById('remote-host-select');
-  if (!select) return;
-  select.innerHTML = '<option value="">Select host...</option>';
-  remoteHostConfigs.forEach(c => {
-    select.innerHTML += `<option value="${escapeAttr(c.id)}">${escapeHtml(c.name)} (${escapeHtml(c.host)}:${c.port})</option>`;
-  });
-}
-
-function renderRemoteHostCards() {
-  const container = document.getElementById('remote-host-cards');
-  if (!container) return;
-  if (remoteHostConfigs.length === 0) {
-    container.innerHTML = '<div class="empty-state" style="padding: 20px;"><p>No remote hosts configured.</p><p style="font-size: 11px;">Click "Add Host" to create a connection.</p></div>';
-    return;
-  }
-  let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
-  remoteHostConfigs.forEach(c => {
-    html += `
-      <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
-        <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
-          <div style="width: 36px; height: 36px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10b981; flex-shrink: 0;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-            <span style="font-weight: 600; color: var(--text-white); font-size: 13px;">${escapeHtml(c.name)}</span>
-            <span style="font-size: 11px; color: var(--text-muted); font-family: monospace;">${escapeHtml(c.username)}@${escapeHtml(c.host)}:${c.port}</span>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-          <span class="status-badge" style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); font-size: 9px;">${escapeHtml(c.authType.toUpperCase())}</span>
-          <button class="btn btn-secondary" onclick="connectToRemoteHost('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Connect</button>
-          <button class="btn btn-secondary" onclick="editRemoteHost('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Edit</button>
-          <button class="btn btn-danger" onclick="deleteRemoteHost('${escapeAttr(c.id)}', '${escapeAttr(c.name)}')" style="padding: 4px 8px; font-size: 10px; height: 24px;">Del</button>
-        </div>
-      </div>`;
-  });
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function connectToRemoteHost(hostId) {
-  const select = document.getElementById('remote-host-select');
-  if (select) select.value = hostId;
-  connectRemoteHost();
-}
-
-async function connectRemoteHost() {
-  const hostId = document.getElementById('remote-host-select').value;
-  if (!hostId) return;
-
-  disconnectRemoteHost();
-
-  const statusEl = document.getElementById('remote-host-status');
-  const disconnectBtn = document.getElementById('remote-host-disconnect-btn');
-  const editBtn = document.getElementById('remote-host-edit-btn');
-  const termContainer = document.getElementById('remote-host-terminal');
-
-  statusEl.textContent = 'Connecting...';
-  statusEl.style.color = '#58a6ff';
-
-  // Get session token
-  const sessionToken = localStorage.getItem('hephaestus_session_token');
-  if (!sessionToken) {
-    statusEl.textContent = 'Not authenticated.';
-    statusEl.style.color = '#ef4444';
-    return;
-  }
-
-  // Initialize xterm
-  remoteHostTerm = new Terminal({
-    cursorBlink: true,
-    fontSize: 13,
-    fontFamily: '"Cascadia Code", "Fira Code", "JetBrains Mono", monospace',
-    theme: {
-      background: '#0d1117',
-      foreground: '#c9d1d9',
-      cursor: '#58a6ff',
-      cursorAccent: '#0d1117',
-      selectionBackground: '#264f78',
-    },
-    convertEol: true,
-  });
-  remoteHostFitAddon = new FitAddon.FitAddon();
-  remoteHostTerm.loadAddon(remoteHostFitAddon);
-  remoteHostTerm.open(termContainer);
-  remoteHostFitAddon.fit();
-
-  const cols = remoteHostTerm.cols;
-  const rows = remoteHostTerm.rows;
-
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/remote-host?token=${encodeURIComponent(sessionToken)}&hostId=${encodeURIComponent(hostId)}&cols=${cols}&rows=${rows}`;
-
-  remoteHostWs = new WebSocket(wsUrl);
-
-  remoteHostWs.onmessage = (event) => {
-    try {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'data') {
-        remoteHostTerm.write(msg.data);
-      } else if (msg.type === 'connected') {
-        statusEl.textContent = `Connected: ${msg.username}@${msg.host}`;
-        statusEl.style.color = '#10b981';
-        disconnectBtn.style.display = 'inline-flex';
-        editBtn.style.display = 'inline-flex';
-        remoteHostTerm.focus();
-      } else if (msg.type === 'disconnected') {
-        statusEl.textContent = 'Disconnected.';
-        statusEl.style.color = '#f59e0b';
-        disconnectBtn.style.display = 'none';
-        editBtn.style.display = 'none';
-        remoteHostWs = null;
-      } else if (msg.type === 'error') {
-        statusEl.textContent = `Error: ${msg.message}`;
-        statusEl.style.color = '#ef4444';
-        remoteHostWs = null;
-      }
-    } catch (_) {}
-  };
-
-  remoteHostWs.onclose = () => {
-    statusEl.textContent = 'Connection closed.';
-    statusEl.style.color = '#f59e0b';
-    disconnectBtn.style.display = 'none';
-    editBtn.style.display = 'none';
-    remoteHostWs = null;
-  };
-
-  remoteHostWs.onerror = () => {
-    statusEl.textContent = 'WebSocket error.';
-    statusEl.style.color = '#ef4444';
-    remoteHostWs = null;
-  };
-
-  // Send terminal input to WebSocket
-  remoteHostTerm.onData((data) => {
-    if (remoteHostWs && remoteHostWs.readyState === WebSocket.OPEN) {
-      remoteHostWs.send(JSON.stringify({ type: 'input', data }));
-    }
-  });
-
-  // Handle terminal resize
-  remoteHostTerm.onResize(({ cols, rows }) => {
-    if (remoteHostWs && remoteHostWs.readyState === WebSocket.OPEN) {
-      remoteHostWs.send(JSON.stringify({ type: 'resize', cols, rows }));
-    }
-  });
-
-  // Resize handler
-  window.addEventListener('resize', () => {
-    if (remoteHostFitAddon) remoteHostFitAddon.fit();
-  });
-}
-
-function disconnectRemoteHost() {
-  if (remoteHostWs) {
-    remoteHostWs.send(JSON.stringify({ type: 'disconnect' }));
-    remoteHostWs.close();
-    remoteHostWs = null;
-  }
-  if (remoteHostTerm) {
-    remoteHostTerm.dispose();
-    remoteHostTerm = null;
-  }
-  const statusEl = document.getElementById('remote-host-status');
-  const disconnectBtn = document.getElementById('remote-host-disconnect-btn');
-  const editBtn = document.getElementById('remote-host-edit-btn');
-  if (statusEl) statusEl.textContent = '';
-  if (disconnectBtn) disconnectBtn.style.display = 'none';
-  if (editBtn) editBtn.style.display = 'none';
-}
-
-function showAddRemoteHostModal() {
-  document.getElementById('rh-id').value = '';
-  document.getElementById('rh-name').value = '';
-  document.getElementById('rh-host').value = '';
-  document.getElementById('rh-port').value = '22';
-  document.getElementById('rh-username').value = '';
-  document.getElementById('rh-auth-type').value = 'password';
-  document.getElementById('rh-password').value = '';
-  document.getElementById('rh-key').value = '';
-  document.getElementById('remote-host-modal-title').textContent = 'Add Remote Host';
-  onRhAuthTypeChange();
-  document.getElementById('modal-remote-host').classList.add('active');
-}
-
-function editRemoteHost(id) {
-  const c = remoteHostConfigs.find(x => x.id === id);
-  if (!c) return;
-  document.getElementById('rh-id').value = c.id;
-  document.getElementById('rh-name').value = c.name;
-  document.getElementById('rh-host').value = c.host;
-  document.getElementById('rh-port').value = c.port;
-  document.getElementById('rh-username').value = c.username;
-  document.getElementById('rh-auth-type').value = c.authType;
-  document.getElementById('rh-password').value = '';
-  document.getElementById('rh-password').placeholder = 'Enter to change';
-  document.getElementById('rh-key').value = '';
-  document.getElementById('remote-host-modal-title').textContent = 'Edit Remote Host';
-  onRhAuthTypeChange();
-  document.getElementById('modal-remote-host').classList.add('active');
-}
-
-function editCurrentRemoteHost() {
-  const select = document.getElementById('remote-host-select');
-  if (select && select.value) editRemoteHost(select.value);
-}
-
-function onRhAuthTypeChange() {
-  const type = document.getElementById('rh-auth-type').value;
-  document.getElementById('rh-password-group').style.display = type === 'password' ? 'block' : 'none';
-  document.getElementById('rh-key-group').style.display = type === 'key' ? 'block' : 'none';
-}
-
-async function saveRemoteHostConfig() {
-  const id = document.getElementById('rh-id').value;
-  const body = {
-    id: id || undefined,
-    name: document.getElementById('rh-name').value.trim(),
-    host: document.getElementById('rh-host').value.trim(),
-    port: document.getElementById('rh-port').value,
-    username: document.getElementById('rh-username').value.trim(),
-    authType: document.getElementById('rh-auth-type').value,
-    password: document.getElementById('rh-password').value,
-    sshKey: document.getElementById('rh-key').value,
-  };
-  if (!body.name || !body.host || !body.username) {
-    alert('Please fill in all required fields.'); return;
-  }
-  if (!id && body.authType === 'password' && !body.password) {
-    alert('Password is required.'); return;
-  }
-  try {
-    const res = await fetch('/api/v1/remote-host/configs', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error);
-    closeModal('modal-remote-host');
-    await loadRemoteHostConfigs();
-    renderRemoteHostCards();
-  } catch (e) { alert('Error: ' + e.message); }
-}
-
-async function deleteRemoteHost(id, name) {
-  if (!confirm(`Delete host "${name}"?`)) return;
-  try {
-    await fetch(`/api/v1/remote-host/configs/${id}`, { method: 'DELETE' });
-    await loadRemoteHostConfigs();
-    renderRemoteHostCards();
-  } catch (e) { alert('Error: ' + e.message); }
-}

@@ -242,10 +242,11 @@
                   <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Data Prepper Pipelines</div>
                 </div>
               </a>
-              <a href="#remote-host" id="menu-remote-host" class="menu-item" style="padding: 6px 16px; border-radius: 4px;" onclick="navigate('remote-host'); return false;">
+              <a href="/remote-host" id="menu-remote-host" class="menu-item" style="padding: 6px 16px; border-radius: 4px;" onclick="window.open('/remote-host', '_blank'); return false;">
                 <span class="menu-item-icon" style="font-size: 10px; min-width: 12px; display: inline-flex; justify-content: center;">•</span>
-                <div>
+                <div style="display: flex; align-items: center; gap: 4px;">
                   <div class="menu-item-title" style="font-size: 11.5px; font-weight: 500;">Remote Host</div>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                 </div>
               </a>
             </div>
@@ -1167,93 +1168,6 @@
             <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
               <button class="btn btn-secondary" onclick="closeNewDpFileModal()" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
               <button class="btn btn-primary" onclick="submitNewDpFile()" style="padding: 8px 16px; font-size: 12px; height: auto;">Create File</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- PAGE: REMOTE HOST TERMINAL -->
-        <div id="page-remote-host" class="hidden">
-          <div class="page-header">
-            <div>
-              <h2 class="page-title">Remote Host</h2>
-              <p class="page-title-desc">SSH terminal access to remote servers.</p>
-            </div>
-            <button class="btn btn-primary" onclick="showAddRemoteHostModal()" style="font-size: 11px;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              Add Host
-            </button>
-          </div>
-          <!-- Host Selector + Terminal -->
-          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <label style="font-size: 11px; color: var(--text-muted); white-space: nowrap;">Host:</label>
-              <select id="remote-host-select" onchange="connectRemoteHost()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 6px 10px; border-radius: 4px; font-size: 12px; min-width: 200px;">
-                <option value="">Select host...</option>
-              </select>
-            </div>
-            <button class="btn btn-secondary" onclick="disconnectRemoteHost()" id="remote-host-disconnect-btn" style="font-size: 10px; padding: 4px 10px; display: none;">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              Disconnect
-            </button>
-            <button class="btn btn-secondary" onclick="editCurrentRemoteHost()" id="remote-host-edit-btn" style="font-size: 10px; padding: 4px 10px; display: none;">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              Edit
-            </button>
-            <div id="remote-host-status" style="font-size: 11px; color: var(--text-muted);"></div>
-          </div>
-          <div id="remote-host-terminal" style="background: #0d1117; border: 1px solid var(--app-border); border-radius: 6px; padding: 4px; min-height: 400px; overflow: hidden;"></div>
-          <div id="remote-host-hosts-list" style="margin-top: 16px;">
-            <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Saved Hosts</div>
-            <div id="remote-host-cards"></div>
-          </div>
-        </div>
-
-        <!-- MODAL: ADD/EDIT REMOTE HOST -->
-        <div id="modal-remote-host" class="modal-overlay">
-          <div class="modal-dialog" style="max-width: 440px;">
-            <div class="modal-header">
-              <h3 class="modal-title" id="remote-host-modal-title">Add Remote Host</h3>
-              <button class="modal-close" onclick="closeModal('modal-remote-host')">&times;</button>
-            </div>
-            <div class="modal-body" style="padding: 20px;">
-              <input type="hidden" id="rh-id">
-              <div class="form-group">
-                <label>Connection Name</label>
-                <input type="text" id="rh-name" placeholder="Production Server">
-              </div>
-              <div class="form-row">
-                <div class="form-group" style="flex: 2;">
-                  <label>Host</label>
-                  <input type="text" id="rh-host" placeholder="192.168.1.100">
-                </div>
-                <div class="form-group" style="flex: 1;">
-                  <label>Port</label>
-                  <input type="number" id="rh-port" value="22">
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Username</label>
-                <input type="text" id="rh-username" placeholder="root">
-              </div>
-              <div class="form-group">
-                <label>Auth Type</label>
-                <select id="rh-auth-type" onchange="onRhAuthTypeChange()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; width: 100%;">
-                  <option value="password">Password</option>
-                  <option value="key">Private Key</option>
-                </select>
-              </div>
-              <div class="form-group" id="rh-password-group">
-                <label>Password</label>
-                <input type="password" id="rh-password" placeholder="••••••">
-              </div>
-              <div class="form-group" id="rh-key-group" style="display: none;">
-                <label>Private Key</label>
-                <textarea id="rh-key" rows="4" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; font-family: monospace;"></textarea>
-              </div>
-            </div>
-            <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
-              <button class="btn btn-secondary" onclick="closeModal('modal-remote-host')" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
-              <button class="btn btn-primary" onclick="saveRemoteHostConfig()" style="padding: 8px 16px; font-size: 12px; height: auto;">Save</button>
             </div>
           </div>
         </div>
@@ -2969,6 +2883,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
-  <script src="js/app.js?v=4.2.0"></script>
+  <script src="js/app.js?v=4.3.0"></script>
 </body>
 </html>

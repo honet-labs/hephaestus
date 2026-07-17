@@ -511,6 +511,8 @@ export async function initDb() {
       auth_type VARCHAR(20) DEFAULT 'password',
       password TEXT,
       ssh_key TEXT,
+      group_name VARCHAR(255) DEFAULT 'Default',
+      tags TEXT[] DEFAULT '{}',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
@@ -539,7 +541,9 @@ export async function initDb() {
       key VARCHAR(100) PRIMARY KEY,
       value TEXT NOT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`
+    );`,
+    `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS group_name VARCHAR(255) DEFAULT 'Default';`,
+    `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`
   ];
   await Promise.all(migrationQueries.map(q => pool.query(q)));
 

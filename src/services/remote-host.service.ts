@@ -12,6 +12,8 @@ export interface RemoteHostConfig {
   authType: "password" | "key";
   password?: string;
   sshKey?: string;
+  groupName?: string;
+  tags?: string[];
   createdAt?: string;
 }
 
@@ -19,23 +21,30 @@ class RemoteHostService {
   public async getConfigs(): Promise<RemoteHostConfig[]> {
     const res = await query(
       `SELECT id, name, host, port, username, auth_type AS "authType",
-              password, ssh_key AS "sshKey", created_at AS "createdAt"
-       FROM remote_host_configs ORDER BY name ASC`
+              password, ssh_key AS "sshKey", group_name AS "groupName",
+              tags, created_at AS "createdAt"
+       FROM remote_host_configs ORDER BY group_name ASC, name ASC`
     );
     return res.rows.map((r: any) => ({
       ...r,
       password: r.password ? "********" : "",
       sshKey: r.sshKey ? "********" : "",
+      groupName: r.groupName || "Default",
+      tags: r.tags || [],
     }));
   }
 
   public async getConfigById(id: string): Promise<RemoteHostConfig | null> {
     const res = await query(
       `SELECT id, name, host, port, username, auth_type AS "authType",
-              password, ssh_key AS "sshKey"
+              password, ssh_key AS "sshKey", group_name AS "groupName", tags
        FROM remote_host_configs WHERE id = $1`, [id]
     );
-    return res.rows.length > 0 ? res.rows[0] : null;
+    if (res.rows.length === 0) return null;
+    const r = res.rows[0];
+    r.groupName = r.groupName || "Default";
+    r.tags = r.tags || [];
+    return r;
   }
 
   public async saveConfig(cfg: Partial<RemoteHostConfig> & { id?: string }): Promise<RemoteHostConfig> {
@@ -54,6 +63,8 @@ class RemoteHostService {
       if (cfg.authType !== undefined) { fields.push("auth_type"); values.push(cfg.authType); }
       if (encryptedPassword !== undefined) { fields.push("password"); values.push(encryptedPassword); }
       if (encryptedKey !== undefined) { fields.push("ssh_key"); values.push(encryptedKey); }
+      if (cfg.groupName !== undefined) { fields.push("group_name"); values.push(cfg.groupName); }
+      if (cfg.tags !== undefined) { fields.push("tags"); values.push(cfg.tags); }
       if (fields.length > 0) {
         const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(", ");
         await query(
@@ -63,9 +74,9 @@ class RemoteHostService {
       }
     } else {
       await query(
-        `INSERT INTO remote_host_configs (id, name, host, port, username, auth_type, password, ssh_key)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [id, cfg.name, cfg.host, cfg.port || 22, cfg.username, cfg.authType || "password", encryptedPassword || null, encryptedKey || null]
+        `INSERT INTO remote_host_configs (id, name, host, port, username, auth_type, password, ssh_key, group_name, tags)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [id, cfg.name, cfg.host, cfg.port || 22, cfg.username, cfg.authType || "password", encryptedPassword || null, encryptedKey || null, cfg.groupName || "Default", cfg.tags || []]
       );
     }
     return (await this.getConfigById(id))!;
