@@ -555,6 +555,7 @@
 
         function switchTab(tabId) {
             activeTabId = tabId;
+            showTerminalView();
             tabs.forEach(t => { const el = document.getElementById('term-' + t.id); if (el) el.classList.toggle('active', t.id === tabId); });
             const at = tabs.find(t => t.id === tabId);
             if (at && at.fitAddon) { setTimeout(() => at.fitAddon.fit(), 50); if (at.term) at.term.focus(); }
@@ -742,6 +743,11 @@
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); hideContextMenu(); } });
         window.addEventListener('resize', () => { tabs.forEach(t => { if (t.fitAddon) t.fitAddon.fit(); }); });
 
+        // ---- Init ----
+        async function init() {
+            await loadServers();
+            renderHome();
+        }
         init();
     </script>
 </body>
