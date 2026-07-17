@@ -94,8 +94,20 @@ class RemoteHostService {
     if (res.rows.length === 0) return null;
     const r = res.rows[0];
     const { decryptText } = await import("../config/db");
-    try { if (r.password) r.password = decryptText(r.password); } catch (_) { /* already-encrypted */ }
-    try { if (r.sshKey) r.sshKey = decryptText(r.sshKey); } catch (_) { /* already-encrypted */ }
+    if (r.password) {
+      const decrypted = decryptText(r.password);
+      if (decrypted === r.password && r.password !== "") {
+        console.warn(`[RemoteHost] Password decryption returned raw value for host "${r.name}" — stored value may not be encrypted or key mismatch.`);
+      }
+      r.password = decrypted;
+    }
+    if (r.sshKey) {
+      const decrypted = decryptText(r.sshKey);
+      if (decrypted === r.sshKey && r.sshKey !== "") {
+        console.warn(`[RemoteHost] SSH key decryption returned raw value for host "${r.name}" — stored value may not be encrypted or key mismatch.`);
+      }
+      r.sshKey = decrypted;
+    }
     return r;
   }
 
