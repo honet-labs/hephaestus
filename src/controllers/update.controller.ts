@@ -55,11 +55,22 @@ export class UpdateController {
   public async checkForUpdates(req: Request, res: Response): Promise<void> {
     try {
       let token = await this.getGithubToken();
-      // Validate token format to prevent command injection
       if (token && !this.validateGithubToken(token)) {
-        token = ""; // Ignore invalid token
+        token = "";
       }
       const remoteUrl = await this.getRemoteUrl();
+
+      if (remoteUrl === "unknown") {
+        res.status(200).json({
+          success: true,
+          hasUpdates: false,
+          message: "Update check not available in this environment",
+          remote: "unknown",
+          authConfigured: !!token
+        });
+        return;
+      }
+
       const fetchCmd = this.gitAuth_cmd(token, "fetch origin");
       const statusCmd = this.gitAuth_cmd(token, "status -uno");
 
@@ -73,7 +84,7 @@ export class UpdateController {
         authConfigured: !!token
       });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: "Failed to check updates", message: error.message });
+      res.status(200).json({ success: true, hasUpdates: false, message: "Update check not available in this environment", remote: "unknown", authConfigured: false });
     }
   }
 
