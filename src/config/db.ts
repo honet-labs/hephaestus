@@ -18,15 +18,19 @@ const KEY_FILE = path.join(config.dbDir, ".encryption_key");
 function getEncryptionKey(): Buffer {
   const envKey = process.env.ENCRYPTION_KEY;
   if (envKey) {
+    console.log(`[Crypto] Using ENCRYPTION_KEY env var (scrypt derivation)`);
     return crypto.scryptSync(envKey, "hephaestus-db-salt", KEY_LEN);
   }
   // Derive or load a persistent key from disk
   try {
     if (fs.existsSync(KEY_FILE)) {
-      return Buffer.from(fs.readFileSync(KEY_FILE, "utf-8"), "hex");
+      const raw = fs.readFileSync(KEY_FILE, "utf-8").trim();
+      console.log(`[Crypto] Using key file: ${KEY_FILE} (${raw.length} hex chars)`);
+      return Buffer.from(raw, "hex");
     }
-  } catch { /* ignore */ }
+  } catch (e) { console.error(`[Crypto] Failed to read key file:`, e); }
   // Generate new key and persist
+  console.log(`[Crypto] Generating NEW encryption key at ${KEY_FILE}`);
   const newKey = crypto.randomBytes(KEY_LEN);
   try {
     fs.mkdirSync(path.dirname(KEY_FILE), { recursive: true });
@@ -49,18 +53,23 @@ export function encryptText(plaintext: string): string {
 export function decryptText(encryptedStr: string): string {
   // If not in expected format, return as-is (plaintext fallback)
   const parts = encryptedStr.split(":");
-  if (parts.length !== 3) return encryptedStr;
+  if (parts.length !== 3) {
+    console.log(`[Crypto] decryptText: not encrypted format (${parts.length} parts), returning as-is`);
+    return encryptedStr;
+  }
   try {
     const key = getEncryptionKey();
     const iv = Buffer.from(parts[0], "hex");
     const authTag = Buffer.from(parts[1], "hex");
+    console.log(`[Crypto] decryptText: iv=${iv.length}b authTag=${authTag.length}b ciphertext=${parts[2].length}hex key=${key.length}b`);
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(parts[2], "hex", "utf8");
     decrypted += decipher.final("utf8");
+    console.log(`[Crypto] decryptText: SUCCESS, decrypted ${decrypted.length} chars`);
     return decrypted;
-  } catch {
-    // Decryption failed — might be old plaintext, return as-is
+  } catch (e: any) {
+    console.error(`[Crypto] decryptText FAILED: ${e.message} — returning raw value`);
     return encryptedStr;
   }
 }
