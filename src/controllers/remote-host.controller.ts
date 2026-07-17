@@ -39,6 +39,22 @@ class RemoteHostController {
       return res.status(500).json({ success: false, error: err.message });
     }
   }
+
+  public async testConnection(req: Request, res: Response) {
+    try {
+      const { host, port, username, authType, password, sshKey } = req.body;
+      if (!host || !username) {
+        return res.status(400).json({ success: false, error: "Host and username are required." });
+      }
+      const result = await remoteHostService.testConnection({
+        host, port: port ? parseInt(port, 10) : 22,
+        username, authType: authType || "password", password, sshKey,
+      });
+      return res.json({ success: result.success, message: result.message });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
 }
 
 export const remoteHostController = new RemoteHostController();

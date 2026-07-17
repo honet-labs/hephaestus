@@ -193,6 +193,42 @@ class RemoteHostService {
       ws.close();
     });
   }
+
+  public async testConnection(params: {
+    host: string; port: number; username: string;
+    authType: "password" | "key"; password?: string; sshKey?: string;
+  }): Promise<{ success: boolean; message: string }> {
+    return new Promise((resolve) => {
+      const ssh = new Client();
+      const timeout = setTimeout(() => {
+        ssh.end();
+        resolve({ success: false, message: "Connection timed out (10s)." });
+      }, 10000);
+
+      ssh.on("ready", () => {
+        clearTimeout(timeout);
+        ssh.end();
+        resolve({ success: true, message: `Connected as ${params.username}@${params.host}:${params.port}` });
+      });
+
+      ssh.on("error", (err: Error) => {
+        clearTimeout(timeout);
+        resolve({ success: false, message: err.message });
+      });
+
+      const connectOpts: any = {
+        host: params.host,
+        port: params.port || 22,
+        username: params.username,
+      };
+      if (params.authType === "key" && params.sshKey) {
+        connectOpts.privateKey = params.sshKey;
+      } else {
+        connectOpts.password = params.password || "";
+      }
+      ssh.connect(connectOpts);
+    });
+  }
 }
 
 export const remoteHostService = new RemoteHostService();

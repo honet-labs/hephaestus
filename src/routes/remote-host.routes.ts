@@ -7,5 +7,6 @@ const router = Router();
 router.get("/configs", requireRole("ADMIN"), (req, res) => remoteHostController.getConfigs(req, res));
 router.post("/configs", requireRole("ADMIN"), (req, res) => remoteHostController.saveConfig(req, res));
 router.delete("/configs/:id", requireRole("ADMIN"), (req, res) => remoteHostController.deleteConfig(req, res));
+router.post("/test-connection", requireRole("ADMIN"), (req, res) => remoteHostController.testConnection(req, res));
 
 export default router;

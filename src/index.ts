@@ -253,8 +253,9 @@ initDb()
         try {
           const crypto = require("crypto");
           const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-          const { pool } = require("./config/db");
-          const sessionRes = await pool.query(
+          const dbModule = require("./config/db");
+          const dbPool = dbModule.default || dbModule.pool;
+          const sessionRes = await dbPool.query(
             "SELECT user_id FROM user_sessions WHERE token = $1 AND expires_at > NOW()",
             [tokenHash]
           );

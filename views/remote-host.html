@@ -7,18 +7,18 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
     <style>
         :root {
-            --bg: #0d1117;
-            --sidebar-bg: #161b22;
-            --topbar: #161b22;
-            --border: #30363d;
-            --text: #c9d1d9;
-            --text-muted: #8b949e;
-            --accent: #58a6ff;
-            --green: #3fb950;
-            --red: #f85149;
-            --yellow: #d29922;
-            --card: #1c2128;
-            --hover: #21262d;
+            --bg: #242424;
+            --sidebar-bg: #1e1e1e;
+            --topbar: #1e1e1e;
+            --border: #3c3c3c;
+            --text: #cbd5e1;
+            --text-muted: #a0a0a0;
+            --accent: #1971c2;
+            --green: #10b981;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --card: #2e2e2e;
+            --hover: #333333;
             --radius: 6px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -168,7 +168,7 @@
         .terminal-status {
             position: absolute; top: 8px; right: 12px; font-size: 10px;
             padding: 2px 8px; border-radius: 4px; z-index: 10;
-            background: rgba(13,17,23,0.8);
+            background: rgba(30,30,30,0.9);
         }
         .terminal-status.connected { color: var(--green); }
         .terminal-status.connecting { color: var(--yellow); }
@@ -345,6 +345,13 @@
                 </div>
             </div>
             <div class="modal-footer">
+                <div style="flex:1;">
+                    <button class="btn btn-secondary" id="test-conn-btn" onclick="testConnection()" style="font-size:11px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        Test Connection
+                    </button>
+                    <span id="test-conn-result" style="font-size:11px; margin-left:8px;"></span>
+                </div>
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="saveServer()">Save</button>
             </div>
@@ -480,7 +487,7 @@
             tab.term = new Terminal({
                 cursorBlink: true, fontSize: 13,
                 fontFamily: '"Cascadia Code","Fira Code","JetBrains Mono",monospace',
-                theme: { background: '#0d1117', foreground: '#c9d1d9', cursor: '#58a6ff', selectionBackground: '#264f78' },
+                theme: { background: '#1a1a1a', foreground: '#cbd5e1', cursor: '#1971c2', selectionBackground: '#264f78' },
                 convertEol: true,
             });
             tab.fitAddon = new FitAddon.FitAddon();
@@ -601,6 +608,7 @@
             document.getElementById('srv-group').value = 'Default';
             document.getElementById('srv-tags').value = '';
             document.getElementById('modal-title').textContent = 'Add Server';
+            document.getElementById('test-conn-result').textContent = '';
             onAuthChange();
             document.getElementById('modal-server').classList.add('active');
         }
@@ -620,6 +628,7 @@
             document.getElementById('srv-group').value = s.groupName || 'Default';
             document.getElementById('srv-tags').value = (s.tags || []).join(', ');
             document.getElementById('modal-title').textContent = 'Edit Server';
+            document.getElementById('test-conn-result').textContent = '';
             onAuthChange();
             document.getElementById('modal-server').classList.add('active');
         }
@@ -659,6 +668,40 @@
             await api('DELETE', '/api/v1/remote-host/configs/' + id);
             await loadServers();
             renderServerList();
+        }
+
+        async function testConnection() {
+            const btn = document.getElementById('test-conn-btn');
+            const result = document.getElementById('test-conn-result');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            result.textContent = '';
+            result.style.color = '';
+            const body = {
+                host: document.getElementById('srv-host').value.trim(),
+                port: document.getElementById('srv-port').value,
+                username: document.getElementById('srv-username').value.trim(),
+                authType: document.getElementById('srv-auth').value,
+                password: document.getElementById('srv-password').value,
+                sshKey: document.getElementById('srv-key').value,
+            };
+            if (!body.host || !body.username) {
+                result.textContent = 'Host and username are required.';
+                result.style.color = 'var(--red)';
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Test Connection';
+                return;
+            }
+            try {
+                const data = await api('POST', '/api/v1/remote-host/test-connection', body);
+                result.textContent = data.message;
+                result.style.color = data.success ? 'var(--green)' : 'var(--red)';
+            } catch (e) {
+                result.textContent = 'Request failed.';
+                result.style.color = 'var(--red)';
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Test Connection';
         }
 
         // ---- Helpers ----
