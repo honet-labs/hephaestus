@@ -440,11 +440,30 @@
         var activeGroupFilter = null;
         var ctxServerId = null;
         var sessionToken = localStorage.getItem('hephaestus_session_token');
+        var STORAGE_KEY = 'remote_host_tabs';
         if (!sessionToken) { window.location.href = '/'; return; }
 
         var TERMINAL_FONT = '"JetBrains Mono", Consolas, "Courier New", monospace';
 
         function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
+        function saveTabs() {
+            var data = tabs.map(function(t) { return { serverId: t.serverId, serverName: t.serverName }; });
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(_){}
+        }
+        function restoreTabs() {
+            var raw;
+            try { raw = localStorage.getItem(STORAGE_KEY); } catch(_){ return; }
+            if (!raw) return;
+            var saved;
+            try { saved = JSON.parse(raw); } catch(_){ return; }
+            if (!saved || !saved.length) return;
+            for (var i = 0; i < saved.length; i++) {
+                var exists = false;
+                for (var j = 0; j < servers.length; j++) { if (servers[j].id === saved[i].serverId) { exists = true; break; } }
+                if (exists) connectToServer(saved[i].serverId);
+            }
+        }
         function getAvatarClass(s) {
             var n = (s.name || '').toLowerCase();
             if (n.indexOf('docker') !== -1) return 'docker';
@@ -548,6 +567,7 @@
             createTerminalContainer(tab);
             renderTabs();
             switchTab(tabId);
+            saveTabs();
 
             startSSH(tab, srv);
         }
@@ -739,6 +759,7 @@
             var el = document.getElementById('term-' + tab.id);
             if (el) el.remove();
             tabs.splice(idx, 1);
+            saveTabs();
             if (activeTabId === tabId) {
                 if (tabs.length > 0) switchTab(tabs[Math.min(idx, tabs.length - 1)].id);
                 else showHomeView();
@@ -944,6 +965,7 @@
         loadServers().then(function() {
             renderHome();
             renderTabs();
+            restoreTabs();
         });
     })();
     </script>
