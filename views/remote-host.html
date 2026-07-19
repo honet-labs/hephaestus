@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Remote Host - Hephaestus</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             color-scheme: dark;
@@ -413,48 +410,61 @@
         var sessionToken = localStorage.getItem('hephaestus_session_token');
         if (!sessionToken) { window.location.href = '/'; return; }
 
-        var FONT_FAMILY_WEB = '"Fira Code", "Cascadia Code", "JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace';
-        var FONT_FAMILY_FALLBACK = 'Consolas, "Liberation Mono", Menlo, "Courier New", monospace';
-        var resolvedFontFamily = null;
+        var fontLoaded = false;
+        var FONT_CSS = '"Cascadia Mono", "Fira Code", Consolas, "Liberation Mono", Menlo, "Courier New", monospace';
 
-        function loadTerminalFont(callback) {
-            if (resolvedFontFamily) { callback(resolvedFontFamily); return; }
-
+        function detectMonospaceFont() {
             var canvas = document.createElement('canvas');
             var ctx = canvas.getContext('2d');
 
-            ctx.font = '14px monospace';
-            var monoWidth = ctx.measureText('W').width;
+            var testString = 'WWMmIl1';
+            var refWidths = {};
+            var fonts = [
+                '"Cascadia Mono"', '"Cascadia Code"', '"Fira Code"',
+                '"JetBrains Mono"', '"SF Mono"', Consolas,
+                '"Liberation Mono"', Menlo, '"Courier New"', monospace
+            ];
 
-            var webFont = 'Fira Code';
-            var loaded = false;
-            var done = false;
+            ctx.font = '400 15px monospace';
+            var baseline = ctx.measureText(testString).width;
+            refWidths['monospace'] = baseline;
 
-            function finish(family) {
-                if (done) return;
-                done = true;
-                resolvedFontFamily = family;
-                callback(family);
+            for (var i = 0; i < fonts.length; i++) {
+                ctx.font = '400 15px ' + fonts[i];
+                var w = ctx.measureText(testString).width;
+                refWidths[fonts[i]] = w;
             }
 
-            var timeout = setTimeout(function() {
-                finish(FONT_FAMILY_FALLBACK);
-            }, 4000);
+            ctx.font = '600 15px "Fira Code"';
+            var firaW = ctx.measureText(testString).width;
+            var monoW = refWidths['monospace'];
 
-            document.fonts.load('600 14px "' + webFont + '"').then(function() {
-                ctx.font = '600 14px "' + webFont + '"';
-                var w = ctx.measureText('W').width;
-                if (Math.abs(w - monoWidth) > 0.5) {
-                    clearTimeout(timeout);
-                    finish(FONT_FAMILY_WEB);
-                } else {
-                    clearTimeout(timeout);
-                    finish(FONT_FAMILY_FALLBACK);
-                }
-            }).catch(function() {
-                clearTimeout(timeout);
-                finish(FONT_FAMILY_FALLBACK);
-            });
+            if (Math.abs(firaW - monoW) > 1) {
+                fontLoaded = true;
+                return '"Fira Code", Consolas, monospace';
+            }
+
+            ctx.font = '600 15px "Cascadia Mono"';
+            var casW = ctx.measureText(testString).width;
+            if (Math.abs(casW - monoW) > 1) {
+                fontLoaded = true;
+                return '"Cascadia Mono", Consolas, monospace';
+            }
+
+            ctx.font = '400 15px Consolas';
+            var conW = ctx.measureText(testString).width;
+            if (Math.abs(conW - monoW) > 1) {
+                return 'Consolas, monospace';
+            }
+
+            return 'monospace';
+        }
+
+        var detectedFont = null;
+        function getTerminalFont() {
+            if (detectedFont) return detectedFont;
+            detectedFont = detectMonospaceFont();
+            return detectedFont;
         }
 
         function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
@@ -468,12 +478,6 @@
             if (!name) return '?';
             var p = name.split(/[\s_\-]+/);
             return p.length >= 2 ? (p[0][0] + p[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
-        }
-        function getTabLabel(serverName, serverId) {
-            var count = 0;
-            for (var i = 0; i < tabs.length; i++) { if (tabs[i].serverId === serverId) count++; }
-            if (count <= 1) return serverName;
-            return serverName + ' (' + count + ')';
         }
 
         function api(method, url, body) {
@@ -568,9 +572,7 @@
             renderTabs();
             switchTab(tabId);
 
-            loadTerminalFont(function(fontFamily) {
-                startSSH(tab, srv, fontFamily);
-            });
+            startSSH(tab, srv);
         }
 
         function createTerminalContainer(tab) {
@@ -581,76 +583,75 @@
             var statusDiv = document.createElement('div');
             statusDiv.className = 'terminal-status connecting';
             statusDiv.id = 'status-' + tab.id;
-            statusDiv.textContent = 'Loading font...';
+            statusDiv.textContent = 'Connecting...';
             div.appendChild(statusDiv);
             wrapper.appendChild(div);
             tab.containerEl = div;
             tab.statusEl = statusDiv;
         }
 
-        function startSSH(tab, srv, fontFamily) {
+        function startSSH(tab, srv) {
             var container = tab.containerEl;
             var statusEl = tab.statusEl;
-            statusEl.textContent = 'Connecting...';
 
-            var termFontSize = 15;
+            var fontFamily = getTerminalFont();
 
             var ro = new ResizeObserver(function(entries) {
                 for (var i = 0; i < entries.length; i++) {
                     var rect = entries[i].contentRect;
                     if (rect.width > 0 && rect.height > 0) {
                         ro.disconnect();
-                        createTerminal(rect.width, rect.height);
+                        doCreateTerminal(tab, srv, container, statusEl, fontFamily);
                         return;
                     }
                 }
             });
             ro.observe(container);
+        }
 
-            function createTerminal() {
-                tab.term = new Terminal({
-                    cursorBlink: true,
-                    fontSize: termFontSize,
-                    fontFamily: fontFamily,
-                    fontWeight: '600',
-                    letterSpacing: 0,
-                    lineHeight: 1.0,
-                    theme: {
-                        background: '#1a1a1a',
-                        foreground: '#e0e0e0',
-                        cursor: '#1971c2',
-                        cursorAccent: '#1a1a1a',
-                        selectionBackground: '#264f78',
-                        black: '#1a1a1a',
-                        red: '#ef4444',
-                        green: '#10b981',
-                        yellow: '#f59e0b',
-                        blue: '#3b82f6',
-                        magenta: '#a855f7',
-                        cyan: '#06b6d4',
-                        white: '#e0e0e0',
-                        brightBlack: '#6b7280',
-                        brightRed: '#f87171',
-                        brightGreen: '#34d399',
-                        brightYellow: '#fbbf24',
-                        brightBlue: '#60a5fa',
-                        brightMagenta: '#c084fc',
-                        brightCyan: '#22d3ee',
-                        brightWhite: '#f9fafb'
-                    },
-                    scrollback: 10000,
-                    convertEol: false,
-                    allowProposedApi: true
-                });
-                tab.fitAddon = new FitAddon.FitAddon();
-                tab.term.loadAddon(tab.fitAddon);
-                tab.term.open(container);
+        function doCreateTerminal(tab, srv, container, statusEl, fontFamily) {
+            tab.term = new Terminal({
+                cursorBlink: true,
+                fontSize: 15,
+                fontFamily: fontFamily,
+                fontWeight: '400',
+                letterSpacing: 0,
+                lineHeight: 1.0,
+                theme: {
+                    background: '#1a1a1a',
+                    foreground: '#e0e0e0',
+                    cursor: '#1971c2',
+                    cursorAccent: '#1a1a1a',
+                    selectionBackground: '#264f78',
+                    black: '#1a1a1a',
+                    red: '#ef4444',
+                    green: '#10b981',
+                    yellow: '#f59e0b',
+                    blue: '#3b82f6',
+                    magenta: '#a855f7',
+                    cyan: '#06b6d4',
+                    white: '#e0e0e0',
+                    brightBlack: '#6b7280',
+                    brightRed: '#f87171',
+                    brightGreen: '#34d399',
+                    brightYellow: '#fbbf24',
+                    brightBlue: '#60a5fa',
+                    brightMagenta: '#c084fc',
+                    brightCyan: '#22d3ee',
+                    brightWhite: '#f9fafb'
+                },
+                scrollback: 10000,
+                convertEol: false,
+                allowProposedApi: true
+            });
+            tab.fitAddon = new FitAddon.FitAddon();
+            tab.term.loadAddon(tab.fitAddon);
+            tab.term.open(container);
 
-                setTimeout(function() {
-                    try { tab.fitAddon.fit(); } catch(e) {}
-                    connectSSH(tab, srv);
-                }, 100);
-            }
+            setTimeout(function() {
+                try { tab.fitAddon.fit(); } catch(e) {}
+                connectSSH(tab, srv);
+            }, 100);
         }
 
         function connectSSH(tab, srv) {
@@ -906,6 +907,7 @@
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].fitAddon) try { tabs[i].fitAddon.fit(); } catch(e) {} }
         });
 
+        getTerminalFont();
         loadServers().then(function() {
             renderHome();
             renderTabs();
