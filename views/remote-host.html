@@ -410,62 +410,7 @@
         var sessionToken = localStorage.getItem('hephaestus_session_token');
         if (!sessionToken) { window.location.href = '/'; return; }
 
-        var fontLoaded = false;
-        var FONT_CSS = '"Cascadia Mono", "Fira Code", Consolas, "Liberation Mono", Menlo, "Courier New", monospace';
-
-        function detectMonospaceFont() {
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-
-            var testString = 'WWMmIl1';
-            var refWidths = {};
-            var fonts = [
-                '"Cascadia Mono"', '"Cascadia Code"', '"Fira Code"',
-                '"JetBrains Mono"', '"SF Mono"', '"Consolas"',
-                '"Liberation Mono"', '"Menlo"', '"Courier New"', '"monospace"'
-            ];
-
-            ctx.font = '400 15px monospace';
-            var baseline = ctx.measureText(testString).width;
-            refWidths['monospace'] = baseline;
-
-            for (var i = 0; i < fonts.length; i++) {
-                ctx.font = '400 15px ' + fonts[i];
-                var w = ctx.measureText(testString).width;
-                refWidths[fonts[i]] = w;
-            }
-
-            ctx.font = '600 15px "Fira Code"';
-            var firaW = ctx.measureText(testString).width;
-            var monoW = refWidths['monospace'];
-
-            if (Math.abs(firaW - monoW) > 1) {
-                fontLoaded = true;
-                return '"Fira Code", Consolas, monospace';
-            }
-
-            ctx.font = '600 15px "Cascadia Mono"';
-            var casW = ctx.measureText(testString).width;
-            if (Math.abs(casW - monoW) > 1) {
-                fontLoaded = true;
-                return '"Cascadia Mono", Consolas, monospace';
-            }
-
-            ctx.font = '400 15px Consolas';
-            var conW = ctx.measureText(testString).width;
-            if (Math.abs(conW - monoW) > 1) {
-                return 'Consolas, monospace';
-            }
-
-            return 'monospace';
-        }
-
-        var detectedFont = null;
-        function getTerminalFont() {
-            if (detectedFont) return detectedFont;
-            detectedFont = detectMonospaceFont();
-            return detectedFont;
-        }
+        var TERMINAL_FONT = 'monospace';
 
         function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
         function getAvatarClass(s) {
@@ -594,14 +539,12 @@
             var container = tab.containerEl;
             var statusEl = tab.statusEl;
 
-            var fontFamily = getTerminalFont();
-
             var ro = new ResizeObserver(function(entries) {
                 for (var i = 0; i < entries.length; i++) {
                     var rect = entries[i].contentRect;
                     if (rect.width > 0 && rect.height > 0) {
                         ro.disconnect();
-                        doCreateTerminal(tab, srv, container, statusEl, fontFamily);
+                        doCreateTerminal(tab, srv, container, statusEl);
                         return;
                     }
                 }
@@ -609,14 +552,11 @@
             ro.observe(container);
         }
 
-        function doCreateTerminal(tab, srv, container, statusEl, fontFamily) {
+        function doCreateTerminal(tab, srv, container, statusEl) {
             tab.term = new Terminal({
                 cursorBlink: true,
-                fontSize: 15,
-                fontFamily: fontFamily,
-                fontWeight: '400',
-                letterSpacing: 0,
-                lineHeight: 1.0,
+                fontSize: 14,
+                fontFamily: TERMINAL_FONT,
                 theme: {
                     background: '#1a1a1a',
                     foreground: '#e0e0e0',
@@ -640,9 +580,7 @@
                     brightCyan: '#22d3ee',
                     brightWhite: '#f9fafb'
                 },
-                scrollback: 10000,
-                convertEol: false,
-                allowProposedApi: true
+                scrollback: 10000
             });
             tab.fitAddon = new FitAddon.FitAddon();
             tab.term.loadAddon(tab.fitAddon);
@@ -907,7 +845,6 @@
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].fitAddon) try { tabs[i].fitAddon.fit(); } catch(e) {} }
         });
 
-        getTerminalFont();
         loadServers().then(function() {
             renderHome();
             renderTabs();
