@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Remote Host - Hephaestus</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             color-scheme: dark;
@@ -152,7 +155,7 @@
         .host-actions button.delete-btn:hover { color: var(--error); border-color: var(--error); }
 
         .tab-bar {
-            display: none; align-items: center; background: var(--app-topbar);
+            display: none; align-items: center; background: #2a2a2a;
             border-bottom: 1px solid var(--app-border); padding: 0 4px; height: 34px;
             flex-shrink: 0; overflow-x: auto;
         }
@@ -167,9 +170,9 @@
         .tab-home.active-view { color: var(--prometheus-orange); border-bottom: 2px solid var(--prometheus-orange); }
         .tab-home svg { width: 14px; height: 14px; }
         .tab-add {
-            padding: 5px 10px; font-size: 14px; cursor: pointer; display: flex;
+            padding: 5px 10px; font-size: 16px; cursor: pointer; display: flex;
             align-items: center; color: var(--text-muted); border-right: 1px solid var(--app-border);
-            transition: all 0.15s; font-weight: 600;
+            transition: all 0.15s; font-weight: 600; line-height: 1;
         }
         .tab-add:hover { color: var(--prometheus-orange); background: #333333; }
         .tab {
@@ -410,7 +413,49 @@
         var sessionToken = localStorage.getItem('hephaestus_session_token');
         if (!sessionToken) { window.location.href = '/'; return; }
 
-        var TERMINAL_FONT = '14px "Consolas", "Liberation Mono", Menlo, "Courier New", monospace';
+        var FONT_FAMILY_WEB = '"Fira Code", "Cascadia Code", "JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace';
+        var FONT_FAMILY_FALLBACK = 'Consolas, "Liberation Mono", Menlo, "Courier New", monospace';
+        var resolvedFontFamily = null;
+
+        function loadTerminalFont(callback) {
+            if (resolvedFontFamily) { callback(resolvedFontFamily); return; }
+
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
+
+            ctx.font = '14px monospace';
+            var monoWidth = ctx.measureText('W').width;
+
+            var webFont = 'Fira Code';
+            var loaded = false;
+            var done = false;
+
+            function finish(family) {
+                if (done) return;
+                done = true;
+                resolvedFontFamily = family;
+                callback(family);
+            }
+
+            var timeout = setTimeout(function() {
+                finish(FONT_FAMILY_FALLBACK);
+            }, 4000);
+
+            document.fonts.load('600 14px "' + webFont + '"').then(function() {
+                ctx.font = '600 14px "' + webFont + '"';
+                var w = ctx.measureText('W').width;
+                if (Math.abs(w - monoWidth) > 0.5) {
+                    clearTimeout(timeout);
+                    finish(FONT_FAMILY_WEB);
+                } else {
+                    clearTimeout(timeout);
+                    finish(FONT_FAMILY_FALLBACK);
+                }
+            }).catch(function() {
+                clearTimeout(timeout);
+                finish(FONT_FAMILY_FALLBACK);
+            });
+        }
 
         function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
         function getAvatarClass(s) {
@@ -513,14 +558,19 @@
             var srv = null;
             for (var i = 0; i < servers.length; i++) { if (servers[i].id === serverId) { srv = servers[i]; break; } }
             if (!srv) return;
+
+            showTerminalView();
+
             var tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
             var tab = { id: tabId, serverId: serverId, serverName: srv.name, ws: null, term: null, fitAddon: null, status: 'connecting', containerEl: null, statusEl: null };
             tabs.push(tab);
             createTerminalContainer(tab);
-            showTerminalView();
             renderTabs();
             switchTab(tabId);
-            startSSH(tab, srv);
+
+            loadTerminalFont(function(fontFamily) {
+                startSSH(tab, srv, fontFamily);
+            });
         }
 
         function createTerminalContainer(tab) {
@@ -531,25 +581,40 @@
             var statusDiv = document.createElement('div');
             statusDiv.className = 'terminal-status connecting';
             statusDiv.id = 'status-' + tab.id;
-            statusDiv.textContent = 'Connecting...';
+            statusDiv.textContent = 'Loading font...';
             div.appendChild(statusDiv);
             wrapper.appendChild(div);
             tab.containerEl = div;
             tab.statusEl = statusDiv;
         }
 
-        function startSSH(tab, srv) {
+        function startSSH(tab, srv, fontFamily) {
             var container = tab.containerEl;
             var statusEl = tab.statusEl;
+            statusEl.textContent = 'Connecting...';
+
+            var termFontSize = 15;
+
+            var ro = new ResizeObserver(function(entries) {
+                for (var i = 0; i < entries.length; i++) {
+                    var rect = entries[i].contentRect;
+                    if (rect.width > 0 && rect.height > 0) {
+                        ro.disconnect();
+                        createTerminal(rect.width, rect.height);
+                        return;
+                    }
+                }
+            });
+            ro.observe(container);
 
             function createTerminal() {
                 tab.term = new Terminal({
                     cursorBlink: true,
-                    fontSize: 14,
-                    fontFamily: 'Consolas, "Liberation Mono", Menlo, "Courier New", monospace',
-                    fontWeight: '400',
+                    fontSize: termFontSize,
+                    fontFamily: fontFamily,
+                    fontWeight: '600',
                     letterSpacing: 0,
-                    lineHeight: 1,
+                    lineHeight: 1.0,
                     theme: {
                         background: '#1a1a1a',
                         foreground: '#e0e0e0',
@@ -574,7 +639,8 @@
                         brightWhite: '#f9fafb'
                     },
                     scrollback: 10000,
-                    convertEol: false
+                    convertEol: false,
+                    allowProposedApi: true
                 });
                 tab.fitAddon = new FitAddon.FitAddon();
                 tab.term.loadAddon(tab.fitAddon);
@@ -583,20 +649,8 @@
                 setTimeout(function() {
                     try { tab.fitAddon.fit(); } catch(e) {}
                     connectSSH(tab, srv);
-                }, 50);
+                }, 100);
             }
-
-            var ro = new ResizeObserver(function(entries) {
-                for (var i = 0; i < entries.length; i++) {
-                    var rect = entries[i].contentRect;
-                    if (rect.width > 0 && rect.height > 0) {
-                        ro.disconnect();
-                        createTerminal();
-                        return;
-                    }
-                }
-            });
-            ro.observe(container);
         }
 
         function connectSSH(tab, srv) {
