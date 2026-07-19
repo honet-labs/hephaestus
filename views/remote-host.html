@@ -410,7 +410,7 @@
         var sessionToken = localStorage.getItem('hephaestus_session_token');
         if (!sessionToken) { window.location.href = '/'; return; }
 
-        var TERMINAL_FONT = 'monospace';
+        var TERMINAL_FONT = 'Consolas, "Courier New", monospace';
 
         function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
         function getAvatarClass(s) {
