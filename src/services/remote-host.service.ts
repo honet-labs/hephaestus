@@ -103,7 +103,7 @@ class RemoteHostService {
     if (r.password) {
       const decrypted = decryptText(r.password);
       r.password = decrypted;
-    } else {
+    }
     if (r.sshKey) {
       const decrypted = decryptText(r.sshKey);
       r.sshKey = decrypted;
