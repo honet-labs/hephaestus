@@ -232,6 +232,24 @@
         .terminal-status.connecting { color: var(--warning); }
         .terminal-status.error { color: var(--error); }
 
+        .reconnect-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(26,26,26,0.85); display: none;
+            align-items: center; justify-content: center; flex-direction: column;
+            z-index: 20; gap: 12px;
+        }
+        .reconnect-overlay.active { display: flex; }
+        .reconnect-overlay svg { width: 36px; height: 36px; color: var(--text-muted); opacity: 0.5; }
+        .reconnect-overlay .reconnect-msg { font-size: 13px; color: var(--text-muted); }
+        .reconnect-overlay .reconnect-btn {
+            padding: 8px 20px; border-radius: 4px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--prometheus-orange);
+            background: rgba(164,129,129,0.15); color: var(--prometheus-orange);
+            transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .reconnect-overlay .reconnect-btn:hover { background: var(--prometheus-orange); color: #fff; }
+        .reconnect-overlay .reconnect-btn svg { width: 14px; height: 14px; opacity: 1; }
+
         .empty-state { padding: 60px 20px; text-align: center; color: var(--text-muted); }
         .empty-state svg { width: 48px; height: 48px; opacity: 0.3; margin-bottom: 12px; }
         .empty-state h3 { font-size: 14px; font-weight: 500; color: var(--text-white); margin-bottom: 4px; }
@@ -544,9 +562,19 @@
             statusDiv.id = 'status-' + tab.id;
             statusDiv.textContent = 'Connecting...';
             div.appendChild(statusDiv);
+            var overlay = document.createElement('div');
+            overlay.className = 'reconnect-overlay';
+            overlay.id = 'overlay-' + tab.id;
+            overlay.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>' +
+                '<div class="reconnect-msg">Connection lost</div>' +
+                '<button class="reconnect-btn" data-reconnect="' + tab.id + '">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>' +
+                'Reconnect</button>';
+            div.appendChild(overlay);
             wrapper.appendChild(div);
             tab.containerEl = div;
             tab.statusEl = statusDiv;
+            tab.overlayEl = overlay;
         }
 
         function startSSH(tab, srv) {
@@ -608,6 +636,8 @@
 
         function connectSSH(tab, srv) {
             var statusEl = tab.statusEl;
+            var overlayEl = tab.overlayEl;
+            if (overlayEl) overlayEl.classList.remove('active');
             var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             var url = protocol + '//' + location.host + '/ws/remote-host?token=' + encodeURIComponent(sessionToken) + '&hostId=' + encodeURIComponent(srv.id) + '&cols=' + tab.term.cols + '&rows=' + tab.term.rows;
             tab.ws = new WebSocket(url);
@@ -619,18 +649,65 @@
                         tab.status = 'connected';
                         statusEl.textContent = msg.username + '@' + msg.host;
                         statusEl.className = 'terminal-status connected';
+                        if (overlayEl) overlayEl.classList.remove('active');
                         tab.term.focus();
                         renderTabs();
                         renderHome();
                     }
-                    else if (msg.type === 'disconnected') { tab.status = 'disconnected'; statusEl.textContent = 'Disconnected'; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); renderHome(); }
-                    else if (msg.type === 'error') { tab.status = 'error'; statusEl.textContent = msg.message; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); renderHome(); }
+                    else if (msg.type === 'disconnected') {
+                        tab.status = 'disconnected';
+                        statusEl.textContent = 'Disconnected';
+                        statusEl.className = 'terminal-status error';
+                        tab.ws = null;
+                        if (overlayEl) overlayEl.classList.add('active');
+                        renderTabs();
+                        renderHome();
+                    }
+                    else if (msg.type === 'error') {
+                        tab.status = 'error';
+                        statusEl.textContent = msg.message;
+                        statusEl.className = 'terminal-status error';
+                        tab.ws = null;
+                        if (overlayEl) overlayEl.classList.add('active');
+                        renderTabs();
+                        renderHome();
+                    }
                 } catch(_){}
             };
-            tab.ws.onclose = function() { tab.status = 'disconnected'; statusEl.textContent = 'Connection closed'; statusEl.className = 'terminal-status error'; tab.ws = null; renderTabs(); renderHome(); };
-            tab.ws.onerror = function() { tab.status = 'error'; statusEl.textContent = 'Connection error'; statusEl.className = 'terminal-status error'; };
+            tab.ws.onclose = function() {
+                if (tab.status === 'connected' || tab.status === 'connecting') {
+                    tab.status = 'disconnected';
+                    statusEl.textContent = 'Connection closed';
+                    statusEl.className = 'terminal-status error';
+                    tab.ws = null;
+                    if (overlayEl) overlayEl.classList.add('active');
+                    renderTabs();
+                    renderHome();
+                }
+            };
+            tab.ws.onerror = function() {
+                tab.status = 'error';
+                statusEl.textContent = 'Connection error';
+                statusEl.className = 'terminal-status error';
+            };
             tab.term.onData(function(data) { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'input', data: data })); });
             tab.term.onResize(function(dim) { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'resize', cols: dim.cols, rows: dim.rows })); });
+        }
+
+        function reconnectTab(tabId) {
+            var tab = null;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { tab = tabs[i]; break; } }
+            if (!tab || !tab.serverId) return;
+            var srv = null;
+            for (var i = 0; i < servers.length; i++) { if (servers[i].id === tab.serverId) { srv = servers[i]; break; } }
+            if (!srv) return;
+            if (tab.ws) { try { tab.ws.close(); } catch(_){} tab.ws = null; }
+            tab.status = 'connecting';
+            tab.statusEl.textContent = 'Reconnecting...';
+            tab.statusEl.className = 'terminal-status connecting';
+            if (tab.overlayEl) tab.overlayEl.classList.remove('active');
+            renderTabs();
+            connectSSH(tab, srv);
         }
 
         function switchTab(tabId) {
@@ -857,6 +934,11 @@
         });
         window.addEventListener('resize', function() {
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].fitAddon) try { tabs[i].fitAddon.fit(); } catch(e) {} }
+        });
+
+        document.getElementById('terminal-wrapper').addEventListener('click', function(e) {
+            var btn = e.target.closest('.reconnect-btn');
+            if (btn && btn.dataset.reconnect) reconnectTab(btn.dataset.reconnect);
         });
 
         loadServers().then(function() {
