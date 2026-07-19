@@ -394,7 +394,7 @@ function initAppOnce() {
 }
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'uptime-monitor', 'prometheus-config', 'dataprepper-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update', 'backup-db-configs', 'backup-destinations', 'backup-run', 'backup-history'];
+const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'prometheus-config', 'dataprepper-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update', 'backup-db-configs', 'backup-destinations', 'backup-run', 'backup-history'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -643,7 +643,7 @@ function toggleMonitoringSubmenu() {
       submenu.style.display = 'flex';
       if (arrow) arrow.style.transform = 'rotate(180deg)';
       const hash = window.location.hash.replace('#', '') || 'overview';
-      if (!['monitoring', 'uptime-monitor'].includes(hash)) {
+      if (hash !== 'monitoring') {
         navigate('monitoring');
       }
     } else {
@@ -802,7 +802,7 @@ function showPage(pageId) {
     if (arrow) arrow.style.transform = 'rotate(0deg)';
   }
 
-  const monitoringPages = ['monitoring', 'uptime-monitor'];
+  const monitoringPages = ['monitoring'];
   const isMonitoringPage = monitoringPages.includes(pageId);
   const monSubmenu = document.getElementById('monitoring-submenu');
   const monParentMenu = document.getElementById('menu-monitoring-parent');
@@ -906,10 +906,6 @@ function showPage(pageId) {
     pageTitle.textContent = 'Monitoring View';
     pageDesc.textContent = 'Slideshow rotasi monitoring dashboard Grafana ter-embed.';
     initMonitoringPage();
-  } else if (pageId === 'uptime-monitor') {
-    pageTitle.textContent = 'Uptime Monitor';
-    pageDesc.textContent = 'Monitor uptime and availability of services via Uptime Kuma integration.';
-    initUptimeMonitorPage();
   } else if (pageId === 'prometheus-config') {
     pageTitle.textContent = 'Prometheus Config';
     pageDesc.textContent = 'Edit and validate prometheus.yml configuration directly from the portal.';
@@ -4708,224 +4704,6 @@ function escapeAttr(str) {
     .replace(/`/g, '\\`')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-}
-
-// ===== UPTIME MONITOR =====
-let uptimeMonitors = [];
-let uptimeRefreshInterval = null;
-
-function initUptimeMonitorPage() {
-  if (uptimeRefreshInterval) clearInterval(uptimeRefreshInterval);
-  loadUptimeKumaMonitors();
-  uptimeRefreshInterval = setInterval(loadUptimeKumaMonitors, 30000);
-  // Clear interval when leaving page
-  const observer = new MutationObserver(() => {
-    const page = document.getElementById('page-uptime-monitor');
-    if (page && page.classList.contains('hidden')) {
-      if (uptimeRefreshInterval) { clearInterval(uptimeRefreshInterval); uptimeRefreshInterval = null; }
-      observer.disconnect();
-    }
-  });
-  observer.observe(document.getElementById('page-uptime-monitor') || document.body, { attributes: true, attributeFilter: ['class'] });
-}
-
-async function loadUptimeKumaMonitors() {
-  const loadingEl = document.getElementById('uptime-kuma-loading');
-  const errorEl = document.getElementById('uptime-kuma-error');
-  const statusEl = document.getElementById('uptime-kuma-status');
-  
-  if (loadingEl) loadingEl.style.display = 'flex';
-  if (errorEl) errorEl.style.display = 'none';
-  if (statusEl) statusEl.style.display = 'none';
-
-  try {
-    const res = await fetch('/api/v1/uptime-kuma/monitors');
-    const result = await res.json();
-
-    if (loadingEl) loadingEl.style.display = 'none';
-
-    if (!result.success) {
-      if (errorEl) {
-        errorEl.style.display = 'block';
-        document.getElementById('uptime-kuma-error-msg').textContent = result.error || 'Failed to load monitors';
-      }
-      return;
-    }
-
-    uptimeMonitors = result.data || [];
-    renderUptimeMonitors(uptimeMonitors);
-    if (statusEl) statusEl.style.display = 'block';
-  } catch (error) {
-    if (loadingEl) loadingEl.style.display = 'none';
-    if (errorEl) {
-      errorEl.style.display = 'block';
-      let msg = error.message || 'Unknown error';
-      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-        msg = 'Backend server is not reachable. Please check if the server is running.';
-      } else if (msg.includes('No active')) {
-        msg = 'No Uptime Kuma configuration found. Click "Configure" to set up a connection.';
-      }
-      document.getElementById('uptime-kuma-error-msg').textContent = msg;
-    }
-  }
-}
-
-function renderUptimeMonitors(monitors) {
-  const tbody = document.getElementById('uptime-monitors-tbody');
-  if (!tbody) return;
-
-  // Update summary cards
-  const total = monitors.length;
-  const up = monitors.filter(m => m.status === 1).length;
-  const down = monitors.filter(m => m.status === 0).length;
-  const pending = monitors.filter(m => m.status !== 1 && m.status !== 0).length;
-
-  document.getElementById('uptime-total-count').textContent = total;
-  document.getElementById('uptime-up-count').textContent = up;
-  document.getElementById('uptime-down-count').textContent = down;
-  document.getElementById('uptime-pending-count').textContent = pending;
-
-  if (total === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="padding: 20px; text-align: center; color: var(--text-muted);">No monitors found. Configure Uptime Kuma first.</td>
-      </tr>`;
-    return;
-  }
-
-  tbody.innerHTML = monitors.map(m => {
-    const statusColor = m.status === 1 ? '#10b981' : m.status === 0 ? '#ef4444' : '#f59e0b';
-    const statusText = m.status === 1 ? 'UP' : m.status === 0 ? 'DOWN' : 'PENDING';
-    const statusBg = m.status === 1 ? 'rgba(16,185,129,0.12)' : m.status === 0 ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)';
-    const uptime = m.uptime != null ? m.uptime.toFixed(2) + '%' : '-';
-    const response = m.avgResponse != null ? m.avgResponse + ' ms' : '-';
-    const lastCheck = m.lastCheck ? new Date(m.lastCheck).toLocaleString() : '-';
-    const monitorTarget = (m.type === 'ping' || !m.url || m.url === 'https://' || m.url === 'http://') ? (m.hostname || m.url || '-') : m.url;
-
-    return `
-      <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-primary)'" onmouseout="this.style.background='transparent'">
-        <td style="padding: 8px 12px;">
-          <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: ${statusColor}; background: ${statusBg};">${statusText}</span>
-        </td>
-        <td style="padding: 8px 12px; color: var(--text-white); font-weight: 500;">${escapeHtml(m.name)}</td>
-        <td style="padding: 8px 12px; color: var(--text-muted);">${escapeHtml(m.type || '-')}</td>
-        <td style="padding: 8px 12px; color: var(--text-muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(monitorTarget)}</td>
-        <td style="padding: 8px 12px; color: ${statusColor}; font-weight: 600;">${uptime}</td>
-        <td style="padding: 8px 12px; color: var(--text-muted);">${response}</td>
-        <td style="padding: 8px 12px; color: var(--text-muted); font-size: 11px;">${lastCheck}</td>
-      </tr>`;
-  }).join('');
-}
-
-function openUptimeKumaConfigModal() {
-  document.getElementById('uptime-kuma-config-modal').style.display = 'flex';
-  document.getElementById('uptime-kuma-test-result').textContent = '';
-  document.getElementById('uptime-kuma-test-result').style.color = '';
-  document.getElementById('uptime-kuma-name').value = '';
-  document.getElementById('uptime-kuma-url').value = '';
-  document.getElementById('uptime-kuma-username').value = '';
-  document.getElementById('uptime-kuma-password').value = '';
-}
-
-function closeUptimeKumaConfigModal() {
-  document.getElementById('uptime-kuma-config-modal').style.display = 'none';
-}
-
-async function testUptimeKumaConnection() {
-  const url = document.getElementById('uptime-kuma-url').value.trim();
-  const username = document.getElementById('uptime-kuma-username').value.trim();
-  const password = document.getElementById('uptime-kuma-password').value;
-  const resultEl = document.getElementById('uptime-kuma-test-result');
-  const btn = document.getElementById('uptime-kuma-test-btn');
-
-  if (!url || !username || !password) {
-    resultEl.textContent = 'Please fill all fields';
-    resultEl.style.color = '#ef4444';
-    return;
-  }
-
-  // URL validation
-  try {
-    const parsedUrl = new URL(url);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      resultEl.textContent = 'URL must start with http:// or https://';
-      resultEl.style.color = '#ef4444';
-      return;
-    }
-  } catch (_) {
-    resultEl.textContent = 'Invalid URL format. Example: http://192.168.1.100:5001';
-    resultEl.style.color = '#ef4444';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Testing...';
-  resultEl.textContent = '';
-  resultEl.style.color = '';
-
-  try {
-    const res = await fetch('/api/v1/uptime-kuma/test', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, username, password })
-    });
-    const result = await res.json();
-
-    if (result.connected) {
-      resultEl.textContent = 'âœ“ Connected!';
-      resultEl.style.color = '#10b981';
-    } else {
-      resultEl.textContent = 'âœ— ' + (result.message || 'Failed');
-      resultEl.style.color = '#ef4444';
-    }
-  } catch (error) {
-    resultEl.textContent = 'âœ— ' + error.message;
-    resultEl.style.color = '#ef4444';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'ðŸ”Œ Test Connection';
-  }
-}
-
-async function saveUptimeKumaConfig() {
-  const name = document.getElementById('uptime-kuma-name').value.trim();
-  const url = document.getElementById('uptime-kuma-url').value.trim();
-  const username = document.getElementById('uptime-kuma-username').value.trim();
-  const password = document.getElementById('uptime-kuma-password').value;
-
-  if (!name || !url || !username || !password) {
-    alert('Please fill all fields');
-    return;
-  }
-
-  try {
-    const parsedUrl = new URL(url);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      alert('URL must start with http:// or https://');
-      return;
-    }
-  } catch (_) {
-    alert('Invalid URL format. Example: http://192.168.1.100:5001');
-    return;
-  }
-
-  try {
-    const res = await fetch('/api/v1/uptime-kuma/configs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, url, username, password })
-    });
-    const result = await res.json();
-
-    if (result.success) {
-      closeUptimeKumaConfigModal();
-      loadUptimeKumaMonitors();
-    } else {
-      alert('Failed to save: ' + (result.error || 'Unknown error'));
-    }
-  } catch (error) {
-    alert('Error: ' + error.message);
-  }
 }
 
 // ==========================================

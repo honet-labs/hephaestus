@@ -85,7 +85,7 @@ router.delete("/configs/:id", requireRole("ADMIN"), async (req: Request, res: Re
   }
 });
 
-// List monitors
+// List monitors (used by Query Explorer)
 router.get("/monitors", requireRole("ADMIN"), async (req: Request, res: Response) => {
   try {
     const { group, type, status } = req.query;
@@ -100,21 +100,11 @@ router.get("/monitors", requireRole("ADMIN"), async (req: Request, res: Response
   }
 });
 
-// Get single monitor
+// Get single monitor (used by Query Explorer)
 router.get("/monitors/:id", requireRole("ADMIN"), async (req: Request, res: Response) => {
   try {
     const monitor = await uptimeKumaService.getMonitorById(parseInt(req.params.id, 10));
     res.status(200).json({ success: true, data: monitor });
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Get monitor stats
-router.get("/monitors/:id/stats", requireRole("ADMIN"), async (req: Request, res: Response) => {
-  try {
-    const stats = await uptimeKumaService.getMonitorStats(parseInt(req.params.id, 10));
-    res.status(200).json({ success: true, data: stats });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
