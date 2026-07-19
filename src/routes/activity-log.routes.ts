@@ -4,7 +4,7 @@ import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
-router.get("/", activityLogController.getLogs);
+router.get("/", requireRole("ADMIN"), activityLogController.getLogs);
 router.delete("/", requireRole("ADMIN"), activityLogController.clearLogs);
 
 export default router;

@@ -101,24 +101,11 @@ class RemoteHostService {
     const r = res.rows[0];
     const { decryptText } = await import("../config/db");
     if (r.password) {
-      const pwdType = typeof r.password;
-      const rawLen = r.password.length;
-      console.log(`[RemoteHost] getRawConfig host="${r.name}" pwdType=${pwdType} pwdRawLen=${rawLen} pwdSample="${String(r.password).substring(0, 10)}..."`);
       const decrypted = decryptText(r.password);
-      const match = decrypted === r.password;
-      console.log(`[RemoteHost] getRawConfig decrypt result: match=${match} decryptedLen=${decrypted.length} decryptedSample="${decrypted.substring(0, 10)}..."`);
-      if (match && r.password !== "") {
-        console.warn(`[RemoteHost] ⚠ Password NOT decrypted for "${r.name}" — key mismatch or not encrypted!`);
-      }
       r.password = decrypted;
     } else {
-      console.warn(`[RemoteHost] ⚠ No password stored for host "${r.name}" (authType=${r.authType})`);
-    }
     if (r.sshKey) {
       const decrypted = decryptText(r.sshKey);
-      if (decrypted === r.sshKey && r.sshKey !== "") {
-        console.warn(`[RemoteHost] SSH key decryption returned raw value for host "${r.name}"`);
-      }
       r.sshKey = decrypted;
     }
     return r;
@@ -214,7 +201,6 @@ class RemoteHostService {
       } else {
         connectOpts.password = cfg.password || "";
       }
-      console.log(`[RemoteHost] SSH connecting to ${connectOpts.username}@${connectOpts.host}:${connectOpts.port} authType=${cfg.authType} passwordLen=${(connectOpts.password || "").length} passStart="${(connectOpts.password || "").substring(0, 3)}..."`);
       ssh.connect(connectOpts);
     }).catch((err) => {
       ws.send(JSON.stringify({ type: "error", message: `Failed to load config: ${err.message}` }));

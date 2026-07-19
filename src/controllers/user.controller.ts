@@ -40,6 +40,15 @@ export class UserController {
         return;
       }
 
+      if (password.length < 8) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Password must be at least 8 characters."
+        });
+        return;
+      }
+
       // Check if username or email already exists
       const checkExists = await query(
         "SELECT 1 FROM users WHERE username = $1 OR email = $2",
@@ -160,6 +169,15 @@ export class UserController {
           success: false,
           error: "Validation Error",
           message: "New password is required."
+        });
+        return;
+      }
+
+      if (password.length < 8) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "Password must be at least 8 characters."
         });
         return;
       }
@@ -472,6 +490,15 @@ export class UserController {
           success: false,
           error: "Validation Error",
           message: "Old password and new password are required."
+        });
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        res.status(400).json({
+          success: false,
+          error: "Validation Error",
+          message: "New password must be at least 8 characters."
         });
         return;
       }

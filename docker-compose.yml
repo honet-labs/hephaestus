@@ -6,11 +6,11 @@ services:
     container_name: hephaestus-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: hephaestus
+      POSTGRES_USER: ${PGUSER:-hephaestus}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-CHANGE_ME_STRONG_PASSWORD}
+      POSTGRES_DB: ${PGDATABASE:-hephaestus}
     ports:
-      - "5435:5432"
+      - "127.0.0.1:5435:5432"
     volumes:
       - hephaestus-db-data:/var/lib/postgresql/data
 
@@ -21,6 +21,12 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     ports:
       - "5000:5000"
     env_file:

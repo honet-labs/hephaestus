@@ -9,7 +9,7 @@ router.post("/login", loginLimiter, userController.login);
 router.post("/logout", userController.logout);
 router.get("/session", userController.getSession);
 
-router.get("/", userController.listUsers);
+router.get("/", requireRole("ADMIN"), userController.listUsers);
 router.post("/", requireRole("ADMIN"), userController.addUser);
 router.delete("/:id", requireRole("ADMIN"), userController.deleteUser);
 router.post("/:id/reset-password", requireRole("ADMIN"), userController.resetPassword);

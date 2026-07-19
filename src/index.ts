@@ -40,7 +40,7 @@ app.use(cors(corsOptions));
 
 // 1b. Security Headers — configure Helmet to work with frontend inline scripts
 // Only enable HSTS and upgradeInsecureRequests when running behind HTTPS reverse proxy
-const isHttps = process.env.HTTPS === "true" || process.env.NODE_ENV === "production";
+const isHttps = process.env.HTTPS !== "false";
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -146,7 +146,7 @@ app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: "Not Found",
-    message: `The endpoint ${req.method} ${req.path} does not exist.`
+    message: "The requested endpoint does not exist."
   });
 });
 
@@ -222,7 +222,7 @@ initDb()
       wss.on("connection", async (ws: any, req: any) => {
         // Origin validation — prevent Cross-Site WebSocket Hijacking
         const origin = req.headers.origin;
-        if (origin && !config.allowedOrigins.includes(origin)) {
+        if (!origin || !config.allowedOrigins.includes(origin)) {
           ws.send(JSON.stringify({ type: "error", message: "Origin not allowed." }));
           ws.close();
           return;
@@ -264,8 +264,8 @@ initDb()
             ws.close();
             return;
           }
-        } catch (err: any) {
-          ws.send(JSON.stringify({ type: "error", message: `Auth error: ${err.message}` }));
+        } catch {
+          ws.send(JSON.stringify({ type: "error", message: "Authentication failed." }));
           ws.close();
           return;
         }

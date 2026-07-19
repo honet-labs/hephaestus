@@ -32,23 +32,15 @@ else
     echo -e "${YELLOW}Warning: 'local-ci.sh' not found. Skipping gatekeeper checks.${NC}"
 fi
 
-# 2b. Check and Install Host Dependencies (snmpwalk, nmap)
+# 2b. Check and Install Host Dependencies (snmpwalk only)
 if command -v apt-get &> /dev/null; then
-    echo -e "${YELLOW}Checking host system dependencies (snmpwalk, nmap)...${NC}"
-    DEPS_TO_INSTALL=()
+    echo -e "${YELLOW}Checking host system dependencies (snmpwalk)...${NC}"
     if ! command -v snmpwalk &> /dev/null; then
-        DEPS_TO_INSTALL+=("snmp")
-    fi
-    if ! command -v nmap &> /dev/null; then
-        DEPS_TO_INSTALL+=("nmap")
-    fi
-
-    if [ ${#DEPS_TO_INSTALL[@]} -gt 0 ]; then
-        echo -e "${YELLOW}Installing missing dependencies on host: ${DEPS_TO_INSTALL[*]}...${NC}"
+        echo -e "${YELLOW}Installing missing dependency: snmp...${NC}"
         sudo apt-get update -y
-        sudo apt-get install -y "${DEPS_TO_INSTALL[@]}"
+        sudo apt-get install -y snmp
     else
-        echo -e "${GREEN}All host system dependencies (snmpwalk, nmap) are already installed.${NC}"
+        echo -e "${GREEN}snmpwalk is already installed.${NC}"
     fi
 fi
 

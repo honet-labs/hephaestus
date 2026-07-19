@@ -30,7 +30,7 @@ function getEncryptionKey(): Buffer {
   try {
     if (fs.existsSync(KEY_FILE)) {
       const raw = fs.readFileSync(KEY_FILE, "utf-8").trim();
-      console.log(`[Crypto] Loaded key from ${KEY_FILE} (${raw.length} hex chars)`);
+      console.log(`[Crypto] Loaded key from ${KEY_FILE}`);
       _cachedKey = Buffer.from(raw, "hex");
       return _cachedKey;
     }
@@ -63,19 +63,19 @@ export function decryptText(encryptedStr: string): string {
   // If not in expected format, return as-is (plaintext fallback)
   const parts = encryptedStr.split(":");
   if (parts.length !== 3) {
-    console.log(`[Crypto] decryptText: not encrypted format (${parts.length} parts), returning as-is`);
+    console.log(`[Crypto] decryptText: not encrypted format, returning as-is`);
     return encryptedStr;
   }
   try {
     const key = getEncryptionKey();
     const iv = Buffer.from(parts[0], "hex");
     const authTag = Buffer.from(parts[1], "hex");
-    console.log(`[Crypto] decryptText: iv=${iv.length}b authTag=${authTag.length}b ciphertext=${parts[2].length}hex key=${key.length}b`);
+    console.log(`[Crypto] decryptText: attempting decryption`);
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(parts[2], "hex", "utf8");
     decrypted += decipher.final("utf8");
-    console.log(`[Crypto] decryptText: SUCCESS, decrypted ${decrypted.length} chars`);
+    console.log(`[Crypto] decryptText: SUCCESS`);
     return decrypted;
   } catch (e: any) {
     console.error(`[Crypto] decryptText FAILED: ${e.message} — returning raw value`);
@@ -91,7 +91,7 @@ export function loadDbConfig() {
       // Decrypt password if it was encrypted
       const password = saved.password
         ? (saved.encrypted ? decryptText(saved.password) : saved.password)
-        : (process.env.PGPASSWORD || "postgres");
+        : (process.env.PGPASSWORD || "");
       return {
         host: saved.host || process.env.PGHOST || "localhost",
         port: parseInt(saved.port || process.env.PGPORT || "5432", 10),
@@ -109,7 +109,7 @@ export function loadDbConfig() {
     host: process.env.PGHOST || "localhost",
     port: parseInt(process.env.PGPORT || "5432", 10),
     user: process.env.PGUSER || "postgres",
-    password: process.env.PGPASSWORD || "postgres",
+    password: process.env.PGPASSWORD || "",
     database: process.env.PGDATABASE || "hephaestus",
     ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: config.sslRejectUnauthorized } : undefined,
   };
@@ -237,7 +237,7 @@ export function setupPool(dbConfig: any) {
   }
   activePool = new Pool({
     ...dbConfig,
-    max: 20,
+    max: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 3000,
   });
@@ -271,7 +271,7 @@ export async function query(text: string, params?: any[]) {
     const res = await activePool.query(text, params);
     const duration = Date.now() - start;
     if (duration > 500) {
-      console.warn(`[DB] Slow query detected: ${text} took ${duration}ms`);
+      console.warn(`[DB] Slow query detected (${duration}ms)`);
     }
     return res;
   } catch (err) {
@@ -308,8 +308,8 @@ export async function initDb() {
     await activePool.query("SELECT version()");
     isDbConnected = true;
   } catch (err: any) {
-    dbConnectionError = err.message || String(err);
-    console.warn("⚠️  [DB] PostgreSQL connection failed. Server will run in Setup Mode:", dbConnectionError);
+    dbConnectionError = "Database connection failed";
+    console.warn("⚠️  [DB] PostgreSQL connection failed. Server will run in Setup Mode.");
     return;
   }
   
