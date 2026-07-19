@@ -6,6 +6,20 @@
     <title>Remote Host - Hephaestus</title>
     <link rel="stylesheet" href="/vendor/xterm/xterm.min.css">
     <style>
+        @font-face {
+            font-family: 'JetBrains Mono';
+            src: url('/vendor/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'JetBrains Mono';
+            src: url('/vendor/fonts/JetBrainsMono-Bold.woff2') format('woff2');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
         :root {
             color-scheme: dark;
             --background: #242424;
@@ -410,7 +424,7 @@
         var sessionToken = localStorage.getItem('hephaestus_session_token');
         if (!sessionToken) { window.location.href = '/'; return; }
 
-        var TERMINAL_FONT = 'Consolas, "Courier New", monospace';
+        var TERMINAL_FONT = '"JetBrains Mono", Consolas, "Courier New", monospace';
 
         function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
         function getAvatarClass(s) {
