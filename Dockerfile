@@ -44,7 +44,7 @@ COPY public/ ./public
 COPY views/ ./views
 
 # Create persistent data directory for fallback db.json storage (if used)
-RUN mkdir -p /app/data && chown -R appuser:appgroup /app
+RUN mkdir -p /app/data/uploads && chown -R appuser:appgroup /app
 
 USER appuser
 

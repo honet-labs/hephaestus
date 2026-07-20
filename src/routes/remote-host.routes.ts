@@ -7,19 +7,22 @@ import fs from "fs";
 
 const router = Router();
 
-// Multer config for temp file uploads
-const uploadDir = path.join(__dirname, "../../data/uploads");
-fs.mkdirSync(uploadDir, { recursive: true });
-const upload = multer({
-  dest: uploadDir,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
-});
+// Multer config for temp file uploads (lazy init to avoid permission errors at module load)
+let upload: multer.Multer;
+function getUpload() {
+  if (!upload) {
+    const uploadDir = path.join(process.cwd(), "data/uploads");
+    fs.mkdirSync(uploadDir, { recursive: true, mode: 0o700 });
+    upload = multer({ dest: uploadDir, limits: { fileSize: 100 * 1024 * 1024 } });
+  }
+  return upload;
+}
 
 router.get("/configs", requireRole("ADMIN"), (req, res) => remoteHostController.getConfigs(req, res));
 router.post("/configs", requireRole("ADMIN"), (req, res) => remoteHostController.saveConfig(req, res));
 router.delete("/configs/:id", requireRole("ADMIN"), (req, res) => remoteHostController.deleteConfig(req, res));
 router.post("/test-connection", requireRole("ADMIN"), (req, res) => remoteHostController.testConnection(req, res));
 router.post("/sftp/list", requireRole("ADMIN"), (req, res) => remoteHostController.sftpListDir(req, res));
-router.post("/sftp/upload", requireRole("ADMIN"), upload.single("file"), (req, res) => remoteHostController.sftpUpload(req, res));
+router.post("/sftp/upload", requireRole("ADMIN"), (req, res, next) => getUpload().single("file")(req, res, next), (req, res) => remoteHostController.sftpUpload(req, res));
 
 export default router;
