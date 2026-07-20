@@ -716,7 +716,7 @@
                     if (msg.type === 'data') { tab.term.write(msg.data); }
                     else if (msg.type === 'connected') {
                         tab.status = 'connected';
-                        statusEl.textContent = msg.username + '@' + msg.host;
+                        statusEl.textContent = 'Connected';
                         statusEl.className = 'terminal-status connected';
                         if (overlayEl) overlayEl.classList.remove('active');
                         tab.term.focus();
