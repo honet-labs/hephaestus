@@ -63,6 +63,29 @@ class RemoteHostController {
         return res.status(400).json({ success: false, error: "hostConfigId is required." });
       }
       const remotePath = path || "/";
+
+      // Local file listing
+      if (hostConfigId === "__local__") {
+        const fs = require("fs");
+        const pathMod = require("path");
+        try {
+          const items = fs.readdirSync(remotePath, { withFileTypes: true });
+          const list = items.map((item: any) => {
+            let size = 0;
+            let modTime = "";
+            try {
+              const stat = fs.statSync(pathMod.join(remotePath, item.name));
+              size = stat.size;
+              modTime = stat.mtime.toISOString();
+            } catch (_) {}
+            return { name: item.name, isDir: item.isDirectory(), size, modTime };
+          });
+          return res.json({ success: true, data: list, path: remotePath });
+        } catch (err: any) {
+          return res.status(500).json({ success: false, error: "Cannot read directory." });
+        }
+      }
+
       const list = await remoteHostService.sftpListDir(hostConfigId, remotePath);
       return res.json({ success: true, data: list, path: remotePath });
     } catch (err: any) {

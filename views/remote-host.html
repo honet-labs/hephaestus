@@ -226,37 +226,139 @@
         }
         .tab-transfer:hover { color: var(--prometheus-orange); background: #333333; }
         .tab-transfer svg { width: 14px; height: 14px; }
-        .upload-dropzone {
-            border: 2px dashed var(--app-border); border-radius: 8px; padding: 40px 20px;
-            text-align: center; cursor: pointer; transition: all 0.2s; background: var(--app-card-dark);
+
+        /* File Transfer - Termius-like layout */
+        .ft-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--background); z-index: 1000; display: none;
+            flex-direction: column;
         }
-        .upload-dropzone:hover, .upload-dropzone.dragover {
-            border-color: var(--prometheus-orange); background: rgba(164, 129, 129, 0.08);
+        .ft-overlay.active { display: flex; }
+        .ft-container { flex: 1; display: flex; overflow: hidden; }
+        .ft-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .ft-local { border-right: 1px solid var(--app-border); }
+        .ft-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 16px; border-bottom: 1px solid var(--app-border);
+            background: var(--app-topbar); flex-shrink: 0; height: 40px;
         }
-        .upload-dropzone svg { width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 8px; }
-        .upload-dropzone p { color: var(--text-muted); font-size: 12px; margin: 0; }
-        .upload-dropzone .upload-file-name { color: var(--text-white); font-weight: 600; font-size: 13px; margin-top: 8px; }
-        .upload-file-list { margin-top: 10px; max-height: 150px; overflow-y: auto; }
-        .upload-file-item {
-            display: flex; align-items: center; gap: 8px; padding: 6px 10px;
-            background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 4px;
-            margin-bottom: 4px; font-size: 12px;
+        .ft-panel-title {
+            font-size: 12px; font-weight: 600; color: var(--text-white);
+            display: flex; align-items: center; gap: 6px;
         }
-        .upload-file-item .file-name { flex: 1; color: var(--text-white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .upload-file-item .file-size { color: var(--text-muted); white-space: nowrap; }
-        .upload-file-item .file-remove { cursor: pointer; color: var(--text-muted); padding: 2px; }
-        .upload-file-item .file-remove:hover { color: var(--error); }
-        .upload-progress { margin-top: 10px; }
-        .upload-progress-bar {
-            width: 100%; height: 6px; background: var(--app-card-dark); border-radius: 3px; overflow: hidden;
+        .ft-panel-actions { display: flex; gap: 4px; }
+        .ft-icon-btn {
+            background: none; border: 1px solid transparent; color: var(--text-muted);
+            cursor: pointer; padding: 4px; border-radius: 4px; display: flex;
+            align-items: center; transition: all 0.15s;
         }
-        .upload-progress-fill {
-            height: 100%; background: var(--prometheus-orange); border-radius: 3px; transition: width 0.3s;
+        .ft-icon-btn:hover { color: var(--text-white); background: var(--app-card); border-color: var(--app-border); }
+        .ft-breadcrumb {
+            display: flex; align-items: center; gap: 2px; padding: 6px 16px;
+            border-bottom: 1px solid var(--app-border); flex-shrink: 0;
+            background: var(--app-card-dark); font-size: 12px; min-height: 32px;
+            overflow-x: auto; white-space: nowrap;
         }
-        .upload-progress-text { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-        .upload-result { margin-top: 8px; font-size: 12px; padding: 6px 10px; border-radius: 4px; }
-        .upload-result.success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid var(--success-border); }
-        .upload-result.error { background: rgba(239,68,68,0.1); color: var(--error); border: 1px solid var(--error-border); }
+        .ft-breadcrumb::-webkit-scrollbar { height: 0; }
+        .ft-bc-item {
+            color: var(--text-muted); cursor: pointer; padding: 2px 4px; border-radius: 3px;
+            transition: all 0.15s;
+        }
+        .ft-bc-item:hover { color: var(--text-white); background: var(--app-card); }
+        .ft-bc-item.active { color: var(--text-white); cursor: default; }
+        .ft-bc-sep { color: var(--app-border); margin: 0 1px; }
+        .ft-table-wrap { flex: 1; overflow-y: auto; }
+        .ft-table-wrap::-webkit-scrollbar { width: 6px; }
+        .ft-table-wrap::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
+        .ft-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .ft-table thead { position: sticky; top: 0; z-index: 1; }
+        .ft-table th {
+            text-align: left; padding: 8px 12px; font-weight: 600; font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);
+            background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);
+        }
+        .ft-table td { padding: 6px 12px; border-bottom: 1px solid rgba(60,60,60,0.3); color: var(--foreground); }
+        .ft-table tr { cursor: pointer; transition: background 0.1s; }
+        .ft-table tbody tr:hover { background: rgba(164, 129, 129, 0.08); }
+        .ft-table tbody tr.selected { background: rgba(164, 129, 129, 0.15); }
+        .ft-table .col-name { width: 45%; }
+        .ft-table .col-date { width: 25%; color: var(--text-muted); }
+        .ft-table .col-size { width: 15%; color: var(--text-muted); text-align: right; }
+        .ft-table .col-kind { width: 15%; color: var(--text-muted); }
+        .ft-table .file-icon { margin-right: 6px; vertical-align: -2px; }
+        .ft-table .file-icon.folder { color: #5ba0d0; }
+        .ft-table .file-icon.file { color: var(--text-muted); }
+        .ft-table .file-icon.parent { color: var(--prometheus-orange); }
+        .ft-dropzone-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(26,26,26,0.9); display: none; align-items: center;
+            justify-content: center; flex-direction: column; gap: 8px; z-index: 5;
+        }
+        .ft-dropzone-overlay.active { display: flex; }
+        .ft-dropzone-overlay p { color: var(--text-muted); font-size: 12px; }
+        .ft-transfer-bar {
+            display: flex; align-items: center; justify-content: center;
+            padding: 8px 16px; border-top: 1px solid var(--app-border);
+            border-bottom: 1px solid var(--app-border); background: var(--app-topbar);
+            flex-shrink: 0; gap: 12px; min-height: 44px;
+        }
+        .ft-transfer-btn {
+            background: var(--btn-primary-bg); color: var(--btn-primary-color);
+            border: none; border-radius: 50%; width: 32px; height: 32px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; flex-shrink: 0;
+        }
+        .ft-transfer-btn:hover { background: var(--btn-primary-hover); }
+        .ft-transfer-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .ft-transfer-progress { flex: 1; max-width: 300px; }
+        .ft-progress-bar {
+            width: 100%; height: 4px; background: var(--app-card-dark); border-radius: 2px; overflow: hidden;
+        }
+        .ft-progress-fill { height: 100%; background: var(--prometheus-orange); width: 0%; transition: width 0.3s; border-radius: 2px; }
+        .ft-progress-text { font-size: 10px; color: var(--text-muted); margin-top: 3px; text-align: center; }
+        .ft-transfer-result { font-size: 11px; padding: 4px 10px; border-radius: 4px; }
+        .ft-transfer-result.success { color: var(--success); }
+        .ft-transfer-result.error { color: var(--error); }
+        .ft-search { padding: 8px 16px; flex-shrink: 0; }
+        .ft-search input {
+            width: 100%; background: var(--app-card-dark); border: 1px solid var(--app-border);
+            color: var(--text-white); padding: 7px 10px; border-radius: 4px;
+            font-size: 12px; outline: none;
+        }
+        .ft-search input::placeholder { color: var(--text-muted); }
+        .ft-search input:focus { border-color: var(--prometheus-orange); }
+        .ft-host-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+        .ft-host-list::-webkit-scrollbar { width: 6px; }
+        .ft-host-list::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
+        .ft-group-label {
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+            color: var(--text-muted); padding: 12px 8px 6px; display: flex; align-items: center; gap: 6px;
+        }
+        .ft-group-label .ft-group-count {
+            background: var(--app-card-dark); border-radius: 3px; padding: 1px 5px;
+            font-size: 9px; font-weight: 600; color: var(--prometheus-orange);
+        }
+        .ft-host-item {
+            display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+            border-radius: 4px; cursor: pointer; transition: all 0.12s;
+        }
+        .ft-host-item:hover { background: var(--app-card); }
+        .ft-host-item.selected { background: rgba(164, 129, 129, 0.15); border: 1px solid var(--prometheus-orange); }
+        .ft-host-avatar {
+            width: 32px; height: 32px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; flex-shrink: 0;
+            font-size: 12px; font-weight: 700; color: #fff;
+        }
+        .ft-host-info { min-width: 0; }
+        .ft-host-name { font-size: 12px; font-weight: 600; color: var(--text-white); }
+        .ft-host-detail { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+        .ft-bottom-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 16px; background: var(--app-topbar); border-top: 1px solid var(--app-border);
+            flex-shrink: 0; height: 42px;
+        }
+        .ft-bottom-left { font-size: 11px; color: var(--text-muted); }
+        .ft-bottom-right { display: flex; gap: 8px; align-items: center; }
 
         .content-area { flex: 1; position: relative; overflow: hidden; min-height: 0; }
         .home-view {
@@ -502,41 +604,80 @@
         </div>
     </div>
 
-    <div id="modal-file-transfer" class="modal-overlay">
-        <div class="modal-dialog" style="width: 520px;">
-            <div class="modal-header">
-                <h3>File Transfer</h3>
-                <button class="modal-close" id="ft-close-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Remote Host</label>
-                    <select id="ft-host"></select>
-                </div>
-                <div class="form-group">
-                    <label>Remote Path</label>
-                    <div style="display:flex; gap:6px;">
-                        <input type="text" id="ft-remote-path" value="/tmp" placeholder="/home/user/" style="flex:1;">
-                        <button class="btn btn-secondary" id="ft-browse-btn" style="white-space:nowrap;">Browse</button>
+    <div id="modal-file-transfer" class="ft-overlay">
+        <div class="ft-container">
+            <!-- Left Panel: Local Files -->
+            <div class="ft-panel ft-local">
+                <div class="ft-panel-header">
+                    <div class="ft-panel-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                        Local
+                    </div>
+                    <div class="ft-panel-actions">
+                        <button class="ft-icon-btn" id="ft-local-refresh" title="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
                     </div>
                 </div>
-                <div class="upload-dropzone" id="ft-dropzone">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <p>Drop files here or click to select</p>
-                    <input type="file" id="ft-file-input" multiple style="display:none;">
+                <div class="ft-breadcrumb" id="ft-local-breadcrumb"></div>
+                <div class="ft-table-wrap">
+                    <table class="ft-table">
+                        <thead><tr><th>Name</th><th>Date Modified</th><th>Size</th><th>Kind</th></tr></thead>
+                        <tbody id="ft-local-files"></tbody>
+                    </table>
                 </div>
-                <div class="upload-file-list" id="ft-file-list"></div>
+                <div class="ft-dropzone-overlay" id="ft-drop-overlay">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <p>Drop files to upload</p>
+                </div>
             </div>
-            <div class="modal-footer">
-                <div style="flex:1;">
-                    <div class="upload-progress" id="ft-progress" style="display:none;">
-                        <div class="upload-progress-bar"><div class="upload-progress-fill" id="ft-progress-fill" style="width:0%"></div></div>
-                        <div class="upload-progress-text" id="ft-progress-text"></div>
-                    </div>
-                    <div class="upload-result" id="ft-result" style="display:none;"></div>
+
+            <!-- Transfer Controls -->
+            <div class="ft-transfer-bar">
+                <button class="ft-transfer-btn" id="ft-upload-btn" title="Upload to remote">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg>
+                </button>
+                <div class="ft-transfer-progress" id="ft-progress" style="display:none;">
+                    <div class="ft-progress-bar"><div class="ft-progress-fill" id="ft-progress-fill"></div></div>
+                    <div class="ft-progress-text" id="ft-progress-text"></div>
                 </div>
-                <button class="btn btn-secondary" id="ft-cancel-btn">Cancel</button>
-                <button class="btn btn-primary" id="ft-upload-btn" disabled>Upload</button>
+                <div class="ft-transfer-result" id="ft-result" style="display:none;"></div>
+            </div>
+
+            <!-- Right Panel: Remote Host -->
+            <div class="ft-panel ft-remote">
+                <div class="ft-panel-header">
+                    <div class="ft-panel-title" id="ft-remote-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                        Select Host
+                    </div>
+                    <button class="ft-icon-btn" id="ft-close-btn" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                </div>
+                <!-- Host selector view -->
+                <div id="ft-host-selector">
+                    <div class="ft-search"><input type="text" id="ft-host-search" placeholder="Search hosts..."></div>
+                    <div class="ft-host-list" id="ft-host-list"></div>
+                </div>
+                <!-- Remote file browser view (hidden until host selected) -->
+                <div id="ft-remote-browser" style="display:none;">
+                    <div class="ft-breadcrumb" id="ft-remote-breadcrumb"></div>
+                    <div class="ft-table-wrap">
+                        <table class="ft-table">
+                            <thead><tr><th>Name</th><th>Size</th><th>Kind</th></tr></thead>
+                            <tbody id="ft-remote-files"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="ft-bottom-bar">
+            <div class="ft-bottom-left">
+                <span id="ft-status-text">No host selected</span>
+            </div>
+            <div class="ft-bottom-right">
+                <input type="file" id="ft-file-input" multiple style="display:none;">
+                <button class="btn btn-secondary" id="ft-add-files-btn">+ Add Files</button>
+                <button class="btn btn-primary" id="ft-send-btn" disabled>Upload</button>
             </div>
         </div>
     </div>
@@ -1049,22 +1190,32 @@
         // === FILE TRANSFER ===
         var ftFiles = [];
         var ftUploading = false;
+        var ftSelectedHost = null;
+        var ftRemotePath = '/';
+        var ftRemoteHistory = ['/'];
+        var ftRemoteHistoryIdx = 0;
+        var ftLocalPath = '/';
+        var ftLocalHistory = ['/'];
+        var ftLocalHistoryIdx = 0;
 
         function openFileTransferModal() {
-            var sel = document.getElementById('ft-host');
-            sel.innerHTML = servers.map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + ' (' + esc(s.host) + ')</option>'; }).join('');
-            // Pre-select active tab's server
-            if (activeTabId) {
-                var t = null;
-                for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === activeTabId) { t = tabs[i]; break; } }
-                if (t) sel.value = t.serverId;
-            }
             ftFiles = [];
-            document.getElementById('ft-file-list').innerHTML = '';
-            document.getElementById('ft-remote-path').value = '/tmp';
+            ftSelectedHost = null;
+            ftRemotePath = '/';
+            ftRemoteHistory = ['/'];
+            ftRemoteHistoryIdx = 0;
+            ftLocalPath = '/';
+            ftLocalHistory = ['/'];
+            ftLocalHistoryIdx = 0;
             document.getElementById('ft-progress').style.display = 'none';
             document.getElementById('ft-result').style.display = 'none';
-            document.getElementById('ft-upload-btn').disabled = true;
+            document.getElementById('ft-send-btn').disabled = true;
+            document.getElementById('ft-status-text').textContent = 'No host selected';
+            document.getElementById('ft-host-selector').style.display = '';
+            document.getElementById('ft-remote-browser').style.display = 'none';
+            document.getElementById('ft-remote-title').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg> Select Host';
+            renderFtHostList();
+            renderFtLocalFiles();
             document.getElementById('modal-file-transfer').classList.add('active');
         }
         function closeFileTransferModal() { document.getElementById('modal-file-transfer').classList.remove('active'); }
@@ -1075,14 +1226,165 @@
             if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
             return (bytes / 1073741824).toFixed(1) + ' GB';
         }
+        function formatFtDate(d) {
+            if (!d) return '-';
+            var dt = new Date(d);
+            return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+        function getFileKind(name, isDir) {
+            if (isDir) return 'folder';
+            var ext = name.split('.').pop().toLowerCase();
+            var map = { 'txt': 'text', 'log': 'text', 'csv': 'text', 'md': 'text', 'json': 'JSON', 'yaml': 'YAML', 'yml': 'YAML', 'xml': 'XML', 'html': 'HTML', 'css': 'CSS', 'js': 'JS', 'ts': 'TS', 'py': 'Python', 'sh': 'script', 'bash': 'script', 'zip': 'archive', 'tar': 'archive', 'gz': 'archive', 'rar': 'archive', 'jpg': 'image', 'jpeg': 'image', 'png': 'image', 'gif': 'image', 'svg': 'image', 'pdf': 'PDF', 'conf': 'config', 'cfg': 'config', 'ini': 'config' };
+            return map[ext] || ext.toUpperCase() || 'file';
+        }
+        function getFileIcon(name, isDir) {
+            if (isDir) return '<svg class="file-icon folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
+            return '<svg class="file-icon file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>';
+        }
 
-        function renderFtFileList() {
-            var el = document.getElementById('ft-file-list');
-            if (ftFiles.length === 0) { el.innerHTML = ''; document.getElementById('ft-upload-btn').disabled = true; return; }
-            document.getElementById('ft-upload-btn').disabled = false;
-            el.innerHTML = ftFiles.map(function(f, i) {
-                return '<div class="upload-file-item"><span class="file-name">' + esc(f.name) + '</span><span class="file-size">' + formatSize(f.size) + '</span><span class="file-remove" data-idx="' + i + '">&times;</span></div>';
-            }).join('');
+        // --- Host Selector ---
+        function renderFtHostList(filter) {
+            var list = document.getElementById('ft-host-list');
+            var search = (filter || '').toLowerCase();
+            var filtered = servers;
+            if (search) filtered = servers.filter(function(s) { return s.name.toLowerCase().indexOf(search) !== -1 || s.host.toLowerCase().indexOf(search) !== -1 || s.username.toLowerCase().indexOf(search) !== -1; });
+            var groups = {};
+            filtered.forEach(function(s) { var g = s.groupName || 'Default'; if (!groups[g]) groups[g] = []; groups[g].push(s); });
+            var html = '';
+            Object.keys(groups).sort().forEach(function(g) {
+                html += '<div class="ft-group-label">' + esc(g) + ' <span class="ft-group-count">' + groups[g].length + '</span></div>';
+                groups[g].forEach(function(s) {
+                    var avClass = (s.name || '').toLowerCase().indexOf('docker') !== -1 ? 'docker' : (s.username === 'root' ? 'linux' : 'server');
+                    var initials = s.name.split(/[\s_\-]+/).length >= 2 ? (s.name.split(/[\s_\-]+/)[0][0] + s.name.split(/[\s_\-]+/)[1][0]).toUpperCase() : s.name.substring(0, 2).toUpperCase();
+                    html += '<div class="ft-host-item' + (ftSelectedHost && ftSelectedHost.id === s.id ? ' selected' : '') + '" data-id="' + esc(s.id) + '">' +
+                        '<div class="host-avatar ' + avClass + '">' + initials + '</div>' +
+                        '<div class="ft-host-info"><div class="ft-host-name">' + esc(s.name) + '</div>' +
+                        '<div class="ft-host-detail">ssh, ' + esc(s.username) + ', ' + esc(s.host) + (s.tags && s.tags.length ? ', ' + s.tags.join(', ') : '') + '</div></div></div>';
+                });
+            });
+            list.innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">No hosts found</div>';
+        }
+
+        function selectFtHost(hostId) {
+            var srv = null;
+            for (var i = 0; i < servers.length; i++) { if (servers[i].id === hostId) { srv = servers[i]; break; } }
+            if (!srv) return;
+            ftSelectedHost = srv;
+            ftRemotePath = '/';
+            ftRemoteHistory = ['/'];
+            ftRemoteHistoryIdx = 0;
+            document.getElementById('ft-host-selector').style.display = 'none';
+            document.getElementById('ft-remote-browser').style.display = '';
+            document.getElementById('ft-remote-title').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg> ' + esc(srv.name);
+            document.getElementById('ft-status-text').textContent = esc(srv.username) + '@' + esc(srv.host);
+            renderFtRemoteBreadcrumb();
+            loadFtRemoteDir(ftRemotePath);
+        }
+
+        // --- Remote File Browser ---
+        function renderFtRemoteBreadcrumb() {
+            var el = document.getElementById('ft-remote-breadcrumb');
+            var parts = ftRemotePath.split('/').filter(Boolean);
+            var html = '<span class="ft-bc-item' + (parts.length === 0 ? ' active' : '') + '" data-path="/">/</span>';
+            var path = '';
+            parts.forEach(function(p, i) {
+                path += '/' + p;
+                var isLast = i === parts.length - 1;
+                html += '<span class="ft-bc-sep">/</span><span class="ft-bc-item' + (isLast ? ' active' : '') + '" data-path="' + esc(path) + '">' + esc(p) + '</span>';
+            });
+            html = '<span class="ft-icon-btn" id="ft-remote-back" title="Back"' + (ftRemoteHistoryIdx <= 0 ? ' style="opacity:0.3;pointer-events:none;"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="15 18 9 12 15 6"></polyline></svg></span>' +
+                   '<span class="ft-icon-btn" id="ft-remote-fwd" title="Forward"' + (ftRemoteHistoryIdx >= ftRemoteHistory.length - 1 ? ' style="opacity:0.3;pointer-events:none;"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 18 15 12 9 6"></polyline></svg></span>' +
+                   html;
+            el.innerHTML = html;
+        }
+
+        function loadFtRemoteDir(path) {
+            if (!ftSelectedHost) return;
+            ftRemotePath = path;
+            renderFtRemoteBreadcrumb();
+            var tbody = document.getElementById('ft-remote-files');
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Loading...</td></tr>';
+            api('POST', '/api/v1/remote-host/sftp/list', { hostConfigId: ftSelectedHost.id, path: path }).then(function(data) {
+                if (!data.success) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--error);padding:20px;">' + esc(data.error || 'Failed') + '</td></tr>'; return; }
+                var items = data.data || [];
+                var dirs = items.filter(function(i) { return i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+                var files = items.filter(function(i) { return !i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+                var sorted = dirs.concat(files);
+                var html = '';
+                if (path !== '/') {
+                    var parent = path.replace(/\/[^\/]+\/?$/, '') || '/';
+                    html += '<tr class="ft-nav-parent" data-path="' + esc(parent) + '"><td class="col-name">' + getFileIcon('', true) + '<span style="color:var(--prometheus-orange);">..</span></td><td class="col-size">-</td><td class="col-kind">parent</td></tr>';
+                }
+                sorted.forEach(function(item) {
+                    html += '<tr data-name="' + esc(item.name) + '" data-isdir="' + item.isDir + '" data-size="' + (item.size || 0) + '">' +
+                        '<td class="col-name">' + getFileIcon(item.name, item.isDir) + esc(item.name) + '</td>' +
+                        '<td class="col-size">' + (item.isDir ? '-' : formatSize(item.size || 0)) + '</td>' +
+                        '<td class="col-kind">' + getFileKind(item.name, item.isDir) + '</td></tr>';
+                });
+                if (!sorted.length && path === '/') {
+                    html = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Empty directory</td></tr>';
+                }
+                tbody.innerHTML = html;
+            }).catch(function() {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--error);padding:20px;">Connection failed</td></tr>';
+            });
+        }
+
+        // --- Local File Browser ---
+        var ftLocalEntries = [];
+
+        function renderFtLocalBreadcrumb() {
+            var el = document.getElementById('ft-local-breadcrumb');
+            var parts = ftLocalPath.split('/').filter(Boolean);
+            var html = '<span class="ft-bc-item' + (parts.length === 0 ? ' active' : '') + '" data-path="/">/</span>';
+            var path = '';
+            parts.forEach(function(p, i) {
+                path += '/' + p;
+                var isLast = i === parts.length - 1;
+                html += '<span class="ft-bc-sep">/</span><span class="ft-bc-item' + (isLast ? ' active' : '') + '" data-path="' + esc(path) + '">' + esc(p) + '</span>';
+            });
+            html = '<span class="ft-icon-btn" id="ft-local-back" title="Back"' + (ftLocalHistoryIdx <= 0 ? ' style="opacity:0.3;pointer-events:none;"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="15 18 9 12 15 6"></polyline></svg></span>' +
+                   '<span class="ft-icon-btn" id="ft-local-fwd" title="Forward"' + (ftLocalHistoryIdx >= ftLocalHistory.length - 1 ? ' style="opacity:0.3;pointer-events:none;"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 18 15 12 9 6"></polyline></svg></span>' +
+                   html;
+            el.innerHTML = html;
+        }
+
+        function renderFtLocalFiles() {
+            ftLocalPath = ftLocalPath || '/';
+            renderFtLocalBreadcrumb();
+            var tbody = document.getElementById('ft-local-files');
+            // Use fetch to list local directory via API
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Loading...</td></tr>';
+            api('POST', '/api/v1/remote-host/sftp/list', { hostConfigId: '__local__', path: ftLocalPath }).then(function(data) {
+                if (!data.success) {
+                    // Fallback: show drag-drop message
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">Select files using "Add Files" button or drag & drop</td></tr>';
+                    return;
+                }
+                var items = data.data || [];
+                var dirs = items.filter(function(i) { return i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+                var files = items.filter(function(i) { return !i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+                var sorted = dirs.concat(files);
+                var html = '';
+                if (ftLocalPath !== '/') {
+                    var parent = ftLocalPath.replace(/\/[^\/]+\/?$/, '') || '/';
+                    html += '<tr class="ft-nav-parent" data-path="' + esc(parent) + '"><td class="col-name">' + getFileIcon('', true) + '<span style="color:var(--prometheus-orange);">..</span></td><td class="col-date">-</td><td class="col-size">-</td><td class="col-kind">parent</td></tr>';
+                }
+                sorted.forEach(function(item) {
+                    var inQueue = ftFiles.some(function(f) { return f.name === item.name; });
+                    html += '<tr data-name="' + esc(item.name) + '" data-isdir="' + item.isDir + '" data-size="' + (item.size || 0) + '"' + (inQueue ? ' class="selected"' : '') + '>' +
+                        '<td class="col-name">' + getFileIcon(item.name, item.isDir) + esc(item.name) + '</td>' +
+                        '<td class="col-date">' + formatFtDate(item.modTime) + '</td>' +
+                        '<td class="col-size">' + (item.isDir ? '-' : formatSize(item.size || 0)) + '</td>' +
+                        '<td class="col-kind">' + getFileKind(item.name, item.isDir) + '</td></tr>';
+                });
+                if (!sorted.length) {
+                    html = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Empty directory</td></tr>';
+                }
+                tbody.innerHTML = html;
+            }).catch(function() {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">Select files using "Add Files" button or drag & drop</td></tr>';
+            });
         }
 
         function addFtFiles(fileList) {
@@ -1093,24 +1395,34 @@
                 }
                 if (!exists) ftFiles.push(fileList[i]);
             }
-            renderFtFileList();
+            updateFtSendBtn();
+            renderFtLocalFiles();
+        }
+
+        function updateFtSendBtn() {
+            document.getElementById('ft-send-btn').disabled = ftFiles.length === 0 || !ftSelectedHost;
+            document.getElementById('ft-status-text').textContent = ftFiles.length > 0 ? ftFiles.length + ' file(s) selected' + (ftSelectedHost ? ' for ' + ftSelectedHost.name : '') : (ftSelectedHost ? ftSelectedHost.username + '@' + ftSelectedHost.host : 'No host selected');
+        }
+
+        function navigateFtLocal(path) {
+            ftLocalHistory = ftLocalHistory.slice(0, ftLocalHistoryIdx + 1);
+            ftLocalHistory.push(path);
+            ftLocalHistoryIdx = ftLocalHistory.length - 1;
+            ftLocalPath = path;
+            renderFtLocalFiles();
         }
 
         function uploadFtFiles() {
-            if (ftUploading || ftFiles.length === 0) return;
-            var hostConfigId = document.getElementById('ft-host').value;
-            var remotePath = document.getElementById('ft-remote-path').value.trim();
-            if (!hostConfigId || !remotePath) { alert('Select a host and enter remote path.'); return; }
-
+            if (ftUploading || ftFiles.length === 0 || !ftSelectedHost) return;
             ftUploading = true;
             var progress = document.getElementById('ft-progress');
             var fill = document.getElementById('ft-progress-fill');
             var text = document.getElementById('ft-progress-text');
             var result = document.getElementById('ft-result');
-            var uploadBtn = document.getElementById('ft-upload-btn');
+            var sendBtn = document.getElementById('ft-send-btn');
             progress.style.display = 'block';
             result.style.display = 'none';
-            uploadBtn.disabled = true;
+            sendBtn.disabled = true;
 
             var completed = 0;
             var total = ftFiles.length;
@@ -1122,72 +1434,35 @@
                     progress.style.display = 'none';
                     result.style.display = 'block';
                     if (errors.length === 0) {
-                        result.className = 'upload-result success';
+                        result.className = 'ft-transfer-result success';
                         result.textContent = 'All ' + total + ' file(s) uploaded successfully.';
                     } else {
-                        result.className = 'upload-result error';
+                        result.className = 'ft-transfer-result error';
                         result.textContent = (total - errors.length) + '/' + total + ' uploaded. Errors: ' + errors.join(', ');
                     }
-                    uploadBtn.disabled = false;
+                    sendBtn.disabled = false;
+                    if (ftSelectedHost) loadFtRemoteDir(ftRemotePath);
                     return;
                 }
                 var f = ftFiles[completed];
                 var pct = Math.round((completed / total) * 100);
                 fill.style.width = pct + '%';
                 text.textContent = 'Uploading ' + (completed + 1) + '/' + total + ': ' + f.name;
-
                 var formData = new FormData();
                 formData.append('file', f);
-                formData.append('hostConfigId', hostConfigId);
-                var fileName = f.name;
-                var fullPath = remotePath.replace(/\/+$/, '') + '/' + fileName;
-                formData.append('remotePath', fullPath);
-
+                formData.append('hostConfigId', ftSelectedHost.id);
+                formData.append('remotePath', ftRemotePath.replace(/\/+$/, '') + '/' + f.name);
                 fetch('/api/v1/remote-host/sftp/upload', {
                     method: 'POST',
                     headers: { 'Authorization': 'Bearer ' + sessionToken },
                     body: formData
                 }).then(function(r) { return r.json(); }).then(function(data) {
-                    if (!data.success) errors.push(fileName);
+                    if (!data.success) errors.push(f.name);
                     completed++;
                     uploadNext();
-                }).catch(function() {
-                    errors.push(fileName);
-                    completed++;
-                    uploadNext();
-                });
+                }).catch(function() { errors.push(f.name); completed++; uploadNext(); });
             }
             uploadNext();
-        }
-
-        function browseRemotePath() {
-            var hostConfigId = document.getElementById('ft-host').value;
-            var currentPath = document.getElementById('ft-remote-path').value.trim() || '/';
-            if (!hostConfigId) { alert('Select a host first.'); return; }
-            api('POST', '/api/v1/remote-host/sftp/list', { hostConfigId: hostConfigId, path: currentPath }).then(function(data) {
-                if (!data.success) { alert(data.error || 'Failed to list directory.'); return; }
-                var items = data.data || [];
-                var dirs = items.filter(function(i) { return i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
-                var html = '<div style="max-height:300px;overflow-y:auto;">';
-                html += '<div class="upload-file-item" style="cursor:pointer;" data-path="' + esc(currentPath.replace(/\/[^\/]+\/?$/, '') || '/') + '"><span class="file-name" style="color:var(--prometheus-orange);">.. (parent)</span></div>';
-                dirs.forEach(function(d) {
-                    var p = currentPath.replace(/\/+$/, '') + '/' + d.name;
-                    html += '<div class="upload-file-item" style="cursor:pointer;" data-path="' + esc(p) + '"><span class="file-name" style="color:var(--prometheus-orange);">' + esc(d.name) + '/</span></div>';
-                });
-                html += '</div>';
-                var overlay = document.createElement('div');
-                overlay.className = 'modal-overlay active';
-                overlay.id = 'ft-browse-overlay';
-                overlay.innerHTML = '<div class="modal-dialog" style="width:400px;"><div class="modal-header"><h3>Browse: ' + esc(currentPath) + '</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div class="modal-body" style="padding:8px;">' + html + '</div></div>';
-                document.body.appendChild(overlay);
-                overlay.addEventListener('click', function(e) {
-                    var item = e.target.closest('.upload-file-item');
-                    if (item && item.dataset.path) {
-                        document.getElementById('ft-remote-path').value = item.dataset.path;
-                        overlay.remove();
-                    }
-                });
-            });
         }
 
         document.getElementById('tab-bar').addEventListener('click', function(e) {
@@ -1329,20 +1604,53 @@
             if (btn && btn.dataset.reconnect) reconnectTab(btn.dataset.reconnect);
         });
 
-        // File Transfer modal events
+        // File Transfer events
         document.getElementById('ft-close-btn').addEventListener('click', closeFileTransferModal);
-        document.getElementById('ft-cancel-btn').addEventListener('click', closeFileTransferModal);
-        document.getElementById('ft-upload-btn').addEventListener('click', uploadFtFiles);
-        document.getElementById('ft-browse-btn').addEventListener('click', browseRemotePath);
-        document.getElementById('ft-dropzone').addEventListener('click', function() { document.getElementById('ft-file-input').click(); });
+        document.getElementById('ft-send-btn').addEventListener('click', uploadFtFiles);
+        document.getElementById('ft-add-files-btn').addEventListener('click', function() { document.getElementById('ft-file-input').click(); });
         document.getElementById('ft-file-input').addEventListener('change', function(e) { addFtFiles(e.target.files); e.target.value = ''; });
-        document.getElementById('ft-dropzone').addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
-        document.getElementById('ft-dropzone').addEventListener('dragleave', function() { this.classList.remove('dragover'); });
-        document.getElementById('ft-dropzone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); addFtFiles(e.dataTransfer.files); });
-        document.getElementById('ft-file-list').addEventListener('click', function(e) {
-            var rm = e.target.closest('.file-remove');
-            if (rm) { ftFiles.splice(parseInt(rm.dataset.idx), 1); renderFtFileList(); }
+        document.getElementById('ft-host-search').addEventListener('input', function(e) { renderFtHostList(e.target.value); });
+        document.getElementById('ft-host-list').addEventListener('click', function(e) {
+            var item = e.target.closest('.ft-host-item');
+            if (item && item.dataset.id) selectFtHost(item.dataset.id);
         });
+        document.getElementById('ft-local-files').addEventListener('click', function(e) {
+            var row = e.target.closest('tr');
+            if (!row) return;
+            var parentRow = row.closest('.ft-nav-parent');
+            if (parentRow) { navigateFtLocal(parentRow.dataset.path); return; }
+            var name = row.dataset.name;
+            var isDir = row.dataset.isdir === 'true';
+            if (isDir && name) { navigateFtLocal(ftLocalPath.replace(/\/+$/, '') + '/' + name); }
+        });
+        document.getElementById('ft-remote-files').addEventListener('click', function(e) {
+            var row = e.target.closest('tr');
+            if (!row) return;
+            var parentRow = row.closest('.ft-nav-parent');
+            if (parentRow) { loadFtRemoteDir(parentRow.dataset.path); return; }
+            var name = row.dataset.name;
+            var isDir = row.dataset.isdir === 'true';
+            if (isDir && name) { ftRemoteHistory = ftRemoteHistory.slice(0, ftRemoteHistoryIdx + 1); ftRemoteHistory.push(ftRemotePath.replace(/\/+$/, '') + '/' + name); ftRemoteHistoryIdx = ftRemoteHistory.length - 1; loadFtRemoteDir(ftRemotePath.replace(/\/+$/, '') + '/' + name); }
+        });
+        document.getElementById('ft-local-breadcrumb').addEventListener('click', function(e) {
+            var item = e.target.closest('.ft-bc-item');
+            if (item && item.dataset.path) { navigateFtLocal(item.dataset.path); }
+        });
+        document.getElementById('ft-remote-breadcrumb').addEventListener('click', function(e) {
+            var back = e.target.closest('#ft-remote-back');
+            if (back) { if (ftRemoteHistoryIdx > 0) { ftRemoteHistoryIdx--; loadFtRemoteDir(ftRemoteHistory[ftRemoteHistoryIdx]); } return; }
+            var fwd = e.target.closest('#ft-remote-fwd');
+            if (fwd) { if (ftRemoteHistoryIdx < ftRemoteHistory.length - 1) { ftRemoteHistoryIdx++; loadFtRemoteDir(ftRemoteHistory[ftRemoteHistoryIdx]); } return; }
+            var bcItem = e.target.closest('.ft-bc-item');
+            if (bcItem && bcItem.dataset.path) { ftRemoteHistory = ftRemoteHistory.slice(0, ftRemoteHistoryIdx + 1); ftRemoteHistory.push(bcItem.dataset.path); ftRemoteHistoryIdx = ftRemoteHistory.length - 1; loadFtRemoteDir(bcItem.dataset.path); }
+        });
+        // Drag & drop on local panel
+        var ftLocalPanel = document.querySelector('.ft-local');
+        if (ftLocalPanel) {
+            ftLocalPanel.addEventListener('dragover', function(e) { e.preventDefault(); document.getElementById('ft-drop-overlay').classList.add('active'); });
+            ftLocalPanel.addEventListener('dragleave', function(e) { if (!ftLocalPanel.contains(e.relatedTarget)) document.getElementById('ft-drop-overlay').classList.remove('active'); });
+            ftLocalPanel.addEventListener('drop', function(e) { e.preventDefault(); document.getElementById('ft-drop-overlay').classList.remove('active'); addFtFiles(e.dataTransfer.files); });
+        }
 
         loadServers().then(function() {
             renderHome();
