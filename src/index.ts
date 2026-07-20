@@ -216,10 +216,23 @@ initDb()
       // WebSocket server for Remote Host terminal (attached to same HTTP server)
       const { WebSocketServer } = require("ws");
       const MAX_WS_CONNECTIONS = 10;
+      const WS_PING_INTERVAL = 30000;
       let wsConnectionCount = 0;
       wss = new WebSocketServer({ server, path: "/ws/remote-host" });
 
+      // Keepalive ping to prevent Cloudflare/proxy idle timeout
+      const pingTimer = setInterval(() => {
+        wss.clients.forEach((ws: any) => {
+          if (ws.isAlive === false) return ws.terminate();
+          ws.isAlive = false;
+          ws.ping();
+        });
+      }, WS_PING_INTERVAL);
+      wss.on("close", () => clearInterval(pingTimer));
+
       wss.on("connection", async (ws: any, req: any) => {
+        ws.isAlive = true;
+        ws.on("pong", () => { ws.isAlive = true; });
         // Origin validation — prevent Cross-Site WebSocket Hijacking
         const origin = req.headers.origin;
         if (!origin || !config.allowedOrigins.includes(origin)) {
@@ -250,6 +263,7 @@ initDb()
         }
 
         // Verify session token
+        let userId = 0;
         try {
           const crypto = require("crypto");
           const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -264,6 +278,12 @@ initDb()
             ws.close();
             return;
           }
+          userId = sessionRes.rows[0].user_id;
+          // Extend session expiry on connect (sliding window)
+          await dbPool.query(
+            "UPDATE user_sessions SET expires_at = NOW() + INTERVAL '24 hours' WHERE token = $1",
+            [tokenHash]
+          );
         } catch {
           ws.send(JSON.stringify({ type: "error", message: "Authentication failed." }));
           ws.close();
@@ -271,7 +291,7 @@ initDb()
         }
 
         const { remoteHostService } = require("./services/remote-host.service");
-        remoteHostService.handleWebSocket(ws, hostConfigId, cols, rows);
+        remoteHostService.handleWebSocket(ws, hostConfigId, cols, rows, userId);
       });
 
       console.log(`🔌 WebSocket server for Remote Host terminal started on /ws/remote-host`);

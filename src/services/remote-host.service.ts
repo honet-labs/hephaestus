@@ -111,7 +111,7 @@ class RemoteHostService {
     return r;
   }
 
-  public handleWebSocket(ws: WebSocket, hostConfigId: string, cols: number, rows: number): void {
+  public handleWebSocket(ws: WebSocket, hostConfigId: string, cols: number, rows: number, userId?: number): void {
     this.getRawConfig(hostConfigId).then((cfg) => {
       if (!cfg) {
         ws.send(JSON.stringify({ type: "error", message: "Host config not found." }));
@@ -176,6 +176,18 @@ class RemoteHostService {
           } else if (parsed.type === "disconnect") {
             termStream?.close();
             ssh.end();
+          } else if (parsed.type === "ping") {
+            // Respond pong and extend session expiry
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "pong" }));
+            }
+            if (userId) {
+              const { query } = require("../config/db");
+              query(
+                "UPDATE user_sessions SET expires_at = NOW() + INTERVAL '24 hours' WHERE user_id = $1 AND expires_at > NOW()",
+                [userId]
+              ).catch(() => {});
+            }
           }
         } catch (_) {
           // If not JSON, treat as raw input
@@ -195,6 +207,8 @@ class RemoteHostService {
         host: cfg.host,
         port: cfg.port || 22,
         username: cfg.username,
+        keepaliveInterval: 15000,
+        keepaliveCountMax: 3,
       };
       if (cfg.authType === "key" && cfg.sshKey) {
         connectOpts.privateKey = cfg.sshKey;

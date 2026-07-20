@@ -710,6 +710,11 @@
             var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             var url = protocol + '//' + location.host + '/ws/remote-host?token=' + encodeURIComponent(sessionToken) + '&hostId=' + encodeURIComponent(srv.id) + '&cols=' + tab.term.cols + '&rows=' + tab.term.rows;
             tab.ws = new WebSocket(url);
+            tab._pingInterval = setInterval(function() {
+                if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
+                    tab.ws.send(JSON.stringify({ type: 'ping' }));
+                }
+            }, 25000);
             tab.ws.onmessage = function(ev) {
                 try {
                     var msg = JSON.parse(ev.data);
@@ -728,6 +733,7 @@
                         statusEl.textContent = 'Disconnected';
                         statusEl.className = 'terminal-status error';
                         tab.ws = null;
+                        if (tab._pingInterval) { clearInterval(tab._pingInterval); tab._pingInterval = null; }
                         if (overlayEl) overlayEl.classList.add('active');
                         renderTabs();
                         renderHome();
@@ -737,6 +743,7 @@
                         statusEl.textContent = msg.message;
                         statusEl.className = 'terminal-status error';
                         tab.ws = null;
+                        if (tab._pingInterval) { clearInterval(tab._pingInterval); tab._pingInterval = null; }
                         if (overlayEl) overlayEl.classList.add('active');
                         renderTabs();
                         renderHome();
@@ -744,6 +751,7 @@
                 } catch(_){}
             };
             tab.ws.onclose = function() {
+                if (tab._pingInterval) { clearInterval(tab._pingInterval); tab._pingInterval = null; }
                 if (tab.status === 'connected' || tab.status === 'connecting') {
                     tab.status = 'disconnected';
                     statusEl.textContent = 'Connection closed';
@@ -801,6 +809,7 @@
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { idx = i; break; } }
             if (idx === -1) return;
             var tab = tabs[idx];
+            if (tab._pingInterval) { clearInterval(tab._pingInterval); tab._pingInterval = null; }
             if (tab.ws) { try { tab.ws.send(JSON.stringify({ type: 'disconnect' })); } catch(_){} tab.ws.close(); }
             if (tab.term) tab.term.dispose();
             var el = document.getElementById('term-' + tab.id);
