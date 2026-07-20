@@ -204,6 +204,21 @@
         .tab-dot.connected { background: var(--success); }
         .tab-dot.error { background: var(--error); }
         .tab-dot.connecting { background: var(--warning); }
+        .tab-group-sep {
+            padding: 5px 10px; font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: var(--text-muted); border-right: 1px solid var(--app-border);
+            display: flex; align-items: center; gap: 4px; white-space: nowrap; opacity: 0.6;
+            cursor: default; user-select: none;
+        }
+        .tab-group-sep .tab-group-count {
+            background: var(--app-card-dark); border-radius: 3px; padding: 0 4px;
+            font-size: 8px; font-weight: 600; color: var(--prometheus-orange);
+        }
+        .tab-rename-input {
+            background: var(--app-card-dark); border: 1px solid var(--prometheus-orange);
+            color: var(--text-white); font-size: 11px; padding: 1px 4px; border-radius: 3px;
+            outline: none; width: 120px; max-width: 140px;
+        }
 
         .content-area { flex: 1; position: relative; overflow: hidden; min-height: 0; }
         .home-view {
@@ -430,6 +445,25 @@
         </div>
     </div>
 
+    <div class="context-menu" id="tab-context-menu">
+        <div class="context-menu-item" data-action="tab-rename">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Rename Tab
+        </div>
+        <div class="context-menu-item" data-action="tab-duplicate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Duplicate Tab
+        </div>
+        <div class="context-menu-item" data-action="tab-reset-name">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            Reset Name
+        </div>
+        <div class="context-menu-item danger" data-action="tab-close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            Close Tab
+        </div>
+    </div>
+
     <script src="/vendor/xterm/xterm.min.js"></script>
     <script src="/vendor/xterm/addon-fit.min.js"></script>
     <script>
@@ -441,14 +475,25 @@
         var ctxServerId = null;
         var sessionToken = localStorage.getItem('hephaestus_session_token');
         var STORAGE_KEY = 'remote_host_tabs';
+        var TAB_RENAME_KEY = 'remote_host_tab_names';
         if (!sessionToken) { window.location.href = '/'; return; }
 
         var TERMINAL_FONT = '"JetBrains Mono", Consolas, "Courier New", monospace';
+        var ctxTabId = null;
 
         function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
+        function getTabDisplayNames() {
+            try { return JSON.parse(localStorage.getItem(TAB_RENAME_KEY)) || {}; } catch(_) { return {}; }
+        }
+        function setTabDisplayName(tabId, name) {
+            var names = getTabDisplayNames();
+            if (name) { names[tabId] = name; } else { delete names[tabId]; }
+            try { localStorage.setItem(TAB_RENAME_KEY, JSON.stringify(names)); } catch(_) {}
+        }
+
         function saveTabs() {
-            var data = tabs.map(function(t) { return { serverId: t.serverId, serverName: t.serverName }; });
+            var data = tabs.map(function(t) { return { serverId: t.serverId, serverName: t.serverName, displayName: t.displayName || '', groupName: t.groupName || 'Default' }; });
             try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(_){}
         }
         function restoreTabs() {
@@ -458,10 +503,11 @@
             var saved;
             try { saved = JSON.parse(raw); } catch(_){ return; }
             if (!saved || !saved.length) return;
+            var displayNames = getTabDisplayNames();
             for (var i = 0; i < saved.length; i++) {
                 var exists = false;
                 for (var j = 0; j < servers.length; j++) { if (servers[j].id === saved[i].serverId) { exists = true; break; } }
-                if (exists) connectToServer(saved[i].serverId);
+                if (exists) connectToServer(saved[i].serverId, saved[i].displayName || displayNames[saved[i].serverId] || '');
             }
         }
         function getAvatarClass(s) {
@@ -554,7 +600,7 @@
             renderTabs();
         }
 
-        function connectToServer(serverId) {
+        function connectToServer(serverId, displayName) {
             var srv = null;
             for (var i = 0; i < servers.length; i++) { if (servers[i].id === serverId) { srv = servers[i]; break; } }
             if (!srv) return;
@@ -562,7 +608,8 @@
             showTerminalView();
 
             var tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
-            var tab = { id: tabId, serverId: serverId, serverName: srv.name, ws: null, term: null, fitAddon: null, status: 'connecting', containerEl: null, statusEl: null };
+            var dn = displayName || '';
+            var tab = { id: tabId, serverId: serverId, serverName: srv.name, displayName: dn, groupName: srv.groupName || 'Default', serverHost: srv.host, serverUsername: srv.username, ws: null, term: null, fitAddon: null, status: 'connecting', containerEl: null, statusEl: null };
             tabs.push(tab);
             createTerminalContainer(tab);
             renderTabs();
@@ -647,6 +694,8 @@
             tab.fitAddon = new FitAddon.FitAddon();
             tab.term.loadAddon(tab.fitAddon);
             tab.term.open(container);
+            tab._onDataDisposable = tab.term.onData(function(data) { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'input', data: data })); });
+            tab._onResizeDisposable = tab.term.onResize(function(dim) { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'resize', cols: dim.cols, rows: dim.rows })); });
 
             setTimeout(function() {
                 try { tab.fitAddon.fit(); } catch(e) {}
@@ -710,8 +759,6 @@
                 statusEl.textContent = 'Connection error';
                 statusEl.className = 'terminal-status error';
             };
-            tab.term.onData(function(data) { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'input', data: data })); });
-            tab.term.onResize(function(dim) { if (tab.ws && tab.ws.readyState === WebSocket.OPEN) tab.ws.send(JSON.stringify({ type: 'resize', cols: dim.cols, rows: dim.rows })); });
         }
 
         function reconnectTab(tabId) {
@@ -774,9 +821,26 @@
             var homeActive = isHomeVisible();
             var html = '<div class="tab-home' + (homeActive ? ' active-view' : '') + '" id="tab-home-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Servers</div>';
             html += '<div class="tab-add" id="tab-add-btn" title="New connection">+</div>';
+
+            var groups = {};
+            var groupOrder = [];
             for (var i = 0; i < tabs.length; i++) {
-                var t = tabs[i];
-                html += '<div class="tab' + (t.id === activeTabId ? ' active' : '') + '" data-tab="' + t.id + '"><span class="tab-dot ' + t.status + '"></span><span style="overflow:hidden;text-overflow:ellipsis;">' + esc(t.serverName) + '</span><span class="tab-close" data-close="' + t.id + '">&times;</span></div>';
+                var g = tabs[i].groupName || 'Default';
+                if (!groups[g]) { groups[g] = []; groupOrder.push(g); }
+                groups[g].push(tabs[i]);
+            }
+
+            for (var gi = 0; gi < groupOrder.length; gi++) {
+                var gName = groupOrder[gi];
+                var gTabs = groups[gName];
+                if (groupOrder.length > 1) {
+                    html += '<div class="tab-group-sep"><span>' + esc(gName) + '</span><span class="tab-group-count">' + gTabs.length + '</span></div>';
+                }
+                for (var i = 0; i < gTabs.length; i++) {
+                    var t = gTabs[i];
+                    var label = t.displayName || t.serverName;
+                    html += '<div class="tab' + (t.id === activeTabId ? ' active' : '') + '" data-tab="' + t.id + '" title="' + esc(t.serverName) + ' (' + esc(t.serverUsername || '') + '@' + esc(t.serverHost || '') + ')"><span class="tab-dot ' + t.status + '"></span><span class="tab-label">' + esc(label) + '</span><span class="tab-close" data-close="' + t.id + '">&times;</span></div>';
+                }
             }
             bar.innerHTML = html;
         }
@@ -905,6 +969,53 @@
             var tab = e.target.closest('.tab');
             if (tab) switchTab(tab.dataset.tab);
         });
+        document.getElementById('tab-bar').addEventListener('dblclick', function(e) {
+            var tab = e.target.closest('.tab');
+            if (tab && !e.target.closest('.tab-close')) startRenameTab(tab.dataset.tab, tab);
+        });
+        document.getElementById('tab-bar').addEventListener('contextmenu', function(e) {
+            var tab = e.target.closest('.tab');
+            if (tab) {
+                e.preventDefault(); e.stopPropagation();
+                ctxTabId = tab.dataset.tab;
+                var menu = document.getElementById('tab-context-menu');
+                menu.style.left = e.clientX + 'px'; menu.style.top = e.clientY + 'px';
+                menu.classList.add('show');
+            }
+        });
+
+        function startRenameTab(tabId, tabEl) {
+            var tab = null;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { tab = tabs[i]; break; } }
+            if (!tab) return;
+            var label = tabEl.querySelector('.tab-label');
+            if (!label) return;
+            var currentName = tab.displayName || tab.serverName;
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'tab-rename-input';
+            input.value = currentName;
+            label.replaceWith(input);
+            input.focus();
+            input.select();
+            function finish() {
+                var newName = input.value.trim();
+                if (newName && newName !== tab.serverName) {
+                    tab.displayName = newName;
+                    setTabDisplayName(tab.serverId, newName);
+                } else {
+                    tab.displayName = '';
+                    setTabDisplayName(tab.serverId, '');
+                }
+                saveTabs();
+                renderTabs();
+            }
+            input.addEventListener('blur', finish);
+            input.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+                if (ev.key === 'Escape') { input.value = tab.serverName; input.blur(); }
+            });
+        }
 
         document.getElementById('modal-close-btn').addEventListener('click', closeModal);
         document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
@@ -944,12 +1055,36 @@
             else if (action === 'delete') { var s = null; for (var i = 0; i < servers.length; i++) { if (servers[i].id === ctxServerId) { s = servers[i]; break; } } if (s) deleteServer(s.id, s.name); }
             hideContextMenu();
         });
-        document.addEventListener('click', function(e) { if (!e.target.closest('.context-menu')) hideContextMenu(); });
+        document.getElementById('tab-context-menu').addEventListener('click', function(e) {
+            var item = e.target.closest('.context-menu-item');
+            if (!item || !ctxTabId) return;
+            var action = item.dataset.action;
+            var tab = null;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === ctxTabId) { tab = tabs[i]; break; } }
+            if (action === 'tab-rename') {
+                if (tab) {
+                    var tabEl = document.querySelector('.tab[data-tab="' + ctxTabId + '"]');
+                    if (tabEl) startRenameTab(ctxTabId, tabEl);
+                }
+            } else if (action === 'tab-duplicate') {
+                if (tab) connectToServer(tab.serverId, tab.displayName || '');
+            } else if (action === 'tab-reset-name') {
+                if (tab) { tab.displayName = ''; setTabDisplayName(tab.serverId, ''); saveTabs(); renderTabs(); }
+            } else if (action === 'tab-close') {
+                if (tab) closeTab(ctxTabId);
+            }
+            hideTabContextMenu();
+        });
+        function hideTabContextMenu() { document.getElementById('tab-context-menu').classList.remove('show'); ctxTabId = null; }
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.context-menu')) { hideContextMenu(); hideTabContextMenu(); }
+        });
 
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeModal();
                 hideContextMenu();
+                hideTabContextMenu();
                 if (!isHomeVisible()) showHomeView();
             }
         });
