@@ -8,7 +8,7 @@ class RemoteHostController {
       const configs = await remoteHostService.getConfigs();
       return res.json({ success: true, data: configs });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: "Failed to load configs." });
     }
   }
 
@@ -26,7 +26,7 @@ class RemoteHostController {
       await logActivity("RemoteHost", "Save Config", `Saved host config "${name}" (${host})`, "SUCCESS");
       return res.json({ success: true, data: cfg, message: `Host "${name}" saved.` });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: "Failed to save config." });
     }
   }
 
@@ -36,7 +36,7 @@ class RemoteHostController {
       await logActivity("RemoteHost", "Delete Config", `Deleted host config ${req.params.id}`, "SUCCESS");
       return res.json({ success: true, message: "Host config deleted." });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: "Failed to delete config." });
     }
   }
 
@@ -52,7 +52,43 @@ class RemoteHostController {
       });
       return res.json({ success: result.success, message: result.message });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(500).json({ success: false, error: "Connection test failed." });
+    }
+  }
+
+  public async sftpListDir(req: Request, res: Response) {
+    try {
+      const { hostConfigId, path } = req.body;
+      if (!hostConfigId) {
+        return res.status(400).json({ success: false, error: "hostConfigId is required." });
+      }
+      const remotePath = path || "/";
+      const list = await remoteHostService.sftpListDir(hostConfigId, remotePath);
+      return res.json({ success: true, data: list, path: remotePath });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Failed to list directory." });
+    }
+  }
+
+  public async sftpUpload(req: Request, res: Response) {
+    try {
+      const hostConfigId = req.body.hostConfigId;
+      const remotePath = req.body.remotePath;
+      if (!hostConfigId || !remotePath) {
+        return res.status(400).json({ success: false, error: "hostConfigId and remotePath are required." });
+      }
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: "No file uploaded." });
+      }
+      const fs = require("fs");
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const result = await remoteHostService.sftpUpload(hostConfigId, remotePath, fileBuffer, req.file.originalname);
+      // Cleanup temp file
+      fs.unlinkSync(req.file.path);
+      await logActivity("RemoteHost", "File Upload", `Uploaded "${req.file.originalname}" to ${remotePath}`, "SUCCESS");
+      return res.json({ success: true, message: result.message });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Upload failed." });
     }
   }
 }

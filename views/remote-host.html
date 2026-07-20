@@ -219,6 +219,44 @@
             color: var(--text-white); font-size: 11px; padding: 1px 4px; border-radius: 3px;
             outline: none; width: 120px; max-width: 140px;
         }
+        .tab-transfer {
+            padding: 5px 10px; font-size: 11px; cursor: pointer; display: flex;
+            align-items: center; gap: 5px; color: var(--text-muted); border-right: 1px solid var(--app-border);
+            transition: all 0.15s; white-space: nowrap; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .tab-transfer:hover { color: var(--prometheus-orange); background: #333333; }
+        .tab-transfer svg { width: 14px; height: 14px; }
+        .upload-dropzone {
+            border: 2px dashed var(--app-border); border-radius: 8px; padding: 40px 20px;
+            text-align: center; cursor: pointer; transition: all 0.2s; background: var(--app-card-dark);
+        }
+        .upload-dropzone:hover, .upload-dropzone.dragover {
+            border-color: var(--prometheus-orange); background: rgba(164, 129, 129, 0.08);
+        }
+        .upload-dropzone svg { width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 8px; }
+        .upload-dropzone p { color: var(--text-muted); font-size: 12px; margin: 0; }
+        .upload-dropzone .upload-file-name { color: var(--text-white); font-weight: 600; font-size: 13px; margin-top: 8px; }
+        .upload-file-list { margin-top: 10px; max-height: 150px; overflow-y: auto; }
+        .upload-file-item {
+            display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+            background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 4px;
+            margin-bottom: 4px; font-size: 12px;
+        }
+        .upload-file-item .file-name { flex: 1; color: var(--text-white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .upload-file-item .file-size { color: var(--text-muted); white-space: nowrap; }
+        .upload-file-item .file-remove { cursor: pointer; color: var(--text-muted); padding: 2px; }
+        .upload-file-item .file-remove:hover { color: var(--error); }
+        .upload-progress { margin-top: 10px; }
+        .upload-progress-bar {
+            width: 100%; height: 6px; background: var(--app-card-dark); border-radius: 3px; overflow: hidden;
+        }
+        .upload-progress-fill {
+            height: 100%; background: var(--prometheus-orange); border-radius: 3px; transition: width 0.3s;
+        }
+        .upload-progress-text { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+        .upload-result { margin-top: 8px; font-size: 12px; padding: 6px 10px; border-radius: 4px; }
+        .upload-result.success { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid var(--success-border); }
+        .upload-result.error { background: rgba(239,68,68,0.1); color: var(--error); border: 1px solid var(--error-border); }
 
         .content-area { flex: 1; position: relative; overflow: hidden; min-height: 0; }
         .home-view {
@@ -461,6 +499,45 @@
         <div class="context-menu-item danger" data-action="tab-close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             Close Tab
+        </div>
+    </div>
+
+    <div id="modal-file-transfer" class="modal-overlay">
+        <div class="modal-dialog" style="width: 520px;">
+            <div class="modal-header">
+                <h3>File Transfer</h3>
+                <button class="modal-close" id="ft-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Remote Host</label>
+                    <select id="ft-host"></select>
+                </div>
+                <div class="form-group">
+                    <label>Remote Path</label>
+                    <div style="display:flex; gap:6px;">
+                        <input type="text" id="ft-remote-path" value="/tmp" placeholder="/home/user/" style="flex:1;">
+                        <button class="btn btn-secondary" id="ft-browse-btn" style="white-space:nowrap;">Browse</button>
+                    </div>
+                </div>
+                <div class="upload-dropzone" id="ft-dropzone">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <p>Drop files here or click to select</p>
+                    <input type="file" id="ft-file-input" multiple style="display:none;">
+                </div>
+                <div class="upload-file-list" id="ft-file-list"></div>
+            </div>
+            <div class="modal-footer">
+                <div style="flex:1;">
+                    <div class="upload-progress" id="ft-progress" style="display:none;">
+                        <div class="upload-progress-bar"><div class="upload-progress-fill" id="ft-progress-fill" style="width:0%"></div></div>
+                        <div class="upload-progress-text" id="ft-progress-text"></div>
+                    </div>
+                    <div class="upload-result" id="ft-result" style="display:none;"></div>
+                </div>
+                <button class="btn btn-secondary" id="ft-cancel-btn">Cancel</button>
+                <button class="btn btn-primary" id="ft-upload-btn" disabled>Upload</button>
+            </div>
         </div>
     </div>
 
@@ -830,6 +907,7 @@
             var homeActive = isHomeVisible();
             var html = '<div class="tab-home' + (homeActive ? ' active-view' : '') + '" id="tab-home-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Servers</div>';
             html += '<div class="tab-add" id="tab-add-btn" title="New connection">+</div>';
+            html += '<div class="tab-transfer" id="tab-transfer-btn" title="File Transfer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Transfer</div>';
 
             var groups = {};
             var groupOrder = [];
@@ -968,7 +1046,152 @@
         document.getElementById('search-input').addEventListener('input', renderHome);
         document.getElementById('btn-new-host').addEventListener('click', showAddModal);
 
+        // === FILE TRANSFER ===
+        var ftFiles = [];
+        var ftUploading = false;
+
+        function openFileTransferModal() {
+            var sel = document.getElementById('ft-host');
+            sel.innerHTML = servers.map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + ' (' + esc(s.host) + ')</option>'; }).join('');
+            // Pre-select active tab's server
+            if (activeTabId) {
+                var t = null;
+                for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === activeTabId) { t = tabs[i]; break; } }
+                if (t) sel.value = t.serverId;
+            }
+            ftFiles = [];
+            document.getElementById('ft-file-list').innerHTML = '';
+            document.getElementById('ft-remote-path').value = '/tmp';
+            document.getElementById('ft-progress').style.display = 'none';
+            document.getElementById('ft-result').style.display = 'none';
+            document.getElementById('ft-upload-btn').disabled = true;
+            document.getElementById('modal-file-transfer').classList.add('active');
+        }
+        function closeFileTransferModal() { document.getElementById('modal-file-transfer').classList.remove('active'); }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+            return (bytes / 1073741824).toFixed(1) + ' GB';
+        }
+
+        function renderFtFileList() {
+            var el = document.getElementById('ft-file-list');
+            if (ftFiles.length === 0) { el.innerHTML = ''; document.getElementById('ft-upload-btn').disabled = true; return; }
+            document.getElementById('ft-upload-btn').disabled = false;
+            el.innerHTML = ftFiles.map(function(f, i) {
+                return '<div class="upload-file-item"><span class="file-name">' + esc(f.name) + '</span><span class="file-size">' + formatSize(f.size) + '</span><span class="file-remove" data-idx="' + i + '">&times;</span></div>';
+            }).join('');
+        }
+
+        function addFtFiles(fileList) {
+            for (var i = 0; i < fileList.length; i++) {
+                var exists = false;
+                for (var j = 0; j < ftFiles.length; j++) {
+                    if (ftFiles[j].name === fileList[i].name && ftFiles[j].size === fileList[i].size) { exists = true; break; }
+                }
+                if (!exists) ftFiles.push(fileList[i]);
+            }
+            renderFtFileList();
+        }
+
+        function uploadFtFiles() {
+            if (ftUploading || ftFiles.length === 0) return;
+            var hostConfigId = document.getElementById('ft-host').value;
+            var remotePath = document.getElementById('ft-remote-path').value.trim();
+            if (!hostConfigId || !remotePath) { alert('Select a host and enter remote path.'); return; }
+
+            ftUploading = true;
+            var progress = document.getElementById('ft-progress');
+            var fill = document.getElementById('ft-progress-fill');
+            var text = document.getElementById('ft-progress-text');
+            var result = document.getElementById('ft-result');
+            var uploadBtn = document.getElementById('ft-upload-btn');
+            progress.style.display = 'block';
+            result.style.display = 'none';
+            uploadBtn.disabled = true;
+
+            var completed = 0;
+            var total = ftFiles.length;
+            var errors = [];
+
+            function uploadNext() {
+                if (completed >= total) {
+                    ftUploading = false;
+                    progress.style.display = 'none';
+                    result.style.display = 'block';
+                    if (errors.length === 0) {
+                        result.className = 'upload-result success';
+                        result.textContent = 'All ' + total + ' file(s) uploaded successfully.';
+                    } else {
+                        result.className = 'upload-result error';
+                        result.textContent = (total - errors.length) + '/' + total + ' uploaded. Errors: ' + errors.join(', ');
+                    }
+                    uploadBtn.disabled = false;
+                    return;
+                }
+                var f = ftFiles[completed];
+                var pct = Math.round((completed / total) * 100);
+                fill.style.width = pct + '%';
+                text.textContent = 'Uploading ' + (completed + 1) + '/' + total + ': ' + f.name;
+
+                var formData = new FormData();
+                formData.append('file', f);
+                formData.append('hostConfigId', hostConfigId);
+                var fileName = f.name;
+                var fullPath = remotePath.replace(/\/+$/, '') + '/' + fileName;
+                formData.append('remotePath', fullPath);
+
+                fetch('/api/v1/remote-host/sftp/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + sessionToken },
+                    body: formData
+                }).then(function(r) { return r.json(); }).then(function(data) {
+                    if (!data.success) errors.push(fileName);
+                    completed++;
+                    uploadNext();
+                }).catch(function() {
+                    errors.push(fileName);
+                    completed++;
+                    uploadNext();
+                });
+            }
+            uploadNext();
+        }
+
+        function browseRemotePath() {
+            var hostConfigId = document.getElementById('ft-host').value;
+            var currentPath = document.getElementById('ft-remote-path').value.trim() || '/';
+            if (!hostConfigId) { alert('Select a host first.'); return; }
+            api('POST', '/api/v1/remote-host/sftp/list', { hostConfigId: hostConfigId, path: currentPath }).then(function(data) {
+                if (!data.success) { alert(data.error || 'Failed to list directory.'); return; }
+                var items = data.data || [];
+                var dirs = items.filter(function(i) { return i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+                var html = '<div style="max-height:300px;overflow-y:auto;">';
+                html += '<div class="upload-file-item" style="cursor:pointer;" data-path="' + esc(currentPath.replace(/\/[^\/]+\/?$/, '') || '/') + '"><span class="file-name" style="color:var(--prometheus-orange);">.. (parent)</span></div>';
+                dirs.forEach(function(d) {
+                    var p = currentPath.replace(/\/+$/, '') + '/' + d.name;
+                    html += '<div class="upload-file-item" style="cursor:pointer;" data-path="' + esc(p) + '"><span class="file-name" style="color:var(--prometheus-orange);">' + esc(d.name) + '/</span></div>';
+                });
+                html += '</div>';
+                var overlay = document.createElement('div');
+                overlay.className = 'modal-overlay active';
+                overlay.id = 'ft-browse-overlay';
+                overlay.innerHTML = '<div class="modal-dialog" style="width:400px;"><div class="modal-header"><h3>Browse: ' + esc(currentPath) + '</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">&times;</button></div><div class="modal-body" style="padding:8px;">' + html + '</div></div>';
+                document.body.appendChild(overlay);
+                overlay.addEventListener('click', function(e) {
+                    var item = e.target.closest('.upload-file-item');
+                    if (item && item.dataset.path) {
+                        document.getElementById('ft-remote-path').value = item.dataset.path;
+                        overlay.remove();
+                    }
+                });
+            });
+        }
+
         document.getElementById('tab-bar').addEventListener('click', function(e) {
+            if (e.target.closest('#tab-transfer-btn')) { openFileTransferModal(); return; }
             var closeBtn = e.target.closest('.tab-close');
             if (closeBtn) { closeTab(closeBtn.dataset.close, e); return; }
             var homeBtn = e.target.closest('.tab-home');
@@ -1104,6 +1327,21 @@
         document.getElementById('terminal-wrapper').addEventListener('click', function(e) {
             var btn = e.target.closest('.reconnect-btn');
             if (btn && btn.dataset.reconnect) reconnectTab(btn.dataset.reconnect);
+        });
+
+        // File Transfer modal events
+        document.getElementById('ft-close-btn').addEventListener('click', closeFileTransferModal);
+        document.getElementById('ft-cancel-btn').addEventListener('click', closeFileTransferModal);
+        document.getElementById('ft-upload-btn').addEventListener('click', uploadFtFiles);
+        document.getElementById('ft-browse-btn').addEventListener('click', browseRemotePath);
+        document.getElementById('ft-dropzone').addEventListener('click', function() { document.getElementById('ft-file-input').click(); });
+        document.getElementById('ft-file-input').addEventListener('change', function(e) { addFtFiles(e.target.files); e.target.value = ''; });
+        document.getElementById('ft-dropzone').addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+        document.getElementById('ft-dropzone').addEventListener('dragleave', function() { this.classList.remove('dragover'); });
+        document.getElementById('ft-dropzone').addEventListener('drop', function(e) { e.preventDefault(); this.classList.remove('dragover'); addFtFiles(e.dataTransfer.files); });
+        document.getElementById('ft-file-list').addEventListener('click', function(e) {
+            var rm = e.target.closest('.file-remove');
+            if (rm) { ftFiles.splice(parseInt(rm.dataset.idx), 1); renderFtFileList(); }
         });
 
         loadServers().then(function() {

@@ -257,6 +257,59 @@ class RemoteHostService {
       ssh.connect(connectOpts);
     });
   }
+
+  private async createSftpConnection(hostConfigId: string): Promise<{ sftp: any; ssh: Client }> {
+    const cfg = await this.getRawConfig(hostConfigId);
+    if (!cfg) throw new Error("Host config not found.");
+    return new Promise((resolve, reject) => {
+      const ssh = new Client();
+      ssh.on("ready", () => {
+        ssh.sftp((err: any, sftp: any) => {
+          if (err) { ssh.end(); reject(err); return; }
+          resolve({ sftp, ssh });
+        });
+      });
+      ssh.on("error", (err: Error) => reject(err));
+      const connectOpts: any = {
+        host: cfg.host,
+        port: cfg.port || 22,
+        username: cfg.username,
+        keepaliveInterval: 15000,
+      };
+      if (cfg.authType === "key" && cfg.sshKey) {
+        connectOpts.privateKey = cfg.sshKey;
+      } else {
+        connectOpts.password = cfg.password || "";
+      }
+      ssh.connect(connectOpts);
+    });
+  }
+
+  public async sftpListDir(hostConfigId: string, remotePath: string): Promise<{ name: string; isDir: boolean; size: number; modTime: string }[]> {
+    const { sftp, ssh } = await this.createSftpConnection(hostConfigId);
+    return new Promise((resolve, reject) => {
+      sftp.readdir(remotePath, (err: any, list: any[]) => {
+        ssh.end();
+        if (err) { reject(err); return; }
+        resolve(list.map((item: any) => ({
+          name: item.filename,
+          isDir: item.attrs.isDirectory(),
+          size: item.attrs.size,
+          modTime: new Date(item.attrs.mtime * 1000).toISOString(),
+        })));
+      });
+    });
+  }
+
+  public async sftpUpload(hostConfigId: string, remotePath: string, fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; message: string }> {
+    const { sftp, ssh } = await this.createSftpConnection(hostConfigId);
+    return new Promise((resolve, reject) => {
+      const writeStream = sftp.createWriteStream(remotePath);
+      writeStream.on("close", () => { ssh.end(); resolve({ success: true, message: `Uploaded ${fileName} to ${remotePath}` }); });
+      writeStream.on("error", (err: any) => { ssh.end(); reject(err); });
+      writeStream.end(fileBuffer);
+    });
+  }
 }
 
 export const remoteHostService = new RemoteHostService();
