@@ -77,7 +77,7 @@ class RemoteHostController {
               const stat = fs.statSync(pathMod.join(remotePath, item.name));
               size = stat.size;
               modTime = stat.mtime.toISOString();
-            } catch (_) {}
+            } catch (_) { /* ignore stat errors for individual files */ }
             return { name: item.name, isDir: item.isDirectory(), size, modTime };
           });
           return res.json({ success: true, data: list, path: remotePath });
