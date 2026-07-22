@@ -366,6 +366,53 @@
             display: none;
         }
         .terminal-container.active { display: block; }
+        .vps-container {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: none; overflow: auto; padding: 16px;
+            background: var(--background);
+        }
+        .vps-container.active { display: block; }
+        .vps-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .vps-header h2 { font-size: 16px; font-weight: 600; color: var(--text-white); }
+        .vps-header .vps-server-label { font-size: 11px; color: var(--text-muted); background: var(--app-card); padding: 3px 8px; border-radius: 4px; }
+        .vps-grid { display: grid; gap: 12px; }
+        .vps-grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .vps-grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .vps-grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .vps-card { background: var(--app-card); border: 1px solid var(--app-border); border-radius: 8px; padding: 14px; }
+        .vps-card-header { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .vps-card-value { font-size: 24px; font-weight: 700; color: var(--text-white); }
+        .vps-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+        .vps-progress { height: 6px; background: var(--app-card-dark); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .vps-progress-bar { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .vps-progress-bar.green { background: var(--success); }
+        .vps-progress-bar.yellow { background: var(--warning); }
+        .vps-progress-bar.red { background: var(--error); }
+        .vps-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .vps-table th { text-align: left; padding: 8px 10px; background: var(--app-card-dark); color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--app-border); position: sticky; top: 0; }
+        .vps-table td { padding: 8px 10px; border-bottom: 1px solid var(--app-border); color: var(--foreground); }
+        .vps-table tr:hover td { background: rgba(255,255,255,0.03); }
+        .vps-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .vps-badge-active { background: rgba(16,185,129,0.15); color: var(--success); }
+        .vps-badge-inactive { background: rgba(160,160,160,0.15); color: var(--text-muted); }
+        .vps-badge-error { background: rgba(239,68,68,0.15); color: var(--error); }
+        .vps-log-box { background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 6px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); max-height: 500px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
+        .vps-filter { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+        .vps-filter input { flex: 1; max-width: 300px; padding: 6px 10px; background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--foreground); border-radius: 4px; font-size: 12px; }
+        .vps-filter input:focus { outline: none; border-color: var(--btn-primary-bg); }
+        .vps-btn { padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--app-border); background: var(--app-card); color: var(--foreground); transition: all 0.15s; }
+        .vps-btn:hover { background: var(--app-card-dark); border-color: var(--text-muted); }
+        .vps-btn-primary { background: var(--btn-primary-bg); border-color: var(--btn-primary-bg); color: #fff; }
+        .vps-btn-primary:hover { background: var(--btn-primary-hover); }
+        .vps-btn-danger { background: var(--error); border-color: var(--error); color: #fff; }
+        .vps-empty { text-align: center; padding: 40px; color: var(--text-muted); font-size: 12px; }
+        .vps-service-actions { display: flex; gap: 4px; }
+        .vps-type-icon { width: 12px; height: 12px; opacity: 0.7; }
+        .tab-dropdown { position: absolute; top: 100%; left: 0; background: var(--app-card); border: 1px solid var(--app-border); border-radius: 6px; padding: 4px 0; z-index: 100; min-width: 160px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        .tab-dropdown.active { display: block; }
+        .tab-dropdown-item { padding: 6px 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--foreground); transition: background 0.1s; }
+        .tab-dropdown-item:hover { background: rgba(255,255,255,0.05); }
+        .tab-dropdown-item svg { width: 14px; height: 14px; opacity: 0.7; }
         .terminal-status {
             position: absolute; top: 8px; right: 12px; font-size: 10px;
             padding: 2px 8px; border-radius: 4px; z-index: 10;
@@ -467,6 +514,14 @@
     </div>
 
     <div class="tab-bar" id="tab-bar"></div>
+    <div class="tab-dropdown" id="tab-type-dropdown">
+        <div class="tab-dropdown-item" data-type="terminal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg> Terminal</div>
+        <div class="tab-dropdown-item" data-type="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg> Dashboard</div>
+        <div class="tab-dropdown-item" data-type="processes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> Processes</div>
+        <div class="tab-dropdown-item" data-type="services"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> Services</div>
+        <div class="tab-dropdown-item" data-type="logs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> System Logs</div>
+        <div class="tab-dropdown-item" data-type="network"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg> Network</div>
+    </div>
 
     <div class="content-area">
         <div class="home-view" id="home-view">
@@ -562,6 +617,26 @@
         <div class="context-menu-item" data-action="connect-duplicate">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line><rect x="6" y="2" width="4" height="4" rx="1"></rect></svg>
             Duplicate Tab
+        </div>
+        <div class="context-menu-item" data-action="open-dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+            Dashboard
+        </div>
+        <div class="context-menu-item" data-action="open-processes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            Processes
+        </div>
+        <div class="context-menu-item" data-action="open-services">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            Services
+        </div>
+        <div class="context-menu-item" data-action="open-logs">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            System Logs
+        </div>
+        <div class="context-menu-item" data-action="open-network">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+            Network
         </div>
         <div class="context-menu-item" data-action="edit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -818,6 +893,173 @@
             startSSH(tab, srv);
         }
 
+        var VPS_TAB_TYPES = { dashboard: 'Dashboard', processes: 'Processes', services: 'Services', logs: 'System Logs', network: 'Network' };
+        var VPS_TAB_ICONS = {
+            terminal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>',
+            dashboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>',
+            processes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>',
+            services: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
+            logs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>',
+            network: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>'
+        };
+
+        function openVpsTab(serverId, tabType) {
+            var srv = null;
+            for (var i = 0; i < servers.length; i++) { if (servers[i].id === serverId) { srv = servers[i]; break; } }
+            if (!srv) return;
+            showTerminalView();
+            var tabId = 'tab-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
+            var label = VPS_TAB_TYPES[tabType] || tabType;
+            var tab = {
+                id: tabId, serverId: serverId, serverName: srv.name, displayName: label,
+                groupName: srv.groupName || 'Default', serverHost: srv.host, serverUsername: srv.username,
+                tabType: tabType, ws: null, term: null, fitAddon: null, status: 'connected',
+                containerEl: null, statusEl: null, overlayEl: null, _refreshInterval: null
+            };
+            tabs.push(tab);
+            createVpsContainer(tab, srv);
+            renderTabs();
+            switchTab(tabId);
+            saveTabs();
+            loadVpsContent(tab, srv);
+        }
+
+        function createVpsContainer(tab, srv) {
+            var wrapper = document.getElementById('terminal-wrapper');
+            var div = document.createElement('div');
+            div.className = 'vps-container';
+            div.id = 'term-' + tab.id;
+            div.innerHTML = '<div class="vps-header"><h2>' + esc(VPS_TAB_TYPES[tab.tabType]) + '</h2><span class="vps-server-label">' + esc(srv.name) + ' (' + esc(srv.host) + ')</span></div><div class="vps-body" id="vps-body-' + tab.id + '"><div class="vps-empty">Loading...</div></div>';
+            wrapper.appendChild(div);
+            tab.containerEl = div;
+        }
+
+        function loadVpsContent(tab, srv) {
+            var body = document.getElementById('vps-body-' + tab.id);
+            if (!body) return;
+            switch (tab.tabType) {
+                case 'dashboard': loadVpsDashboard(tab, srv, body); break;
+                case 'processes': loadVpsProcesses(tab, srv, body); break;
+                case 'services': loadVpsServices(tab, srv, body); break;
+                case 'logs': loadVpsLogs(tab, srv, body); break;
+                case 'network': loadVpsNetwork(tab, srv, body); break;
+            }
+        }
+
+        function formatBytes(b) { if (!b || b === 0) return '0 B'; var k = 1024; var s = ['B','KB','MB','GB','TB']; var i = Math.floor(Math.log(b) / Math.log(k)); return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + s[i]; }
+        function getProgressClass(pct) { return pct >= 90 ? 'red' : pct >= 70 ? 'yellow' : 'green'; }
+
+        function loadVpsDashboard(tab, srv, body) {
+            api('POST', '/api/v1/vps/metrics', { hostConfigId: tab.serverId }).then(function(data) {
+                if (!data || data.error) { body.innerHTML = '<div class="vps-empty">' + esc(data ? data.error : 'Failed to load') + '</div>'; return; }
+                var cpuPct = data.cpu ? data.cpu.usage : 0;
+                var memPct = data.memory ? data.memory.percent : 0;
+                var html = '<div class="vps-grid vps-grid-4" style="margin-bottom:12px">' +
+                    '<div class="vps-card"><div class="vps-card-header">CPU Usage</div><div class="vps-card-value">' + cpuPct.toFixed(1) + '%</div><div class="vps-card-sub">' + (data.cpu ? data.cpu.cores + ' cores' : '') + '</div><div class="vps-progress"><div class="vps-progress-bar ' + getProgressClass(cpuPct) + '" style="width:' + cpuPct + '%"></div></div></div>' +
+                    '<div class="vps-card"><div class="vps-card-header">Memory</div><div class="vps-card-value">' + memPct.toFixed(1) + '%</div><div class="vps-card-sub">' + (data.memory ? formatBytes(data.memory.used) + ' / ' + formatBytes(data.memory.total) : '') + '</div><div class="vps-progress"><div class="vps-progress-bar ' + getProgressClass(memPct) + '" style="width:' + memPct + '%"></div></div></div>' +
+                    '<div class="vps-card"><div class="vps-card-header">Load Average</div><div class="vps-card-value">' + (data.loadAvg ? data.loadAvg.map(function(l){return l.toFixed(2);}).join(' / ') : '--') + '</div></div>' +
+                    '<div class="vps-card"><div class="vps-card-header">Disks</div><div class="vps-card-value">' + (data.disks ? data.disks.length : 0) + '</div><div class="vps-card-sub">mounted</div></div>' +
+                    '</div>';
+                if (data.disks && data.disks.length) {
+                    html += '<div class="vps-card"><div class="vps-card-header">Disk Usage</div><table class="vps-table"><thead><tr><th>Mount</th><th>Total</th><th>Used</th><th>Avail</th><th>Usage</th></tr></thead><tbody>';
+                    data.disks.forEach(function(d) {
+                        html += '<tr><td>' + esc(d.mount) + '</td><td>' + formatBytes(parseInt(d.total)) + '</td><td>' + formatBytes(parseInt(d.used)) + '</td><td>' + formatBytes(parseInt(d.available)) + '</td><td><div style="display:flex;align-items:center;gap:8px"><div class="vps-progress" style="flex:1;margin:0"><div class="vps-progress-bar ' + getProgressClass(d.percent) + '" style="width:' + d.percent + '%"></div></div><span>' + d.percent + '%</span></div></td></tr>';
+                    });
+                    html += '</tbody></table></div>';
+                }
+                body.innerHTML = html;
+                tab._refreshInterval = setInterval(function() { if (activeTabId === tab.id) loadVpsDashboard(tab, srv, body); }, 5000);
+            }).catch(function(err) { body.innerHTML = '<div class="vps-empty">Connection failed: ' + esc(err.message || 'Unknown error') + '</div>'; });
+        }
+
+        function loadVpsProcesses(tab, srv, body) {
+            body.innerHTML = '<div class="vps-filter"><input type="text" id="vps-proc-filter-' + tab.id + '" placeholder="Search processes..."><select id="vps-proc-sort-' + tab.id + '" class="vps-btn"><option value="cpu">Sort by CPU</option><option value="mem">Sort by Memory</option></select></div><div class="vps-card"><table class="vps-table"><thead><tr><th>PID</th><th>User</th><th>CPU%</th><th>MEM%</th><th>RSS</th><th>Command</th><th></th></tr></thead><tbody id="vps-proc-tbody-' + tab.id + '"></tbody></table></div>';
+            var tbody = document.getElementById('vps-proc-tbody-' + tab.id);
+            function refresh() {
+                var sortSel = document.getElementById('vps-proc-sort-' + tab.id);
+                var sortBy = sortSel ? sortSel.value : 'cpu';
+                api('POST', '/api/v1/vps/processes', { hostConfigId: tab.serverId, sortBy: sortBy }).then(function(data) {
+                    if (!data || data.error) { tbody.innerHTML = '<tr><td colspan="7" class="vps-empty">' + esc(data ? data.error : 'Failed') + '</td></tr>'; return; }
+                    tab._vpsData = data;
+                    renderProcRows(tab, tbody);
+                }).catch(function() { tbody.innerHTML = '<tr><td colspan="7" class="vps-empty">Connection failed</td></tr>'; });
+            }
+            function renderProcRows(tab, tbody) {
+                var filter = (document.getElementById('vps-proc-filter-' + tab.id) || {}).value || '';
+                var filtered = (tab._vpsData || []).filter(function(p) { return !filter || p.command.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || String(p.pid).indexOf(filter) !== -1; });
+                tbody.innerHTML = filtered.map(function(p) { return '<tr><td>' + p.pid + '</td><td>' + esc(p.user) + '</td><td>' + p.cpu.toFixed(1) + '</td><td>' + p.mem.toFixed(1) + '</td><td>' + formatBytes(p.rss * 1024) + '</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(p.command) + '">' + esc(p.command) + '</td><td><button class="vps-btn vps-btn-danger" onclick="vpsKillProc(\'' + tab.serverId + '\',' + p.pid + ')">Kill</button></td></tr>'; }).join('');
+            }
+            window.vpsKillProc = function(hostId, pid) { if (!confirm('Kill process ' + pid + '?')) return; api('POST', '/api/v1/vps/kill-process', { hostConfigId: hostId, pid: pid }).then(refresh); };
+            setTimeout(function() {
+                var filterEl = document.getElementById('vps-proc-filter-' + tab.id);
+                var sortEl = document.getElementById('vps-proc-sort-' + tab.id);
+                if (filterEl) filterEl.addEventListener('input', function() { renderProcRows(tab, tbody); });
+                if (sortEl) sortEl.addEventListener('change', refresh);
+                refresh();
+            }, 0);
+            tab._refreshInterval = setInterval(function() { if (activeTabId === tab.id) refresh(); }, 10000);
+        }
+
+        function loadVpsServices(tab, srv, body) {
+            body.innerHTML = '<div class="vps-filter"><input type="text" id="vps-svc-filter-' + tab.id + '" placeholder="Search services..."></div><div class="vps-card"><table class="vps-table"><thead><tr><th>Name</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead><tbody id="vps-svc-tbody-' + tab.id + '"></tbody></table></div>';
+            var tbody = document.getElementById('vps-svc-tbody-' + tab.id);
+            function refresh() {
+                api('POST', '/api/v1/vps/services', { hostConfigId: tab.serverId }).then(function(data) {
+                    if (!data || data.error) { tbody.innerHTML = '<tr><td colspan="4" class="vps-empty">' + esc(data ? data.error : 'Failed') + '</td></tr>'; return; }
+                    tab._vpsData = data;
+                    renderSvcRows(tab, tbody);
+                }).catch(function() { tbody.innerHTML = '<tr><td colspan="4" class="vps-empty">Connection failed</td></tr>'; });
+            }
+            function renderSvcRows(tab, tbody) {
+                var filter = (document.getElementById('vps-svc-filter-' + tab.id) || {}).value || '';
+                var filtered = (tab._vpsData || []).filter(function(s) { return !filter || s.name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || s.description.toLowerCase().indexOf(filter.toLowerCase()) !== -1; });
+                tbody.innerHTML = filtered.map(function(s) {
+                    var badge = s.activeState === 'active' ? 'vps-badge-active' : s.activeState === 'failed' ? 'vps-badge-error' : 'vps-badge-inactive';
+                    var actions = '';
+                    if (s.activeState !== 'active') actions += '<button class="vps-btn" onclick="vpsSvcCtl(\'' + tab.serverId + '\',\'' + esc(s.name) + '\',\'start\')">Start</button> ';
+                    if (s.activeState === 'active') actions += '<button class="vps-btn" onclick="vpsSvcCtl(\'' + tab.serverId + '\',\'' + esc(s.name) + '\',\'stop\')">Stop</button> ';
+                    actions += '<button class="vps-btn" onclick="vpsSvcCtl(\'' + tab.serverId + '\',\'' + esc(s.name) + '\',\'restart\')">Restart</button>';
+                    return '<tr><td style="font-weight:500">' + esc(s.name) + '</td><td style="color:var(--text-muted)">' + esc(s.description) + '</td><td><span class="vps-badge ' + badge + '">' + esc(s.activeState) + '</span></td><td class="vps-service-actions">' + actions + '</td></tr>';
+                }).join('');
+            }
+            window.vpsSvcCtl = function(hostId, name, action) { if (!confirm(action.charAt(0).toUpperCase() + action.slice(1) + ' service ' + name + '?')) return; api('POST', '/api/v1/vps/service/control', { hostConfigId: hostId, serviceName: name, action: action }).then(function() { setTimeout(refresh, 1000); }); };
+            setTimeout(function() {
+                var filterEl = document.getElementById('vps-svc-filter-' + tab.id);
+                if (filterEl) filterEl.addEventListener('input', function() { renderSvcRows(tab, tbody); });
+                refresh();
+            }, 0);
+            tab._refreshInterval = setInterval(function() { if (activeTabId === tab.id) refresh(); }, 15000);
+        }
+
+        function loadVpsLogs(tab, srv, body) {
+            body.innerHTML = '<div class="vps-filter"><input type="text" id="vps-log-unit-' + tab.id + '" placeholder="Unit (e.g. sshd)..." style="max-width:200px"><input type="number" id="vps-log-lines-' + tab.id + '" value="100" min="10" max="500" style="max-width:80px"><button class="vps-btn vps-btn-primary" id="vps-log-load-' + tab.id + '">Load</button></div><div class="vps-log-box" id="vps-log-content-' + tab.id + '">Click Load to view logs</div>';
+            setTimeout(function() {
+                var loadBtn = document.getElementById('vps-log-load-' + tab.id);
+                if (loadBtn) loadBtn.addEventListener('click', function() {
+                    var unit = (document.getElementById('vps-log-unit-' + tab.id) || {}).value || '';
+                    var lines = parseInt((document.getElementById('vps-log-lines-' + tab.id) || {}).value) || 100;
+                    var logEl = document.getElementById('vps-log-content-' + tab.id);
+                    logEl.textContent = 'Loading...';
+                    api('POST', '/api/v1/vps/logs', { hostConfigId: tab.serverId, lines: lines, unit: unit || undefined }).then(function(data) {
+                        logEl.textContent = data.logs || data.error || 'No logs found';
+                    }).catch(function() { logEl.textContent = 'Failed to load logs'; });
+                });
+            }, 0);
+        }
+
+        function loadVpsNetwork(tab, srv, body) {
+            api('POST', '/api/v1/vps/network', { hostConfigId: tab.serverId }).then(function(data) {
+                if (!data || data.error) { body.innerHTML = '<div class="vps-empty">' + esc(data ? data.error : 'Failed') + '</div>'; return; }
+                var html = '<div class="vps-card" style="margin-bottom:12px"><div class="vps-card-header">Network Interfaces</div><table class="vps-table"><thead><tr><th>Name</th><th>IPv4</th><th>IPv6</th><th>MAC</th><th>State</th></tr></thead><tbody>';
+                (data.interfaces || []).forEach(function(n) {
+                    var badge = n.state === 'up' ? 'vps-badge-active' : 'vps-badge-inactive';
+                    html += '<tr><td style="font-weight:500">' + esc(n.name) + '</td><td>' + esc(n.ipv4) + '</td><td style="color:var(--text-muted)">' + esc(n.ipv6) + '</td><td style="font-family:monospace">' + esc(n.mac) + '</td><td><span class="vps-badge ' + badge + '">' + esc(n.state) + '</span></td></tr>';
+                });
+                html += '</tbody></table></div><div class="vps-card"><div class="vps-card-header">Listening Ports</div><div class="vps-log-box" style="max-height:250px">' + esc(data.connections || 'No data') + '</div></div>';
+                body.innerHTML = html;
+            }).catch(function(err) { body.innerHTML = '<div class="vps-empty">Connection failed</div>'; });
+        }
+
         function createTerminalContainer(tab) {
             var wrapper = document.getElementById('terminal-wrapper');
             var div = document.createElement('div');
@@ -996,8 +1238,10 @@
             }
             var at = null;
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { at = tabs[i]; break; } }
-            if (at && at.fitAddon) {
-                setTimeout(function() { try { at.fitAddon.fit(); } catch(e) {} if (at.term) at.term.focus(); }, 50);
+            if (at && !at.tabType) {
+                if (at.fitAddon) {
+                    setTimeout(function() { try { at.fitAddon.fit(); } catch(e) {} if (at.term) at.term.focus(); }, 50);
+                }
             }
             renderTabs();
         }
@@ -1008,6 +1252,7 @@
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { idx = i; break; } }
             if (idx === -1) return;
             var tab = tabs[idx];
+            if (tab._refreshInterval) { clearInterval(tab._refreshInterval); tab._refreshInterval = null; }
             if (tab._pingInterval) { clearInterval(tab._pingInterval); tab._pingInterval = null; }
             if (tab.ws) { try { tab.ws.send(JSON.stringify({ type: 'disconnect' })); } catch(_){} tab.ws.close(); }
             if (tab.term) tab.term.dispose();
@@ -1048,7 +1293,8 @@
                 for (var i = 0; i < gTabs.length; i++) {
                     var t = gTabs[i];
                     var label = t.displayName || t.serverName;
-                    html += '<div class="tab' + (t.id === activeTabId ? ' active' : '') + '" data-tab="' + t.id + '" title="' + esc(t.serverName) + ' (' + esc(t.serverUsername || '') + '@' + esc(t.serverHost || '') + ')"><span class="tab-dot ' + t.status + '"></span><span class="tab-label">' + esc(label) + '</span><span class="tab-close" data-close="' + t.id + '">&times;</span></div>';
+                    var typeIcon = VPS_TAB_ICONS[t.tabType || 'terminal'] || VPS_TAB_ICONS.terminal;
+                    html += '<div class="tab' + (t.id === activeTabId ? ' active' : '') + '" data-tab="' + t.id + '" title="' + esc(t.serverName) + ' (' + esc(t.serverUsername || '') + '@' + esc(t.serverHost || '') + ')"><span class="tab-dot ' + t.status + '"></span>' + (t.tabType && t.tabType !== 'terminal' ? '<span class="vps-type-icon">' + typeIcon + '</span>' : '') + '<span class="tab-label">' + esc(label) + '</span><span class="tab-close" data-close="' + t.id + '">&times;</span></div>';
                 }
             }
             bar.innerHTML = html;
@@ -1436,6 +1682,7 @@
         }
 
         // Event listeners
+        var tabDropdownSelectedServer = null;
         document.getElementById('tab-bar').addEventListener('click', function(e) {
             if (e.target.closest('#tab-transfer-btn')) { openFileTransferModal(); return; }
             var closeBtn = e.target.closest('.tab-close');
@@ -1443,10 +1690,42 @@
             var homeBtn = e.target.closest('.tab-home');
             if (homeBtn) { showHomeView(); return; }
             var addBtn = e.target.closest('.tab-add');
-            if (addBtn) { showHomeView(); return; }
+            if (addBtn) {
+                var dd = document.getElementById('tab-type-dropdown');
+                var rect = addBtn.getBoundingClientRect();
+                dd.style.left = rect.left + 'px';
+                dd.style.top = rect.bottom + 'px';
+                dd.classList.toggle('active');
+                return;
+            }
             var tab = e.target.closest('.tab');
             if (tab) switchTab(tab.dataset.tab);
         });
+        document.getElementById('tab-type-dropdown').addEventListener('click', function(e) {
+            var item = e.target.closest('.tab-dropdown-item');
+            if (!item) return;
+            var type = item.dataset.type;
+            this.classList.remove('active');
+            if (type === 'terminal') {
+                showHomeView();
+            } else {
+                showHomeView();
+                tabDropdownSelectedServer = type;
+                setTimeout(function() { promptVpsTabServer(type); }, 100);
+            }
+        });
+        document.addEventListener('click', function(e) {
+            var dd = document.getElementById('tab-type-dropdown');
+            if (!e.target.closest('.tab-dropdown') && !e.target.closest('.tab-add')) dd.classList.remove('active');
+        });
+        function promptVpsTabServer(tabType) {
+            if (servers.length === 0) { alert('No servers configured.'); return; }
+            var serverNames = servers.map(function(s, i) { return (i + 1) + '. ' + s.name + ' (' + s.host + ')'; });
+            var input = prompt('Select server for ' + VPS_TAB_TYPES[tabType] + ':\n\n' + serverNames.join('\n') + '\n\nEnter number:');
+            if (!input) return;
+            var idx = parseInt(input) - 1;
+            if (idx >= 0 && idx < servers.length) openVpsTab(servers[idx].id, tabType);
+        }
         document.getElementById('tab-bar').addEventListener('dblclick', function(e) {
             var tab = e.target.closest('.tab');
             if (tab && !e.target.closest('.tab-close')) startRenameTab(tab.dataset.tab, tab);
@@ -1527,8 +1806,14 @@
             var item = e.target.closest('.context-menu-item');
             if (!item || !ctxServerId) return;
             var action = item.dataset.action;
+            hideContextMenu();
             if (action === 'connect') connectToServer(ctxServerId);
             else if (action === 'connect-duplicate') connectToServer(ctxServerId);
+            else if (action === 'open-dashboard') openVpsTab(ctxServerId, 'dashboard');
+            else if (action === 'open-processes') openVpsTab(ctxServerId, 'processes');
+            else if (action === 'open-services') openVpsTab(ctxServerId, 'services');
+            else if (action === 'open-logs') openVpsTab(ctxServerId, 'logs');
+            else if (action === 'open-network') openVpsTab(ctxServerId, 'network');
             else if (action === 'edit') editServer(ctxServerId);
             else if (action === 'delete') { var s = null; for (var i = 0; i < servers.length; i++) { if (servers[i].id === ctxServerId) { s = servers[i]; break; } } if (s) deleteServer(s.id, s.name); }
             hideContextMenu();

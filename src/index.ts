@@ -119,11 +119,6 @@ app.get("/remote-host", (req: Request, res: Response) => {
   res.sendFile("remote-host.html", { root: require("path").join(__dirname, "../views") });
 });
 
-// VPS Control Panel page (no auth middleware - page verifies session via JS)
-app.get("/vps-control", (req: Request, res: Response) => {
-  res.sendFile("vps-control.html", { root: require("path").join(__dirname, "../views") });
-});
-
 import { authMiddleware } from "./middleware/auth.middleware";
 import setupRoutes from "./routes/setup.routes";
 
