@@ -239,13 +239,36 @@
         .ft-local { border-right: 1px solid var(--app-border); }
         .ft-panel-header {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 10px 16px; border-bottom: 1px solid var(--app-border);
-            background: var(--app-topbar); flex-shrink: 0; height: 40px;
+            padding: 0 12px; border-bottom: 1px solid var(--app-border);
+            background: var(--app-topbar); flex-shrink: 0; height: 38px;
         }
-        .ft-panel-title {
+        .ft-panel-host {
+            display: flex; align-items: center; gap: 6px; cursor: pointer;
+            padding: 4px 8px; border-radius: 4px; transition: background 0.15s;
             font-size: 12px; font-weight: 600; color: var(--text-white);
-            display: flex; align-items: center; gap: 6px;
         }
+        .ft-panel-host:hover { background: var(--app-card); }
+        .ft-host-dropdown {
+            position: absolute; top: 38px; left: 0; right: 0; z-index: 10;
+            background: var(--app-card); border-bottom: 1px solid var(--app-border);
+            max-height: 250px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .ft-host-dropdown::-webkit-scrollbar { width: 6px; }
+        .ft-host-dropdown::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
+        .ft-host-option {
+            padding: 7px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+            font-size: 12px; color: var(--foreground); transition: background 0.1s;
+        }
+        .ft-host-option:hover { background: rgba(164, 129, 129, 0.1); }
+        .ft-host-option.active { color: var(--prometheus-orange); }
+        .ft-host-option .ho-icon {
+            width: 24px; height: 24px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 10px;
+            font-weight: 700; color: #fff; flex-shrink: 0;
+        }
+        .ft-host-option .ho-info { min-width: 0; }
+        .ft-host-option .ho-name { font-weight: 600; color: var(--text-white); }
+        .ft-host-option .ho-detail { font-size: 10px; color: var(--text-muted); }
         .ft-panel-actions { display: flex; gap: 4px; }
         .ft-icon-btn {
             background: none; border: 1px solid transparent; color: var(--text-muted);
@@ -289,76 +312,41 @@
         .ft-table .file-icon.folder { color: #5ba0d0; }
         .ft-table .file-icon.file { color: var(--text-muted); }
         .ft-table .file-icon.parent { color: var(--prometheus-orange); }
-        .ft-dropzone-overlay {
+        .ft-drop-overlay {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(26,26,26,0.9); display: none; align-items: center;
             justify-content: center; flex-direction: column; gap: 8px; z-index: 5;
         }
-        .ft-dropzone-overlay.active { display: flex; }
-        .ft-dropzone-overlay p { color: var(--text-muted); font-size: 12px; }
-        .ft-transfer-bar {
+        .ft-drop-overlay.active { display: flex; }
+        .ft-drop-overlay p { color: var(--text-muted); font-size: 12px; }
+        .ft-center {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 48px; flex-shrink: 0; background: var(--app-card-dark);
+            border-left: 1px solid var(--app-border); border-right: 1px solid var(--app-border);
+            gap: 8px;
+        }
+        .ft-arrow-btn {
+            width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--app-border);
+            background: var(--app-card); color: var(--text-muted); cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            padding: 8px 16px; border-top: 1px solid var(--app-border);
-            border-bottom: 1px solid var(--app-border); background: var(--app-topbar);
-            flex-shrink: 0; gap: 12px; min-height: 44px;
+            transition: all 0.2s;
         }
-        .ft-transfer-btn {
-            background: var(--btn-primary-bg); color: var(--btn-primary-color);
-            border: none; border-radius: 50%; width: 32px; height: 32px;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s; flex-shrink: 0;
-        }
-        .ft-transfer-btn:hover { background: var(--btn-primary-hover); }
-        .ft-transfer-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .ft-transfer-progress { flex: 1; max-width: 300px; }
-        .ft-progress-bar {
-            width: 100%; height: 4px; background: var(--app-card-dark); border-radius: 2px; overflow: hidden;
-        }
-        .ft-progress-fill { height: 100%; background: var(--prometheus-orange); width: 0%; transition: width 0.3s; border-radius: 2px; }
-        .ft-progress-text { font-size: 10px; color: var(--text-muted); margin-top: 3px; text-align: center; }
-        .ft-transfer-result { font-size: 11px; padding: 4px 10px; border-radius: 4px; }
-        .ft-transfer-result.success { color: var(--success); }
-        .ft-transfer-result.error { color: var(--error); }
-        .ft-search { padding: 8px 16px; flex-shrink: 0; }
-        .ft-search input {
-            width: 100%; background: var(--app-card-dark); border: 1px solid var(--app-border);
-            color: var(--text-white); padding: 7px 10px; border-radius: 4px;
-            font-size: 12px; outline: none;
-        }
-        .ft-search input::placeholder { color: var(--text-muted); }
-        .ft-search input:focus { border-color: var(--prometheus-orange); }
-        .ft-host-list { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
-        .ft-host-list::-webkit-scrollbar { width: 6px; }
-        .ft-host-list::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
-        .ft-group-label {
-            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
-            color: var(--text-muted); padding: 12px 8px 6px; display: flex; align-items: center; gap: 6px;
-        }
-        .ft-group-label .ft-group-count {
-            background: var(--app-card-dark); border-radius: 3px; padding: 1px 5px;
-            font-size: 9px; font-weight: 600; color: var(--prometheus-orange);
-        }
-        .ft-host-item {
-            display: flex; align-items: center; gap: 10px; padding: 8px 10px;
-            border-radius: 4px; cursor: pointer; transition: all 0.12s;
-        }
-        .ft-host-item:hover { background: var(--app-card); }
-        .ft-host-item.selected { background: rgba(164, 129, 129, 0.15); border: 1px solid var(--prometheus-orange); }
-        .ft-host-avatar {
-            width: 32px; height: 32px; border-radius: 50%; display: flex;
-            align-items: center; justify-content: center; flex-shrink: 0;
-            font-size: 12px; font-weight: 700; color: #fff;
-        }
-        .ft-host-info { min-width: 0; }
-        .ft-host-name { font-size: 12px; font-weight: 600; color: var(--text-white); }
-        .ft-host-detail { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+        .ft-arrow-btn:hover { background: var(--btn-primary-bg); color: var(--btn-primary-color); border-color: var(--btn-primary-bg); }
+        .ft-arrow-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .ft-center-status { font-size: 9px; color: var(--text-muted); text-align: center; max-width: 40px; word-break: break-all; }
         .ft-bottom-bar {
             display: flex; align-items: center; justify-content: space-between;
-            padding: 8px 16px; background: var(--app-topbar); border-top: 1px solid var(--app-border);
-            flex-shrink: 0; height: 42px;
+            padding: 6px 16px; background: var(--app-topbar); border-top: 1px solid var(--app-border);
+            flex-shrink: 0; height: 38px;
         }
-        .ft-bottom-left { font-size: 11px; color: var(--text-muted); }
-        .ft-bottom-right { display: flex; gap: 8px; align-items: center; }
+        .ft-bottom-left, .ft-bottom-right { display: flex; gap: 8px; align-items: center; }
+        .ft-bottom-center { flex: 1; max-width: 300px; margin: 0 16px; }
+        .ft-progress-bar { width: 100%; height: 4px; background: var(--app-card-dark); border-radius: 2px; overflow: hidden; }
+        .ft-progress-fill { height: 100%; background: var(--prometheus-orange); width: 0%; transition: width 0.3s; border-radius: 2px; }
+        .ft-progress-text { font-size: 10px; color: var(--text-muted); margin-top: 2px; text-align: center; }
+        .ft-transfer-result { font-size: 11px; padding: 3px 8px; border-radius: 4px; }
+        .ft-transfer-result.success { color: var(--success); }
+        .ft-transfer-result.error { color: var(--error); }
 
         .content-area { flex: 1; position: relative; overflow: hidden; min-height: 0; }
         .home-view {
@@ -606,78 +594,71 @@
 
     <div id="modal-file-transfer" class="ft-overlay">
         <div class="ft-container">
-            <!-- Left Panel: Local Files -->
-            <div class="ft-panel ft-local">
+            <!-- Left Panel -->
+            <div class="ft-panel" id="ft-panel-left">
                 <div class="ft-panel-header">
-                    <div class="ft-panel-title">
+                    <div class="ft-panel-host" id="ft-left-host">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
-                        Local
+                        <span id="ft-left-host-name">Local</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </div>
                     <div class="ft-panel-actions">
-                        <button class="ft-icon-btn" id="ft-local-refresh" title="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
+                        <button class="ft-icon-btn" id="ft-left-refresh" title="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
                     </div>
                 </div>
-                <div class="ft-breadcrumb" id="ft-local-breadcrumb"></div>
-                <div class="ft-table-wrap">
-                    <table class="ft-table">
-                        <thead><tr><th>Name</th><th>Date Modified</th><th>Size</th><th>Kind</th></tr></thead>
-                        <tbody id="ft-local-files"></tbody>
-                    </table>
+                <div class="ft-host-dropdown" id="ft-left-dropdown" style="display:none;"></div>
+                <div class="ft-breadcrumb" id="ft-left-breadcrumb"></div>
+                <div class="ft-table-wrap" id="ft-left-wrap">
+                    <table class="ft-table"><thead><tr><th>Name</th><th>Date Modified</th><th>Size</th><th>Kind</th></tr></thead><tbody id="ft-left-files"></tbody></table>
                 </div>
-                <div class="ft-dropzone-overlay" id="ft-drop-overlay">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <p>Drop files to upload</p>
-                </div>
+                <div class="ft-drop-overlay" id="ft-left-drop"><p>Drop files here</p></div>
             </div>
 
-            <!-- Transfer Controls -->
-            <div class="ft-transfer-bar">
-                <button class="ft-transfer-btn" id="ft-upload-btn" title="Upload to remote">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg>
+            <!-- Center Transfer Controls -->
+            <div class="ft-center">
+                <button class="ft-arrow-btn" id="ft-transfer-right" title="Upload to remote">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </button>
-                <div class="ft-transfer-progress" id="ft-progress" style="display:none;">
-                    <div class="ft-progress-bar"><div class="ft-progress-fill" id="ft-progress-fill"></div></div>
-                    <div class="ft-progress-text" id="ft-progress-text"></div>
-                </div>
-                <div class="ft-transfer-result" id="ft-result" style="display:none;"></div>
+                <div class="ft-center-status" id="ft-center-status"></div>
+                <button class="ft-arrow-btn" id="ft-transfer-left" title="Download from remote">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
             </div>
 
-            <!-- Right Panel: Remote Host -->
-            <div class="ft-panel ft-remote">
+            <!-- Right Panel -->
+            <div class="ft-panel" id="ft-panel-right">
                 <div class="ft-panel-header">
-                    <div class="ft-panel-title" id="ft-remote-title">
+                    <div class="ft-panel-host" id="ft-right-host">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-                        Select Host
+                        <span id="ft-right-host-name">Select Host</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     </div>
-                    <button class="ft-icon-btn" id="ft-close-btn" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                </div>
-                <!-- Host selector view -->
-                <div id="ft-host-selector">
-                    <div class="ft-search"><input type="text" id="ft-host-search" placeholder="Search hosts..."></div>
-                    <div class="ft-host-list" id="ft-host-list"></div>
-                </div>
-                <!-- Remote file browser view (hidden until host selected) -->
-                <div id="ft-remote-browser" style="display:none;">
-                    <div class="ft-breadcrumb" id="ft-remote-breadcrumb"></div>
-                    <div class="ft-table-wrap">
-                        <table class="ft-table">
-                            <thead><tr><th>Name</th><th>Size</th><th>Kind</th></tr></thead>
-                            <tbody id="ft-remote-files"></tbody>
-                        </table>
+                    <div class="ft-panel-actions">
+                        <button class="ft-icon-btn" id="ft-right-refresh" title="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
+                        <button class="ft-icon-btn" id="ft-close-btn" title="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
                     </div>
                 </div>
+                <div class="ft-host-dropdown" id="ft-right-dropdown" style="display:none;"></div>
+                <div class="ft-breadcrumb" id="ft-right-breadcrumb"></div>
+                <div class="ft-table-wrap" id="ft-right-wrap">
+                    <table class="ft-table"><thead><tr><th>Name</th><th>Size</th><th>Kind</th></tr></thead><tbody id="ft-right-files"></tbody></table>
+                </div>
+                <div class="ft-drop-overlay" id="ft-right-drop"><p>Drop files here</p></div>
             </div>
         </div>
 
         <!-- Bottom bar -->
         <div class="ft-bottom-bar">
             <div class="ft-bottom-left">
-                <span id="ft-status-text">No host selected</span>
-            </div>
-            <div class="ft-bottom-right">
                 <input type="file" id="ft-file-input" multiple style="display:none;">
                 <button class="btn btn-secondary" id="ft-add-files-btn">+ Add Files</button>
-                <button class="btn btn-primary" id="ft-send-btn" disabled>Upload</button>
+            </div>
+            <div class="ft-bottom-center" id="ft-transfer-progress" style="display:none;">
+                <div class="ft-progress-bar"><div class="ft-progress-fill" id="ft-progress-fill"></div></div>
+                <div class="ft-progress-text" id="ft-progress-text"></div>
+            </div>
+            <div class="ft-bottom-right">
+                <div class="ft-transfer-result" id="ft-result" style="display:none;"></div>
             </div>
         </div>
     </div>
@@ -1188,283 +1169,262 @@
         document.getElementById('btn-new-host').addEventListener('click', showAddModal);
 
         // === FILE TRANSFER ===
-        var ftFiles = [];
-        var ftUploading = false;
-        var ftSelectedHost = null;
-        var ftRemotePath = '/';
-        var ftRemoteHistory = ['/'];
-        var ftRemoteHistoryIdx = 0;
-        var ftLocalPath = '/';
-        var ftLocalHistory = ['/'];
-        var ftLocalHistoryIdx = 0;
+        var ftPanelLeft = { type: 'local', hostId: null, path: '/', history: ['/'], histIdx: 0, files: [] };
+        var ftPanelRight = { type: 'remote', hostId: null, path: '/', history: ['/'], histIdx: 0 };
+        var ftDragging = null; // 'left' or 'right'
 
         function openFileTransferModal() {
-            ftFiles = [];
-            ftSelectedHost = null;
-            ftRemotePath = '/';
-            ftRemoteHistory = ['/'];
-            ftRemoteHistoryIdx = 0;
-            ftLocalPath = '/';
-            ftLocalHistory = ['/'];
-            ftLocalHistoryIdx = 0;
-            document.getElementById('ft-progress').style.display = 'none';
+            ftPanelLeft = { type: 'local', hostId: null, path: '/', history: ['/'], histIdx: 0, files: [] };
+            ftPanelRight = { type: 'remote', hostId: null, path: '/', history: ['/'], histIdx: 0 };
+            document.getElementById('ft-left-host-name').textContent = 'Local';
+            document.getElementById('ft-right-host-name').textContent = 'Select Host';
+            document.getElementById('ft-left-dropdown').style.display = 'none';
+            document.getElementById('ft-right-dropdown').style.display = 'none';
+            document.getElementById('ft-transfer-progress').style.display = 'none';
             document.getElementById('ft-result').style.display = 'none';
-            document.getElementById('ft-send-btn').disabled = true;
-            document.getElementById('ft-status-text').textContent = 'No host selected';
-            document.getElementById('ft-host-selector').style.display = '';
-            document.getElementById('ft-remote-browser').style.display = 'none';
-            document.getElementById('ft-remote-title').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg> Select Host';
-            renderFtHostList();
-            renderFtLocalFiles();
+            document.getElementById('ft-center-status').textContent = '';
+            renderFtPanelBreadcrumb('left');
+            renderFtPanelBreadcrumb('right');
+            renderFtPanelFiles('left');
+            renderFtPanelFiles('right');
+            updateFtArrowBtns();
             document.getElementById('modal-file-transfer').classList.add('active');
         }
         function closeFileTransferModal() { document.getElementById('modal-file-transfer').classList.remove('active'); }
 
-        function formatSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-            if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
-            return (bytes / 1073741824).toFixed(1) + ' GB';
-        }
-        function formatFtDate(d) {
-            if (!d) return '-';
-            var dt = new Date(d);
-            return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        }
-        function getFileKind(name, isDir) {
-            if (isDir) return 'folder';
-            var ext = name.split('.').pop().toLowerCase();
-            var map = { 'txt': 'text', 'log': 'text', 'csv': 'text', 'md': 'text', 'json': 'JSON', 'yaml': 'YAML', 'yml': 'YAML', 'xml': 'XML', 'html': 'HTML', 'css': 'CSS', 'js': 'JS', 'ts': 'TS', 'py': 'Python', 'sh': 'script', 'bash': 'script', 'zip': 'archive', 'tar': 'archive', 'gz': 'archive', 'rar': 'archive', 'jpg': 'image', 'jpeg': 'image', 'png': 'image', 'gif': 'image', 'svg': 'image', 'pdf': 'PDF', 'conf': 'config', 'cfg': 'config', 'ini': 'config' };
-            return map[ext] || ext.toUpperCase() || 'file';
-        }
-        function getFileIcon(name, isDir) {
-            if (isDir) return '<svg class="file-icon folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
-            return '<svg class="file-icon file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>';
-        }
+        function formatSize(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1)+' KB'; if (b < 1073741824) return (b/1048576).toFixed(1)+' MB'; return (b/1073741824).toFixed(1)+' GB'; }
+        function formatFtDate(d) { if (!d) return '-'; var dt = new Date(d); return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+', '+dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
+        function getFtFileKind(n, isDir) { if (isDir) return 'folder'; var ext = n.split('.').pop().toLowerCase(); var m = {'txt':'text','log':'text','csv':'text','json':'JSON','yaml':'YAML','yml':'YAML','xml':'XML','html':'HTML','css':'CSS','js':'JS','ts':'TS','py':'Python','sh':'script','zip':'archive','tar':'archive','gz':'archive','jpg':'image','png':'image','pdf':'PDF','conf':'config'}; return m[ext]||ext.toUpperCase()||'file'; }
+        function getFtFileIcon(n, isDir) { if (isDir) return '<svg class="file-icon folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>'; return '<svg class="file-icon file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>'; }
+        function getAvatarColor(s) { var n=(s.name||'').toLowerCase(); if(n.indexOf('docker')!==-1)return'#2496ed'; if(s.username==='root')return'#f0c040'; return'#10b981'; }
 
-        // --- Host Selector ---
-        function renderFtHostList(filter) {
-            var list = document.getElementById('ft-host-list');
-            var search = (filter || '').toLowerCase();
-            var filtered = servers;
-            if (search) filtered = servers.filter(function(s) { return s.name.toLowerCase().indexOf(search) !== -1 || s.host.toLowerCase().indexOf(search) !== -1 || s.username.toLowerCase().indexOf(search) !== -1; });
+        // Host Dropdown
+        function toggleFtDropdown(side) {
+            var dd = document.getElementById('ft-'+side+'-dropdown');
+            var isOpen = dd.style.display !== 'none';
+            // Close other
+            document.getElementById('ft-left-dropdown').style.display = 'none';
+            document.getElementById('ft-right-dropdown').style.display = 'none';
+            if (isOpen) return;
+            var html = '<div class="ft-host-option' + (ftPanelLeft.type==='local' && side==='left' ? ' active' : '') + '" data-side="'+side+'" data-host="__local__">' +
+                '<div class="ho-icon" style="background:#1971c2;">L</div><div class="ho-info"><div class="ho-name">Local</div><div class="ho-detail">This machine</div></div></div>';
             var groups = {};
-            filtered.forEach(function(s) { var g = s.groupName || 'Default'; if (!groups[g]) groups[g] = []; groups[g].push(s); });
-            var html = '';
+            servers.forEach(function(s) { var g=s.groupName||'Default'; if(!groups[g])groups[g]=[]; groups[g].push(s); });
             Object.keys(groups).sort().forEach(function(g) {
-                html += '<div class="ft-group-label">' + esc(g) + ' <span class="ft-group-count">' + groups[g].length + '</span></div>';
+                html += '<div class="ft-host-option" data-side="'+side+'" style="pointer-events:none;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;padding:4px 12px;font-weight:700;">'+esc(g)+'</div>';
                 groups[g].forEach(function(s) {
-                    var avClass = (s.name || '').toLowerCase().indexOf('docker') !== -1 ? 'docker' : (s.username === 'root' ? 'linux' : 'server');
-                    var initials = s.name.split(/[\s_\-]+/).length >= 2 ? (s.name.split(/[\s_\-]+/)[0][0] + s.name.split(/[\s_\-]+/)[1][0]).toUpperCase() : s.name.substring(0, 2).toUpperCase();
-                    html += '<div class="ft-host-item' + (ftSelectedHost && ftSelectedHost.id === s.id ? ' selected' : '') + '" data-id="' + esc(s.id) + '">' +
-                        '<div class="host-avatar ' + avClass + '">' + initials + '</div>' +
-                        '<div class="ft-host-info"><div class="ft-host-name">' + esc(s.name) + '</div>' +
-                        '<div class="ft-host-detail">ssh, ' + esc(s.username) + ', ' + esc(s.host) + (s.tags && s.tags.length ? ', ' + s.tags.join(', ') : '') + '</div></div></div>';
+                    var active = (side==='right' && ftPanelRight.hostId===s.id) ? ' active' : '';
+                    html += '<div class="ft-host-option'+active+'" data-side="'+side+'" data-host="'+esc(s.id)+'">' +
+                        '<div class="ho-icon" style="background:'+getAvatarColor(s)+';">'+(s.name||'?')[0].toUpperCase()+'</div>' +
+                        '<div class="ho-info"><div class="ho-name">'+esc(s.name)+'</div><div class="ho-detail">ssh, '+esc(s.username)+', '+esc(s.host)+'</div></div></div>';
                 });
             });
-            list.innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">No hosts found</div>';
+            dd.innerHTML = html;
+            dd.style.display = 'block';
         }
 
-        function selectFtHost(hostId) {
-            var srv = null;
-            for (var i = 0; i < servers.length; i++) { if (servers[i].id === hostId) { srv = servers[i]; break; } }
-            if (!srv) return;
-            ftSelectedHost = srv;
-            ftRemotePath = '/';
-            ftRemoteHistory = ['/'];
-            ftRemoteHistoryIdx = 0;
-            document.getElementById('ft-host-selector').style.display = 'none';
-            document.getElementById('ft-remote-browser').style.display = '';
-            document.getElementById('ft-remote-title').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg> ' + esc(srv.name);
-            document.getElementById('ft-status-text').textContent = esc(srv.username) + '@' + esc(srv.host);
-            renderFtRemoteBreadcrumb();
-            loadFtRemoteDir(ftRemotePath);
-        }
-
-        // --- Remote File Browser ---
-        function renderFtRemoteBreadcrumb() {
-            var el = document.getElementById('ft-remote-breadcrumb');
-            var parts = ftRemotePath.split('/').filter(Boolean);
-            var html = '<span class="ft-bc-item' + (parts.length === 0 ? ' active' : '') + '" data-path="/">/</span>';
-            var path = '';
-            parts.forEach(function(p, i) {
-                path += '/' + p;
-                var isLast = i === parts.length - 1;
-                html += '<span class="ft-bc-sep">/</span><span class="ft-bc-item' + (isLast ? ' active' : '') + '" data-path="' + esc(path) + '">' + esc(p) + '</span>';
-            });
-            html = '<span class="ft-icon-btn" id="ft-remote-back" title="Back"' + (ftRemoteHistoryIdx <= 0 ? ' style="opacity:0.3;pointer-events:none;"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="15 18 9 12 15 6"></polyline></svg></span>' +
-                   '<span class="ft-icon-btn" id="ft-remote-fwd" title="Forward"' + (ftRemoteHistoryIdx >= ftRemoteHistory.length - 1 ? ' style="opacity:0.3;pointer-events:none;"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 18 15 12 9 6"></polyline></svg></span>' +
-                   html;
-            el.innerHTML = html;
-        }
-
-        function loadFtRemoteDir(path) {
-            if (!ftSelectedHost) return;
-            ftRemotePath = path;
-            renderFtRemoteBreadcrumb();
-            var tbody = document.getElementById('ft-remote-files');
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Loading...</td></tr>';
-            api('POST', '/api/v1/remote-host/sftp/list', { hostConfigId: ftSelectedHost.id, path: path }).then(function(data) {
-                if (!data.success) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--error);padding:20px;">' + esc(data.error || 'Failed') + '</td></tr>'; return; }
-                var items = data.data || [];
-                var dirs = items.filter(function(i) { return i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
-                var files = items.filter(function(i) { return !i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
-                var sorted = dirs.concat(files);
-                var html = '';
-                if (path !== '/') {
-                    var parent = path.replace(/\/[^\/]+\/?$/, '') || '/';
-                    html += '<tr class="ft-nav-parent" data-path="' + esc(parent) + '"><td class="col-name">' + getFileIcon('', true) + '<span style="color:var(--prometheus-orange);">..</span></td><td class="col-size">-</td><td class="col-kind">parent</td></tr>';
-                }
-                sorted.forEach(function(item) {
-                    html += '<tr data-name="' + esc(item.name) + '" data-isdir="' + item.isDir + '" data-size="' + (item.size || 0) + '">' +
-                        '<td class="col-name">' + getFileIcon(item.name, item.isDir) + esc(item.name) + '</td>' +
-                        '<td class="col-size">' + (item.isDir ? '-' : formatSize(item.size || 0)) + '</td>' +
-                        '<td class="col-kind">' + getFileKind(item.name, item.isDir) + '</td></tr>';
-                });
-                if (!sorted.length && path === '/') {
-                    html = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">Empty directory</td></tr>';
-                }
-                tbody.innerHTML = html;
-            }).catch(function() {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--error);padding:20px;">Connection failed</td></tr>';
-            });
-        }
-
-        // --- Local File Browser ---
-        var ftLocalEntries = [];
-
-        function renderFtLocalBreadcrumb() {
-            var el = document.getElementById('ft-local-breadcrumb');
-            var parts = ftLocalPath.split('/').filter(Boolean);
-            var html = '<span class="ft-bc-item' + (parts.length === 0 ? ' active' : '') + '" data-path="/">/</span>';
-            var path = '';
-            parts.forEach(function(p, i) {
-                path += '/' + p;
-                var isLast = i === parts.length - 1;
-                html += '<span class="ft-bc-sep">/</span><span class="ft-bc-item' + (isLast ? ' active' : '') + '" data-path="' + esc(path) + '">' + esc(p) + '</span>';
-            });
-            html = '<span class="ft-icon-btn" id="ft-local-back" title="Back"' + (ftLocalHistoryIdx <= 0 ? ' style="opacity:0.3;pointer-events:none;"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="15 18 9 12 15 6"></polyline></svg></span>' +
-                   '<span class="ft-icon-btn" id="ft-local-fwd" title="Forward"' + (ftLocalHistoryIdx >= ftLocalHistory.length - 1 ? ' style="opacity:0.3;pointer-events:none;"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 18 15 12 9 6"></polyline></svg></span>' +
-                   html;
-            el.innerHTML = html;
-        }
-
-        function renderFtLocalFiles() {
-            ftLocalPath = ftLocalPath || '/';
-            renderFtLocalBreadcrumb();
-            var tbody = document.getElementById('ft-local-files');
-            // Use fetch to list local directory via API
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Loading...</td></tr>';
-            api('POST', '/api/v1/remote-host/sftp/list', { hostConfigId: '__local__', path: ftLocalPath }).then(function(data) {
-                if (!data.success) {
-                    // Fallback: show drag-drop message
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">Select files using "Add Files" button or drag & drop</td></tr>';
-                    return;
-                }
-                var items = data.data || [];
-                var dirs = items.filter(function(i) { return i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
-                var files = items.filter(function(i) { return !i.isDir; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
-                var sorted = dirs.concat(files);
-                var html = '';
-                if (ftLocalPath !== '/') {
-                    var parent = ftLocalPath.replace(/\/[^\/]+\/?$/, '') || '/';
-                    html += '<tr class="ft-nav-parent" data-path="' + esc(parent) + '"><td class="col-name">' + getFileIcon('', true) + '<span style="color:var(--prometheus-orange);">..</span></td><td class="col-date">-</td><td class="col-size">-</td><td class="col-kind">parent</td></tr>';
-                }
-                sorted.forEach(function(item) {
-                    var inQueue = ftFiles.some(function(f) { return f.name === item.name; });
-                    html += '<tr data-name="' + esc(item.name) + '" data-isdir="' + item.isDir + '" data-size="' + (item.size || 0) + '"' + (inQueue ? ' class="selected"' : '') + '>' +
-                        '<td class="col-name">' + getFileIcon(item.name, item.isDir) + esc(item.name) + '</td>' +
-                        '<td class="col-date">' + formatFtDate(item.modTime) + '</td>' +
-                        '<td class="col-size">' + (item.isDir ? '-' : formatSize(item.size || 0)) + '</td>' +
-                        '<td class="col-kind">' + getFileKind(item.name, item.isDir) + '</td></tr>';
-                });
-                if (!sorted.length) {
-                    html = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Empty directory</td></tr>';
-                }
-                tbody.innerHTML = html;
-            }).catch(function() {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">Select files using "Add Files" button or drag & drop</td></tr>';
-            });
-        }
-
-        function addFtFiles(fileList) {
-            for (var i = 0; i < fileList.length; i++) {
-                var exists = false;
-                for (var j = 0; j < ftFiles.length; j++) {
-                    if (ftFiles[j].name === fileList[i].name && ftFiles[j].size === fileList[i].size) { exists = true; break; }
-                }
-                if (!exists) ftFiles.push(fileList[i]);
+        function selectFtHost(side, hostId) {
+            var panel = side === 'left' ? ftPanelLeft : ftPanelRight;
+            document.getElementById('ft-'+side+'-dropdown').style.display = 'none';
+            if (hostId === '__local__') {
+                panel.type = 'local'; panel.hostId = null;
+                document.getElementById('ft-'+side+'-host-name').textContent = 'Local';
+                document.getElementById('ft-'+side+'-host').querySelector('svg').outerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>';
+            } else {
+                var srv = null;
+                for (var i=0;i<servers.length;i++){if(servers[i].id===hostId){srv=servers[i];break;}}
+                if (!srv) return;
+                panel.type = 'remote'; panel.hostId = hostId;
+                document.getElementById('ft-'+side+'-host-name').textContent = srv.name;
+                document.getElementById('ft-'+side+'-host').querySelector('svg').outerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>';
             }
-            updateFtSendBtn();
-            renderFtLocalFiles();
+            panel.path = '/'; panel.history = ['/']; panel.histIdx = 0;
+            renderFtPanelBreadcrumb(side);
+            renderFtPanelFiles(side);
+            updateFtArrowBtns();
         }
 
-        function updateFtSendBtn() {
-            document.getElementById('ft-send-btn').disabled = ftFiles.length === 0 || !ftSelectedHost;
-            document.getElementById('ft-status-text').textContent = ftFiles.length > 0 ? ftFiles.length + ' file(s) selected' + (ftSelectedHost ? ' for ' + ftSelectedHost.name : '') : (ftSelectedHost ? ftSelectedHost.username + '@' + ftSelectedHost.host : 'No host selected');
+        // Breadcrumb
+        function renderFtPanelBreadcrumb(side) {
+            var panel = side === 'left' ? ftPanelLeft : ftPanelRight;
+            var el = document.getElementById('ft-'+side+'-breadcrumb');
+            var parts = panel.path.split('/').filter(Boolean);
+            var html = '<span class="ft-bc-item'+(parts.length===0?' active':'')+'" data-path="/">/</span>';
+            var p = '';
+            parts.forEach(function(pt,i) { p += '/'+pt; html += '<span class="ft-bc-sep">/</span><span class="ft-bc-item'+(i===parts.length-1?' active':'')+'" data-path="'+esc(p)+'">'+esc(pt)+'</span>'; });
+            html = '<span class="ft-icon-btn ft-bc-back" data-side="'+side+'"'+(panel.histIdx<=0?' style="opacity:0.3;pointer-events:none;"':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="15 18 9 12 15 6"></polyline></svg></span>' +
+                '<span class="ft-icon-btn ft-bc-fwd" data-side="'+side+'"'+(panel.histIdx>=panel.history.length-1?' style="opacity:0.3;pointer-events:none;"':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 18 15 12 9 6"></polyline></svg></span>' + html;
+            el.innerHTML = html;
         }
 
-        function navigateFtLocal(path) {
-            ftLocalHistory = ftLocalHistory.slice(0, ftLocalHistoryIdx + 1);
-            ftLocalHistory.push(path);
-            ftLocalHistoryIdx = ftLocalHistory.length - 1;
-            ftLocalPath = path;
-            renderFtLocalFiles();
+        function navigateFtPanel(side, path) {
+            var panel = side === 'left' ? ftPanelLeft : ftPanelRight;
+            panel.history = panel.history.slice(0, panel.histIdx + 1);
+            panel.history.push(path);
+            panel.histIdx = panel.history.length - 1;
+            panel.path = path;
+            renderFtPanelBreadcrumb(side);
+            renderFtPanelFiles(side);
         }
 
-        function uploadFtFiles() {
-            if (ftUploading || ftFiles.length === 0 || !ftSelectedHost) return;
-            ftUploading = true;
-            var progress = document.getElementById('ft-progress');
+        // File listing
+        function renderFtPanelFiles(side) {
+            var panel = side === 'left' ? ftPanelLeft : ftPanelRight;
+            var tbody = document.getElementById('ft-'+side+'-files');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">Loading...</td></tr>';
+            renderFtPanelBreadcrumb(side);
+
+            if (panel.type === 'local') {
+                api('POST', '/api/v1/remote-host/sftp/list', { hostConfigId: '__local__', path: panel.path }).then(function(data) {
+                    if (!data.success) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">Use "+ Add Files" or drag & drop</td></tr>'; return; }
+                    tbody.innerHTML = buildFtRows(data.data || [], side, true);
+                }).catch(function() { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:30px;">Cannot read directory</td></tr>'; });
+            } else if (panel.hostId) {
+                api('POST', '/api/v1/remote-host/sftp/list', { hostConfigId: panel.hostId, path: panel.path }).then(function(data) {
+                    if (!data.success) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--error);padding:20px;">'+esc(data.error||'Failed')+'</td></tr>'; return; }
+                    tbody.innerHTML = buildFtRows(data.data || [], side, false);
+                }).catch(function() { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--error);padding:20px;">Connection failed</td></tr>'; });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:30px;">Click host name to select a remote host</td></tr>';
+            }
+        }
+
+        function buildFtRows(items, side, showDate) {
+            var panel = side === 'left' ? ftPanelLeft : ftPanelRight;
+            var dirs = items.filter(function(i){return i.isDir;}).sort(function(a,b){return a.name.localeCompare(b.name);});
+            var files = items.filter(function(i){return !i.isDir;}).sort(function(a,b){return a.name.localeCompare(b.name);});
+            var sorted = dirs.concat(files);
+            var html = '';
+            if (panel.path !== '/') {
+                var parent = panel.path.replace(/\/[^\/]+\/?$/, '') || '/';
+                html += '<tr class="ft-nav-parent" data-path="'+esc(parent)+'" data-side="'+side+'"><td class="col-name">'+getFtFileIcon('',true)+'<span style="color:var(--prometheus-orange);">..</span></td>'+(showDate?'<td class="col-date">-</td>':'')+'<td class="col-size">-</td><td class="col-kind">parent</td></tr>';
+            }
+            sorted.forEach(function(item) {
+                var cols = showDate ? '<td class="col-date">'+formatFtDate(item.modTime)+'</td>' : '';
+                html += '<tr data-name="'+esc(item.name)+'" data-isdir="'+item.isDir+'" data-size="'+(item.size||0)+'" data-side="'+side+'" draggable="true">' +
+                    '<td class="col-name">'+getFtFileIcon(item.name,item.isDir)+esc(item.name)+'</td>'+cols+
+                    '<td class="col-size">'+(item.isDir?'-':formatSize(item.size||0))+'</td>'+
+                    '<td class="col-kind">'+getFtFileKind(item.name,item.isDir)+'</td></tr>';
+            });
+            if (!sorted.length) html = '<tr><td colspan="'+(showDate?4:3)+'" style="text-align:center;color:var(--text-muted);padding:20px;">Empty directory</td></tr>';
+            return html;
+        }
+
+        // Transfer
+        function updateFtArrowBtns() {
+            var hasLeft = ftPanelLeft.type === 'local' || ftPanelLeft.hostId;
+            var hasRight = ftPanelRight.hostId;
+            document.getElementById('ft-transfer-right').disabled = !hasRight;
+            document.getElementById('ft-transfer-left').disabled = !hasRight;
+        }
+
+        function ftTransfer(fromSide, toSide) {
+            var fromPanel = fromSide === 'left' ? ftPanelLeft : ftPanelRight;
+            var toPanel = toSide === 'left' ? ftPanelLeft : ftPanelRight;
+            if (!fromPanel.hostId && fromPanel.type !== 'local') return;
+            if (!toPanel.hostId && toPanel.type !== 'local') return;
+
+            // Get selected files from source panel
+            var tbody = document.getElementById('ft-'+fromSide+'-files');
+            var selected = tbody.querySelectorAll('tr.selected');
+            if (selected.length === 0) { document.getElementById('ft-center-status').textContent = 'Select files'; return; }
+
+            var fileItems = [];
+            selected.forEach(function(tr) {
+                if (tr.dataset.isdir === 'true') return;
+                fileItems.push({ name: tr.dataset.name, size: parseInt(tr.dataset.size||'0') });
+            });
+            if (fileItems.length === 0) return;
+
+            var progress = document.getElementById('ft-transfer-progress');
             var fill = document.getElementById('ft-progress-fill');
             var text = document.getElementById('ft-progress-text');
             var result = document.getElementById('ft-result');
-            var sendBtn = document.getElementById('ft-send-btn');
             progress.style.display = 'block';
             result.style.display = 'none';
-            sendBtn.disabled = true;
+            document.getElementById('ft-center-status').textContent = '0/' + fileItems.length;
 
-            var completed = 0;
-            var total = ftFiles.length;
-            var errors = [];
-
-            function uploadNext() {
-                if (completed >= total) {
-                    ftUploading = false;
+            var completed = 0, errors = 0;
+            function transferNext() {
+                if (completed >= fileItems.length) {
                     progress.style.display = 'none';
                     result.style.display = 'block';
-                    if (errors.length === 0) {
-                        result.className = 'ft-transfer-result success';
-                        result.textContent = 'All ' + total + ' file(s) uploaded successfully.';
-                    } else {
-                        result.className = 'ft-transfer-result error';
-                        result.textContent = (total - errors.length) + '/' + total + ' uploaded. Errors: ' + errors.join(', ');
-                    }
-                    sendBtn.disabled = false;
-                    if (ftSelectedHost) loadFtRemoteDir(ftRemotePath);
+                    result.className = 'ft-transfer-result ' + (errors === 0 ? 'success' : 'error');
+                    result.textContent = errors === 0 ? 'All files transferred.' : (completed-errors)+'/'+completed+' OK, '+errors+' failed.';
+                    document.getElementById('ft-center-status').textContent = '';
+                    renderFtPanelFiles(toSide);
                     return;
                 }
-                var f = ftFiles[completed];
-                var pct = Math.round((completed / total) * 100);
-                fill.style.width = pct + '%';
-                text.textContent = 'Uploading ' + (completed + 1) + '/' + total + ': ' + f.name;
-                var formData = new FormData();
-                formData.append('file', f);
-                formData.append('hostConfigId', ftSelectedHost.id);
-                formData.append('remotePath', ftRemotePath.replace(/\/+$/, '') + '/' + f.name);
-                fetch('/api/v1/remote-host/sftp/upload', {
-                    method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + sessionToken },
-                    body: formData
-                }).then(function(r) { return r.json(); }).then(function(data) {
-                    if (!data.success) errors.push(f.name);
-                    completed++;
-                    uploadNext();
-                }).catch(function() { errors.push(f.name); completed++; uploadNext(); });
+                var f = fileItems[completed];
+                fill.style.width = Math.round((completed/fileItems.length)*100)+'%';
+                text.textContent = (completed+1)+'/'+fileItems.length+': '+f.name;
+                document.getElementById('ft-center-status').textContent = (completed+1)+'/'+fileItems.length;
+
+                if (fromPanel.type === 'local' && toPanel.type === 'remote') {
+                    // Upload: local → remote
+                    uploadFtFile(fromPanel, toPanel, f, function(ok) { if(!ok)errors++; completed++; transferNext(); });
+                } else if (fromPanel.type === 'remote' && toPanel.type === 'local') {
+                    // Download: remote → local
+                    downloadFtFile(fromPanel, toPanel, f, function(ok) { if(!ok)errors++; completed++; transferNext(); });
+                } else if (fromPanel.type === 'remote' && toPanel.type === 'remote') {
+                    // Remote → Remote: download then upload
+                    remoteToRemoteFt(fromPanel, toPanel, f, function(ok) { if(!ok)errors++; completed++; transferNext(); });
+                } else {
+                    // Local → Local: just copy via upload
+                    uploadFtFile(fromPanel, toPanel, f, function(ok) { if(!ok)errors++; completed++; transferNext(); });
+                }
             }
-            uploadNext();
+            transferNext();
         }
 
+        function uploadFtFile(fromPanel, toPanel, file, cb) {
+            // Read file from local, upload to remote
+            var input = document.getElementById('ft-file-input');
+            // We need the actual File object - find it by name from pending files
+            var fileObj = null;
+            for (var i=0;i<ftPanelLeft.files.length;i++) { if (ftPanelLeft.files[i].name === file.name) { fileObj = ftPanelLeft.files[i]; break; } }
+            if (!fileObj) { cb(false); return; }
+            var formData = new FormData();
+            formData.append('file', fileObj);
+            formData.append('hostConfigId', toPanel.hostId);
+            formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + file.name);
+            fetch('/api/v1/remote-host/sftp/upload', { method:'POST', headers:{'Authorization':'Bearer '+sessionToken}, body:formData })
+                .then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+        }
+
+        function downloadFtFile(fromPanel, toPanel, file, cb) {
+            fetch('/api/v1/remote-host/sftp/download', {
+                method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
+                body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: fromPanel.path.replace(/\/+$/, '') + '/' + file.name })
+            }).then(function(r) {
+                if (!r.ok) throw new Error('fail');
+                return r.blob();
+            }).then(function(blob) {
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = file.name;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                cb(true);
+            }).catch(function(){cb(false);});
+        }
+
+        function remoteToRemoteFt(fromPanel, toPanel, file, cb) {
+            // Download from source, then upload to dest
+            fetch('/api/v1/remote-host/sftp/download', {
+                method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
+                body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: fromPanel.path.replace(/\/+$/, '') + '/' + file.name })
+            }).then(function(r) { if (!r.ok) throw new Error('fail'); return r.blob(); })
+            .then(function(blob) {
+                var formData = new FormData();
+                formData.append('file', blob, file.name);
+                formData.append('hostConfigId', toPanel.hostId);
+                formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + file.name);
+                return fetch('/api/v1/remote-host/sftp/upload', { method:'POST', headers:{'Authorization':'Bearer '+sessionToken}, body:formData });
+            }).then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+        }
+
+        // Event listeners
         document.getElementById('tab-bar').addEventListener('click', function(e) {
             if (e.target.closest('#tab-transfer-btn')) { openFileTransferModal(); return; }
             var closeBtn = e.target.closest('.tab-close');

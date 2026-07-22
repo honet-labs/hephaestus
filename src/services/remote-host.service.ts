@@ -310,6 +310,17 @@ class RemoteHostService {
       writeStream.end(fileBuffer);
     });
   }
+
+  public async sftpDownload(hostConfigId: string, remotePath: string): Promise<{ buffer: Buffer; fileName: string; size: number }> {
+    const { sftp, ssh } = await this.createSftpConnection(hostConfigId);
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const readStream = sftp.createReadStream(remotePath);
+      readStream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      readStream.on("end", () => { ssh.end(); const buf = Buffer.concat(chunks); resolve({ buffer: buf, fileName: remotePath.split("/").pop() || "download", size: buf.length }); });
+      readStream.on("error", (err: any) => { ssh.end(); reject(err); });
+    });
+  }
 }
 
 export const remoteHostService = new RemoteHostService();

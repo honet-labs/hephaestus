@@ -106,12 +106,27 @@ class RemoteHostController {
       const fs = require("fs");
       const fileBuffer = fs.readFileSync(req.file.path);
       const result = await remoteHostService.sftpUpload(hostConfigId, remotePath, fileBuffer, req.file.originalname);
-      // Cleanup temp file
       fs.unlinkSync(req.file.path);
       await logActivity("RemoteHost", "File Upload", `Uploaded "${req.file.originalname}" to ${remotePath}`, "SUCCESS");
       return res.json({ success: true, message: result.message });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: "Upload failed." });
+    }
+  }
+
+  public async sftpDownload(req: Request, res: Response) {
+    try {
+      const { hostConfigId, remotePath } = req.body;
+      if (!hostConfigId || !remotePath) {
+        return res.status(400).json({ success: false, error: "hostConfigId and remotePath are required." });
+      }
+      const result = await remoteHostService.sftpDownload(hostConfigId, remotePath);
+      res.setHeader("Content-Disposition", `attachment; filename="${result.fileName}"`);
+      res.setHeader("Content-Length", result.size.toString());
+      res.setHeader("Content-Type", "application/octet-stream");
+      return res.send(result.buffer);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Download failed." });
     }
   }
 }

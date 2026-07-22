@@ -19,6 +19,7 @@ import prometheusRoutes from "./routes/prometheus.routes";
 import dataprepperRoutes from "./routes/dataprepper.routes";
 import backupRoutes from "./routes/backup.routes";
 import remoteHostRoutes from "./routes/remote-host.routes";
+import vpsControlRoutes from "./routes/vps-control.routes";
 
 const app = express();
 
@@ -118,6 +119,11 @@ app.get("/remote-host", (req: Request, res: Response) => {
   res.sendFile("remote-host.html", { root: require("path").join(__dirname, "../views") });
 });
 
+// VPS Control Panel page (no auth middleware - page verifies session via JS)
+app.get("/vps-control", (req: Request, res: Response) => {
+  res.sendFile("vps-control.html", { root: require("path").join(__dirname, "../views") });
+});
+
 import { authMiddleware } from "./middleware/auth.middleware";
 import setupRoutes from "./routes/setup.routes";
 
@@ -140,6 +146,7 @@ app.use("/api/v1/prometheus", prometheusRoutes);
 app.use("/api/v1/dataprepper", dataprepperRoutes);
 app.use("/api/v1/backup", backupRoutes);
 app.use("/api/v1/remote-host", remoteHostRoutes);
+app.use("/api/v1/vps", vpsControlRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {

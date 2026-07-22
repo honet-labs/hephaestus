@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VPS Control Panel - Hephaestus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/vendor/xterm/xterm.min.css">
+  <script src="/vendor/xterm/xterm.min.js"></script>
+  <script src="/vendor/xterm/addon-fit.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg-primary:#0f1117;--bg-secondary:#1a1d27;--bg-tertiary:#242736;--bg-hover:#2a2e3d;
+      --border-primary:#2a2e3d;--border-focus:#3b82f6;
+      --text-primary:#e5e7eb;--text-secondary:#9ca3af;--text-muted:#6b7280;
+      --accent:#3b82f6;--accent-hover:#2563eb;--success:#22c55e;--warning:#f59e0b;--danger:#ef4444;
+      --info:#06b6d4;
+      --font-sans:'Inter',system-ui,-apple-system,sans-serif;--font-mono:'JetBrains Mono',Consolas,'Courier New',monospace;
+    }
+    html,body{height:100%;font-family:var(--font-sans);background:var(--bg-primary);color:var(--text-primary);overflow:hidden}
+    .app{display:flex;flex-direction:column;height:100vh}
+    .header{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:var(--bg-secondary);border-bottom:1px solid var(--border-primary);flex-shrink:0}
+    .header-left{display:flex;align-items:center;gap:12px}
+    .header-title{font-size:15px;font-weight:600;color:var(--text-primary)}
+    .header-subtitle{font-size:12px;color:var(--text-secondary)}
+    .header-right{display:flex;align-items:center;gap:12px}
+    .btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border-primary);background:var(--bg-tertiary);color:var(--text-primary);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+    .btn:hover{background:var(--bg-hover);border-color:var(--text-muted)}
+    .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .btn-primary:hover{background:var(--accent-hover)}
+    .btn-danger{background:var(--danger);border-color:var(--danger);color:#fff}
+    .btn-danger:hover{background:#dc2626}
+    .btn-sm{padding:4px 10px;font-size:11px}
+    select,input{background:var(--bg-tertiary);border:1px solid var(--border-primary);color:var(--text-primary);padding:6px 10px;border-radius:6px;font-size:12px;font-family:var(--font-sans)}
+    select:focus,input:focus{outline:none;border-color:var(--border-focus)}
+    .main{display:flex;flex:1;overflow:hidden}
+    .sidebar{width:180px;background:var(--bg-secondary);border-right:1px solid var(--border-primary);display:flex;flex-direction:column;flex-shrink:0}
+    .sidebar-item{padding:10px 16px;font-size:13px;color:var(--text-secondary);cursor:pointer;border-left:3px solid transparent;transition:all .15s}
+    .sidebar-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+    .sidebar-item.active{color:var(--accent);background:rgba(59,130,246,.1);border-left-color:var(--accent)}
+    .sidebar-item i{margin-right:8px;width:16px;text-align:center}
+    .content{flex:1;overflow:auto;padding:20px}
+    .status-bar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg-tertiary);border-top:1px solid var(--border-primary);font-size:11px;color:var(--text-muted)}
+    .status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted)}
+    .status-dot.connected{background:var(--success)}
+    .status-dot.disconnected{background:var(--danger)}
+    .grid{display:grid;gap:16px}
+    .grid-2{grid-template-columns:repeat(2,1fr)}
+    .grid-3{grid-template-columns:repeat(3,1fr)}
+    .grid-4{grid-template-columns:repeat(4,1fr)}
+    .card{background:var(--bg-secondary);border:1px solid var(--border-primary);border-radius:10px;padding:16px}
+    .card-header{font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+    .card-value{font-size:28px;font-weight:700;color:var(--text-primary)}
+    .card-label{font-size:11px;color:var(--text-secondary);margin-top:4px}
+    .progress{height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;margin-top:8px}
+    .progress-bar{height:100%;border-radius:3px;transition:width .3s}
+    .progress-bar.green{background:var(--success)}
+    .progress-bar.yellow{background:var(--warning)}
+    .progress-bar.red{background:var(--danger)}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{text-align:left;padding:8px 12px;background:var(--bg-tertiary);color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border-primary);position:sticky;top:0}
+    td{padding:8px 12px;border-bottom:1px solid var(--border-primary);color:var(--text-primary)}
+    tr:hover td{background:var(--bg-hover)}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+    .log-box{background:var(--bg-primary);border:1px solid var(--border-primary);border-radius:6px;padding:12px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);max-height:500px;overflow:auto;white-space:pre-wrap;word-break:break-all;line-height:1.5}
+    .terminal-container{height:100%}
+    #terminal{height:100%}
+    .empty-state{text-align:center;padding:40px;color:var(--text-muted)}
+    .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase}
+    .badge-active{background:rgba(34,197,94,.15);color:var(--success)}
+    .badge-inactive{background:rgba(107,114,128,.15);color:var(--text-muted)}
+    .badge-error{background:rgba(239,68,68,.15);color:var(--danger)}
+    .service-actions{display:flex;gap:4px}
+    .filter-bar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+    .filter-bar input{flex:1;max-width:300px}
+    @media(max-width:900px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+    .loading{opacity:.5;pointer-events:none}
+    .text-success{color:var(--success)}.text-warning{color:var(--warning)}.text-danger{color:var(--danger)}.text-info{color:var(--info)}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="header-left">
+        <div>
+          <div class="header-title">VPS Control Panel</div>
+          <div class="header-subtitle">Server Management & Monitoring</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <select id="serverSelect">
+          <option value="">-- Select Server --</option>
+        </select>
+        <button class="btn btn-primary" onclick="refreshAll()">Refresh</button>
+        <button class="btn" onclick="window.close()">Close</button>
+      </div>
+    </div>
+    <div class="main">
+      <div class="sidebar">
+        <div class="sidebar-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+          <span>&#9632;</span> Dashboard
+        </div>
+        <div class="sidebar-item" data-page="processes" onclick="switchPage('processes')">
+          <span>&#9638;</span> Processes
+        </div>
+        <div class="sidebar-item" data-page="services" onclick="switchPage('services')">
+          <span>&#9881;</span> Services
+        </div>
+        <div class="sidebar-item" data-page="logs" onclick="switchPage('logs')">
+          <span>&#9776;</span> System Logs
+        </div>
+        <div class="sidebar-item" data-page="network" onclick="switchPage('network')">
+          <span>&#9741;</span> Network
+        </div>
+        <div class="sidebar-item" data-page="terminal" onclick="switchPage('terminal')">
+          <span>&#9618;</span> Terminal
+        </div>
+      </div>
+      <div class="content">
+        <div id="page-dashboard" class="tab-content active">
+          <div class="grid grid-4" style="margin-bottom:16px">
+            <div class="card">
+              <div class="card-header">CPU Usage</div>
+              <div class="card-value" id="cpu-usage">--</div>
+              <div class="card-label" id="cpu-model">--</div>
+              <div class="progress"><div class="progress-bar green" id="cpu-bar" style="width:0%"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-header">Memory</div>
+              <div class="card-value" id="mem-usage">--</div>
+              <div class="card-label" id="mem-detail">--</div>
+              <div class="progress"><div class="progress-bar green" id="mem-bar" style="width:0%"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-header">Load Average</div>
+              <div class="card-value" id="load-avg">--</div>
+              <div class="card-label">1m / 5m / 15m</div>
+            </div>
+            <div class="card">
+              <div class="card-header">System Info</div>
+              <div class="card-label" id="sys-hostname" style="font-size:13px;color:var(--text-primary)">--</div>
+              <div class="card-label" id="sys-os">--</div>
+              <div class="card-label" id="sys-uptime">--</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">Disk Usage</div>
+            <table>
+              <thead><tr><th>Filesystem</th><th>Mount</th><th>Total</th><th>Used</th><th>Available</th><th>Usage</th></tr></thead>
+              <tbody id="disk-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="page-processes" class="tab-content">
+          <div class="filter-bar">
+            <input type="text" id="process-filter" placeholder="Search processes..." oninput="filterProcesses()">
+            <select id="process-sort" onchange="loadProcesses()">
+              <option value="cpu">Sort by CPU</option>
+              <option value="mem">Sort by Memory</option>
+            </select>
+          </div>
+          <div class="card">
+            <table>
+              <thead><tr><th>PID</th><th>User</th><th>CPU%</th><th>MEM%</th><th>RSS</th><th>Command</th><th>Action</th></tr></thead>
+              <tbody id="process-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="page-services" class="tab-content">
+          <div class="filter-bar">
+            <input type="text" id="service-filter" placeholder="Search services..." oninput="filterServices()">
+          </div>
+          <div class="card">
+            <table>
+              <thead><tr><th>Name</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="service-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="page-logs" class="tab-content">
+          <div class="filter-bar">
+            <input type="text" id="log-unit" placeholder="Unit (e.g. sshd, nginx)..." style="max-width:200px">
+            <input type="number" id="log-lines" placeholder="Lines" value="100" min="10" max="500" style="max-width:100px">
+            <button class="btn btn-primary" onclick="loadLogs()">Load Logs</button>
+            <button class="btn" onclick="clearLogs()">Clear</button>
+          </div>
+          <div class="log-box" id="log-content">Select a server and click Load Logs</div>
+        </div>
+        <div id="page-network" class="tab-content">
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-header">Network Interfaces</div>
+            <table>
+              <thead><tr><th>Name</th><th>IPv4</th><th>IPv6</th><th>MAC</th><th>State</th></tr></thead>
+              <tbody id="net-interface-table"></tbody>
+            </table>
+          </div>
+          <div class="card">
+            <div class="card-header">Listening Ports</div>
+            <div class="log-box" id="net-connections" style="max-height:300px">Select a server to view network info</div>
+          </div>
+        </div>
+        <div id="page-terminal" class="tab-content" style="height:100%">
+          <div class="terminal-container" id="terminal-container"></div>
+        </div>
+      </div>
+    </div>
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Not connected</span>
+    </div>
+  </div>
+  <script>
+    let currentHostId = null;
+    let terminal = null;
+    let fitAddon = null;
+    let ws = null;
+    let refreshInterval = null;
+    let processes = [];
+    let services = [];
+
+    async function checkSession() {
+      try {
+        const token = localStorage.getItem('session_token');
+        if (!token) { window.location.href = '/#overview'; return; }
+        const res = await fetch('/api/v1/users/me', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) { window.location.href = '/#overview'; return; }
+        const data = await res.json();
+        if (data.user && data.user.role === 'ADMIN') {
+          loadServers();
+        } else {
+          window.location.href = '/#overview';
+        }
+      } catch { window.location.href = '/#overview'; }
+    }
+
+    async function loadServers() {
+      try {
+        const token = localStorage.getItem('session_token');
+        const res = await fetch('/api/v1/remote-host/configs', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) return;
+        const configs = await res.json();
+        const sel = document.getElementById('serverSelect');
+        sel.innerHTML = '<option value="">-- Select Server --</option>';
+        configs.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = `${c.name} (${c.host})`;
+          sel.appendChild(opt);
+        });
+      } catch (e) { console.error('Failed to load servers:', e); }
+    }
+
+    function switchPage(page) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+      document.querySelector(`[data-page="${page}"]`).classList.add('active');
+      if (page === 'terminal' && !terminal) initTerminal();
+      if (page === 'terminal' && terminal) setTimeout(() => fitAddon.fit(), 50);
+    }
+
+    document.getElementById('serverSelect').addEventListener('change', function() {
+      currentHostId = this.value || null;
+      if (terminal) { disconnectTerminal(); terminal = null; document.getElementById('terminal-container').innerHTML = ''; }
+      if (currentHostId) {
+        refreshAll();
+        document.getElementById('statusDot').className = 'status-dot connected';
+        document.getElementById('statusText').textContent = 'Connected to ' + this.options[this.selectedIndex].text;
+      } else {
+        document.getElementById('statusDot').className = 'status-dot disconnected';
+        document.getElementById('statusText').textContent = 'Not connected';
+      }
+    });
+
+    function refreshAll() {
+      if (!currentHostId) return;
+      loadMetrics();
+      loadProcesses();
+      loadServices();
+      loadSystemInfo();
+      loadNetwork();
+    }
+
+    async function apiPost(endpoint, body) {
+      const token = localStorage.getItem('session_token');
+      const res = await fetch('/api/v1/vps/' + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('API error: ' + res.status);
+      return res.json();
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function getProgressClass(pct) {
+      if (pct >= 90) return 'red';
+      if (pct >= 70) return 'yellow';
+      return 'green';
+    }
+
+    async function loadMetrics() {
+      if (!currentHostId) return;
+      try {
+        const data = await apiPost('metrics', { hostConfigId: currentHostId });
+        document.getElementById('cpu-usage').textContent = data.cpu.usage.toFixed(1) + '%';
+        document.getElementById('cpu-model').textContent = data.cpu.cores + ' cores - ' + data.cpu.model;
+        document.getElementById('cpu-bar').style.width = data.cpu.usage + '%';
+        document.getElementById('cpu-bar').className = 'progress-bar ' + getProgressClass(data.cpu.usage);
+
+        document.getElementById('mem-usage').textContent = data.memory.percent.toFixed(1) + '%';
+        document.getElementById('mem-detail').textContent = formatBytes(data.memory.used) + ' / ' + formatBytes(data.memory.total);
+        document.getElementById('mem-bar').style.width = data.memory.percent + '%';
+        document.getElementById('mem-bar').className = 'progress-bar ' + getProgressClass(data.memory.percent);
+
+        document.getElementById('load-avg').textContent = data.loadAvg.map(l => l.toFixed(2)).join(' / ');
+
+        const diskTbody = document.getElementById('disk-table');
+        diskTbody.innerHTML = data.disks.map(d => `
+          <tr>
+            <td>${escHtml(d.filesystem)}</td>
+            <td>${escHtml(d.mount)}</td>
+            <td>${formatBytes(parseInt(d.total))}</td>
+            <td>${formatBytes(parseInt(d.used))}</td>
+            <td>${formatBytes(parseInt(d.available))}</td>
+            <td><div style="display:flex;align-items:center;gap:8px"><div class="progress" style="flex:1;margin:0"><div class="progress-bar ${getProgressClass(d.percent)}" style="width:${d.percent}%"></div></div><span>${d.percent}%</span></div></td>
+          </tr>
+        `).join('');
+      } catch (e) { console.error('Metrics error:', e); }
+    }
+
+    async function loadProcesses() {
+      if (!currentHostId) return;
+      try {
+        const sortBy = document.getElementById('process-sort').value;
+        processes = await apiPost('processes', { hostConfigId: currentHostId, sortBy });
+        filterProcesses();
+      } catch (e) { console.error('Process error:', e); }
+    }
+
+    function filterProcesses() {
+      const filter = document.getElementById('process-filter').value.toLowerCase();
+      const filtered = processes.filter(p => p.command.toLowerCase().includes(filter) || String(p.pid).includes(filter) || p.user.toLowerCase().includes(filter));
+      const tbody = document.getElementById('process-table');
+      tbody.innerHTML = filtered.map(p => `
+        <tr>
+          <td>${p.pid}</td>
+          <td>${escHtml(p.user)}</td>
+          <td>${p.cpu.toFixed(1)}</td>
+          <td>${p.mem.toFixed(1)}</td>
+          <td>${formatBytes(p.rss * 1024)}</td>
+          <td style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(p.command)}">${escHtml(p.command)}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="killProcess(${p.pid})">Kill</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function killProcess(pid) {
+      if (!confirm('Kill process ' + pid + '?')) return;
+      try {
+        await apiPost('kill-process', { hostConfigId: currentHostId, pid, signal: 'SIGTERM' });
+        setTimeout(loadProcesses, 500);
+      } catch (e) { alert('Failed to kill process: ' + e.message); }
+    }
+
+    async function loadServices() {
+      if (!currentHostId) return;
+      try {
+        services = await apiPost('services', { hostConfigId: currentHostId });
+        filterServices();
+      } catch (e) { console.error('Service error:', e); }
+    }
+
+    function filterServices() {
+      const filter = document.getElementById('service-filter').value.toLowerCase();
+      const filtered = services.filter(s => s.name.toLowerCase().includes(filter) || s.description.toLowerCase().includes(filter));
+      const tbody = document.getElementById('service-table');
+      tbody.innerHTML = filtered.map(s => {
+        const badge = s.activeState === 'active' ? 'badge-active' : s.activeState === 'failed' ? 'badge-error' : 'badge-inactive';
+        return `
+        <tr>
+          <td style="font-weight:500">${escHtml(s.name)}</td>
+          <td style="color:var(--text-secondary)">${escHtml(s.description)}</td>
+          <td><span class="badge ${badge}">${escHtml(s.activeState)}</span></td>
+          <td class="service-actions">
+            ${s.activeState !== 'active' ? `<button class="btn btn-sm" onclick="controlService('${escHtml(s.name)}','start')">Start</button>` : ''}
+            ${s.activeState === 'active' ? `<button class="btn btn-sm" onclick="controlService('${escHtml(s.name)}','stop')">Stop</button>` : ''}
+            <button class="btn btn-sm" onclick="controlService('${escHtml(s.name)}','restart')">Restart</button>
+          </td>
+        </tr>
+        `;
+      }).join('');
+    }
+
+    async function controlService(name, action) {
+      if (!confirm(action.charAt(0).toUpperCase() + action.slice(1) + ' service ' + name + '?')) return;
+      try {
+        await apiPost('service/control', { hostConfigId: currentHostId, serviceName: name, action });
+        setTimeout(loadServices, 1000);
+      } catch (e) { alert('Failed: ' + e.message); }
+    }
+
+    async function loadLogs() {
+      if (!currentHostId) return;
+      const unit = document.getElementById('log-unit').value;
+      const lines = document.getElementById('log-lines').value;
+      try {
+        const data = await apiPost('logs', { hostConfigId: currentHostId, lines: parseInt(lines) || 100, unit: unit || undefined });
+        document.getElementById('log-content').textContent = data.logs || 'No logs found';
+      } catch (e) { document.getElementById('log-content').textContent = 'Error loading logs: ' + e.message; }
+    }
+
+    function clearLogs() {
+      document.getElementById('log-content').textContent = '';
+      document.getElementById('log-unit').value = '';
+    }
+
+    async function loadSystemInfo() {
+      if (!currentHostId) return;
+      try {
+        const data = await apiPost('system-info', { hostConfigId: currentHostId });
+        document.getElementById('sys-hostname').textContent = data.hostname;
+        document.getElementById('sys-os').textContent = data.os + ' (' + data.arch + ')';
+        document.getElementById('sys-uptime').textContent = data.uptime;
+      } catch (e) { console.error('System info error:', e); }
+    }
+
+    async function loadNetwork() {
+      if (!currentHostId) return;
+      try {
+        const data = await apiPost('network', { hostConfigId: currentHostId });
+        const tbody = document.getElementById('net-interface-table');
+        tbody.innerHTML = (data.interfaces || []).map(n => `
+          <tr>
+            <td style="font-weight:500">${escHtml(n.name)}</td>
+            <td>${escHtml(n.ipv4)}</td>
+            <td style="color:var(--text-muted)">${escHtml(n.ipv6)}</td>
+            <td style="font-family:var(--font-mono)">${escHtml(n.mac)}</td>
+            <td><span class="badge ${n.state === 'up' ? 'badge-active' : 'badge-inactive'}">${escHtml(n.state)}</span></td>
+          </tr>
+        `).join('');
+        document.getElementById('net-connections').textContent = data.connections || 'No data';
+      } catch (e) { console.error('Network error:', e); }
+    }
+
+    function initTerminal() {
+      if (terminal) return;
+      const container = document.getElementById('terminal-container');
+      terminal = new Terminal({
+        fontFamily: '"JetBrains Mono", Consolas, "Courier New", monospace',
+        fontSize: 14,
+        theme: { background: '#0f1117', foreground: '#e5e7eb', cursor: '#3b82f6', selectionBackground: 'rgba(59,130,246,.3)' },
+        cursorBlink: true,
+        scrollback: 5000,
+      });
+      fitAddon = new FitAddon.FitAddon();
+      terminal.loadAddon(fitAddon);
+      terminal.open(container);
+      fitAddon.fit();
+      terminal.onData(data => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'input', data }));
+        }
+      });
+      terminal.onResize(({ cols, rows }) => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+        }
+      });
+      window.addEventListener('resize', () => { if (fitAddon) fitAddon.fit(); });
+      connectTerminalWS();
+    }
+
+    function connectTerminalWS() {
+      if (!currentHostId) { terminal.writeln('Select a server first.'); return; }
+      const token = localStorage.getItem('session_token');
+      if (!token) { terminal.writeln('No session token.'); return; }
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${proto}//${location.host}/ws/remote-host?token=${token}&hostId=${currentHostId}&cols=${terminal.cols}&rows=${terminal.rows}`;
+      ws = new WebSocket(url);
+      ws.onopen = () => { terminal.writeln('Connecting...'); };
+      ws.onmessage = (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg.type === 'data') terminal.write(msg.data);
+          else if (msg.type === 'connected') { terminal.clear(); terminal.writeln('Connected to ' + msg.host); }
+          else if (msg.type === 'error') terminal.writeln('\r\n\x1b[31mError: ' + escHtml(msg.message) + '\x1b[0m\r\n');
+          else if (msg.type === 'pong') {}
+        } catch { terminal.write(evt.data); }
+      };
+      ws.onclose = () => { terminal.writeln('\r\n\x1b[33mConnection closed.\x1b[0m'); };
+      ws.onerror = () => { terminal.writeln('\r\n\x1b[31mWebSocket error.\x1b[0m'); };
+      setInterval(() => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' })); }, 25000);
+    }
+
+    function disconnectTerminal() {
+      if (ws) { ws.close(); ws = null; }
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    checkSession();
+  </script>
+</body>
+</html>

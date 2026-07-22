@@ -1,0 +1,153 @@
+import { Request, Response } from "express";
+import { vpsControlService } from "../services/vps-control.service";
+
+export class VpsControlController {
+  public async execCommand(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId, command } = req.body;
+      if (!hostConfigId || !command) {
+        res.status(400).json({ error: "hostConfigId and command are required" });
+        return;
+      }
+      if (command.length > 2048) {
+        res.status(400).json({ error: "Command too long (max 2048 chars)" });
+        return;
+      }
+      const blocked = /^\s*(rm\s+-rf\s+\/|mkfs|dd\s+if=|:(){ :\|:& };:)/i;
+      if (blocked.test(command)) {
+        res.status(403).json({ error: "Dangerous command blocked" });
+        return;
+      }
+      const result = await vpsControlService.execCommand(hostConfigId, command);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to execute command" });
+    }
+  }
+
+  public async getMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId } = req.body;
+      if (!hostConfigId) {
+        res.status(400).json({ error: "hostConfigId is required" });
+        return;
+      }
+      const metrics = await vpsControlService.getMetrics(hostConfigId);
+      res.json(metrics);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to get metrics" });
+    }
+  }
+
+  public async getProcesses(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId, sortBy } = req.body;
+      if (!hostConfigId) {
+        res.status(400).json({ error: "hostConfigId is required" });
+        return;
+      }
+      const validSort = sortBy === "mem" ? "mem" : "cpu";
+      const processes = await vpsControlService.getProcesses(hostConfigId, validSort);
+      res.json(processes);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to get processes" });
+    }
+  }
+
+  public async getServices(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId } = req.body;
+      if (!hostConfigId) {
+        res.status(400).json({ error: "hostConfigId is required" });
+        return;
+      }
+      const services = await vpsControlService.getServices(hostConfigId);
+      res.json(services);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to get services" });
+    }
+  }
+
+  public async controlService(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId, serviceName, action } = req.body;
+      if (!hostConfigId || !serviceName || !action) {
+        res.status(400).json({ error: "hostConfigId, serviceName, and action are required" });
+        return;
+      }
+      const validActions = ["start", "stop", "restart", "enable", "disable"];
+      if (!validActions.includes(action)) {
+        res.status(400).json({ error: "Invalid action" });
+        return;
+      }
+      const result = await vpsControlService.controlService(hostConfigId, serviceName, action);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to control service" });
+    }
+  }
+
+  public async getSystemLogs(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId, lines, unit, since } = req.body;
+      if (!hostConfigId) {
+        res.status(400).json({ error: "hostConfigId is required" });
+        return;
+      }
+      const logLines = Math.min(Math.max(parseInt(String(lines)) || 100, 1), 500);
+      const logs = await vpsControlService.getSystemLogs(hostConfigId, { lines: logLines, unit, since });
+      res.json({ logs });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to get system logs" });
+    }
+  }
+
+  public async getSystemInfo(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId } = req.body;
+      if (!hostConfigId) {
+        res.status(400).json({ error: "hostConfigId is required" });
+        return;
+      }
+      const info = await vpsControlService.getSystemInfo(hostConfigId);
+      res.json(info);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to get system info" });
+    }
+  }
+
+  public async getNetwork(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId } = req.body;
+      if (!hostConfigId) {
+        res.status(400).json({ error: "hostConfigId is required" });
+        return;
+      }
+      const network = await vpsControlService.getNetwork(hostConfigId);
+      res.json(network);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to get network info" });
+    }
+  }
+
+  public async killProcess(req: Request, res: Response): Promise<void> {
+    try {
+      const { hostConfigId, pid, signal } = req.body;
+      if (!hostConfigId || !pid) {
+        res.status(400).json({ error: "hostConfigId and pid are required" });
+        return;
+      }
+      const pidNum = parseInt(String(pid));
+      if (isNaN(pidNum) || pidNum < 1 || pidNum > 4194304) {
+        res.status(400).json({ error: "Invalid PID" });
+        return;
+      }
+      const result = await vpsControlService.killProcess(hostConfigId, pidNum, signal || "SIGTERM");
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to kill process" });
+    }
+  }
+}
+
+export const vpsControlController = new VpsControlController();

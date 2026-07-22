@@ -24,5 +24,6 @@ router.delete("/configs/:id", requireRole("ADMIN"), (req, res) => remoteHostCont
 router.post("/test-connection", requireRole("ADMIN"), (req, res) => remoteHostController.testConnection(req, res));
 router.post("/sftp/list", requireRole("ADMIN"), (req, res) => remoteHostController.sftpListDir(req, res));
 router.post("/sftp/upload", requireRole("ADMIN"), (req, res, next) => getUpload().single("file")(req, res, next), (req, res) => remoteHostController.sftpUpload(req, res));
+router.post("/sftp/download", requireRole("ADMIN"), (req, res) => remoteHostController.sftpDownload(req, res));
 
 export default router;
