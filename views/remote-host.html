@@ -325,11 +325,12 @@
         .ft-table .file-icon.parent { color: var(--prometheus-orange); }
         .ft-drop-overlay {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(26,26,26,0.9); display: none; align-items: center;
+            background: rgba(16,185,129,0.15); display: none; align-items: center;
             justify-content: center; flex-direction: column; gap: 8px; z-index: 5;
+            border: 2px dashed rgba(16,185,129,0.5); border-radius: 8px;
         }
         .ft-drop-overlay.active { display: flex; }
-        .ft-drop-overlay p { color: var(--text-muted); font-size: 12px; }
+        .ft-drop-overlay p { color: var(--text-white); font-size: 13px; font-weight: 500; }
         .ft-center {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             width: 48px; flex-shrink: 0; background: var(--app-card-dark);
@@ -860,6 +861,21 @@
             if (body) opts.body = JSON.stringify(body);
             return fetch(url, opts).then(function(r) { return r.json(); });
         }
+        function showToast(msg, type, duration) {
+            type = type || 'info';
+            duration = duration || 3000;
+            var existing = document.getElementById('ft-toast');
+            if (existing) existing.remove();
+            var colors = { success: '#10b981', error: '#ef4444', info: '#3b82f6', warning: '#f59e0b' };
+            var bg = colors[type] || colors.info;
+            var el = document.createElement('div');
+            el.id = 'ft-toast';
+            el.style.cssText = 'position:fixed;top:16px;right:16px;z-index:10000;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;color:#fff;background:' + bg + ';box-shadow:0 4px 12px rgba(0,0,0,0.4);opacity:0;transform:translateY(-10px);transition:all 0.3s ease;max-width:400px;word-break:break-word;';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            requestAnimationFrame(function() { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+            setTimeout(function() { el.style.opacity = '0'; el.style.transform = 'translateY(-10px)'; setTimeout(function() { el.remove(); }, 300); }, duration);
+        }
         function loadServers() {
             return api('GET', '/api/v1/remote-host/configs').then(function(data) {
                 if (data.success) servers = data.data || [];
@@ -1091,7 +1107,20 @@
                     return '<tr><td style="font-weight:500">' + esc(s.name) + '</td><td style="color:var(--text-muted)">' + esc(s.description) + '</td><td><span class="vps-badge ' + badge + '">' + esc(s.activeState) + '</span></td><td class="vps-service-actions">' + actions + '</td></tr>';
                 }).join('');
             }
-            window.vpsSvcCtl = function(hostId, name, action) { if (!confirm(action.charAt(0).toUpperCase() + action.slice(1) + ' service ' + name + '?')) return; api('POST', '/api/v1/vps/service/control', { hostConfigId: hostId, serviceName: name, action: action }).then(function() { setTimeout(refresh, 1000); }); };
+            window.vpsSvcCtl = function(hostId, name, action) {
+                if (!confirm(action.charAt(0).toUpperCase() + action.slice(1) + ' service ' + name + '?')) return;
+                showToast(action.charAt(0).toUpperCase() + action.slice(1) + 'ting ' + name + '...', 'info', 10000);
+                var btns = document.querySelectorAll('button[onclick*="' + name + '"]');
+                btns.forEach(function(b) { b.disabled = true; b.style.opacity = '0.5'; });
+                api('POST', '/api/v1/vps/service/control', { hostConfigId: hostId, serviceName: name, action: action }).then(function(result) {
+                    if (result && result.error) { showToast('Failed: ' + result.error, 'error', 5000); }
+                    else { showToast(name + ' ' + action + 'ed successfully', 'success', 3000); }
+                    setTimeout(refresh, 1500);
+                }).catch(function(err) {
+                    showToast('Error: ' + (err.message || 'Unknown error'), 'error', 5000);
+                    setTimeout(refresh, 1500);
+                });
+            };
             setTimeout(function() {
                 var filterEl = document.getElementById('vps-svc-filter-' + tab.id);
                 if (filterEl) filterEl.addEventListener('input', function() { renderSvcRows(tab, tbody); });
@@ -1701,14 +1730,16 @@
             result.style.display = 'none';
             document.getElementById('ft-center-status').textContent = '0/' + fileItems.length;
 
-            var completed = 0, errors = 0;
+            var completed = 0, errors = 0, lastError = '';
             function transferNext() {
                 if (completed >= fileItems.length) {
                     progress.style.display = 'none';
                     result.style.display = 'block';
                     result.className = 'ft-transfer-result ' + (errors === 0 ? 'success' : 'error');
-                    result.textContent = errors === 0 ? 'All files transferred.' : (completed-errors)+'/'+completed+' OK, '+errors+' failed.';
+                    result.textContent = errors === 0 ? 'All files transferred.' : (completed-errors)+'/'+completed+' OK, '+errors+' failed.' + (lastError ? ' ('+lastError+')' : '');
                     document.getElementById('ft-center-status').textContent = '';
+                    if (errors === 0) showToast('Transfer complete: ' + fileItems.length + ' file(s)', 'success');
+                    else showToast('Transfer failed: ' + errors + '/' + fileItems.length + ' failed' + (lastError ? ' - ' + lastError : ''), 'error');
                     renderFtPanelFiles(toSide);
                     return;
                 }
@@ -1717,18 +1748,15 @@
                 text.textContent = (completed+1)+'/'+fileItems.length+': '+f.name;
                 document.getElementById('ft-center-status').textContent = (completed+1)+'/'+fileItems.length;
 
+                var cb = function(ok, errMsg) { if(!ok){errors++; lastError=errMsg||'Failed';} completed++; transferNext(); };
                 if (fromPanel.type === 'local' && toPanel.type === 'remote') {
-                    // Upload: local → remote
-                    uploadFtFile(fromPanel, toPanel, f, function(ok) { if(!ok)errors++; completed++; transferNext(); });
+                    uploadFtFile(fromPanel, toPanel, f, cb);
                 } else if (fromPanel.type === 'remote' && toPanel.type === 'local') {
-                    // Download: remote → local
-                    downloadFtFile(fromPanel, toPanel, f, function(ok) { if(!ok)errors++; completed++; transferNext(); });
+                    downloadFtFile(fromPanel, toPanel, f, cb);
                 } else if (fromPanel.type === 'remote' && toPanel.type === 'remote') {
-                    // Remote → Remote: download then upload
-                    remoteToRemoteFt(fromPanel, toPanel, f, function(ok) { if(!ok)errors++; completed++; transferNext(); });
+                    remoteToRemoteFt(fromPanel, toPanel, f, cb);
                 } else {
-                    // Local → Local: just copy via upload
-                    uploadFtFile(fromPanel, toPanel, f, function(ok) { if(!ok)errors++; completed++; transferNext(); });
+                    uploadFtFile(fromPanel, toPanel, f, cb);
                 }
             }
             transferNext();
@@ -1741,17 +1769,21 @@
                 fetch('/api/v1/remote-host/sftp/local-to-remote', {
                     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
                     body: JSON.stringify({ localPath: localPath, hostConfigId: toPanel.hostId, remotePath: remotePath })
-                }).then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+                }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                  .then(function(d) { cb(d.success, d.error || null); })
+                  .catch(function(e) { cb(false, e.message || 'Upload failed'); });
             } else {
                 var fileObj = null;
                 for (var i=0;i<ftPanelLeft.files.length;i++) { if (ftPanelLeft.files[i].name === file.name) { fileObj = ftPanelLeft.files[i]; break; } }
-                if (!fileObj) { cb(false); return; }
+                if (!fileObj) { cb(false, 'File not found in local files'); return; }
                 var formData = new FormData();
                 formData.append('file', fileObj);
                 formData.append('hostConfigId', toPanel.hostId);
                 formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + file.name);
                 fetch('/api/v1/remote-host/sftp/upload', { method:'POST', headers:{'Authorization':'Bearer '+sessionToken}, body:formData })
-                    .then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+                    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                    .then(function(d) { cb(d.success, d.error || null); })
+                    .catch(function(e) { cb(false, e.message || 'Upload failed'); });
             }
         }
 
@@ -1762,7 +1794,9 @@
                 fetch('/api/v1/remote-host/sftp/remote-to-local', {
                     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
                     body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: remotePath, localPath: localPath })
-                }).then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+                }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                  .then(function(d) { cb(d.success, d.error || null); })
+                  .catch(function(e) { cb(false, e.message || 'Download failed'); });
             } else {
                 fetch('/api/v1/remote-host/sftp/download', {
                     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
@@ -1782,18 +1816,17 @@
         }
 
         function remoteToRemoteFt(fromPanel, toPanel, file, cb) {
-            // Download from source, then upload to dest
             fetch('/api/v1/remote-host/sftp/download', {
                 method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
                 body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: fromPanel.path.replace(/\/+$/, '') + '/' + file.name })
-            }).then(function(r) { if (!r.ok) throw new Error('fail'); return r.blob(); })
+            }).then(function(r) { if (!r.ok) throw new Error('Download failed (HTTP ' + r.status + ')'); return r.blob(); })
             .then(function(blob) {
                 var formData = new FormData();
                 formData.append('file', blob, file.name);
                 formData.append('hostConfigId', toPanel.hostId);
                 formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + file.name);
                 return fetch('/api/v1/remote-host/sftp/upload', { method:'POST', headers:{'Authorization':'Bearer '+sessionToken}, body:formData });
-            }).then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+            }).then(function(r) { return r.json(); }).then(function(d) { cb(d.success); }).catch(function(e) { cb(false); });
         }
 
         // Event listeners
@@ -2109,16 +2142,20 @@
             if (item && item.dataset.path) { navigateFtPanel('right', item.dataset.path); }
         });
 
-        // Drag & Drop for file transfer panels
+        // Drag & Drop for file transfer panels (external files only)
         function setupFtDragDrop(side) {
             var panel = document.getElementById('ft-panel-' + side);
             var drop = document.getElementById('ft-' + side + '-drop');
             if (!panel || !drop) return;
-            panel.addEventListener('dragover', function(e) { e.preventDefault(); e.stopPropagation(); drop.classList.add('active'); });
+            panel.addEventListener('dragover', function(e) {
+                if (e.dataTransfer.types.indexOf('text/plain') !== -1) return;
+                e.preventDefault(); e.stopPropagation(); drop.classList.add('active');
+            });
             panel.addEventListener('dragleave', function(e) { if (!panel.contains(e.relatedTarget)) drop.classList.remove('active'); });
             panel.addEventListener('drop', function(e) {
-                e.preventDefault(); e.stopPropagation();
                 drop.classList.remove('active');
+                if (e.dataTransfer.types.indexOf('text/plain') !== -1) return;
+                e.preventDefault(); e.stopPropagation();
                 if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                     addFtFiles(e.dataTransfer.files);
                 }

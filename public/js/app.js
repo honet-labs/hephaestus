@@ -9136,6 +9136,7 @@ function closeNewDpFileModal() {
 async function submitNewDpFile() {
   const input = document.getElementById('new-dp-filename');
   const errorEl = document.getElementById('new-dp-filename-error');
+  const createBtn = document.querySelector('#modal-new-dp-file .btn-primary, #modal-new-dp-file button:last-child');
   let filename = (input ? input.value : '').trim();
 
   if (!filename) {
@@ -9160,6 +9161,10 @@ async function submitNewDpFile() {
     errorEl.style.display = 'block';
     return;
   }
+
+  errorEl.style.display = 'none';
+  const origBtnText = createBtn ? createBtn.textContent : '';
+  if (createBtn) { createBtn.textContent = 'Creating...'; createBtn.disabled = true; }
 
   const templateContent =
 `# Data Prepper Pipeline Configuration
@@ -9213,10 +9218,15 @@ my-pipeline:
         resultEl.style.color = '#f59e0b';
         resultEl.textContent = result.message;
       }
+    } else {
+      showFeedback('success', 'Pipeline Created', 'File "' + filename + '" created successfully.');
     }
   } catch (e) {
     errorEl.textContent = e.message;
     errorEl.style.display = 'block';
+    showFeedback('error', 'Creation Failed', e.message);
+  } finally {
+    if (createBtn) { createBtn.textContent = origBtnText; createBtn.disabled = false; }
   }
 }
 
