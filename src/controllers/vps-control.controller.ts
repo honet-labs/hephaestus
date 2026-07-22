@@ -90,9 +90,9 @@ export class VpsControlController {
         return;
       }
       const result = await vpsControlService.controlService(hostConfigId, serviceName, action);
-      res.json(result);
+      res.json({ success: true, message: `${action} ${serviceName} executed`, stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode });
     } catch (err: any) {
-      res.status(500).json({ error: "Failed to control service" });
+      res.status(200).json({ success: false, error: err.message || "Failed to control service" });
     }
   }
 
@@ -152,9 +152,9 @@ export class VpsControlController {
         return;
       }
       const result = await vpsControlService.killProcess(hostConfigId, pidNum, signal || "SIGTERM");
-      res.json(result);
+      res.json({ success: true, message: `Process ${pidNum} killed with ${signal || 'SIGTERM'}`, stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode });
     } catch (err: any) {
-      res.status(500).json({ error: "Failed to kill process" });
+      res.status(200).json({ success: false, error: err.message || "Failed to kill process" });
     }
   }
 }

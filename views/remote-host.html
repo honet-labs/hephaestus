@@ -1074,7 +1074,18 @@
                 var filtered = (tab._vpsData || []).filter(function(p) { return !filter || p.command.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || String(p.pid).indexOf(filter) !== -1; });
                 tbody.innerHTML = filtered.map(function(p) { return '<tr><td>' + p.pid + '</td><td>' + esc(p.user) + '</td><td>' + p.cpu.toFixed(1) + '</td><td>' + p.mem.toFixed(1) + '</td><td>' + formatBytes(p.rss * 1024) + '</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(p.command) + '">' + esc(p.command) + '</td><td><button class="vps-btn vps-btn-danger" onclick="vpsKillProc(\'' + tab.serverId + '\',' + p.pid + ')">Kill</button></td></tr>'; }).join('');
             }
-            window.vpsKillProc = function(hostId, pid) { if (!confirm('Kill process ' + pid + '?')) return; api('POST', '/api/v1/vps/kill-process', { hostConfigId: hostId, pid: pid }).then(refresh); };
+            window.vpsKillProc = function(hostId, pid) {
+                if (!confirm('Kill process ' + pid + '?')) return;
+                showToast('Killing process ' + pid + '...', 'info', 10000);
+                api('POST', '/api/v1/vps/kill-process', { hostConfigId: hostId, pid: pid }).then(function(result) {
+                    if (result && result.error) { showToast('Failed: ' + result.error, 'error', 5000); }
+                    else { showToast('Process ' + pid + ' killed successfully', 'success', 3000); }
+                    setTimeout(refresh, 1500);
+                }).catch(function(err) {
+                    showToast('Error: ' + (err.message || 'Unknown error'), 'error', 5000);
+                    setTimeout(refresh, 1500);
+                });
+            };
             setTimeout(function() {
                 var filterEl = document.getElementById('vps-proc-filter-' + tab.id);
                 var sortEl = document.getElementById('vps-proc-sort-' + tab.id);
