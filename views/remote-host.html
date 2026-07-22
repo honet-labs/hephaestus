@@ -1660,9 +1660,11 @@
         // Transfer
         function updateFtArrowBtns() {
             var hasLeft = ftPanelLeft.type === 'local' || ftPanelLeft.hostId;
-            var hasRight = ftPanelRight.hostId;
-            document.getElementById('ft-transfer-right').disabled = !hasRight;
-            document.getElementById('ft-transfer-left').disabled = !hasRight;
+            var hasRight = ftPanelRight.type === 'local' || ftPanelRight.hostId;
+            var canGoRight = hasLeft && hasRight;
+            var canGoLeft = hasLeft && hasRight;
+            document.getElementById('ft-transfer-right').disabled = !canGoRight;
+            document.getElementById('ft-transfer-left').disabled = !canGoLeft;
         }
 
         function ftTransfer(fromSide, toSide) {
@@ -1725,35 +1727,50 @@
         }
 
         function uploadFtFile(fromPanel, toPanel, file, cb) {
-            // Read file from local, upload to remote
-            var input = document.getElementById('ft-file-input');
-            // We need the actual File object - find it by name from pending files
-            var fileObj = null;
-            for (var i=0;i<ftPanelLeft.files.length;i++) { if (ftPanelLeft.files[i].name === file.name) { fileObj = ftPanelLeft.files[i]; break; } }
-            if (!fileObj) { cb(false); return; }
-            var formData = new FormData();
-            formData.append('file', fileObj);
-            formData.append('hostConfigId', toPanel.hostId);
-            formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + file.name);
-            fetch('/api/v1/remote-host/sftp/upload', { method:'POST', headers:{'Authorization':'Bearer '+sessionToken}, body:formData })
-                .then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+            if (fromPanel.type === 'local') {
+                var localPath = fromPanel.path.replace(/\/+$/, '') + '/' + file.name;
+                var remotePath = toPanel.path.replace(/\/+$/, '') + '/' + file.name;
+                fetch('/api/v1/remote-host/sftp/local-to-remote', {
+                    method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
+                    body: JSON.stringify({ localPath: localPath, hostConfigId: toPanel.hostId, remotePath: remotePath })
+                }).then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+            } else {
+                var fileObj = null;
+                for (var i=0;i<ftPanelLeft.files.length;i++) { if (ftPanelLeft.files[i].name === file.name) { fileObj = ftPanelLeft.files[i]; break; } }
+                if (!fileObj) { cb(false); return; }
+                var formData = new FormData();
+                formData.append('file', fileObj);
+                formData.append('hostConfigId', toPanel.hostId);
+                formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + file.name);
+                fetch('/api/v1/remote-host/sftp/upload', { method:'POST', headers:{'Authorization':'Bearer '+sessionToken}, body:formData })
+                    .then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+            }
         }
 
         function downloadFtFile(fromPanel, toPanel, file, cb) {
-            fetch('/api/v1/remote-host/sftp/download', {
-                method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
-                body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: fromPanel.path.replace(/\/+$/, '') + '/' + file.name })
-            }).then(function(r) {
-                if (!r.ok) throw new Error('fail');
-                return r.blob();
-            }).then(function(blob) {
-                var a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = file.name;
-                a.click();
-                URL.revokeObjectURL(a.href);
-                cb(true);
-            }).catch(function(){cb(false);});
+            if (toPanel.type === 'local') {
+                var remotePath = fromPanel.path.replace(/\/+$/, '') + '/' + file.name;
+                var localPath = toPanel.path.replace(/\/+$/, '') + '/' + file.name;
+                fetch('/api/v1/remote-host/sftp/remote-to-local', {
+                    method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
+                    body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: remotePath, localPath: localPath })
+                }).then(function(r){return r.json();}).then(function(d){cb(d.success);}).catch(function(){cb(false);});
+            } else {
+                fetch('/api/v1/remote-host/sftp/download', {
+                    method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
+                    body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: fromPanel.path.replace(/\/+$/, '') + '/' + file.name })
+                }).then(function(r) {
+                    if (!r.ok) throw new Error('fail');
+                    return r.blob();
+                }).then(function(blob) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = file.name;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    cb(true);
+                }).catch(function(){cb(false);});
+            }
         }
 
         function remoteToRemoteFt(fromPanel, toPanel, file, cb) {
@@ -1822,10 +1839,11 @@
             if (type === 'terminal') {
                 var vpsEl = document.getElementById('vps-panel-' + at.id);
                 if (vpsEl) vpsEl.style.display = 'none';
-                if (at.containerEl) at.containerEl.style.display = '';
+                if (at.containerEl) { at.containerEl.style.display = ''; at.containerEl.classList.add('active'); }
+                at._currentVpsType = null;
                 if (at.fitAddon) { setTimeout(function() { try { at.fitAddon.fit(); } catch(ex) {} if (at.term) at.term.focus(); }, 50); }
             } else {
-                if (at.containerEl) at.containerEl.style.display = 'none';
+                if (at.containerEl) { at.containerEl.style.display = 'none'; at.containerEl.classList.remove('active'); }
                 var vpsPanel = document.getElementById('vps-panel-' + at.id);
                 if (!vpsPanel) {
                     vpsPanel = document.createElement('div');
@@ -2086,7 +2104,60 @@
                 var row = e.target.closest('tr');
                 if (!row || row.classList.contains('ft-nav-parent') || row.dataset.isdir === 'true') { e.preventDefault(); return; }
                 e.dataTransfer.setData('text/plain', JSON.stringify({ side: side, name: row.dataset.name, size: row.dataset.size }));
-                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.effectAllowed = 'copyMove';
+                row.style.opacity = '0.5';
+            });
+            tbody.addEventListener('dragend', function(e) {
+                var row = e.target.closest('tr');
+                if (row) row.style.opacity = '';
+            });
+            var toSide = side === 'left' ? 'right' : 'left';
+            var toPanel = toSide === 'left' ? ftPanelLeft : ftPanelRight;
+            tbody.addEventListener('dragover', function(e) {
+                var data;
+                try { data = JSON.parse(e.dataTransfer.types[0] === 'text/plain' ? '' : ''); } catch(_) {}
+                if (e.dataTransfer.types.indexOf('text/plain') !== -1) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                }
+            });
+            tbody.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var raw = e.dataTransfer.getData('text/plain');
+                if (!raw) return;
+                try {
+                    var dragData = JSON.parse(raw);
+                    if (dragData.side === side) return;
+                    var fromPanel = dragData.side === 'left' ? ftPanelLeft : ftPanelRight;
+                    var toPanelObj = side === 'left' ? ftPanelLeft : ftPanelRight;
+                    if (!fromPanel.hostId && fromPanel.type !== 'local') return;
+                    if (!toPanelObj.hostId && toPanelObj.type !== 'local') return;
+                    var file = { name: dragData.name, size: parseInt(dragData.size || '0') };
+                    document.getElementById('ft-center-status').textContent = 'Transferring: ' + file.name;
+                    if (fromPanel.type === 'local' && toPanelObj.type === 'remote') {
+                        uploadFtFile(fromPanel, toPanelObj, file, function(ok) {
+                            document.getElementById('ft-center-status').textContent = ok ? 'Done' : 'Failed';
+                            if (ok) renderFtPanelFiles(side);
+                            setTimeout(function() { document.getElementById('ft-center-status').textContent = ''; }, 2000);
+                        });
+                    } else if (fromPanel.type === 'remote' && toPanelObj.type === 'local') {
+                        downloadFtFile(fromPanel, toPanelObj, file, function(ok) {
+                            document.getElementById('ft-center-status').textContent = ok ? 'Done' : 'Failed';
+                            if (ok) renderFtPanelFiles(side);
+                            setTimeout(function() { document.getElementById('ft-center-status').textContent = ''; }, 2000);
+                        });
+                    } else if (fromPanel.type === 'remote' && toPanelObj.type === 'remote') {
+                        remoteToRemoteFt(fromPanel, toPanelObj, file, function(ok) {
+                            document.getElementById('ft-center-status').textContent = ok ? 'Done' : 'Failed';
+                            if (ok) renderFtPanelFiles(side);
+                            setTimeout(function() { document.getElementById('ft-center-status').textContent = ''; }, 2000);
+                        });
+                    } else {
+                        document.getElementById('ft-center-status').textContent = 'Unsupported transfer';
+                        setTimeout(function() { document.getElementById('ft-center-status').textContent = ''; }, 2000);
+                    }
+                } catch(_) {}
             });
         }
         setupFtRowDrag('left');

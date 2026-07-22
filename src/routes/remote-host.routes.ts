@@ -25,5 +25,7 @@ router.post("/test-connection", requireRole("ADMIN"), (req, res) => remoteHostCo
 router.post("/sftp/list", requireRole("ADMIN"), (req, res) => remoteHostController.sftpListDir(req, res));
 router.post("/sftp/upload", requireRole("ADMIN"), (req, res, next) => getUpload().single("file")(req, res, next), (req, res) => remoteHostController.sftpUpload(req, res));
 router.post("/sftp/download", requireRole("ADMIN"), (req, res) => remoteHostController.sftpDownload(req, res));
+router.post("/sftp/local-to-remote", requireRole("ADMIN"), (req, res) => remoteHostController.localToRemote(req, res));
+router.post("/sftp/remote-to-local", requireRole("ADMIN"), (req, res) => remoteHostController.remoteToLocal(req, res));
 
 export default router;

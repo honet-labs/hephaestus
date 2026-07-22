@@ -129,6 +129,50 @@ class RemoteHostController {
       return res.status(500).json({ success: false, error: "Download failed." });
     }
   }
+
+  public async localToRemote(req: Request, res: Response) {
+    try {
+      const { localPath, hostConfigId, remotePath } = req.body;
+      if (!hostConfigId || !remotePath || !localPath) {
+        return res.status(400).json({ success: false, error: "localPath, hostConfigId, and remotePath are required." });
+      }
+      const fs = require("fs");
+      if (!fs.existsSync(localPath)) {
+        return res.status(404).json({ success: false, error: "Local file not found." });
+      }
+      const stat = fs.statSync(localPath);
+      if (stat.isDirectory()) {
+        return res.status(400).json({ success: false, error: "Cannot transfer a directory." });
+      }
+      const fileBuffer = fs.readFileSync(localPath);
+      const fileName = localPath.split(/[/\\]/).pop() || "file";
+      const result = await remoteHostService.sftpUpload(hostConfigId, remotePath, fileBuffer, fileName);
+      await logActivity("RemoteHost", "Local→Remote", `Transferred "${fileName}" to ${remotePath}`, "SUCCESS");
+      return res.json({ success: true, message: result.message });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Transfer failed." });
+    }
+  }
+
+  public async remoteToLocal(req: Request, res: Response) {
+    try {
+      const { hostConfigId, remotePath, localPath } = req.body;
+      if (!hostConfigId || !remotePath || !localPath) {
+        return res.status(400).json({ success: false, error: "hostConfigId, remotePath, and localPath are required." });
+      }
+      const result = await remoteHostService.sftpDownload(hostConfigId, remotePath);
+      const fs = require("fs");
+      const dir = require("path").dirname(localPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(localPath, result.buffer);
+      await logActivity("RemoteHost", "Remote→Local", `Transferred "${result.fileName}" to ${localPath}`, "SUCCESS");
+      return res.json({ success: true, message: `Downloaded to ${localPath}` });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Transfer failed." });
+    }
+  }
 }
 
 export const remoteHostController = new RemoteHostController();
