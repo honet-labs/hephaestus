@@ -224,7 +224,7 @@
 
     async function checkSession() {
       try {
-        const token = localStorage.getItem('session_token');
+        const token = localStorage.getItem('hephaestus_session_token');
         if (!token) { window.location.href = '/#overview'; return; }
         const res = await fetch('/api/v1/users/me', { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) { window.location.href = '/#overview'; return; }
@@ -239,10 +239,11 @@
 
     async function loadServers() {
       try {
-        const token = localStorage.getItem('session_token');
+        const token = localStorage.getItem('hephaestus_session_token');
         const res = await fetch('/api/v1/remote-host/configs', { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) return;
-        const configs = await res.json();
+        const data = await res.json();
+        const configs = data.success ? (data.data || []) : [];
         const sel = document.getElementById('serverSelect');
         sel.innerHTML = '<option value="">-- Select Server --</option>';
         configs.forEach(c => {
@@ -286,7 +287,7 @@
     }
 
     async function apiPost(endpoint, body) {
-      const token = localStorage.getItem('session_token');
+      const token = localStorage.getItem('hephaestus_session_token');
       const res = await fetch('/api/v1/vps/' + endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
@@ -484,7 +485,7 @@
 
     function connectTerminalWS() {
       if (!currentHostId) { terminal.writeln('Select a server first.'); return; }
-      const token = localStorage.getItem('session_token');
+      const token = localStorage.getItem('hephaestus_session_token');
       if (!token) { terminal.writeln('No session token.'); return; }
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const url = `${proto}//${location.host}/ws/remote-host?token=${token}&hostId=${currentHostId}&cols=${terminal.cols}&rows=${terminal.rows}`;
