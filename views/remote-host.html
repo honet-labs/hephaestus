@@ -996,10 +996,11 @@
             tab.containerEl = div;
         }
 
-        function loadVpsContent(tab, srv) {
-            var body = document.getElementById('vps-body-' + tab.id);
+        function loadVpsContent(tab, srv, body, vpsType) {
+            if (!body) body = document.getElementById('vps-body-' + tab.id);
             if (!body) return;
-            switch (tab.tabType) {
+            var type = vpsType || tab._currentVpsType || tab.tabType || 'terminal';
+            switch (type) {
                 case 'dashboard': loadVpsDashboard(tab, srv, body); break;
                 case 'processes': loadVpsProcesses(tab, srv, body); break;
                 case 'services': loadVpsServices(tab, srv, body); break;
@@ -1838,7 +1839,7 @@
                 var body = document.getElementById('vps-body-' + at.id);
                 var srv = null;
                 for (var j = 0; j < servers.length; j++) { if (servers[j].id === at.serverId) { srv = servers[j]; break; } }
-                if (srv) loadVpsContent(at, srv, body);
+                if (srv) loadVpsContent(at, srv, body, type);
             }
         });
         function promptVpsTabServer(tabType) {
