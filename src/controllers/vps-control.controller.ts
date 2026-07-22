@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { vpsControlService } from "../services/vps-control.service";
 
+const metricsCache = new Map<string, { data: any; expires: number }>();
+const METRICS_CACHE_TTL = 10000;
+
 export class VpsControlController {
   public async execCommand(req: Request, res: Response): Promise<void> {
     try {
@@ -32,7 +35,13 @@ export class VpsControlController {
         res.status(400).json({ error: "hostConfigId is required" });
         return;
       }
+      const cached = metricsCache.get(hostConfigId);
+      if (cached && cached.expires > Date.now()) {
+        res.json(cached.data);
+        return;
+      }
       const metrics = await vpsControlService.getMetrics(hostConfigId);
+      metricsCache.set(hostConfigId, { data: metrics, expires: Date.now() + METRICS_CACHE_TTL });
       res.json(metrics);
     } catch (err: any) {
       res.status(500).json({ error: "Failed to get metrics" });

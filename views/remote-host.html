@@ -397,6 +397,11 @@
             display: none;
         }
         .terminal-container.active { display: block; }
+        .vps-inline-panel {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: none; overflow: auto; padding: 16px;
+            background: var(--background); z-index: 10;
+        }
         .vps-container {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             display: none; overflow: auto; padding: 16px;
@@ -975,7 +980,7 @@
             var tab = {
                 id: tabId, serverId: serverId, serverName: srv.name, displayName: label,
                 groupName: srv.groupName || 'Default', serverHost: srv.host, serverUsername: srv.username,
-                tabType: tabType, ws: null, term: null, fitAddon: null, status: 'connected',
+                tabType: tabType, _currentVpsType: tabType, ws: null, term: null, fitAddon: null, status: 'connected',
                 containerEl: null, statusEl: null, overlayEl: null, _refreshInterval: null
             };
             tabs.push(tab);
@@ -997,6 +1002,7 @@
         }
 
         function loadVpsContent(tab, srv, body, vpsType) {
+            if (tab._refreshInterval) { clearInterval(tab._refreshInterval); tab._refreshInterval = null; }
             if (!body) body = document.getElementById('vps-body-' + tab.id);
             if (!body) return;
             var type = vpsType || tab._currentVpsType || tab.tabType || 'terminal';
@@ -1031,7 +1037,7 @@
                     html += '</tbody></table></div>';
                 }
                 body.innerHTML = html;
-                tab._refreshInterval = setInterval(function() { if (activeTabId === tab.id) loadVpsDashboard(tab, srv, body); }, 5000);
+                tab._refreshInterval = setInterval(function() { if (activeTabId === tab.id) loadVpsDashboard(tab, srv, body); }, 15000);
             }).catch(function(err) { body.innerHTML = '<div class="vps-empty">Connection failed: ' + esc(err.message || 'Unknown error') + '</div>'; });
         }
 
@@ -1060,7 +1066,7 @@
                 if (sortEl) sortEl.addEventListener('change', refresh);
                 refresh();
             }, 0);
-            tab._refreshInterval = setInterval(function() { if (activeTabId === tab.id) refresh(); }, 10000);
+            tab._refreshInterval = setInterval(function() { if (activeTabId === tab.id) refresh(); }, 15000);
         }
 
         function loadVpsServices(tab, srv, body) {
@@ -1298,19 +1304,19 @@
             document.querySelectorAll('.vps-sidebar-btn[data-vps="terminal"]')[0].classList.add('active');
             for (var i = 0; i < tabs.length; i++) {
                 var termEl = document.getElementById('term-' + tabs[i].id);
-                var vpsEl = document.getElementById('vps-panel-' + tabs[i].id);
+                var inlineVps = document.getElementById('vps-inline-' + tabs[i].id);
                 if (tabs[i].id === tabId) {
                     if (at && at._currentVpsType && at._currentVpsType !== 'terminal') {
-                        if (termEl) termEl.style.display = 'none';
-                        if (vpsEl) { vpsEl.style.display = 'block'; }
+                        if (termEl) { termEl.style.display = ''; termEl.classList.add('active'); }
+                        if (inlineVps) inlineVps.style.display = 'block';
                         document.querySelectorAll('.vps-sidebar-btn').forEach(function(b) { if (b.dataset.vps === at._currentVpsType) b.classList.add('active'); });
                     } else {
                         if (termEl) { termEl.style.display = ''; termEl.classList.add('active'); }
-                        if (vpsEl) vpsEl.style.display = 'none';
+                        if (inlineVps) inlineVps.style.display = 'none';
                     }
                 } else {
                     if (termEl) { termEl.classList.remove('active'); termEl.style.display = 'none'; }
-                    if (vpsEl) vpsEl.style.display = 'none';
+                    if (inlineVps) inlineVps.style.display = 'none';
                 }
             }
             if (at && !at._currentVpsType && at.fitAddon) {
@@ -1333,6 +1339,8 @@
             if (el) el.remove();
             var vpsPanel = document.getElementById('vps-panel-' + tab.id);
             if (vpsPanel) vpsPanel.remove();
+            var inlineVps = document.getElementById('vps-inline-' + tab.id);
+            if (inlineVps) inlineVps.remove();
             tabs.splice(idx, 1);
             saveTabs();
             if (activeTabId === tabId) {
@@ -1833,31 +1841,54 @@
             var at = null;
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === activeTabId) { at = tabs[i]; break; } }
             if (!at) return;
-            var wrapper = document.getElementById('terminal-wrapper');
             document.querySelectorAll('.vps-sidebar-btn').forEach(function(b) { b.classList.remove('active'); });
             btn.classList.add('active');
+            var isTerminalTab = at.containerEl && at.containerEl.classList.contains('terminal-container');
             if (type === 'terminal') {
-                var vpsEl = document.getElementById('vps-panel-' + at.id);
-                if (vpsEl) vpsEl.style.display = 'none';
-                if (at.containerEl) { at.containerEl.style.display = ''; at.containerEl.classList.add('active'); }
+                if (at._refreshInterval) { clearInterval(at._refreshInterval); at._refreshInterval = null; }
+                var existingVps = document.getElementById('vps-inline-' + at.id);
+                if (existingVps) existingVps.style.display = 'none';
+                if (isTerminalTab && at.containerEl) { at.containerEl.style.display = ''; at.containerEl.classList.add('active'); }
+                else if (at.containerEl) { at.containerEl.style.display = ''; at.containerEl.classList.add('active'); }
                 at._currentVpsType = null;
                 if (at.fitAddon) { setTimeout(function() { try { at.fitAddon.fit(); } catch(ex) {} if (at.term) at.term.focus(); }, 50); }
             } else {
-                if (at.containerEl) { at.containerEl.style.display = 'none'; at.containerEl.classList.remove('active'); }
-                var vpsPanel = document.getElementById('vps-panel-' + at.id);
-                if (!vpsPanel) {
-                    vpsPanel = document.createElement('div');
-                    vpsPanel.className = 'vps-container active';
-                    vpsPanel.id = 'vps-panel-' + at.id;
-                    vpsPanel.innerHTML = '<div class="vps-header"><h2>' + esc(VPS_TAB_TYPES[type]) + '</h2><span class="vps-server-label">' + esc(at.serverName) + ' (' + esc(at.serverHost) + ')</span></div><div class="vps-body" id="vps-body-' + at.id + '"><div class="vps-empty">Loading...</div></div>';
-                    wrapper.appendChild(vpsPanel);
-                }
-                vpsPanel.style.display = 'block';
                 at._currentVpsType = type;
-                var body = document.getElementById('vps-body-' + at.id);
-                var srv = null;
-                for (var j = 0; j < servers.length; j++) { if (servers[j].id === at.serverId) { srv = servers[j]; break; } }
-                if (srv) loadVpsContent(at, srv, body, type);
+                if (isTerminalTab && at.containerEl) {
+                    at.containerEl.style.display = '';
+                    at.containerEl.classList.add('active');
+                    var inlineVps = document.getElementById('vps-inline-' + at.id);
+                    if (!inlineVps) {
+                        inlineVps = document.createElement('div');
+                        inlineVps.id = 'vps-inline-' + at.id;
+                        inlineVps.className = 'vps-inline-panel';
+                        at.containerEl.appendChild(inlineVps);
+                    }
+                    inlineVps.style.display = 'block';
+                    if (at.term) { try { at.term.blur(); } catch(ex) {} }
+                    var srv = null;
+                    for (var j = 0; j < servers.length; j++) { if (servers[j].id === at.serverId) { srv = servers[j]; break; } }
+                    var header = '<div class="vps-header"><h2>' + esc(VPS_TAB_TYPES[type]) + '</h2><span class="vps-server-label">' + esc(at.serverName) + ' (' + esc(at.serverHost) + ')</span></div>';
+                    inlineVps.innerHTML = header + '<div class="vps-body" id="vps-body-' + at.id + '"><div class="vps-empty">Loading...</div></div>';
+                    var body = document.getElementById('vps-body-' + at.id);
+                    if (srv) loadVpsContent(at, srv, body, type);
+                } else if (at.containerEl) {
+                    at.containerEl.classList.remove('active');
+                    var existingVps2 = document.getElementById('vps-inline-' + at.id);
+                    if (existingVps2) existingVps2.style.display = 'none';
+                    at.containerEl.style.display = '';
+                    at.containerEl.classList.add('active');
+                    var srv2 = null;
+                    for (var k = 0; k < servers.length; k++) { if (servers[k].id === at.serverId) { srv2 = servers[k]; break; } }
+                    var vpsBody = at.containerEl.querySelector('.vps-body');
+                    if (!vpsBody) {
+                        vpsBody = document.createElement('div');
+                        vpsBody.className = 'vps-body';
+                        vpsBody.id = 'vps-body-' + at.id;
+                        at.containerEl.appendChild(vpsBody);
+                    }
+                    if (srv2) loadVpsContent(at, srv2, vpsBody, type);
+                }
             }
         });
         function promptVpsTabServer(tabType) {
