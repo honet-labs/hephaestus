@@ -367,10 +367,30 @@
         .home-view.hidden { display: none; }
         .terminal-view {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            display: none; flex-direction: column;
+            display: none;
         }
         .terminal-view.active { display: flex; }
-
+        .terminal-view-body { display: flex; flex: 1; overflow: hidden; }
+        .vps-sidebar {
+            width: 48px; background: var(--app-sidebar); border-right: 1px solid var(--app-border);
+            display: flex; flex-direction: column; align-items: center; padding: 8px 0;
+            gap: 4px; flex-shrink: 0; overflow-y: auto;
+        }
+        .vps-sidebar-btn {
+            width: 36px; height: 36px; border-radius: 6px; border: none; background: transparent;
+            color: var(--text-muted); cursor: pointer; display: flex; align-items: center;
+            justify-content: center; transition: all 0.15s; position: relative;
+        }
+        .vps-sidebar-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-white); }
+        .vps-sidebar-btn.active { background: var(--btn-primary-bg); color: #fff; }
+        .vps-sidebar-btn svg { width: 18px; height: 18px; }
+        .vps-sidebar-btn[title]:hover::after {
+            content: attr(title); position: absolute; left: 44px; top: 50%; transform: translateY(-50%);
+            background: var(--app-card); color: var(--text-white); padding: 4px 8px; border-radius: 4px;
+            font-size: 11px; white-space: nowrap; z-index: 100; border: 1px solid var(--app-border);
+            pointer-events: none;
+        }
+        .vps-sidebar-divider { width: 24px; height: 1px; background: var(--app-border); margin: 4px 0; }
         .terminal-wrapper { flex: 1; position: relative; overflow: hidden; }
         .terminal-container {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -549,7 +569,30 @@
         </div>
 
         <div class="terminal-view" id="terminal-view">
-            <div class="terminal-wrapper" id="terminal-wrapper"></div>
+            <div class="terminal-view-body">
+                <div class="vps-sidebar" id="vps-sidebar">
+                    <button class="vps-sidebar-btn active" data-vps="terminal" title="Terminal">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    </button>
+                    <div class="vps-sidebar-divider"></div>
+                    <button class="vps-sidebar-btn" data-vps="dashboard" title="Dashboard">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                    </button>
+                    <button class="vps-sidebar-btn" data-vps="processes" title="Processes">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    </button>
+                    <button class="vps-sidebar-btn" data-vps="services" title="Services">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                    <button class="vps-sidebar-btn" data-vps="logs" title="System Logs">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    </button>
+                    <button class="vps-sidebar-btn" data-vps="network" title="Network">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                    </button>
+                </div>
+                <div class="terminal-wrapper" id="terminal-wrapper"></div>
+            </div>
         </div>
     </div>
 
@@ -1248,19 +1291,29 @@
         function switchTab(tabId) {
             activeTabId = tabId;
             showTerminalView();
-            for (var i = 0; i < tabs.length; i++) {
-                var el = document.getElementById('term-' + tabs[i].id);
-                if (el) {
-                    if (tabs[i].id === tabId) el.classList.add('active');
-                    else el.classList.remove('active');
-                }
-            }
             var at = null;
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { at = tabs[i]; break; } }
-            if (at && !at.tabType) {
-                if (at.fitAddon) {
-                    setTimeout(function() { try { at.fitAddon.fit(); } catch(e) {} if (at.term) at.term.focus(); }, 50);
+            document.querySelectorAll('.vps-sidebar-btn').forEach(function(b) { b.classList.remove('active'); });
+            document.querySelectorAll('.vps-sidebar-btn[data-vps="terminal"]')[0].classList.add('active');
+            for (var i = 0; i < tabs.length; i++) {
+                var termEl = document.getElementById('term-' + tabs[i].id);
+                var vpsEl = document.getElementById('vps-panel-' + tabs[i].id);
+                if (tabs[i].id === tabId) {
+                    if (at && at._currentVpsType && at._currentVpsType !== 'terminal') {
+                        if (termEl) termEl.style.display = 'none';
+                        if (vpsEl) { vpsEl.style.display = 'block'; }
+                        document.querySelectorAll('.vps-sidebar-btn').forEach(function(b) { if (b.dataset.vps === at._currentVpsType) b.classList.add('active'); });
+                    } else {
+                        if (termEl) { termEl.style.display = ''; termEl.classList.add('active'); }
+                        if (vpsEl) vpsEl.style.display = 'none';
+                    }
+                } else {
+                    if (termEl) { termEl.classList.remove('active'); termEl.style.display = 'none'; }
+                    if (vpsEl) vpsEl.style.display = 'none';
                 }
+            }
+            if (at && !at._currentVpsType && at.fitAddon) {
+                setTimeout(function() { try { at.fitAddon.fit(); } catch(e) {} if (at.term) at.term.focus(); }, 50);
             }
             renderTabs();
         }
@@ -1277,6 +1330,8 @@
             if (tab.term) tab.term.dispose();
             var el = document.getElementById('term-' + tab.id);
             if (el) el.remove();
+            var vpsPanel = document.getElementById('vps-panel-' + tab.id);
+            if (vpsPanel) vpsPanel.remove();
             tabs.splice(idx, 1);
             saveTabs();
             if (activeTabId === tabId) {
@@ -1752,6 +1807,40 @@
             var dd = document.getElementById('tab-type-dropdown');
             if (!e.target.closest('.tab-dropdown') && !e.target.closest('.tab-add')) dd.classList.remove('active');
         });
+        document.getElementById('vps-sidebar').addEventListener('click', function(e) {
+            var btn = e.target.closest('.vps-sidebar-btn');
+            if (!btn) return;
+            var type = btn.dataset.vps;
+            if (!type) return;
+            var at = null;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === activeTabId) { at = tabs[i]; break; } }
+            if (!at) return;
+            var wrapper = document.getElementById('terminal-wrapper');
+            document.querySelectorAll('.vps-sidebar-btn').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            if (type === 'terminal') {
+                var vpsEl = document.getElementById('vps-panel-' + at.id);
+                if (vpsEl) vpsEl.style.display = 'none';
+                if (at.containerEl) at.containerEl.style.display = '';
+                if (at.fitAddon) { setTimeout(function() { try { at.fitAddon.fit(); } catch(ex) {} if (at.term) at.term.focus(); }, 50); }
+            } else {
+                if (at.containerEl) at.containerEl.style.display = 'none';
+                var vpsPanel = document.getElementById('vps-panel-' + at.id);
+                if (!vpsPanel) {
+                    vpsPanel = document.createElement('div');
+                    vpsPanel.className = 'vps-container active';
+                    vpsPanel.id = 'vps-panel-' + at.id;
+                    vpsPanel.innerHTML = '<div class="vps-header"><h2>' + esc(VPS_TAB_TYPES[type]) + '</h2><span class="vps-server-label">' + esc(at.serverName) + ' (' + esc(at.serverHost) + ')</span></div><div class="vps-body" id="vps-body-' + at.id + '"><div class="vps-empty">Loading...</div></div>';
+                    wrapper.appendChild(vpsPanel);
+                }
+                vpsPanel.style.display = 'block';
+                at._currentVpsType = type;
+                var body = document.getElementById('vps-body-' + at.id);
+                var srv = null;
+                for (var j = 0; j < servers.length; j++) { if (servers[j].id === at.serverId) { srv = servers[j]; break; } }
+                if (srv) loadVpsContent(at, srv, body);
+            }
+        });
         function promptVpsTabServer(tabType) {
             if (servers.length === 0) { alert('No servers configured.'); return; }
             var serverNames = servers.map(function(s, i) { return (i + 1) + '. ' + s.name + ' (' + s.host + ')'; });
@@ -1969,6 +2058,38 @@
             var item = e.target.closest('.ft-bc-item');
             if (item && item.dataset.path) { navigateFtPanel('right', item.dataset.path); }
         });
+
+        // Drag & Drop for file transfer panels
+        function setupFtDragDrop(side) {
+            var panel = document.getElementById('ft-panel-' + side);
+            var drop = document.getElementById('ft-' + side + '-drop');
+            if (!panel || !drop) return;
+            panel.addEventListener('dragover', function(e) { e.preventDefault(); e.stopPropagation(); drop.classList.add('active'); });
+            panel.addEventListener('dragleave', function(e) { if (!panel.contains(e.relatedTarget)) drop.classList.remove('active'); });
+            panel.addEventListener('drop', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                drop.classList.remove('active');
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    addFtFiles(e.dataTransfer.files);
+                }
+            });
+        }
+        setupFtDragDrop('left');
+        setupFtDragDrop('right');
+
+        // Drag & Drop on table rows (drag files between panels)
+        function setupFtRowDrag(side) {
+            var tbody = document.getElementById('ft-' + side + '-files');
+            if (!tbody) return;
+            tbody.addEventListener('dragstart', function(e) {
+                var row = e.target.closest('tr');
+                if (!row || row.classList.contains('ft-nav-parent') || row.dataset.isdir === 'true') { e.preventDefault(); return; }
+                e.dataTransfer.setData('text/plain', JSON.stringify({ side: side, name: row.dataset.name, size: row.dataset.size }));
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+        }
+        setupFtRowDrag('left');
+        setupFtRowDrag('right');
 
         loadServers().then(function() {
             renderHome();
