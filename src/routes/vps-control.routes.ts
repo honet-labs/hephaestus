@@ -1,11 +1,9 @@
 import { Router } from "express";
 import { vpsControlController } from "../controllers/vps-control.controller";
-import { authMiddleware } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
-router.use(authMiddleware);
 router.use(requireRole("ADMIN"));
 
 router.post("/exec", vpsControlController.execCommand);

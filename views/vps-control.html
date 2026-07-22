@@ -219,6 +219,7 @@
     let fitAddon = null;
     let ws = null;
     let refreshInterval = null;
+    let pingInterval = null;
     let processes = [];
     let services = [];
 
@@ -226,7 +227,7 @@
       try {
         const token = localStorage.getItem('hephaestus_session_token');
         if (!token) { window.location.href = '/#overview'; return; }
-        const res = await fetch('/api/v1/users/me', { headers: { 'Authorization': `Bearer ${token}` } });
+        const res = await fetch('/api/v1/users/session', { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) { window.location.href = '/#overview'; return; }
         const data = await res.json();
         if (data.user && data.user.role === 'ADMIN') {
@@ -502,16 +503,18 @@
       };
       ws.onclose = () => { terminal.writeln('\r\n\x1b[33mConnection closed.\x1b[0m'); };
       ws.onerror = () => { terminal.writeln('\r\n\x1b[31mWebSocket error.\x1b[0m'); };
-      setInterval(() => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' })); }, 25000);
+      if (pingInterval) clearInterval(pingInterval);
+      pingInterval = setInterval(() => { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' })); }, 25000);
     }
 
     function disconnectTerminal() {
+      if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
       if (ws) { ws.close(); ws = null; }
     }
 
     function escHtml(str) {
       if (!str) return '';
-      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
     checkSession();
