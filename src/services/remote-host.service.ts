@@ -292,7 +292,7 @@ class RemoteHostService {
     }
 
     // Close stale connection
-    if (existing) { try { existing.ssh.end(); } catch (_) {} this.sftpPool.delete(poolKey); }
+    if (existing) { try { existing.ssh.end(); } catch (_e) { /* ignore close error */ } this.sftpPool.delete(poolKey); }
 
     return new Promise((resolve, reject) => {
       const ssh = new Client();

@@ -91,7 +91,7 @@ class VpsControlService {
         return existing.client;
       }
       // Connection expired, close it
-      try { existing.client.end(); } catch (_) {}
+      try { existing.client.end(); } catch (_e) { /* ignore close error */ }
       this.sshPool.delete(poolKey);
     }
 
