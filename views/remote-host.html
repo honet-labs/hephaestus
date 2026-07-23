@@ -547,6 +547,12 @@
         .context-menu-item:hover { background: #333333; }
         .context-menu-item.danger { color: var(--error); }
         .context-menu-item svg { width: 14px; height: 14px; }
+        .tab-group-item { position: relative; }
+        .tab-group-submenu { position: fixed; z-index: 200; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 4px 0; min-width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .tab-group-submenu .context-menu-item { padding: 6px 12px; font-size: 12px; cursor: pointer; color: #ccc; display: flex; align-items: center; gap: 6px; }
+        .tab-group-submenu .context-menu-item:hover { background: #333; }
+        .tab-group-submenu .context-menu-item.active-group { color: var(--btn-primary-bg); }
+        .tab-group-submenu .tab-group-divider { height: 1px; background: #333; margin: 4px 0; }
     </style>
 </head>
 <body>
@@ -733,11 +739,17 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
             Reset Name
         </div>
+        <div class="context-menu-item" data-action="tab-group" id="tab-group-menu-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+            Move to Group
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;width:12px;height:12px"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
         <div class="context-menu-item danger" data-action="tab-close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             Close Tab
         </div>
     </div>
+    <div class="context-menu" id="tab-group-submenu" style="display:none"></div>
 
     <div id="modal-file-transfer" class="ft-overlay">
         <div class="ft-container">
@@ -2064,7 +2076,53 @@
             }
             hideTabContextMenu();
         });
-        function hideTabContextMenu() { document.getElementById('tab-context-menu').classList.remove('show'); ctxTabId = null; }
+        function hideTabContextMenu() {
+            document.getElementById('tab-context-menu').classList.remove('show');
+            document.getElementById('tab-group-submenu').style.display = 'none';
+            ctxTabId = null;
+        }
+
+        // Group submenu logic
+        document.getElementById('tab-group-menu-item').addEventListener('mouseenter', function(e) {
+            if (!ctxTabId) return;
+            var tab = null;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === ctxTabId) { tab = tabs[i]; break; } }
+            if (!tab) return;
+            var currentGroup = tab.groupName || 'Default';
+            var existingGroups = {};
+            for (var i = 0; i < tabs.length; i++) { var g = tabs[i].groupName || 'Default'; existingGroups[g] = true; }
+            var groupNames = Object.keys(existingGroups).sort();
+            var html = '';
+            for (var i = 0; i < groupNames.length; i++) {
+                var g = groupNames[i];
+                html += '<div class="context-menu-item' + (g === currentGroup ? ' active-group' : '') + '" data-group="' + esc(g) + '">' + esc(g) + '</div>';
+            }
+            html += '<div class="tab-group-divider"></div>';
+            html += '<div class="context-menu-item" data-group="__new__">+ New Group</div>';
+            var submenu = document.getElementById('tab-group-submenu');
+            submenu.innerHTML = html;
+            var menuRect = document.getElementById('tab-context-menu').getBoundingClientRect();
+            submenu.style.left = menuRect.right + 'px';
+            submenu.style.top = this.getBoundingClientRect().top + 'px';
+            submenu.style.display = 'block';
+        });
+        document.getElementById('tab-group-submenu').addEventListener('click', function(e) {
+            var item = e.target.closest('.context-menu-item');
+            if (!item || !ctxTabId) return;
+            var groupName = item.dataset.group;
+            var tab = null;
+            for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === ctxTabId) { tab = tabs[i]; break; } }
+            if (!tab) return;
+            if (groupName === '__new__') {
+                var name = prompt('Enter group name:');
+                if (name && name.trim()) groupName = name.trim();
+                else { hideTabContextMenu(); return; }
+            }
+            tab.groupName = groupName;
+            saveTabs();
+            renderTabs();
+            hideTabContextMenu();
+        });
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.context-menu')) { hideContextMenu(); hideTabContextMenu(); }
         });
