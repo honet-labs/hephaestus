@@ -76,10 +76,17 @@ class VpsControlService {
     if (res.rows.length === 0) throw new Error("Host config not found.");
     const r = res.rows[0];
 
+    console.log(`[VPS] SSH connecting to ${r.username}@${r.host}:${r.port} (configId=${hostConfigId})`);
     const ssh = new Client();
     return new Promise((resolve, reject) => {
-      ssh.on("ready", () => resolve(ssh));
-      ssh.on("error", (err: Error) => reject(err));
+      ssh.on("ready", () => {
+        console.log(`[VPS] SSH connected to ${r.username}@${r.host}:${r.port}`);
+        resolve(ssh);
+      });
+      ssh.on("error", (err: Error) => {
+        console.error(`[VPS] SSH error for ${r.host}: ${err.message}`);
+        reject(err);
+      });
 
       const connectOpts: any = {
         host: r.host,
@@ -100,6 +107,7 @@ class VpsControlService {
 
   public async execCommand(hostConfigId: string, command: string, usePty: boolean = false): Promise<ExecResult> {
     const ssh = await this.createSshConnection(hostConfigId);
+    const MAX_BUFFER = 10 * 1024 * 1024; // 10MB
     return new Promise((resolve, reject) => {
       const execOpts: any = {};
       if (usePty) execOpts.pty = true;
@@ -107,9 +115,22 @@ class VpsControlService {
         if (err) { ssh.end(); reject(err); return; }
         let stdout = "";
         let stderr = "";
-        stream.on("data", (data: Buffer) => { stdout += data.toString("utf-8"); });
-        stream.stderr.on("data", (data: Buffer) => { stderr += data.toString("utf-8"); });
-        stream.on("close", (code: number) => { ssh.end(); resolve({ stdout, stderr, exitCode: code ?? 0 }); });
+        let overflowed = false;
+        stream.on("data", (data: Buffer) => {
+          if (stdout.length < MAX_BUFFER) {
+            stdout += data.toString("utf-8");
+          } else { overflowed = true; }
+        });
+        stream.stderr.on("data", (data: Buffer) => {
+          if (stderr.length < MAX_BUFFER) {
+            stderr += data.toString("utf-8");
+          }
+        });
+        stream.on("close", (code: number) => {
+          ssh.end();
+          if (overflowed) stdout += "\n... [output truncated at 10MB]";
+          resolve({ stdout, stderr, exitCode: code ?? 0 });
+        });
       });
     });
   }
@@ -214,6 +235,9 @@ class VpsControlService {
 
   public async controlService(hostConfigId: string, serviceName: string, action: "start" | "stop" | "restart" | "enable" | "disable"): Promise<ExecResult> {
     const sanitized = serviceName.replace(/[^a-zA-Z0-9._@-]/g, "");
+    if (!/^[a-zA-Z0-9._@-]+$/.test(sanitized) || sanitized.length === 0 || sanitized.length > 256) {
+      throw new Error("Invalid service name");
+    }
     const result = await this.execCommand(hostConfigId, `sudo systemctl ${action} ${sanitized}`);
     if (result.exitCode !== 0) {
       const errMsg = result.stderr.trim() || result.stdout.trim() || `Failed to ${action} service (exit code ${result.exitCode})`;

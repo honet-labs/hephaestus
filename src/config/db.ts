@@ -78,8 +78,8 @@ export function decryptText(encryptedStr: string): string {
     console.log(`[Crypto] decryptText: SUCCESS`);
     return decrypted;
   } catch (e: any) {
-    console.error(`[Crypto] decryptText FAILED: ${e.message} — returning raw value`);
-    return encryptedStr;
+    console.error(`[Crypto] decryptText FAILED: ${e.message}`);
+    throw new Error(`Decryption failed: ${e.message}`);
   }
 }
 
@@ -237,7 +237,7 @@ export function setupPool(dbConfig: any) {
   }
   activePool = new Pool({
     ...dbConfig,
-    max: 5,
+    max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 3000,
   });

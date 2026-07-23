@@ -839,7 +839,7 @@
         var TERMINAL_FONT = '"JetBrains Mono", Consolas, "Courier New", monospace';
         var ctxTabId = null;
 
-        function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+        function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') : ''; }
 
         function getTabDisplayNames() {
             try { return JSON.parse(localStorage.getItem(TAB_RENAME_KEY)) || {}; } catch(_) { return {}; }
@@ -1284,8 +1284,11 @@
             var overlayEl = tab.overlayEl;
             if (overlayEl) overlayEl.classList.remove('active');
             var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            var url = protocol + '//' + location.host + '/ws/remote-host?token=' + encodeURIComponent(sessionToken) + '&hostId=' + encodeURIComponent(srv.id) + '&cols=' + tab.term.cols + '&rows=' + tab.term.rows;
+            var url = protocol + '//' + location.host + '/ws/remote-host?cols=' + tab.term.cols + '&rows=' + tab.term.rows;
             tab.ws = new WebSocket(url);
+            tab.ws.onopen = function() {
+                tab.ws.send(JSON.stringify({ type: 'auth', token: sessionToken, hostId: srv.id }));
+            };
             tab._pingInterval = setInterval(function() {
                 if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
                     tab.ws.send(JSON.stringify({ type: 'ping' }));

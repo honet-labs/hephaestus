@@ -219,8 +219,9 @@ initDb()
       const { WebSocketServer } = require("ws");
       const MAX_WS_CONNECTIONS = 10;
       const WS_PING_INTERVAL = 15000;
+      const WS_MAX_PAYLOAD = 64 * 1024; // 64KB
       let wsConnectionCount = 0;
-      wss = new WebSocketServer({ server, path: "/ws/remote-host" });
+      wss = new WebSocketServer({ server, path: "/ws/remote-host", maxPayload: WS_MAX_PAYLOAD });
 
       // Keepalive ping to prevent Cloudflare/proxy idle timeout
       const pingTimer = setInterval(() => {
@@ -253,47 +254,67 @@ initDb()
         ws.on("close", () => { wsConnectionCount--; });
 
         const url = new URL(req.url, `http://${req.headers.host}`);
-        const token = url.searchParams.get("token");
-        const hostConfigId = url.searchParams.get("hostId");
         const cols = parseInt(url.searchParams.get("cols") || "80", 10);
         const rows = parseInt(url.searchParams.get("rows") || "24", 10);
 
-        if (!token || !hostConfigId) {
-          ws.send(JSON.stringify({ type: "error", message: "Missing token or hostId." }));
-          ws.close();
-          return;
-        }
-
-        // Verify session token
-        let userId = 0;
-        try {
-          const crypto = require("crypto");
-          const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-          const dbModule = require("./config/db");
-          const dbPool = dbModule.default || dbModule.pool;
-          const sessionRes = await dbPool.query(
-            "SELECT user_id FROM user_sessions WHERE token = $1 AND expires_at > NOW()",
-            [tokenHash]
-          );
-          if (sessionRes.rows.length === 0) {
-            ws.send(JSON.stringify({ type: "error", message: "Invalid session." }));
+        // Wait for first message with auth (token + hostId)
+        let authenticated = false;
+        const authTimeout = setTimeout(() => {
+          if (!authenticated) {
+            ws.send(JSON.stringify({ type: "error", message: "Auth timeout." }));
             ws.close();
-            return;
           }
-          userId = sessionRes.rows[0].user_id;
-          // Extend session expiry on connect (sliding window)
-          await dbPool.query(
-            "UPDATE user_sessions SET expires_at = NOW() + INTERVAL '24 hours' WHERE token = $1",
-            [tokenHash]
-          );
-        } catch {
-          ws.send(JSON.stringify({ type: "error", message: "Authentication failed." }));
-          ws.close();
-          return;
-        }
+        }, 10000);
 
-        const { remoteHostService } = require("./services/remote-host.service");
-        remoteHostService.handleWebSocket(ws, hostConfigId, cols, rows, userId);
+        ws._authHandler = async (data: Buffer) => {
+          if (authenticated) return;
+          try {
+            const msg = JSON.parse(data.toString("utf-8"));
+            if (msg.type !== "auth" || !msg.token || !msg.hostId) {
+              ws.send(JSON.stringify({ type: "error", message: "Missing auth payload." }));
+              ws.close();
+              clearTimeout(authTimeout);
+              return;
+            }
+            clearTimeout(authTimeout);
+            authenticated = true;
+            delete ws._authHandler;
+
+            const crypto = require("crypto");
+            const tokenHash = crypto.createHash("sha256").update(msg.token).digest("hex");
+            const dbModule = require("./config/db");
+            const dbPool = dbModule.default || dbModule.pool;
+            const sessionRes = await dbPool.query(
+              "SELECT user_id FROM user_sessions WHERE token = $1 AND expires_at > NOW()",
+              [tokenHash]
+            );
+            if (sessionRes.rows.length === 0) {
+              ws.send(JSON.stringify({ type: "error", message: "Invalid session." }));
+              ws.close();
+              return;
+            }
+            const userId = sessionRes.rows[0].user_id;
+            await dbPool.query(
+              "UPDATE user_sessions SET expires_at = NOW() + INTERVAL '24 hours' WHERE token = $1",
+              [tokenHash]
+            );
+
+            const { remoteHostService } = require("./services/remote-host.service");
+            remoteHostService.handleWebSocket(ws, msg.hostConfigId || msg.hostId, cols, rows, userId);
+          } catch {
+            ws.send(JSON.stringify({ type: "error", message: "Authentication failed." }));
+            ws.close();
+          }
+        };
+
+        ws._rawHandler = (data: Buffer) => {
+          if (!authenticated && ws._authHandler) {
+            ws._authHandler(data);
+          }
+        };
+        ws.on("message", ws._rawHandler);
+
+        ws.on("close", () => { clearTimeout(authTimeout); });
       });
 
       console.log(`🔌 WebSocket server for Remote Host terminal started on /ws/remote-host`);

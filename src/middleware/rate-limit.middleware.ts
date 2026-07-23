@@ -9,6 +9,13 @@ function getUserKey(req: any): string {
   return req.ip || "unknown";
 }
 
+// Login: per-username key (prevents brute force from single Cloudflare IP)
+function getLoginKey(req: any): string {
+  const username = req.body?.username || req.body?.email;
+  if (username) return `login:${username}`;
+  return req.ip || "unknown";
+}
+
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 2000,
@@ -28,5 +35,6 @@ export const loginLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: getLoginKey,
   message: { success: false, error: "Too Many Requests", message: "Too many login attempts, please try again later." }
 });

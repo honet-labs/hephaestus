@@ -16,7 +16,7 @@ export class VpsControlController {
         res.status(400).json({ error: "Command too long (max 2048 chars)" });
         return;
       }
-      const blocked = /^\s*(rm\s+-rf\s+\/|mkfs|dd\s+if=|:(){ :\|:& };:)/i;
+      const blocked = /^\s*(rm\s+-rf\s+\/|mkfs|dd\s+if=|:(){ :\|:& };:|chmod\s+777\s+\/|wget.*\|\s*bash|curl.*\|\s*sh|curl.*\|\s*bash|nc\s+-[el]|python.*-c\s+|perl.*-e\s+|ruby.*-e\s+)/i;
       if (blocked.test(command)) {
         res.status(403).json({ error: "Dangerous command blocked" });
         return;
