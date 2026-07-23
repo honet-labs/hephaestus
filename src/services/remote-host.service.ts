@@ -337,8 +337,8 @@ class RemoteHostService {
       function cleanup() {
         if (cleaned) return;
         cleaned = true;
-        try { fromSsh.end(); } catch (_) {}
-        try { toSsh.end(); } catch (_) {}
+        try { fromSsh.end(); } catch (_) { /* ignore */ }
+        try { toSsh.end(); } catch (_) { /* ignore */ }
       }
 
       fromSsh.on("error", (err: Error) => { cleanup(); reject(err); });
