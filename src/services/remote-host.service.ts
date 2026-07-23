@@ -208,7 +208,7 @@ class RemoteHostService {
         port: cfg.port || 22,
         username: cfg.username,
         keepaliveInterval: 15000,
-        keepaliveCountMax: 3,
+        keepaliveCountMax: 10,
       };
       if (cfg.authType === "key" && cfg.sshKey) {
         connectOpts.privateKey = cfg.sshKey;

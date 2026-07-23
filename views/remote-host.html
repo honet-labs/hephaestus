@@ -1278,7 +1278,7 @@
                 if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
                     tab.ws.send(JSON.stringify({ type: 'ping' }));
                 }
-            }, 25000);
+            }, 15000);
             tab.ws.onmessage = function(ev) {
                 try {
                     var msg = JSON.parse(ev.data);

@@ -218,7 +218,7 @@ initDb()
       // WebSocket server for Remote Host terminal (attached to same HTTP server)
       const { WebSocketServer } = require("ws");
       const MAX_WS_CONNECTIONS = 10;
-      const WS_PING_INTERVAL = 30000;
+      const WS_PING_INTERVAL = 15000;
       let wsConnectionCount = 0;
       wss = new WebSocketServer({ server, path: "/ws/remote-host" });
 
