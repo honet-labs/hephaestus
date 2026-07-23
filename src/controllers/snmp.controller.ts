@@ -4,6 +4,18 @@ import { logActivity } from "../config/db";
 
 const snmpService = new SnmpService();
 
+const PRIVATE_IP_PATTERNS = [
+  /^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./,
+  /^169\.254\./, /^0\./, /^::1$/, /^fc00:/, /^fe80:/,
+  /^100\.(6[4-9]|[7-9]\d|1[0-2][0-7])\./,
+];
+
+function isPrivateOrReservedIP(host: string): boolean {
+  const h = host.trim().toLowerCase();
+  if (["localhost", "127.0.0.1", "::1", "0.0.0.0", "169.254.169.254", "metadata.google.internal"].includes(h)) return true;
+  return PRIVATE_IP_PATTERNS.some(p => p.test(h));
+}
+
 export class SnmpController {
   
   public static getPresets(req: Request, res: Response) {
@@ -82,6 +94,14 @@ export class SnmpController {
         success: false, 
         error: "Bad Request", 
         message: "Parameters host and operation are required." 
+      });
+    }
+
+    if (isPrivateOrReservedIP(host)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Bad Request", 
+        message: "SNMP queries to private/reserved IPs are not allowed." 
       });
     }
 

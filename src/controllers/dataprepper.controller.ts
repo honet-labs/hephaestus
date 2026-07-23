@@ -23,7 +23,8 @@ export class DataPrepperController {
       const result = await dataprepperService.listPipelineFiles(configId);
       return res.status(200).json({ success: true, data: result });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] listPipelines error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to list pipelines." });
     }
   }
 
@@ -40,7 +41,8 @@ export class DataPrepperController {
       const result = await dataprepperService.readPipelineFile(filename, configId);
       return res.status(200).json({ success: true, data: result });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] readPipeline error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to read pipeline." });
     }
   }
 
@@ -60,7 +62,8 @@ export class DataPrepperController {
       }
       return res.status(200).json(result);
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] savePipeline error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to save pipeline." });
     }
   }
 
@@ -76,7 +79,8 @@ export class DataPrepperController {
       const result = dataprepperService.validatePipeline(content);
       return res.status(200).json({ success: true, data: result });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] validatePipeline error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to validate pipeline." });
     }
   }
 
@@ -88,7 +92,8 @@ export class DataPrepperController {
       const configs = await dataprepperService.getConfigsList();
       return res.status(200).json({ success: true, data: configs });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] getConfigsList error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to load configs." });
     }
   }
 
@@ -118,7 +123,8 @@ export class DataPrepperController {
       await logActivity("DataPrepper Settings", "Save Profile", `Saved DataPrepper profile "${item.name}" (Mode: ${item.mode})`, "SUCCESS");
       return res.status(200).json({ success: true, message: "Profile saved.", config: item });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] saveConfigProfile error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to save profile." });
     }
   }
 
@@ -131,7 +137,8 @@ export class DataPrepperController {
       await logActivity("DataPrepper Settings", "Delete Profile", `Deleted DataPrepper profile "${req.params.id}"`, "SUCCESS");
       return res.status(200).json({ success: true, message: "Profile deleted." });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] deleteConfigProfile error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to delete profile." });
     }
   }
 
@@ -144,7 +151,8 @@ export class DataPrepperController {
       await logActivity("DataPrepper Settings", "Activate Profile", `Activated DataPrepper profile "${req.params.id}"`, "SUCCESS");
       return res.status(200).json({ success: true, message: "Profile activated." });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] activateConfigProfile error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to activate profile." });
     }
   }
 
@@ -163,7 +171,8 @@ export class DataPrepperController {
       const result = await dataprepperService.testSSHConnection(target);
       return res.status(200).json({ success: true, isConnected: result.success, message: result.message });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[DataPrepper] testConnectionById error:", err.message);
+      return res.status(500).json({ success: false, error: "Connection test failed." });
     }
   }
 
@@ -206,11 +215,10 @@ export class DataPrepperController {
         });
       }
     } catch (err: any) {
-      console.error("[DataPrepperController] Error testing connection:", err);
+      console.error("[DataPrepperController] Error testing connection:", err.message);
       return res.status(500).json({
         success: false,
-        error: "Internal Server Error",
-        message: err.message
+        error: "Connection test failed."
       });
     }
   }

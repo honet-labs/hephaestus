@@ -24,6 +24,7 @@ import vpsControlRoutes from "./routes/vps-control.routes";
 const app = express();
 
 // 1. CORS Configuration
+// Null origin allowed: server-to-server, curl, mobile apps cannot carry cookies/Authorization by default
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     if (!origin || config.allowedOrigins.includes(origin)) {
@@ -84,7 +85,7 @@ app.use("/api/v1", (_req: Request, res: Response, next: NextFunction) => {
 
 // 2. Request parsing middlewares
 app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
 // Simple logger middleware
 app.use((req: Request, res: Response, next: NextFunction) => {

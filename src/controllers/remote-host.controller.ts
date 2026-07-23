@@ -256,7 +256,8 @@ class RemoteHostController {
       await logActivity("RemoteHost", "Remote→Remote", `Transferred ${fromPath} → ${toPath}`, "SUCCESS");
       return res.json({ success: true, message: result.message });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message || "Transfer failed." });
+      console.error(`[RemoteHost] remoteToRemote failed:`, err.message);
+      return res.status(500).json({ success: false, error: "Transfer failed. Check logs for details." });
     }
   }
 }

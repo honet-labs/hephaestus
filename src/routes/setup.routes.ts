@@ -33,6 +33,13 @@ router.post("/create-admin", loginLimiter, async (req: Request, res: Response) =
       return;
     }
 
+    // Secondary guard: block if admin user already exists
+    const userCount = await query("SELECT COUNT(*) as count FROM users WHERE role = 'ADMIN'");
+    if (parseInt(userCount.rows[0].count, 10) > 0) {
+      res.status(400).json({ success: false, error: "Forbidden", message: "Admin user already exists. Use normal login." });
+      return;
+    }
+
     const { username, email, password } = req.body;
     if (!username || !email || !password) {
       res.status(400).json({ success: false, error: "Validation Error", message: "Username, email, and password are required." });

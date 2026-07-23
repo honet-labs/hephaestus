@@ -10,7 +10,8 @@ class BackupController {
       const configs = await backupService.getDbConfigs();
       return res.json({ success: true, data: configs });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] getDbConfigs error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to load database configs." });
     }
   }
 
@@ -24,7 +25,8 @@ class BackupController {
       await logActivity("Backup", "Save DB Config", `Saved database config "${name}" (${dbType})`, "SUCCESS");
       return res.json({ success: true, data: cfg, message: `Database config "${name}" saved.` });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] saveDbConfig error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to save database config." });
     }
   }
 
@@ -34,7 +36,8 @@ class BackupController {
       await logActivity("Backup", "Delete DB Config", `Deleted database config ${req.params.id}`, "SUCCESS");
       return res.json({ success: true, message: "Database config deleted." });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] deleteDbConfig error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to delete database config." });
     }
   }
 
@@ -44,7 +47,8 @@ class BackupController {
       const result = await backupService.testDbConnection({ id: "test", name: name || "Test", dbType, host, port: parseInt(port, 10), username, password, databaseName, sshHost, sshPort: sshPort ? parseInt(sshPort, 10) : undefined, sshUser, sshAuth, sshPassword, sshKey } as any);
       return res.json(result);
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] testDbConnection error:", err.message);
+      return res.status(500).json({ success: false, error: "Connection test failed." });
     }
   }
 
@@ -54,7 +58,8 @@ class BackupController {
       const dests = await backupService.getDestinations();
       return res.json({ success: true, data: dests });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] getDestinations error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to load destinations." });
     }
   }
 
@@ -68,7 +73,8 @@ class BackupController {
       await logActivity("Backup", "Save Destination", `Saved backup destination "${name}" (${destType})`, "SUCCESS");
       return res.json({ success: true, data: dest, message: `Destination "${name}" saved.` });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] saveDestination error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to save destination." });
     }
   }
 
@@ -78,7 +84,8 @@ class BackupController {
       await logActivity("Backup", "Delete Destination", `Deleted backup destination ${req.params.id}`, "SUCCESS");
       return res.json({ success: true, message: "Destination deleted." });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] deleteDestination error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to delete destination." });
     }
   }
 
@@ -93,7 +100,8 @@ class BackupController {
       await logActivity("Backup", "Run Backup", `Backup completed: ${result.filename} (${result.status})`, result.status === "success" ? "SUCCESS" : "ERROR");
       return res.json({ success: true, data: result, message: `Backup ${result.status}: ${result.filename}` });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] runBackup error:", err.message);
+      return res.status(500).json({ success: false, error: "Backup execution failed." });
     }
   }
 
@@ -106,7 +114,8 @@ class BackupController {
       const total = await backupService.getHistoryCount();
       return res.json({ success: true, data: history, total });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] getHistory error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to load history." });
     }
   }
 
@@ -115,7 +124,8 @@ class BackupController {
       await backupService.deleteHistory(req.params.id);
       return res.json({ success: true, message: "History entry deleted." });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] deleteHistory error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to delete history entry." });
     }
   }
 
@@ -125,7 +135,8 @@ class BackupController {
       const schedules = await backupService.getSchedules();
       return res.json({ success: true, data: schedules });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] getSchedules error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to load schedules." });
     }
   }
 
@@ -142,7 +153,8 @@ class BackupController {
       await logActivity("Backup", "Save Schedule", `Saved backup schedule "${name}" (${cronExpression})`, "SUCCESS");
       return res.json({ success: true, data: schedule, message: `Schedule "${name}" saved.` });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] saveSchedule error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to save schedule." });
     }
   }
 
@@ -152,7 +164,8 @@ class BackupController {
       await logActivity("Backup", "Delete Schedule", `Deleted backup schedule ${req.params.id}`, "SUCCESS");
       return res.json({ success: true, message: "Schedule deleted." });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] deleteSchedule error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to delete schedule." });
     }
   }
 
@@ -163,7 +176,8 @@ class BackupController {
       await logActivity("Backup", "Toggle Schedule", `Schedule "${schedule.name}" ${isActive ? "enabled" : "disabled"}`, "SUCCESS");
       return res.json({ success: true, data: schedule });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] toggleSchedule error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to toggle schedule." });
     }
   }
 
@@ -173,7 +187,8 @@ class BackupController {
       await logActivity("Backup", "Run Schedule", `Manual run: ${result.filename} (${result.status})`, result.status === "success" ? "SUCCESS" : "ERROR");
       return res.json({ success: true, data: result, message: `Backup ${result.status}: ${result.filename}` });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err.message });
+      console.error("[Backup] runScheduleNow error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to run schedule." });
     }
   }
 }

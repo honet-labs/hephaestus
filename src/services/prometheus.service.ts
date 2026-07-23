@@ -193,7 +193,12 @@ export class PrometheusService {
     const activeConfig = await this.getConfigToUse(configId);
 
     if (activeConfig.mode === "local") {
-      const configPath = activeConfig.path;
+      const configPath = path.resolve(activeConfig.path);
+      // Block access to sensitive system paths
+      const blocked = ["/etc/shadow", "/etc/passwd", "/etc/sudoers", "/root/.ssh", "/etc/ssh/sshd_config"];
+      if (blocked.some(b => configPath.startsWith(b))) {
+        throw new Error("Access to this path is restricted");
+      }
       const dir = path.dirname(configPath);
 
       await fsPromises.mkdir(dir, { recursive: true });

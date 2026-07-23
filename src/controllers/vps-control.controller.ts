@@ -16,7 +16,42 @@ export class VpsControlController {
         res.status(400).json({ error: "Command too long (max 2048 chars)" });
         return;
       }
-      const blocked = /^\s*(rm\s+-rf\s+\/|mkfs|dd\s+if=|:(){ :\|:& };:|chmod\s+777\s+\/|wget.*\|\s*bash|curl.*\|\s*sh|curl.*\|\s*bash|nc\s+-[el]|python.*-c\s+|perl.*-e\s+|ruby.*-e\s+)/i;
+      const blocked = new RegExp([
+        "^\\s*(rm\\s+-rf\\s+/|mkfs|dd\\s+if=|:\\(\\){\\s*:\\|:&\\s*};:)",
+        "chmod\\s+777\\s+/",
+        "wget.*\\|\\s*(ba)?sh",
+        "curl.*\\|\\s*(ba)?sh",
+        "curl.*\\|\\s*sh",
+        "nc\\s+-[el]",
+        "python3?\\s+-c",
+        "perl\\s+-e",
+        "ruby\\s+-e",
+        "shutdown",
+        "reboot",
+        "halt",
+        "poweroff",
+        "init\\s+[06]",
+        "iptables\\s+-F",
+        "ip6tables\\s+-F",
+        "crontab\\s+-r",
+        "base64\\s+-d\\s*\\|",
+        "cat\\s+/etc/(shadow|passwd)",
+        "find\\s+/\\s+-perm",
+        "mount\\s+/",
+        "umount\\s+/",
+        "fdisk",
+        "parted",
+        "mkswap",
+        "swapon",
+        "swapoff",
+        "insmod",
+        "rmmod",
+        "modprobe",
+        "systemctl\\s+(mask|unmask|disable)\\s+",
+        "kill\\s+-9\\s+1\\b",
+        "killall",
+        "pkill\\s+-9",
+      ].join("|"), "i");
       if (blocked.test(command)) {
         res.status(403).json({ error: "Dangerous command blocked" });
         return;
