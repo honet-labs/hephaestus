@@ -479,7 +479,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Contact
 
-For questions, feedback, or contributions:
+For questions, feedback, contributions, or any suggestions, ideas, and criticism:
 
 - Email: info@honet.web.id
 - GitHub: https://github.com/honet-labs/hephaestus
