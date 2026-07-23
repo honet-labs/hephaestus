@@ -407,7 +407,7 @@
         .vps-inline-panel.active { display: flex; }
         .vps-body { flex: 1; overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
         .vps-body .vps-filter { flex-shrink: 0; }
-        .vps-body .vps-card { flex: 1; overflow: hidden; display: flex; flex-direction: column; margin: 0; }
+        .vps-body .vps-card { flex: 1; overflow: hidden; display: flex; flex-direction: column; margin: 0; padding: 0; }
         .vps-body .vps-card table { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .vps-body .vps-card table thead { flex-shrink: 0; }
         .vps-body .vps-card table thead tr { display: table; width: 100%; table-layout: fixed; }
@@ -427,8 +427,8 @@
         .vps-grid-2 { grid-template-columns: repeat(2, 1fr); }
         .vps-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .vps-grid-4 { grid-template-columns: repeat(4, 1fr); }
-        .vps-card { background: var(--app-card); border: 1px solid var(--app-border); border-radius: 8px; padding: 0; overflow: hidden; }
-        .vps-card-header { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding: 14px 14px 0; }
+        .vps-card { background: var(--app-card); border: 1px solid var(--app-border); border-radius: 8px; padding: 14px; }
+        .vps-card-header { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
         .vps-card-value { font-size: 24px; font-weight: 700; color: var(--text-white); }
         .vps-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
         .vps-progress { height: 6px; background: var(--app-card-dark); border-radius: 3px; overflow: hidden; margin-top: 8px; }
