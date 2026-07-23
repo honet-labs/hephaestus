@@ -260,14 +260,30 @@ class RemoteHostService {
     });
   }
 
-  private async createSftpConnection(hostConfigId: string): Promise<{ sftp: any; ssh: Client }> {
+  private sftpPool = new Map<string, { ssh: Client; sftp: any; lastUsed: number }>();
+  private SFTP_POOL_TIMEOUT = 3 * 60 * 1000; // 3 minutes
+
+  private async getSftpConnection(hostConfigId: string): Promise<{ sftp: any; ssh: Client }> {
     const cfg = await this.getRawConfig(hostConfigId);
     if (!cfg) throw new Error("Host config not found.");
+
+    const poolKey = hostConfigId;
+    const existing = this.sftpPool.get(poolKey);
+    if (existing && (Date.now() - existing.lastUsed) < this.SFTP_POOL_TIMEOUT) {
+      existing.lastUsed = Date.now();
+      return { sftp: existing.sftp, ssh: existing.ssh };
+    }
+
+    // Close stale connection
+    if (existing) { try { existing.ssh.end(); } catch (_) {} this.sftpPool.delete(poolKey); }
+
     return new Promise((resolve, reject) => {
       const ssh = new Client();
       ssh.on("ready", () => {
         ssh.sftp((err: any, sftp: any) => {
           if (err) { ssh.end(); reject(err); return; }
+          ssh.on("close", () => { const e = this.sftpPool.get(poolKey); if (e && e.ssh === ssh) this.sftpPool.delete(poolKey); });
+          this.sftpPool.set(poolKey, { ssh, sftp, lastUsed: Date.now() });
           resolve({ sftp, ssh });
         });
       });
@@ -288,7 +304,7 @@ class RemoteHostService {
   }
 
   public async sftpListDir(hostConfigId: string, remotePath: string): Promise<{ name: string; isDir: boolean; size: number; modTime: string }[]> {
-    const { sftp, ssh } = await this.createSftpConnection(hostConfigId);
+    const { sftp, ssh } = await this.getSftpConnection(hostConfigId);
     return new Promise((resolve, reject) => {
       sftp.readdir(remotePath, (err: any, list: any[]) => {
         ssh.end();
@@ -304,7 +320,7 @@ class RemoteHostService {
   }
 
   public async sftpUpload(hostConfigId: string, remotePath: string, fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; message: string }> {
-    const { sftp, ssh } = await this.createSftpConnection(hostConfigId);
+    const { sftp, ssh } = await this.getSftpConnection(hostConfigId);
     return new Promise((resolve, reject) => {
       const writeStream = sftp.createWriteStream(remotePath);
       writeStream.on("close", () => { ssh.end(); resolve({ success: true, message: `Uploaded ${fileName} to ${remotePath}` }); });
@@ -314,7 +330,7 @@ class RemoteHostService {
   }
 
   public async sftpDownload(hostConfigId: string, remotePath: string): Promise<{ buffer: Buffer; fileName: string; size: number }> {
-    const { sftp, ssh } = await this.createSftpConnection(hostConfigId);
+    const { sftp, ssh } = await this.getSftpConnection(hostConfigId);
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
       const readStream = sftp.createReadStream(remotePath);

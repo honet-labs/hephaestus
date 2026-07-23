@@ -469,14 +469,16 @@ class BackupService {
       for (const row of Object.values(tables) as any[]) {
         const tableName = row[`Tables_in_${cfg.databaseName}`];
         if (!tableName) continue;
-        const [createRows] = await c.query(`SHOW CREATE TABLE \`${tableName}\``);
+        const safeName = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+        if (!safeName) continue;
+        const [createRows] = await c.query(`SHOW CREATE TABLE \`${safeName}\``);
         dump += (createRows as any[])[0]?.["Create Table"] || "";
         dump += ";\n\n";
-        const [dataRows] = await c.query(`SELECT * FROM \`${tableName}\``);
+        const [dataRows] = await c.query(`SELECT * FROM \`${safeName}\``);
         for (const d of dataRows as any[]) {
           const cols = Object.keys(d);
           const vals = cols.map(c => d[c] === null ? "NULL" : typeof d[c] === "string" ? `'${d[c].replace(/'/g, "''")}'` : d[c]);
-          dump += `INSERT INTO \`${tableName}\` (${cols.map(c => `\`${c}\``).join(", ")}) VALUES (${vals.join(", ")});\n`;
+          dump += `INSERT INTO \`${safeName}\` (${cols.map(c => `\`${c}\``).join(", ")}) VALUES (${vals.join(", ")});\n`;
         }
         dump += "\n";
       }
@@ -490,11 +492,13 @@ class BackupService {
       let dump = "-- SQL Server dump\n";
       for (const row of tablesResult.recordset) {
         const tableName = row.TABLE_NAME;
-        const dataResult = await pool.request().query(`SELECT * FROM [${tableName}]`);
+        const safeName = tableName.replace(/[^a-zA-Z0-9_]/g, "");
+        if (!safeName) continue;
+        const dataResult = await pool.request().query(`SELECT * FROM [${safeName}]`);
         for (const d of dataResult.recordset) {
           const cols = Object.keys(d);
           const vals = cols.map(c => d[c] === null ? "NULL" : typeof d[c] === "string" ? `'${d[c].replace(/'/g, "''")}'` : d[c]);
-          dump += `INSERT INTO [${tableName}] (${cols.map(c => `[${c}]`).join(", ")}) VALUES (${vals.join(", ")});\n`;
+          dump += `INSERT INTO [${safeName}] (${cols.map(c => `[${c}]`).join(", ")}) VALUES (${vals.join(", ")});\n`;
         }
         dump += "\n";
       }

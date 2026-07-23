@@ -67,7 +67,10 @@ export interface NetworkInterface {
 }
 
 class VpsControlService {
-  private async createSshConnection(hostConfigId: string): Promise<Client> {
+  private sshPool = new Map<string, { client: Client; lastUsed: number; configHash: string }>();
+  private POOL_IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+  private async getOrCreateSshConnection(hostConfigId: string): Promise<Client> {
     const { query } = await import("../config/db");
     const res = await query(
       `SELECT host, port, username, auth_type AS "authType", password, ssh_key AS "sshKey"
@@ -76,17 +79,27 @@ class VpsControlService {
     if (res.rows.length === 0) throw new Error("Host config not found.");
     const r = res.rows[0];
 
-    console.log(`[VPS] SSH connecting to ${r.username}@${r.host}:${r.port} (configId=${hostConfigId})`);
+    const poolKey = `${r.host}:${r.port}:${r.username}`;
+    const configHash = `${r.authType}:${r.password || ""}:${r.sshKey || ""}`;
+
+    // Check for existing valid connection
+    const existing = this.sshPool.get(poolKey);
+    if (existing && existing.configHash === configHash) {
+      const age = Date.now() - existing.lastUsed;
+      if (age < this.POOL_IDLE_TIMEOUT) {
+        existing.lastUsed = Date.now();
+        return existing.client;
+      }
+      // Connection expired, close it
+      try { existing.client.end(); } catch (_) {}
+      this.sshPool.delete(poolKey);
+    }
+
+    console.log(`[VPS] SSH connecting to ${r.username}@${r.host}:${r.port}`);
     const ssh = new Client();
-    return new Promise((resolve, reject) => {
-      ssh.on("ready", () => {
-        console.log(`[VPS] SSH connected to ${r.username}@${r.host}:${r.port}`);
-        resolve(ssh);
-      });
-      ssh.on("error", (err: Error) => {
-        console.error(`[VPS] SSH error for ${r.host}: ${err.message}`);
-        reject(err);
-      });
+    await new Promise<void>((resolve, reject) => {
+      ssh.on("ready", () => { console.log(`[VPS] SSH connected to ${r.host}`); resolve(); });
+      ssh.on("error", (err: Error) => { console.error(`[VPS] SSH error for ${r.host}: ${err.message}`); reject(err); });
 
       const connectOpts: any = {
         host: r.host,
@@ -103,10 +116,15 @@ class VpsControlService {
       }
       ssh.connect(connectOpts);
     });
+
+    // Store in pool
+    ssh.on("close", () => { this.sshPool.delete(poolKey); });
+    this.sshPool.set(poolKey, { client: ssh, lastUsed: Date.now(), configHash });
+    return ssh;
   }
 
   public async execCommand(hostConfigId: string, command: string, usePty: boolean = false): Promise<ExecResult> {
-    const ssh = await this.createSshConnection(hostConfigId);
+    const ssh = await this.getOrCreateSshConnection(hostConfigId);
     const MAX_BUFFER = 10 * 1024 * 1024; // 10MB
     return new Promise((resolve, reject) => {
       const execOpts: any = {};
@@ -136,7 +154,7 @@ class VpsControlService {
   }
 
   public async getMetrics(hostConfigId: string): Promise<{ cpu: CpuInfo; memory: MemoryInfo; disks: DiskInfo[]; loadAvg: number[] }> {
-    const ssh = await this.createSshConnection(hostConfigId);
+    const ssh = await this.getOrCreateSshConnection(hostConfigId);
     return new Promise((resolve, reject) => {
       const cmds = [
         `grep -c ^processor /proc/cpuinfo`,
@@ -282,7 +300,7 @@ class VpsControlService {
   }
 
   public async getNetwork(hostConfigId: string): Promise<{ interfaces: NetworkInterface[]; connections: string }> {
-    const ssh = await this.createSshConnection(hostConfigId);
+    const ssh = await this.getOrCreateSshConnection(hostConfigId);
     return new Promise((resolve, reject) => {
       const cmd = [
         `ip -o addr show | awk '{print $2, $3, $4}'`,

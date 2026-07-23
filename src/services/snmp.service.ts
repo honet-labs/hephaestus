@@ -199,7 +199,7 @@ export class SnmpService {
     // Save MIB raw file
     const safeName = mibName.replace(/[^a-zA-Z0-9_-]/g, "");
     const mibFilePath = path.join(MIBS_DIR, `${safeName}.mib`);
-    fs.writeFileSync(mibFilePath, content, "utf-8");
+    await fs.promises.writeFile(mibFilePath, content, "utf-8");
 
     // Parse the MIB
     const nodes = this.parseMibText(content);
@@ -291,7 +291,7 @@ export class SnmpService {
       for (const mibName of mibsToSync) {
         console.log(`[SnmpService] Auto-syncing MIB "${mibName}"...`);
         const mibFilePath = path.join(MIBS_DIR, `${mibName}.mib`);
-        const content = fs.readFileSync(mibFilePath, "utf-8");
+        const content = await fs.promises.readFile(mibFilePath, "utf-8");
         try {
           await this.importMib(mibName, { text: content });
           console.log(`[SnmpService] Successfully auto-synced MIB "${mibName}"`);
