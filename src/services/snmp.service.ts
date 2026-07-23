@@ -46,12 +46,16 @@ export class SnmpService {
     this.ensureMibDirectories();
   }
 
-  private ensureMibDirectories() {
-    if (!fs.existsSync(config.dbDir)) {
-      fs.mkdirSync(config.dbDir, { recursive: true });
+  private async ensureMibDirectories() {
+    try {
+      await fs.promises.access(config.dbDir);
+    } catch {
+      await fs.promises.mkdir(config.dbDir, { recursive: true });
     }
-    if (!fs.existsSync(MIBS_DIR)) {
-      fs.mkdirSync(MIBS_DIR, { recursive: true });
+    try {
+      await fs.promises.access(MIBS_DIR);
+    } catch {
+      await fs.promises.mkdir(MIBS_DIR, { recursive: true });
     }
   }
 
@@ -273,9 +277,9 @@ export class SnmpService {
 
   // Automatically scan the MIBs directory and synchronize files with the database
   public async syncMibsFromDisk(): Promise<void> {
-    this.ensureMibDirectories();
+    await this.ensureMibDirectories();
     try {
-      const files = fs.readdirSync(MIBS_DIR);
+      const files = await fs.promises.readdir(MIBS_DIR);
       const mibFiles = files.filter(f => f.endsWith(".mib"));
       if (mibFiles.length === 0) return;
 
@@ -306,13 +310,15 @@ export class SnmpService {
 
   // Delete an imported MIB (PostgreSQL cascade takes care of registry nodes automatically)
   public async deleteMib(name: string): Promise<boolean> {
-    this.ensureMibDirectories();
+    await this.ensureMibDirectories();
     
     // Remove file from disk
     const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "");
     const mibFilePath = path.join(MIBS_DIR, `${safeName}.mib`);
-    if (fs.existsSync(mibFilePath)) {
-      fs.unlinkSync(mibFilePath);
+    try {
+      await fs.promises.unlink(mibFilePath);
+    } catch (_e) {
+      // File may not exist, ignore
     }
 
     // Delete from PostgreSQL (ON DELETE CASCADE handles cleaning up the oid_registry records)

@@ -48,7 +48,7 @@ router.get("/overview", requireRole("ADMIN"), async (req, res) => {
       }
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    return res.status(500).json({ success: false, error: "Failed to retrieve overview." });
   }
 });
 
@@ -94,7 +94,7 @@ router.get("/github-token", requireRole("ADMIN"), async (req, res) => {
     const masked = token ? (token.substring(0, 4) + "****" + token.substring(token.length - 4)) : "";
     return res.status(200).json({ success: true, configured: !!token, masked });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    return res.status(500).json({ success: false, error: "Failed to retrieve GitHub token status." });
   }
 });
 
@@ -128,7 +128,7 @@ router.post("/github-token", requireRole("ADMIN"), async (req, res) => {
     );
     return res.status(200).json({ success: true, message: "GitHub token saved." });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    return res.status(500).json({ success: false, error: "Failed to save GitHub token." });
   }
 });
 

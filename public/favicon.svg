@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Hammer handle -->
+  <rect x="26" y="4" width="5" height="36" rx="2.5" fill="#94a3b8" transform="rotate(-30 28.5 22)"/>
+  <!-- Hammer head -->
+  <rect x="12" y="2" width="28" height="10" rx="3" fill="#cbd5e1" transform="rotate(-30 26 7)"/>
+  <!-- Anvil base -->
+  <path d="M12 46 L52 46 L48 56 L16 56 Z" fill="#64748b"/>
+  <!-- Anvil body -->
+  <path d="M18 32 L46 32 L52 46 L12 46 Z" fill="#94a3b8"/>
+  <!-- Anvil horn -->
+  <path d="M18 32 L6 36 L12 42 L18 38 Z" fill="#94a3b8"/>
+  <!-- Anvil top -->
+  <rect x="16" y="28" width="30" height="6" rx="1" fill="#cbd5e1"/>
+</svg>

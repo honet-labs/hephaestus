@@ -79,7 +79,7 @@ export class GrokService {
     this.patterns = { ...BUILTIN_PATTERNS };
   }
 
-  private parseCustomPatterns(customPatternsStr: string): void {
+  private parseCustomPatternsInto(target: Record<string, string>, customPatternsStr: string): void {
     if (!customPatternsStr) return;
     for (const line of customPatternsStr.split("\n")) {
       const trimmed = line.trim();
@@ -88,25 +88,24 @@ export class GrokService {
         if (parts.length >= 2) {
           const name = parts[0];
           const regex = parts.slice(1).join(" ");
-          this.patterns[name] = regex;
+          target[name] = regex;
         }
       }
     }
   }
 
-  private expandPattern(pattern: string): string {
+  private expandPattern(pattern: string, patterns: Record<string, string>): string {
     const cache = new Map<string, string>();
 
     const expand = (name: string, depth: number): string => {
-      if (depth > 50) return ""; // prevent infinite recursion
+      if (depth > 50) return "";
       if (cache.has(name)) return cache.get(name)!;
 
-      let regex = this.patterns[name];
+      let regex = patterns[name];
       if (!regex) return "";
 
-      cache.set(name, ""); // prevent circular references
+      cache.set(name, "");
 
-      // Recursively expand nested patterns
       regex = regex.replace(/%\{([^:}]+)(?::([^}]+))?\}/g, (_match, patternName, _fieldName) => {
         return expand(patternName, depth + 1);
       });
@@ -115,7 +114,6 @@ export class GrokService {
       return regex;
     };
 
-    // Find all top-level %{PATTERN:name} in the pattern and expand
     let expanded = pattern;
     let lastExpanded = "";
     let iterations = 0;
@@ -126,29 +124,27 @@ export class GrokService {
 
       expanded = expanded.replace(/%\{([^:}]+)(?::([^}]+))?\}/g, (_match, patternName, _fieldName) => {
         const regex = expand(patternName, 0);
-        return regex || _match; // Keep original if pattern not found
+        return regex || _match;
       });
     }
 
     return expanded;
   }
 
-  private buildRegex(pattern: string): { regex: RegExp; fieldNames: string[] } {
+  private buildRegex(pattern: string, patterns: Record<string, string>): { regex: RegExp; fieldNames: string[] } {
     const fieldNames: string[] = [];
     let regexStr = pattern;
 
-    // First pass: expand all %{PATTERN:name} into named groups
-    // Handle %{PATTERN:name} syntax
     regexStr = regexStr.replace(/%\{([^:}]+):([^}]+)\}/g, (_match, patternName, fieldName) => {
       fieldNames.push(fieldName);
-      const expanded = this.patterns[patternName] || "";
+      const expanded = patterns[patternName] || "";
       if (!expanded) return "";
       return `(?<${fieldName}>${expanded})`;
     });
 
     // Second pass: expand remaining %{PATTERN} (without name)
     regexStr = regexStr.replace(/%\{([^:}]+)\}/g, (_match, patternName) => {
-      const expanded = this.patterns[patternName] || "";
+      const expanded = patterns[patternName] || "";
       return expanded;
     });
 
@@ -161,24 +157,23 @@ export class GrokService {
   }
 
   public testGrok(pattern: string, customPatterns: string, rawLog: string): GrokTestResult {
-    this.patterns = { ...BUILTIN_PATTERNS };
-    this.parseCustomPatterns(customPatterns);
+    const localPatterns: Record<string, string> = { ...BUILTIN_PATTERNS };
+    this.parseCustomPatternsInto(localPatterns, customPatterns);
 
     const lines = rawLog.split("\n");
     const resultLines: LineVisual[] = [];
     const jsonOutput: { line: number; data: GrokMatchResult }[] = [];
 
-    // Build regex from pattern
     let regex: RegExp | null = null;
     try {
-      const expandedPattern = this.expandPattern(pattern);
-      const built = this.buildRegex(expandedPattern);
+      const expandedPattern = this.expandPattern(pattern, localPatterns);
+      const built = this.buildRegex(expandedPattern, localPatterns);
       regex = built.regex;
     } catch (e: any) {
       throw new Error(`Pattern error: ${e.message}`);
     }
 
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < lines.length && i < 10000; i++) {
       const line = lines[i];
 
       if (!line.trim()) {
@@ -191,7 +186,13 @@ export class GrokService {
         continue;
       }
 
-      const match = regex.exec(line);
+      let match: RegExpExecArray | null = null;
+      try {
+        match = regex.exec(line);
+      } catch (_e) {
+        resultLines.push({ matched: false, empty: false, text: line });
+        continue;
+      }
 
       if (match && match.groups) {
         const cleanMatch: GrokMatchResult = {};

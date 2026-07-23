@@ -95,7 +95,10 @@ export class GrafanaService {
        FROM grafana_configs 
        ORDER BY name ASC`
     );
-    return res.rows;
+    return res.rows.map((r: any) => ({
+      ...r,
+      token: r.token ? "********" : "",
+    }));
   }
 
   /**

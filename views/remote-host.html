@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Remote Host - Hephaestus</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/vendor/xterm/xterm.min.css">
     <style>
         @font-face {
@@ -1144,9 +1145,13 @@
             function renderProcRows(tab, tbody) {
                 var filter = (document.getElementById('vps-proc-filter-' + tab.id) || {}).value || '';
                 var filtered = (tab._vpsData || []).filter(function(p) { return !filter || p.command.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || String(p.pid).indexOf(filter) !== -1; });
-                tbody.innerHTML = filtered.map(function(p) { return '<tr><td>' + p.pid + '</td><td>' + esc(p.user) + '</td><td>' + p.cpu.toFixed(1) + '</td><td>' + p.mem.toFixed(1) + '</td><td>' + formatBytes(p.rss * 1024) + '</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(p.command) + '">' + esc(p.command) + '</td><td><button class="vps-btn vps-btn-danger" onclick="vpsKillProc(\'' + tab.serverId + '\',' + p.pid + ')">Kill</button></td></tr>'; }).join('');
+                tbody.innerHTML = filtered.map(function(p) { return '<tr><td>' + p.pid + '</td><td>' + esc(p.user) + '</td><td>' + p.cpu.toFixed(1) + '</td><td>' + p.mem.toFixed(1) + '</td><td>' + formatBytes(p.rss * 1024) + '</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(p.command) + '">' + esc(p.command) + '</td><td><button class="vps-btn vps-btn-danger" data-action="kill-proc" data-host-id="' + esc(tab.serverId) + '" data-pid="' + p.pid + '">Kill</button></td></tr>'; }).join('');
             }
-            window.vpsKillProc = function(hostId, pid) {
+            tbody.addEventListener('click', function(e) {
+                var btn = e.target.closest('[data-action="kill-proc"]');
+                if (!btn) return;
+                var hostId = btn.getAttribute('data-host-id');
+                var pid = parseInt(btn.getAttribute('data-pid'), 10);
                 if (!confirm('Kill process ' + pid + '?')) return;
                 showToast('Killing process ' + pid + '...', 'info', 10000);
                 api('POST', '/api/v1/vps/kill-process', { hostConfigId: hostId, pid: pid }).then(function(result) {
@@ -1157,7 +1162,7 @@
                     showToast('Error: ' + (err.message || 'Unknown error'), 'error', 5000);
                     setTimeout(refresh, 1500);
                 });
-            };
+            });
             setTimeout(function() {
                 var filterEl = document.getElementById('vps-proc-filter-' + tab.id);
                 var sortEl = document.getElementById('vps-proc-sort-' + tab.id);
@@ -1184,17 +1189,22 @@
                 tbody.innerHTML = filtered.map(function(s) {
                     var badge = s.activeState === 'active' ? 'vps-badge-active' : s.activeState === 'failed' ? 'vps-badge-error' : 'vps-badge-inactive';
                     var actions = '';
-                    if (s.activeState !== 'active') actions += '<button class="vps-btn" onclick="vpsSvcCtl(\'' + tab.serverId + '\',\'' + esc(s.name) + '\',\'start\')">Start</button> ';
-                    if (s.activeState === 'active') actions += '<button class="vps-btn" onclick="vpsSvcCtl(\'' + tab.serverId + '\',\'' + esc(s.name) + '\',\'stop\')">Stop</button> ';
-                    actions += '<button class="vps-btn" onclick="vpsSvcCtl(\'' + tab.serverId + '\',\'' + esc(s.name) + '\',\'restart\')">Restart</button>';
+                    if (s.activeState !== 'active') actions += '<button class="vps-btn" data-action="svc-ctl" data-host-id="' + esc(tab.serverId) + '" data-svc-name="' + esc(s.name) + '" data-svc-action="start">Start</button> ';
+                    if (s.activeState === 'active') actions += '<button class="vps-btn" data-action="svc-ctl" data-host-id="' + esc(tab.serverId) + '" data-svc-name="' + esc(s.name) + '" data-svc-action="stop">Stop</button> ';
+                    actions += '<button class="vps-btn" data-action="svc-ctl" data-host-id="' + esc(tab.serverId) + '" data-svc-name="' + esc(s.name) + '" data-svc-action="restart">Restart</button>';
                     return '<tr><td style="font-weight:500">' + esc(s.name) + '</td><td style="color:var(--text-muted)">' + esc(s.description) + '</td><td><span class="vps-badge ' + badge + '">' + esc(s.activeState) + '</span></td><td class="vps-service-actions">' + actions + '</td></tr>';
                 }).join('');
             }
-            window.vpsSvcCtl = function(hostId, name, action) {
+            tbody.addEventListener('click', function(e) {
+                var btn = e.target.closest('[data-action="svc-ctl"]');
+                if (!btn) return;
+                var hostId = btn.getAttribute('data-host-id');
+                var name = btn.getAttribute('data-svc-name');
+                var action = btn.getAttribute('data-svc-action');
                 if (!confirm(action.charAt(0).toUpperCase() + action.slice(1) + ' service ' + name + '?')) return;
                 showToast(action.charAt(0).toUpperCase() + action.slice(1) + 'ting ' + name + '...', 'info', 10000);
-                var btns = document.querySelectorAll('button[onclick*="' + name + '"]');
-                btns.forEach(function(b) { b.disabled = true; b.style.opacity = '0.5'; });
+                var allBtns = tbody.querySelectorAll('[data-svc-name="' + CSS.escape(name) + '"]');
+                allBtns.forEach(function(b) { b.disabled = true; b.style.opacity = '0.5'; });
                 api('POST', '/api/v1/vps/service/control', { hostConfigId: hostId, serviceName: name, action: action }).then(function(result) {
                     if (result && result.error) { showToast('Failed: ' + result.error, 'error', 5000); }
                     else { showToast(name + ' ' + action + 'ed successfully', 'success', 3000); }
@@ -1203,7 +1213,7 @@
                     showToast('Error: ' + (err.message || 'Unknown error'), 'error', 5000);
                     setTimeout(refresh, 1500);
                 });
-            };
+            });
             setTimeout(function() {
                 var filterEl = document.getElementById('vps-svc-filter-' + tab.id);
                 if (filterEl) filterEl.addEventListener('input', function() { renderSvcRows(tab, tbody); });
@@ -1448,6 +1458,8 @@
             var tab = tabs[idx];
             if (tab._refreshInterval) { clearInterval(tab._refreshInterval); tab._refreshInterval = null; }
             if (tab._pingInterval) { clearInterval(tab._pingInterval); tab._pingInterval = null; }
+            if (tab._onDataDisposable) { try { tab._onDataDisposable.dispose(); } catch(_){} tab._onDataDisposable = null; }
+            if (tab._onResizeDisposable) { try { tab._onResizeDisposable.dispose(); } catch(_){} tab._onResizeDisposable = null; }
             if (tab.ws) { try { tab.ws.send(JSON.stringify({ type: 'disconnect' })); } catch(_){} tab.ws.close(); }
             if (tab.term) tab.term.dispose();
             var el = document.getElementById('term-' + tab.id);
@@ -2294,6 +2306,13 @@
         });
         window.addEventListener('resize', function() {
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].fitAddon) try { tabs[i].fitAddon.fit(); } catch(e) {} }
+        });
+        window.addEventListener('beforeunload', function() {
+            for (var i = 0; i < tabs.length; i++) {
+                var t = tabs[i];
+                if (t._refreshInterval) { clearInterval(t._refreshInterval); t._refreshInterval = null; }
+                if (t._pingInterval) { clearInterval(t._pingInterval); t._pingInterval = null; }
+            }
         });
 
         document.getElementById('terminal-wrapper').addEventListener('click', function(e) {

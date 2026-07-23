@@ -7,12 +7,17 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${PGUSER:-hephaestus}
-      POSTGRES_PASSWORD: ${PGPASSWORD:-CHANGE_ME_STRONG_PASSWORD}
+      POSTGRES_PASSWORD: ${PGPASSWORD:?Please set PGPASSWORD in .env file}
       POSTGRES_DB: ${PGDATABASE:-hephaestus}
     ports:
       - "127.0.0.1:5435:5432"
     volumes:
       - hephaestus-db-data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
 
   hephaestus-backend:
     image: hephaestus-backend:latest
@@ -28,7 +33,7 @@ services:
       retries: 3
       start_period: 10s
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     env_file:
       - .env
     environment:
@@ -40,6 +45,11 @@ services:
       - hephaestus-db
     volumes:
       - hephaestus-backend-data:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2"
 
 volumes:
   hephaestus-db-data:

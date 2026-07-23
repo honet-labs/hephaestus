@@ -155,7 +155,7 @@ export class SettingsController {
           res.status(200).json({
             success: false,
             error: "Connection Failed",
-            message: err.message || "Failed to connect to Grafana."
+            message: "Failed to connect to Grafana."
           });
         }
         return;
@@ -171,7 +171,7 @@ export class SettingsController {
           res.status(400).json({
             success: false,
             error: "Save Failed",
-            message: `Save canceled because connection test failed: ${err.message}`
+            message: "Save canceled because connection test failed."
           });
           return;
         }
@@ -289,7 +289,7 @@ export class SettingsController {
 
       if (id) {
         const existing = list.find(c => c.id === id);
-        if (existing && (token.includes("******") || token.includes("************"))) {
+        if (existing && token && (token.includes("******") || token.includes("************"))) {
           targetToken = existing.token;
         }
       }
@@ -310,7 +310,7 @@ export class SettingsController {
         res.status(400).json({
           success: false,
           error: "Connection Test Failed",
-          message: `Connection failed: ${err.message}`
+          message: "Connection failed."
         });
         return;
       }

@@ -216,6 +216,16 @@ initDb()
       console.log(`🔒 Allowed CORS origins: ${config.allowedOrigins.join(", ")}`);
       console.log(`📊 Target Grafana: ${activeGrafana.host}`);
 
+      // Periodic session cleanup (every 6 hours)
+      setInterval(async () => {
+        try {
+          const { rows } = await dbPool.query("DELETE FROM user_sessions WHERE expires_at < NOW() RETURNING id");
+          if (rows.length > 0) console.log(`🧹 [Session] Cleaned up ${rows.length} expired sessions.`);
+        } catch (err: any) {
+          console.error("⚠️  [Session] Error cleaning expired sessions:", err.message);
+        }
+      }, 6 * 60 * 60 * 1000);
+
       // WebSocket server for Remote Host terminal (attached to same HTTP server)
       const { WebSocketServer } = require("ws");
       const MAX_WS_CONNECTIONS = 10;
@@ -295,8 +305,9 @@ initDb()
               return;
             }
             const userId = sessionRes.rows[0].user_id;
+            const maxExpiry = "7 days";
             await dbPool.query(
-              "UPDATE user_sessions SET expires_at = NOW() + INTERVAL '24 hours' WHERE token = $1",
+              "UPDATE user_sessions SET expires_at = LEAST(NOW() + INTERVAL '24 hours', (SELECT created_at FROM user_sessions WHERE token = $1) + INTERVAL '" + maxExpiry + "') WHERE token = $1",
               [tokenHash]
             );
 

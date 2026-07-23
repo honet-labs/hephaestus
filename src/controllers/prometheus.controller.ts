@@ -24,7 +24,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message || "Failed to read Prometheus configuration file."
+        message: "Failed to read Prometheus configuration file."
       });
     }
   }
@@ -63,7 +63,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message || "An error occurred during validation check."
+        message: "An error occurred during validation check."
       });
     }
   }
@@ -97,7 +97,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message || "Failed to save Prometheus configuration."
+        message: "Failed to save Prometheus configuration."
       });
     }
   }
@@ -118,7 +118,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to retrieve configuration list."
       });
     }
   }
@@ -160,7 +160,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to save configuration profile."
       });
     }
   }
@@ -187,7 +187,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to delete configuration profile."
       });
     }
   }
@@ -214,7 +214,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to activate configuration profile."
       });
     }
   }
@@ -342,7 +342,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to test connection."
       });
     }
   }
@@ -383,7 +383,7 @@ export class PrometheusController {
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to test connection."
       });
     }
   }

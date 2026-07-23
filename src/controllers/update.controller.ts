@@ -90,7 +90,7 @@ export class UpdateController {
       res.status(200).json({
         success: false,
         hasUpdates: false,
-        message: isGitMissing ? "Git is not installed on the server." : "Failed to check for updates: " + (error.message || "Unknown error"),
+        message: isGitMissing ? "Git is not installed on the server." : "Failed to check for updates.",
         remote: "unknown",
         authConfigured: false
       });

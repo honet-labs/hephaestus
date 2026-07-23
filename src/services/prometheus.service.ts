@@ -195,8 +195,8 @@ export class PrometheusService {
     if (activeConfig.mode === "local") {
       const configPath = path.resolve(activeConfig.path);
       // Block access to sensitive system paths
-      const blocked = ["/etc/shadow", "/etc/passwd", "/etc/sudoers", "/root/.ssh", "/etc/ssh/sshd_config"];
-      if (blocked.some(b => configPath.startsWith(b))) {
+      const blocked = ["/etc/shadow", "/etc/passwd", "/etc/sudoers", "/root/.ssh", "/etc/ssh/sshd_config", "/etc/krb5.conf", "/proc/", "/sys/", "/dev/", ".env", "id_rsa", "id_ed25519", "id_dsa", "id_ecdsa"];
+      if (blocked.some(b => configPath.includes(b))) {
         throw new Error("Access to this path is restricted");
       }
       const dir = path.dirname(configPath);
@@ -268,7 +268,7 @@ scrape_configs:
       }
 
       return new Promise((resolve) => {
-        exec(`promtool check config "${tempFilePath}"`, async (err, stdout, stderr) => {
+        exec(`promtool check config ${shellEscape(tempFilePath)}`, async (err, stdout, stderr) => {
           try {
             await fsPromises.unlink(tempFilePath);
           } catch (_) {

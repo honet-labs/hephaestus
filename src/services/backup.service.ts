@@ -452,9 +452,14 @@ class BackupService {
         dump += ";\n\n";
         const dataRes = await c.query(`SELECT * FROM "${safeName}"`);
         for (const d of dataRes.rows) {
-          const cols = Object.keys(d);
-          const vals = cols.map(c => typeof d[c] === "string" ? `'${d[c].replace(/'/g, "''")}'` : d[c] === null ? "NULL" : d[c]);
-          dump += `INSERT INTO "${safeName}" (${cols.join(", ")}) VALUES (${vals.join(", ")});\n`;
+          const cols = Object.keys(d).map(c => c.replace(/[^a-zA-Z0-9_]/g, ""));
+          const vals = cols.map((c, i) => {
+            const v = d[Object.keys(d)[i]];
+            if (v === null) return "NULL";
+            if (typeof v === "string") return `'${v.replace(/'/g, "''")}'`;
+            return String(v);
+          });
+          dump += `INSERT INTO "${safeName}" (${cols.map(c => `"${c}"`).join(", ")}) VALUES (${vals.join(", ")});\n`;
         }
         dump += "\n";
       }
@@ -578,9 +583,12 @@ class BackupService {
   private async uploadToLocal(buffer: Buffer, filename: string, config: Record<string, any>): Promise<void> {
     const fs = await import("fs/promises");
     const path = await import("path");
-    const destDir = config.path || "/opt/backups";
-    try { await fs.access(destDir); } catch { await fs.mkdir(destDir, { recursive: true }); }
-    await fs.writeFile(path.join(destDir, filename), buffer);
+    const destDir = path.resolve(config.path || "/opt/backups");
+    const safeDir = destDir.replace(/\0/g, "");
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "");
+    if (!safeName) throw new Error("Invalid filename");
+    try { await fs.access(safeDir); } catch { await fs.mkdir(safeDir, { recursive: true }); }
+    await fs.writeFile(path.join(safeDir, safeName), buffer);
   }
 
   private async uploadToR2(buffer: Buffer, filename: string, config: Record<string, any>): Promise<void> {

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" fill="none">
+  <!-- Anvil + Hammer Icon -->
+  <g transform="translate(10, 5)">
+    <!-- Hammer handle -->
+    <rect x="22" y="5" width="4" height="42" rx="2" fill="#94a3b8" transform="rotate(-30 24 26)"/>
+    <!-- Hammer head -->
+    <rect x="8" y="2" width="30" height="12" rx="3" fill="#cbd5e1" transform="rotate(-30 23 8)"/>
+    <!-- Anvil base -->
+    <path d="M10 52 L50 52 L46 62 L14 62 Z" fill="#64748b"/>
+    <!-- Anvil body -->
+    <path d="M16 38 L44 38 L50 52 L10 52 Z" fill="#94a3b8"/>
+    <!-- Anvil horn -->
+    <path d="M16 38 L4 42 L10 48 L16 44 Z" fill="#94a3b8"/>
+    <!-- Anvil top -->
+    <rect x="14" y="34" width="32" height="6" rx="1" fill="#cbd5e1"/>
+  </g>
+  <!-- HEPHAESTUS Text -->
+  <text x="72" y="56" font-family="Georgia, 'Times New Roman', serif" font-size="42" font-weight="bold" fill="#e2e8f0" letter-spacing="3">HEPHAESTUS</text>
+</svg>

@@ -4,13 +4,13 @@ import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
-router.get("/panels", (req, res) => queryExplorerController.getQueryPanels(req, res));
+router.get("/panels", requireRole("ADMIN"), (req, res) => queryExplorerController.getQueryPanels(req, res));
 
 /**
    * @route   GET /api/v1/query-explorer/metadata
    * @desc    Retrieve metrics metadata from target datasource
    */
-router.get("/metadata", (req, res) => queryExplorerController.getMetricsMetadata(req, res));
+router.get("/metadata", requireRole("ADMIN"), (req, res) => queryExplorerController.getMetricsMetadata(req, res));
 
 /**
    * @route   POST /api/v1/query-explorer/panels

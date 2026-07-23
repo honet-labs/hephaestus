@@ -44,6 +44,8 @@ class RemoteHostService {
     const r = res.rows[0];
     r.groupName = r.groupName || "Default";
     r.tags = r.tags || [];
+    r.password = r.password ? "********" : "";
+    r.sshKey = r.sshKey ? "********" : "";
     return r;
   }
 
@@ -211,6 +213,7 @@ class RemoteHostService {
         username: cfg.username,
         keepaliveInterval: 15000,
         keepaliveCountMax: 10,
+        readyTimeout: 10000,
       };
       if (cfg.authType === "key" && cfg.sshKey) {
         connectOpts.privateKey = cfg.sshKey;
@@ -263,6 +266,20 @@ class RemoteHostService {
   private sftpPool = new Map<string, { ssh: Client; sftp: any; lastUsed: number }>();
   private SFTP_POOL_TIMEOUT = 3 * 60 * 1000; // 3 minutes
 
+  private sanitizeRemotePath(remotePath: string): string {
+    if (!remotePath || !remotePath.trim()) return "/";
+    let p = remotePath.replace(/\0/g, "");
+    p = p.replace(/~+/g, "");
+    const parts = p.split("/").filter(Boolean);
+    const resolved: string[] = [];
+    for (const part of parts) {
+      if (part === "..") { resolved.pop(); continue; }
+      if (part === ".") continue;
+      resolved.push(part);
+    }
+    return "/" + resolved.join("/");
+  }
+
   private async getSftpConnection(hostConfigId: string): Promise<{ sftp: any; ssh: Client }> {
     const cfg = await this.getRawConfig(hostConfigId);
     if (!cfg) throw new Error("Host config not found.");
@@ -293,6 +310,7 @@ class RemoteHostService {
         port: cfg.port || 22,
         username: cfg.username,
         keepaliveInterval: 15000,
+        readyTimeout: 10000,
       };
       if (cfg.authType === "key" && cfg.sshKey) {
         connectOpts.privateKey = cfg.sshKey;
@@ -304,9 +322,10 @@ class RemoteHostService {
   }
 
   public async sftpListDir(hostConfigId: string, remotePath: string): Promise<{ name: string; isDir: boolean; size: number; modTime: string }[]> {
+    const safePath = this.sanitizeRemotePath(remotePath);
     const { sftp, ssh } = await this.getSftpConnection(hostConfigId);
     return new Promise((resolve, reject) => {
-      sftp.readdir(remotePath, (err: any, list: any[]) => {
+      sftp.readdir(safePath, (err: any, list: any[]) => {
         ssh.end();
         if (err) { reject(err); return; }
         resolve(list.map((item: any) => ({
@@ -320,22 +339,24 @@ class RemoteHostService {
   }
 
   public async sftpUpload(hostConfigId: string, remotePath: string, fileBuffer: Buffer, fileName: string): Promise<{ success: boolean; message: string }> {
+    const safePath = this.sanitizeRemotePath(remotePath);
     const { sftp, ssh } = await this.getSftpConnection(hostConfigId);
     return new Promise((resolve, reject) => {
-      const writeStream = sftp.createWriteStream(remotePath);
-      writeStream.on("close", () => { ssh.end(); resolve({ success: true, message: `Uploaded ${fileName} to ${remotePath}` }); });
+      const writeStream = sftp.createWriteStream(safePath);
+      writeStream.on("close", () => { ssh.end(); resolve({ success: true, message: `Uploaded ${fileName} to ${safePath}` }); });
       writeStream.on("error", (err: any) => { ssh.end(); reject(err); });
       writeStream.end(fileBuffer);
     });
   }
 
   public async sftpDownload(hostConfigId: string, remotePath: string): Promise<{ buffer: Buffer; fileName: string; size: number }> {
+    const safePath = this.sanitizeRemotePath(remotePath);
     const { sftp, ssh } = await this.getSftpConnection(hostConfigId);
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
-      const readStream = sftp.createReadStream(remotePath);
+      const readStream = sftp.createReadStream(safePath);
       readStream.on("data", (chunk: Buffer) => chunks.push(chunk));
-      readStream.on("end", () => { ssh.end(); const buf = Buffer.concat(chunks); resolve({ buffer: buf, fileName: remotePath.split("/").pop() || "download", size: buf.length }); });
+      readStream.on("end", () => { ssh.end(); const buf = Buffer.concat(chunks); resolve({ buffer: buf, fileName: safePath.split("/").pop() || "download", size: buf.length }); });
       readStream.on("error", (err: any) => { ssh.end(); reject(err); });
     });
   }
@@ -344,6 +365,8 @@ class RemoteHostService {
     fromHostConfigId: string, fromPath: string,
     toHostConfigId: string, toPath: string,
   ): Promise<{ success: boolean; message: string }> {
+    const safeFromPath = this.sanitizeRemotePath(fromPath);
+    const safeToPath = this.sanitizeRemotePath(toPath);
     const fromCfg = await this.getRawConfig(fromHostConfigId);
     const toCfg = await this.getRawConfig(toHostConfigId);
     if (!fromCfg || !toCfg) throw new Error("One or both host configs not found.");
@@ -362,25 +385,25 @@ class RemoteHostService {
       fromSsh.on("error", (err: Error) => { cleanup(); reject(err); });
       toSsh.on("error", (err: Error) => { cleanup(); reject(err); });
 
-      const fromConnOpts: any = { host: fromCfg.host, port: fromCfg.port || 22, username: fromCfg.username, keepaliveInterval: 15000 };
+      const fromConnOpts: any = { host: fromCfg.host, port: fromCfg.port || 22, username: fromCfg.username, keepaliveInterval: 15000, readyTimeout: 10000 };
       if (fromCfg.authType === "key" && fromCfg.sshKey) fromConnOpts.privateKey = fromCfg.sshKey;
       else fromConnOpts.password = fromCfg.password || "";
 
-      const toConnOpts: any = { host: toCfg.host, port: toCfg.port || 22, username: toCfg.username, keepaliveInterval: 15000 };
+      const toConnOpts: any = { host: toCfg.host, port: toCfg.port || 22, username: toCfg.username, keepaliveInterval: 15000, readyTimeout: 10000 };
       if (toCfg.authType === "key" && toCfg.sshKey) toConnOpts.privateKey = toCfg.sshKey;
       else toConnOpts.password = toCfg.password || "";
 
       toSsh.on("ready", () => {
         toSsh.sftp((toErr: any, toSftp: any) => {
           if (toErr) { cleanup(); reject(toErr); return; }
-          const writeStream = toSftp.createWriteStream(toPath);
-          writeStream.on("close", () => { cleanup(); resolve({ success: true, message: `Transferred ${fromPath} → ${toPath}` }); });
+          const writeStream = toSftp.createWriteStream(safeToPath);
+          writeStream.on("close", () => { cleanup(); resolve({ success: true, message: `Transferred ${safeFromPath} → ${safeToPath}` }); });
           writeStream.on("error", (err: any) => { cleanup(); reject(err); });
 
           fromSsh.on("ready", () => {
             fromSsh.sftp((fromErr: any, fromSftp: any) => {
               if (fromErr) { cleanup(); reject(fromErr); return; }
-              const readStream = fromSftp.createReadStream(fromPath);
+              const readStream = fromSftp.createReadStream(safeFromPath);
               readStream.on("error", (err: any) => { cleanup(); reject(err); });
               readStream.pipe(writeStream);
             });

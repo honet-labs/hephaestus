@@ -12,7 +12,7 @@ router.get("/configs", requireRole("ADMIN"), async (req: Request, res: Response)
     const sanitized = configs.map(c => ({ ...c, password: "••••••••" }));
     res.status(200).json({ success: true, data: sanitized });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: "Failed to retrieve configurations." });
   }
 });
 
@@ -40,7 +40,7 @@ router.post("/configs", requireRole("ADMIN"), async (req: Request, res: Response
 
     res.status(201).json({ success: true, id, message: "Config saved and activated" });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: "Failed to save configuration." });
   }
 });
 
@@ -51,7 +51,7 @@ router.post("/test", requireRole("ADMIN"), async (req: Request, res: Response) =
     const result = await uptimeKumaService.testConnection(url, username, password);
     res.status(200).json({ success: true, ...result });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: "Failed to test connection." });
   }
 });
 
@@ -68,7 +68,7 @@ router.post("/configs/:id/test", requireRole("ADMIN"), async (req: Request, res:
     const result = await uptimeKumaService.testConnection(config.url, config.username, config.password);
     res.status(200).json({ success: true, ...result });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: "Failed to test connection." });
   }
 });
 
@@ -81,7 +81,7 @@ router.delete("/configs/:id", requireRole("ADMIN"), async (req: Request, res: Re
     await logActivity("Uptime Kuma", "Delete Config", `Deleted Uptime Kuma config`, "SUCCESS");
     res.status(200).json({ success: true, message: "Config deleted" });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: "Failed to delete configuration." });
   }
 });
 
@@ -96,7 +96,7 @@ router.get("/monitors", requireRole("ADMIN"), async (req: Request, res: Response
     });
     res.status(200).json({ success: true, data: monitors });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: "Failed to retrieve monitors." });
   }
 });
 
@@ -106,7 +106,7 @@ router.get("/monitors/:id", requireRole("ADMIN"), async (req: Request, res: Resp
     const monitor = await uptimeKumaService.getMonitorById(parseInt(req.params.id, 10));
     res.status(200).json({ success: true, data: monitor });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: "Failed to retrieve monitor." });
   }
 });
 
@@ -142,7 +142,7 @@ router.post("/query", requireRole("ADMIN"), async (req: Request, res: Response) 
 
     res.status(200).json({ success: true, data });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: "Failed to execute query." });
   }
 });
 

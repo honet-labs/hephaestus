@@ -14,8 +14,8 @@ const GRAFANA_CONFIGS_FILE = path.join(DB_DIR, "grafana_configs.json");
 const PROMETHEUS_CONFIGS_FILE = path.join(DB_DIR, "prometheus_configs.json");
 const MONITORING_VIEWS_FILE = path.join(DB_DIR, "monitoring_views.json");
 
-// SSL certificate validation: set NODE_TLS_REJECT_UNAUTHORIZED=0 only for dev/self-signed certs
-const SSL_REJECT_UNAUTHORIZED = process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0";
+// SSL certificate validation: only allow disabling in development mode
+const SSL_REJECT_UNAUTHORIZED = process.env.NODE_ENV === "production" || process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0";
 
 export interface PrometheusConfigItem {
   id: string;
