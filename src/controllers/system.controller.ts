@@ -31,10 +31,11 @@ export class SystemController {
         }
       });
     } catch (err: any) {
+      console.error("[System] getDbConfig error:", err.message);
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to retrieve database configuration."
       });
     }
   };
@@ -91,7 +92,7 @@ export class SystemController {
         res.status(400).json({
           success: false,
           error: "Connection Failed",
-          message: `Failed to connect to database with new configuration: ${dbConnectionError}`
+          message: "Failed to connect to database with new configuration."
         });
         return;
       }
@@ -113,10 +114,11 @@ export class SystemController {
         isConnected: isDbConnected
       });
     } catch (err: any) {
+      console.error("[System] saveDbConfig error:", err.message);
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to save database configuration."
       });
     }
   };
@@ -184,21 +186,22 @@ export class SystemController {
         await logActivity(
           "Database Configuration",
           "Test Connection",
-          `Failed database connection test to host "${host}": ${err.message}`,
+          `Failed database connection test to host "${host}"`,
           "ERROR"
         );
 
         res.status(400).json({
           success: false,
           error: "Connection Failed",
-          message: `Failed to connect to database: ${err.message || String(err)}`
+          message: "Failed to connect to database. Check credentials and network."
         });
       }
     } catch (err: any) {
+      console.error("[System] testDbConfig error:", err.message);
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: err.message
+        message: "Failed to test database configuration."
       });
     }
   };

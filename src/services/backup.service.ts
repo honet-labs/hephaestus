@@ -445,14 +445,16 @@ class BackupService {
       const tables = await c.query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
       let dump = "-- PostgreSQL dump\n";
       for (const row of tables.rows) {
-        const createRes = await c.query(`SELECT pg_get_tabledef('public', '${row.tablename}')`);
+        const safeName = row.tablename.replace(/[^a-zA-Z0-9_]/g, "");
+        if (!safeName) continue;
+        const createRes = await c.query(`SELECT pg_get_tabledef('public', $1)`, [safeName]);
         dump += createRes.rows[0]?.pg_get_tabledef || "";
         dump += ";\n\n";
-        const dataRes = await c.query(`SELECT * FROM ${row.tablename}`);
+        const dataRes = await c.query(`SELECT * FROM "${safeName}"`);
         for (const d of dataRes.rows) {
           const cols = Object.keys(d);
           const vals = cols.map(c => typeof d[c] === "string" ? `'${d[c].replace(/'/g, "''")}'` : d[c] === null ? "NULL" : d[c]);
-          dump += `INSERT INTO ${row.tablename} (${cols.join(", ")}) VALUES (${vals.join(", ")});\n`;
+          dump += `INSERT INTO "${safeName}" (${cols.join(", ")}) VALUES (${vals.join(", ")});\n`;
         }
         dump += "\n";
       }

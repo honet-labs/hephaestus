@@ -38,7 +38,7 @@ export class SettingsController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to retrieve Grafana settings."
+        message: "Failed to retrieve Grafana settings."
       });
     }
   }
@@ -73,7 +73,7 @@ export class SettingsController {
       res.status(500).json({
         success: false,
         error: "Grafana Datasources Error",
-        message: error.message || "Failed to retrieve datasources from Grafana server."
+        message: "Failed to retrieve datasources from Grafana server."
       });
     }
   }
@@ -223,7 +223,7 @@ export class SettingsController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to process Grafana settings action."
+        message: "Failed to process Grafana settings action."
       });
     }
   }
@@ -253,7 +253,7 @@ export class SettingsController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to list configurations."
+        message: "Failed to list configurations."
       });
     }
   }
@@ -361,7 +361,7 @@ export class SettingsController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to save configuration."
+        message: "Failed to save configuration."
       });
     }
   }
@@ -402,7 +402,7 @@ export class SettingsController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to delete configuration."
+        message: "Failed to delete configuration."
       });
     }
   }
@@ -439,7 +439,7 @@ export class SettingsController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to activate configuration."
+        message: "Failed to activate configuration."
       });
     }
   }
@@ -475,7 +475,7 @@ export class SettingsController {
       res.status(200).json({
         success: false,
         isConnected: false,
-        message: error.message || "Failed to connect to Grafana."
+        message: "Failed to connect to Grafana."
       });
     }
   }

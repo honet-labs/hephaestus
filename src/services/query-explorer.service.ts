@@ -16,21 +16,40 @@ function validateDatasourceUid(uid: string): void {
 /**
  * Validate that a URL points to a public/allowed host, not internal networks.
  */
+function isPrivateIP(hostname: string): boolean {
+  if (hostname.startsWith("100.")) {
+    const secondOctet = parseInt(hostname.split(".")[1], 10);
+    if (secondOctet >= 64 && secondOctet <= 127) return true; // 100.64.0.0/10 (CGNAT)
+  }
+  return false;
+}
+
 function validateUrlNotInternal(urlStr: string): void {
   try {
     const url = new URL(urlStr);
-    const hostname = url.hostname;
-    // Block private/internal IP ranges
+    const h = url.hostname.toLowerCase();
+    // Block private/internal IP ranges (IPv4 and IPv6)
     if (
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname === "::1" ||
-      hostname.startsWith("10.") ||
-      hostname.startsWith("172.") ||
-      hostname.startsWith("192.168.") ||
-      hostname.startsWith("169.254.") ||
-      hostname.endsWith(".local") ||
-      hostname.endsWith(".internal")
+      h === "localhost" ||
+      h === "127.0.0.1" ||
+      h === "::1" ||
+      h === "0.0.0.0" ||
+      h.startsWith("10.") ||
+      h.startsWith("172.") ||
+      h.startsWith("192.168.") ||
+      h.startsWith("169.254.") ||
+      isPrivateIP(h) ||
+      h.endsWith(".local") ||
+      h.endsWith(".internal") ||
+      h.includes("metadata.google.internal") ||
+      // IPv6 private ranges
+      h.startsWith("fc") ||
+      h.startsWith("fd") ||
+      h.startsWith("fe80") ||
+      h.startsWith("::ffff:127.") ||
+      h.startsWith("::ffff:10.") ||
+      h.startsWith("::ffff:172.") ||
+      h.startsWith("::ffff:192.168.")
     ) {
       throw new Error("Requests to internal/private network addresses are not allowed.");
     }

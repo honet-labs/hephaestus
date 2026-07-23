@@ -19,7 +19,7 @@ export class QueryExplorerController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to retrieve query panels."
+        message: "Failed to retrieve query panels."
       });
     }
   }
@@ -81,7 +81,7 @@ export class QueryExplorerController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to create query panel."
+        message: "Failed to create query panel."
       });
     }
   }
@@ -137,7 +137,7 @@ export class QueryExplorerController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to update query panel."
+        message: "Failed to update query panel."
       });
     }
   }
@@ -172,7 +172,7 @@ export class QueryExplorerController {
       res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: error.message || "Failed to delete query panel."
+        message: "Failed to delete query panel."
       });
     }
   }
@@ -217,7 +217,7 @@ export class QueryExplorerController {
       res.status(500).json({
         success: false,
         error: "Query Execution Error",
-        message: error.message || "Failed to execute query for panel."
+        message: "Failed to execute query for panel."
       });
     }
   }
@@ -265,7 +265,7 @@ export class QueryExplorerController {
       res.status(500).json({
         success: false,
         error: "Query Test Error",
-        message: error.message || "Failed to test query config."
+        message: "Failed to test query config."
       });
     }
   }
@@ -298,7 +298,7 @@ export class QueryExplorerController {
       res.status(500).json({
         success: false,
         error: "Metadata Fetch Error",
-        message: error.message || "Failed to fetch metrics metadata."
+        message: "Failed to fetch metrics metadata."
       });
     }
   }
