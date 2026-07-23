@@ -214,9 +214,10 @@ class VpsControlService {
 
   public async controlService(hostConfigId: string, serviceName: string, action: "start" | "stop" | "restart" | "enable" | "disable"): Promise<ExecResult> {
     const sanitized = serviceName.replace(/[^a-zA-Z0-9._@-]/g, "");
-    const result = await this.execCommand(hostConfigId, `sudo systemctl ${action} ${sanitized}`, true);
-    if (result.exitCode !== 0 && result.stderr) {
-      throw new Error(result.stderr.trim().split("\n").pop() || `Failed to ${action} service (exit code ${result.exitCode})`);
+    const result = await this.execCommand(hostConfigId, `sudo systemctl ${action} ${sanitized}`);
+    if (result.exitCode !== 0) {
+      const errMsg = result.stderr.trim() || result.stdout.trim() || `Failed to ${action} service (exit code ${result.exitCode})`;
+      throw new Error(errMsg.split("\n").pop() || errMsg);
     }
     return result;
   }
@@ -303,9 +304,10 @@ class VpsControlService {
     if (pid < 1 || pid > 4194304) throw new Error("Invalid PID");
     const validSignals = ["SIGTERM", "SIGKILL", "SIGHUP", "SIGINT"];
     if (!validSignals.includes(signal)) throw new Error("Invalid signal");
-    const result = await this.execCommand(hostConfigId, `sudo kill -${signal} ${pid}`, true);
-    if (result.exitCode !== 0 && result.stderr) {
-      throw new Error(result.stderr.trim().split("\n").pop() || `Failed to kill process (exit code ${result.exitCode})`);
+    const result = await this.execCommand(hostConfigId, `sudo kill -${signal} ${pid} 2>&1`);
+    if (result.exitCode !== 0) {
+      const errMsg = result.stderr.trim() || result.stdout.trim() || `Failed to kill process (exit code ${result.exitCode})`;
+      throw new Error(errMsg.split("\n").pop() || errMsg);
     }
     return result;
   }

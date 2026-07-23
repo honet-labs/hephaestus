@@ -335,7 +335,7 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             width: 48px; flex-shrink: 0; background: var(--app-card-dark);
             border-left: 1px solid var(--app-border); border-right: 1px solid var(--app-border);
-            gap: 8px;
+            gap: 8px; position: relative;
         }
         .ft-arrow-btn {
             width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--app-border);
@@ -345,7 +345,7 @@
         }
         .ft-arrow-btn:hover { background: var(--btn-primary-bg); color: var(--btn-primary-color); border-color: var(--btn-primary-bg); }
         .ft-arrow-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .ft-center-status { font-size: 9px; color: var(--text-muted); text-align: center; max-width: 40px; word-break: break-all; }
+        .ft-center-status { font-size: 9px; color: var(--text-muted); text-align: center; max-width: 44px; word-break: break-all; line-height: 1.2; }
         .ft-bottom-bar {
             display: flex; align-items: center; justify-content: space-between;
             padding: 6px 16px; background: var(--app-topbar); border-top: 1px solid var(--app-border);
@@ -392,7 +392,7 @@
             pointer-events: none;
         }
         .vps-sidebar-divider { width: 24px; height: 1px; background: var(--app-border); margin: 4px 0; }
-        .terminal-wrapper { flex: 1; position: relative; overflow: hidden; }
+        .terminal-wrapper { flex: 1; position: relative; overflow: hidden; margin-left: 10px; }
         .terminal-container {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             display: none;
@@ -400,15 +400,26 @@
         .terminal-container.active { display: block; }
         .vps-inline-panel {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            display: none; overflow: auto; padding: 16px;
+            overflow: hidden; padding: 16px;
             background: var(--background); z-index: 10;
+            display: none; flex-direction: column;
         }
+        .vps-inline-panel.active { display: flex; }
+        .vps-body { flex: 1; overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
+        .vps-body .vps-filter { flex-shrink: 0; }
+        .vps-body .vps-card { flex: 1; overflow: hidden; display: flex; flex-direction: column; margin: 0; }
+        .vps-body .vps-card table { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .vps-body .vps-card table thead { flex-shrink: 0; }
+        .vps-body .vps-card table thead tr { display: table; width: 100%; table-layout: fixed; }
+        .vps-body .vps-card table tbody { flex: 1; overflow-y: auto; display: block; }
+        .vps-body .vps-card table tbody tr { display: table; width: 100%; table-layout: fixed; }
         .vps-container {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            display: none; overflow: auto; padding: 16px;
+            overflow: hidden; padding: 16px;
             background: var(--background);
+            display: none; flex-direction: column;
         }
-        .vps-container.active { display: block; }
+        .vps-container.active { display: flex; }
         .vps-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
         .vps-header h2 { font-size: 16px; font-weight: 600; color: var(--text-white); }
         .vps-header .vps-server-label { font-size: 11px; color: var(--text-muted); background: var(--app-card); padding: 3px 8px; border-radius: 4px; }
@@ -416,8 +427,8 @@
         .vps-grid-2 { grid-template-columns: repeat(2, 1fr); }
         .vps-grid-3 { grid-template-columns: repeat(3, 1fr); }
         .vps-grid-4 { grid-template-columns: repeat(4, 1fr); }
-        .vps-card { background: var(--app-card); border: 1px solid var(--app-border); border-radius: 8px; padding: 14px; }
-        .vps-card-header { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .vps-card { background: var(--app-card); border: 1px solid var(--app-border); border-radius: 8px; padding: 0; overflow: hidden; }
+        .vps-card-header { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding: 14px 14px 0; }
         .vps-card-value { font-size: 24px; font-weight: 700; color: var(--text-white); }
         .vps-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
         .vps-progress { height: 6px; background: var(--app-card-dark); border-radius: 3px; overflow: hidden; margin-top: 8px; }
@@ -426,7 +437,7 @@
         .vps-progress-bar.yellow { background: var(--warning); }
         .vps-progress-bar.red { background: var(--error); }
         .vps-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .vps-table th { text-align: left; padding: 8px 10px; background: var(--app-card-dark); color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--app-border); position: sticky; top: 0; }
+        .vps-table th { text-align: left; padding: 8px 10px; background: var(--app-card-dark); color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--app-border); position: sticky; top: 0; z-index: 1; }
         .vps-table td { padding: 8px 10px; border-bottom: 1px solid var(--app-border); color: var(--foreground); }
         .vps-table tr:hover td { background: rgba(255,255,255,0.03); }
         .vps-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
@@ -857,9 +868,11 @@
         }
 
         function api(method, url, body) {
-            var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionToken } };
+            var controller = new AbortController();
+            var timer = setTimeout(function() { controller.abort(); }, 30000);
+            var opts = { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionToken }, signal: controller.signal };
             if (body) opts.body = JSON.stringify(body);
-            return fetch(url, opts).then(function(r) { return r.json(); });
+            return fetch(url, opts).then(function(r) { clearTimeout(timer); return r.json(); }).catch(function(e) { clearTimeout(timer); throw e; });
         }
         function showToast(msg, type, duration) {
             type = type || 'info';
@@ -1348,15 +1361,15 @@
                 if (tabs[i].id === tabId) {
                     if (at && at._currentVpsType && at._currentVpsType !== 'terminal') {
                         if (termEl) { termEl.style.display = ''; termEl.classList.add('active'); }
-                        if (inlineVps) inlineVps.style.display = 'block';
+                        if (inlineVps) inlineVps.classList.add('active');
                         document.querySelectorAll('.vps-sidebar-btn').forEach(function(b) { if (b.dataset.vps === at._currentVpsType) b.classList.add('active'); });
                     } else {
                         if (termEl) { termEl.style.display = ''; termEl.classList.add('active'); }
-                        if (inlineVps) inlineVps.style.display = 'none';
+                        if (inlineVps) inlineVps.classList.remove('active');
                     }
                 } else {
                     if (termEl) { termEl.classList.remove('active'); termEl.style.display = 'none'; }
-                    if (inlineVps) inlineVps.style.display = 'none';
+                    if (inlineVps) inlineVps.classList.remove('active');
                 }
             }
             if (at && !at._currentVpsType && at.fitAddon) {
@@ -1827,17 +1840,12 @@
         }
 
         function remoteToRemoteFt(fromPanel, toPanel, file, cb) {
-            fetch('/api/v1/remote-host/sftp/download', {
+            var fromPath = fromPanel.path.replace(/\/+$/, '') + '/' + file.name;
+            var toPath = toPanel.path.replace(/\/+$/, '') + '/' + file.name;
+            fetch('/api/v1/remote-host/sftp/remote-to-remote', {
                 method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
-                body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: fromPanel.path.replace(/\/+$/, '') + '/' + file.name })
-            }).then(function(r) { if (!r.ok) throw new Error('Download failed (HTTP ' + r.status + ')'); return r.blob(); })
-            .then(function(blob) {
-                var formData = new FormData();
-                formData.append('file', blob, file.name);
-                formData.append('hostConfigId', toPanel.hostId);
-                formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + file.name);
-                return fetch('/api/v1/remote-host/sftp/upload', { method:'POST', headers:{'Authorization':'Bearer '+sessionToken}, body:formData });
-            }).then(function(r) { return r.json(); }).then(function(d) { cb(d.success); }).catch(function(e) { cb(false); });
+                body: JSON.stringify({ fromHostConfigId: fromPanel.hostId, fromPath: fromPath, toHostConfigId: toPanel.hostId, toPath: toPath })
+            }).then(function(r) { return r.json(); }).then(function(d) { cb(d.success, d.error || null); }).catch(function(e) { cb(false, e.message || 'Transfer failed'); });
         }
 
         // Event listeners
@@ -1891,7 +1899,7 @@
             if (type === 'terminal') {
                 if (at._refreshInterval) { clearInterval(at._refreshInterval); at._refreshInterval = null; }
                 var existingVps = document.getElementById('vps-inline-' + at.id);
-                if (existingVps) existingVps.style.display = 'none';
+                if (existingVps) existingVps.classList.remove('active');
                 if (isTerminalTab && at.containerEl) { at.containerEl.style.display = ''; at.containerEl.classList.add('active'); }
                 else if (at.containerEl) { at.containerEl.style.display = ''; at.containerEl.classList.add('active'); }
                 at._currentVpsType = null;
@@ -1908,7 +1916,7 @@
                         inlineVps.className = 'vps-inline-panel';
                         at.containerEl.appendChild(inlineVps);
                     }
-                    inlineVps.style.display = 'block';
+                    inlineVps.classList.add('active');
                     if (at.term) { try { at.term.blur(); } catch(ex) {} }
                     var srv = null;
                     for (var j = 0; j < servers.length; j++) { if (servers[j].id === at.serverId) { srv = servers[j]; break; } }
@@ -1919,7 +1927,7 @@
                 } else if (at.containerEl) {
                     at.containerEl.classList.remove('active');
                     var existingVps2 = document.getElementById('vps-inline-' + at.id);
-                    if (existingVps2) existingVps2.style.display = 'none';
+                    if (existingVps2) existingVps2.classList.remove('active');
                     at.containerEl.style.display = '';
                     at.containerEl.classList.add('active');
                     var srv2 = null;
@@ -2153,21 +2161,23 @@
             if (item && item.dataset.path) { navigateFtPanel('right', item.dataset.path); }
         });
 
-        // Drag & Drop for file transfer panels (external files only)
+        // Drag & Drop for file transfer panels
         function setupFtDragDrop(side) {
             var panel = document.getElementById('ft-panel-' + side);
             var drop = document.getElementById('ft-' + side + '-drop');
             if (!panel || !drop) return;
             panel.addEventListener('dragover', function(e) {
-                if (e.dataTransfer.types.indexOf('text/plain') !== -1) return;
-                e.preventDefault(); e.stopPropagation(); drop.classList.add('active');
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer.types.indexOf('Files') !== -1) {
+                    drop.classList.add('active');
+                }
             });
             panel.addEventListener('dragleave', function(e) { if (!panel.contains(e.relatedTarget)) drop.classList.remove('active'); });
             panel.addEventListener('drop', function(e) {
                 drop.classList.remove('active');
-                if (e.dataTransfer.types.indexOf('text/plain') !== -1) return;
-                e.preventDefault(); e.stopPropagation();
-                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    e.preventDefault(); e.stopPropagation();
                     addFtFiles(e.dataTransfer.files);
                 }
             });
@@ -2183,8 +2193,9 @@
                 var row = e.target.closest('tr');
                 if (!row || row.classList.contains('ft-nav-parent') || row.dataset.isdir === 'true') { e.preventDefault(); return; }
                 e.dataTransfer.setData('text/plain', JSON.stringify({ side: side, name: row.dataset.name, size: row.dataset.size }));
-                e.dataTransfer.effectAllowed = 'copyMove';
+                e.dataTransfer.effectAllowed = 'copy';
                 row.style.opacity = '0.5';
+                setTimeout(function() { row.style.opacity = ''; }, 0);
             });
             tbody.addEventListener('dragend', function(e) {
                 var row = e.target.closest('tr');
@@ -2213,22 +2224,26 @@
                     if (!fromPanel.hostId && fromPanel.type !== 'local') return;
                     if (!toPanelObj.hostId && toPanelObj.type !== 'local') return;
                     var file = { name: dragData.name, size: parseInt(dragData.size || '0') };
-                    document.getElementById('ft-center-status').textContent = 'Transferring: ' + file.name;
+                    document.getElementById('ft-center-status').textContent = '1/1';
+                    document.getElementById('ft-center-status').title = file.name;
                     if (fromPanel.type === 'local' && toPanelObj.type === 'remote') {
                         uploadFtFile(fromPanel, toPanelObj, file, function(ok) {
                             document.getElementById('ft-center-status').textContent = ok ? 'Done' : 'Failed';
+                            document.getElementById('ft-center-status').title = '';
                             if (ok) renderFtPanelFiles(side);
                             setTimeout(function() { document.getElementById('ft-center-status').textContent = ''; }, 2000);
                         });
                     } else if (fromPanel.type === 'remote' && toPanelObj.type === 'local') {
                         downloadFtFile(fromPanel, toPanelObj, file, function(ok) {
                             document.getElementById('ft-center-status').textContent = ok ? 'Done' : 'Failed';
+                            document.getElementById('ft-center-status').title = '';
                             if (ok) renderFtPanelFiles(side);
                             setTimeout(function() { document.getElementById('ft-center-status').textContent = ''; }, 2000);
                         });
                     } else if (fromPanel.type === 'remote' && toPanelObj.type === 'remote') {
                         remoteToRemoteFt(fromPanel, toPanelObj, file, function(ok) {
                             document.getElementById('ft-center-status').textContent = ok ? 'Done' : 'Failed';
+                            document.getElementById('ft-center-status').title = '';
                             if (ok) renderFtPanelFiles(side);
                             setTimeout(function() { document.getElementById('ft-center-status').textContent = ''; }, 2000);
                         });

@@ -321,6 +321,58 @@ class RemoteHostService {
       readStream.on("error", (err: any) => { ssh.end(); reject(err); });
     });
   }
+
+  public async sftpRemoteToRemote(
+    fromHostConfigId: string, fromPath: string,
+    toHostConfigId: string, toPath: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const fromCfg = await this.getRawConfig(fromHostConfigId);
+    const toCfg = await this.getRawConfig(toHostConfigId);
+    if (!fromCfg || !toCfg) throw new Error("One or both host configs not found.");
+
+    return new Promise((resolve, reject) => {
+      const fromSsh = new Client();
+      const toSsh = new Client();
+      let cleaned = false;
+      function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
+        try { fromSsh.end(); } catch (_) {}
+        try { toSsh.end(); } catch (_) {}
+      }
+
+      fromSsh.on("error", (err: Error) => { cleanup(); reject(err); });
+      toSsh.on("error", (err: Error) => { cleanup(); reject(err); });
+
+      const fromConnOpts: any = { host: fromCfg.host, port: fromCfg.port || 22, username: fromCfg.username, keepaliveInterval: 15000 };
+      if (fromCfg.authType === "key" && fromCfg.sshKey) fromConnOpts.privateKey = fromCfg.sshKey;
+      else fromConnOpts.password = fromCfg.password || "";
+
+      const toConnOpts: any = { host: toCfg.host, port: toCfg.port || 22, username: toCfg.username, keepaliveInterval: 15000 };
+      if (toCfg.authType === "key" && toCfg.sshKey) toConnOpts.privateKey = toCfg.sshKey;
+      else toConnOpts.password = toCfg.password || "";
+
+      toSsh.on("ready", () => {
+        toSsh.sftp((toErr: any, toSftp: any) => {
+          if (toErr) { cleanup(); reject(toErr); return; }
+          const writeStream = toSftp.createWriteStream(toPath);
+          writeStream.on("close", () => { cleanup(); resolve({ success: true, message: `Transferred ${fromPath} → ${toPath}` }); });
+          writeStream.on("error", (err: any) => { cleanup(); reject(err); });
+
+          fromSsh.on("ready", () => {
+            fromSsh.sftp((fromErr: any, fromSftp: any) => {
+              if (fromErr) { cleanup(); reject(fromErr); return; }
+              const readStream = fromSftp.createReadStream(fromPath);
+              readStream.on("error", (err: any) => { cleanup(); reject(err); });
+              readStream.pipe(writeStream);
+            });
+          });
+          fromSsh.connect(fromConnOpts);
+        });
+      });
+      toSsh.connect(toConnOpts);
+    });
+  }
 }
 
 export const remoteHostService = new RemoteHostService();

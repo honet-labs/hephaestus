@@ -173,6 +173,20 @@ class RemoteHostController {
       return res.status(500).json({ success: false, error: "Transfer failed." });
     }
   }
+
+  public async remoteToRemote(req: Request, res: Response) {
+    try {
+      const { fromHostConfigId, fromPath, toHostConfigId, toPath } = req.body;
+      if (!fromHostConfigId || !fromPath || !toHostConfigId || !toPath) {
+        return res.status(400).json({ success: false, error: "fromHostConfigId, fromPath, toHostConfigId, and toPath are required." });
+      }
+      const result = await remoteHostService.sftpRemoteToRemote(fromHostConfigId, fromPath, toHostConfigId, toPath);
+      await logActivity("RemoteHost", "Remote→Remote", `Transferred ${fromPath} → ${toPath}`, "SUCCESS");
+      return res.json({ success: true, message: result.message });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || "Transfer failed." });
+    }
+  }
 }
 
 export const remoteHostController = new RemoteHostController();
