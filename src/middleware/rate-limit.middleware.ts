@@ -4,7 +4,7 @@ import rateLimit from "express-rate-limit";
 function getUserKey(req: any): string {
   const auth = req.headers.authorization;
   if (auth && auth.startsWith("Bearer ")) {
-    return auth.slice(7); // use the token itself as key
+    return auth.slice(7);
   }
   return req.ip || "unknown";
 }
@@ -21,14 +21,6 @@ export const globalLimiter = rateLimit({
     return false;
   },
   message: { success: false, error: "Too Many Requests", message: "Too many requests, please try again later." }
-});
-
-export const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: "Too Many Requests", message: "Too many login attempts, please try again later." }
 });
 
 export const loginLimiter = rateLimit({
