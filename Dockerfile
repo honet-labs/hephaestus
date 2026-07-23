@@ -26,8 +26,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install system dependencies (snmpwalk only, nmap removed for security)
-RUN apk add --no-cache net-snmp-tools
+# Install system dependencies (snmpwalk + git for updates)
+RUN apk add --no-cache net-snmp-tools git
 
 # Create non-root user
 RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup

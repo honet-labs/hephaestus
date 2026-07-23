@@ -126,18 +126,20 @@ async function checkForUpdates() {
     const data = await res.json();
     if (data.success && data.hasUpdates) {
       let msg = 'Updates available! Click "Apply Update" to install.';
-      if (data.remote) msg += ` (Remote: ${data.remote})`;
+      if (data.remote && data.remote !== 'unknown') msg += ` (Remote: ${data.remote})`;
       status.textContent = msg;
       status.style.color = '#f59e0b';
       applyBtn.style.display = 'inline-flex';
     } else if (data.success) {
       let msg = 'System is up to date.';
-      if (data.remote) msg += ` (Remote: ${data.remote})`;
+      if (data.remote && data.remote !== 'unknown') msg += ` (Remote: ${data.remote})`;
       status.textContent = msg;
       status.style.color = '#3fb950';
+      applyBtn.style.display = 'none';
     } else {
-      status.textContent = 'Could not check for updates: ' + (data.message || 'Unknown error');
+      status.textContent = data.message || 'Could not check for updates.';
       status.style.color = '#ff7b72';
+      applyBtn.style.display = 'none';
     }
   } catch (e) {
     status.textContent = 'Failed to check updates: ' + e.message;

@@ -64,18 +64,19 @@ export class UpdateController {
         res.status(200).json({
           success: true,
           hasUpdates: false,
-          message: "Update check not available in this environment",
+          message: "Git repository not found. Run 'git clone' first.",
           remote: "unknown",
           authConfigured: !!token
         });
         return;
       }
 
-      const fetchCmd = this.gitAuth_cmd(token, "fetch origin");
-      const statusCmd = this.gitAuth_cmd(token, "status -uno");
+      const fetchCmd = this.gitAuth_cmd(token, "fetch origin 2>&1");
+      const statusCmd = this.gitAuth_cmd(token, "status -uno 2>&1");
 
-      const { stdout } = await execAsync(`${fetchCmd} && ${statusCmd}`, { cwd: path.resolve(__dirname, "../..") });
-      const hasUpdates = !stdout.includes("Your branch is up to date");
+      const { stdout, stderr } = await execAsync(`${fetchCmd} && ${statusCmd}`, { cwd: path.resolve(__dirname, "../.."), timeout: 30000 });
+      const output = (stdout || "") + (stderr || "");
+      const hasUpdates = !output.includes("Your branch is up to date") && !output.includes("already up to date");
       res.status(200).json({
         success: true,
         hasUpdates,
@@ -84,7 +85,15 @@ export class UpdateController {
         authConfigured: !!token
       });
     } catch (error: any) {
-      res.status(200).json({ success: true, hasUpdates: false, message: "Update check not available in this environment", remote: "unknown", authConfigured: false });
+      console.error("[Update] checkForUpdates error:", error.message);
+      const isGitMissing = error.message?.includes("not found") || error.message?.includes("ENOENT") || error.message?.includes("spawn git");
+      res.status(200).json({
+        success: false,
+        hasUpdates: false,
+        message: isGitMissing ? "Git is not installed on the server." : "Failed to check for updates: " + (error.message || "Unknown error"),
+        remote: "unknown",
+        authConfigured: false
+      });
     }
   }
 

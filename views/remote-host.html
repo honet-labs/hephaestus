@@ -360,6 +360,37 @@
         .ft-transfer-result.success { color: var(--success); }
         .ft-transfer-result.error { color: var(--error); }
 
+        .ft-log-panel {
+            flex-shrink: 0; height: 120px; border-top: 1px solid var(--app-border);
+            display: flex; flex-direction: column; background: var(--app-topbar);
+        }
+        .ft-log-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 4px 12px; background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);
+            flex-shrink: 0;
+        }
+        .ft-log-header span { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .ft-log-header button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; padding: 2px 6px; border-radius: 3px; }
+        .ft-log-header button:hover { background: rgba(255,255,255,0.05); color: var(--text-white); }
+        .ft-log-body {
+            flex: 1; overflow-y: auto; padding: 4px 12px; font-family: var(--terminal-font);
+            font-size: 11px; line-height: 1.6;
+        }
+        .ft-log-body::-webkit-scrollbar { width: 6px; }
+        .ft-log-body::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
+        .ft-log-entry { display: flex; gap: 8px; align-items: flex-start; }
+        .ft-log-time { color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+        .ft-log-msg { color: var(--text-secondary); word-break: break-all; }
+        .ft-log-msg.success { color: var(--success); }
+        .ft-log-msg.error { color: var(--error); }
+        .ft-log-msg.info { color: #58a6ff; }
+        .ft-log-msg.progress { color: var(--prometheus-orange); }
+        .ft-log-queue {
+            display: flex; gap: 12px; padding: 2px 12px; font-size: 10px; color: var(--text-muted);
+            border-top: 1px solid var(--app-border); flex-shrink: 0; background: var(--app-card-dark);
+        }
+        .ft-log-queue span { display: flex; align-items: center; gap: 4px; }
+
         .content-area { flex: 1; position: relative; overflow: hidden; min-height: 0; }
         .home-view {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -803,6 +834,21 @@
                     <table class="ft-table"><thead><tr><th>Name</th><th>Size</th><th>Kind</th></tr></thead><tbody id="ft-right-files"></tbody></table>
                 </div>
                 <div class="ft-drop-overlay" id="ft-right-drop"><p>Drop files here</p></div>
+            </div>
+        </div>
+
+        <!-- Transfer Log Panel -->
+        <div class="ft-log-panel" id="ft-log-panel">
+            <div class="ft-log-header">
+                <span>Transfer Log</span>
+                <button id="ft-log-clear" title="Clear log">Clear</button>
+            </div>
+            <div class="ft-log-body" id="ft-log-body"></div>
+            <div class="ft-log-queue" id="ft-log-queue">
+                <span>Queued: <b id="ft-q-queued">0</b></span>
+                <span>Active: <b id="ft-q-active">0</b></span>
+                <span>Successful: <b id="ft-q-done">0</b></span>
+                <span>Failed: <b id="ft-q-fail">0</b></span>
             </div>
         </div>
 
@@ -1586,6 +1632,35 @@
         var ftPanelRight = { type: 'remote', hostId: null, path: '/', history: ['/'], histIdx: 0 };
         var ftDragging = null; // 'left' or 'right'
 
+        // Transfer log state
+        var ftLogQueue = [];
+        var ftLogActive = 0;
+        var ftLogDone = 0;
+        var ftLogFail = 0;
+
+        function ftLog(msg, cls) {
+            var body = document.getElementById('ft-log-body');
+            if (!body) return;
+            var now = new Date();
+            var ts = ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2)+':'+('0'+now.getSeconds()).slice(-2);
+            var div = document.createElement('div');
+            div.className = 'ft-log-entry';
+            div.innerHTML = '<span class="ft-log-time">'+ts+'</span><span class="ft-log-msg '+(cls||'')+'">'+esc(msg)+'</span>';
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight;
+        }
+
+        function ftLogUpdateQueue() {
+            var qEl = document.getElementById('ft-q-queued');
+            var aEl = document.getElementById('ft-q-active');
+            var dEl = document.getElementById('ft-q-done');
+            var fEl = document.getElementById('ft-q-fail');
+            if (qEl) qEl.textContent = ftLogQueue.length;
+            if (aEl) aEl.textContent = ftLogActive;
+            if (dEl) dEl.textContent = ftLogDone;
+            if (fEl) fEl.textContent = ftLogFail;
+        }
+
         function openFileTransferModal() {
             ftPanelLeft = { type: 'local', hostId: null, path: '/', history: ['/'], histIdx: 0, files: [] };
             ftPanelRight = { type: 'remote', hostId: null, path: '/', history: ['/'], histIdx: 0 };
@@ -1651,14 +1726,14 @@
             var panel = side === 'left' ? ftPanelLeft : ftPanelRight;
             document.getElementById('ft-'+side+'-dropdown').style.display = 'none';
             if (hostId === '__local__') {
-                panel.type = 'local'; panel.hostId = null;
+                panel.type = 'local'; panel.hostId = null; panel.hostName = 'Local';
                 document.getElementById('ft-'+side+'-host-name').textContent = 'Local';
                 document.getElementById('ft-'+side+'-host').querySelector('svg').outerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>';
             } else {
                 var srv = null;
                 for (var i=0;i<servers.length;i++){if(servers[i].id===hostId){srv=servers[i];break;}}
                 if (!srv) return;
-                panel.type = 'remote'; panel.hostId = hostId;
+                panel.type = 'remote'; panel.hostId = hostId; panel.hostName = srv.name;
                 document.getElementById('ft-'+side+'-host-name').textContent = srv.name;
                 document.getElementById('ft-'+side+'-host').querySelector('svg').outerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>';
             }
@@ -1762,6 +1837,9 @@
             });
             if (fileItems.length === 0) return;
 
+            ftLog('Queued ' + fileItems.length + ' file(s) for transfer', 'info');
+            ftLogUpdateQueue();
+
             var progress = document.getElementById('ft-transfer-progress');
             var fill = document.getElementById('ft-progress-fill');
             var text = document.getElementById('ft-progress-text');
@@ -1803,65 +1881,141 @@
         }
 
         function uploadFtFile(fromPanel, toPanel, file, cb) {
+            var fileName = file.name;
+            var startTime = Date.now();
+            var from = fromPanel.type === 'local' ? 'Local' : (fromPanel.hostName || 'Remote');
+            var to = toPanel.type === 'local' ? 'Local' : (toPanel.hostName || 'Remote');
+            ftLog('Starting upload: ' + fileName + ' -> ' + to + ':' + toPanel.path, 'info');
+            ftLogActive++;
+            ftLogUpdateQueue();
+
             if (fromPanel.type === 'local') {
-                var localPath = fromPanel.path.replace(/\/+$/, '') + '/' + file.name;
-                var remotePath = toPanel.path.replace(/\/+$/, '') + '/' + file.name;
+                var localPath = fromPanel.path.replace(/\/+$/, '') + '/' + fileName;
+                var remotePath = toPanel.path.replace(/\/+$/, '') + '/' + fileName;
                 fetch('/api/v1/remote-host/sftp/local-to-remote', {
                     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
                     body: JSON.stringify({ localPath: localPath, hostConfigId: toPanel.hostId, remotePath: remotePath })
                 }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-                  .then(function(d) { cb(d.success, d.error || null); })
-                  .catch(function(e) { cb(false, e.message || 'Upload failed'); });
+                  .then(function(d) {
+                    ftLogActive--;
+                    if (d.success) { ftLogDone++; ftLog('Upload complete: ' + ftLogTransfer(fileName, from, to, startTime), 'success'); }
+                    else { ftLogFail++; ftLog('Upload failed: ' + fileName + ' - ' + (d.error || 'Unknown error'), 'error'); }
+                    ftLogUpdateQueue();
+                    cb(d.success, d.error || null);
+                  })
+                  .catch(function(e) {
+                    ftLogActive--; ftLogFail++;
+                    ftLog('Upload error: ' + fileName + ' - ' + (e.message || 'Network error'), 'error');
+                    ftLogUpdateQueue();
+                    cb(false, e.message || 'Upload failed');
+                  });
             } else {
                 var fileObj = null;
-                for (var i=0;i<ftPanelLeft.files.length;i++) { if (ftPanelLeft.files[i].name === file.name) { fileObj = ftPanelLeft.files[i]; break; } }
-                if (!fileObj) { cb(false, 'File not found in local files'); return; }
+                for (var i=0;i<ftPanelLeft.files.length;i++) { if (ftPanelLeft.files[i].name === fileName) { fileObj = ftPanelLeft.files[i]; break; } }
+                if (!fileObj) { ftLogActive--; ftLogFail++; ftLog('Upload failed: ' + fileName + ' - File not found in local files', 'error'); ftLogUpdateQueue(); cb(false, 'File not found in local files'); return; }
                 var formData = new FormData();
                 formData.append('file', fileObj);
                 formData.append('hostConfigId', toPanel.hostId);
-                formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + file.name);
+                formData.append('remotePath', toPanel.path.replace(/\/+$/, '') + '/' + fileName);
                 fetch('/api/v1/remote-host/sftp/upload', { method:'POST', headers:{'Authorization':'Bearer '+sessionToken}, body:formData })
                     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-                    .then(function(d) { cb(d.success, d.error || null); })
-                    .catch(function(e) { cb(false, e.message || 'Upload failed'); });
+                    .then(function(d) {
+                        ftLogActive--;
+                        if (d.success) { ftLogDone++; ftLog('Upload complete: ' + ftLogTransfer(fileName, from, to, startTime), 'success'); }
+                        else { ftLogFail++; ftLog('Upload failed: ' + fileName + ' - ' + (d.error || 'Unknown error'), 'error'); }
+                        ftLogUpdateQueue();
+                        cb(d.success, d.error || null);
+                    })
+                    .catch(function(e) {
+                        ftLogActive--; ftLogFail++;
+                        ftLog('Upload error: ' + fileName + ' - ' + (e.message || 'Network error'), 'error');
+                        ftLogUpdateQueue();
+                        cb(false, e.message || 'Upload failed');
+                    });
             }
         }
 
         function downloadFtFile(fromPanel, toPanel, file, cb) {
+            var fileName = file.name;
+            var startTime = Date.now();
+            var from = fromPanel.type === 'local' ? 'Local' : (fromPanel.hostName || 'Remote');
+            var to = toPanel.type === 'local' ? 'Local' : (toPanel.hostName || 'Remote');
+            ftLog('Starting download: ' + from + ':' + fromPanel.path + '/' + fileName, 'info');
+            ftLogActive++;
+            ftLogUpdateQueue();
+
             if (toPanel.type === 'local') {
-                var remotePath = fromPanel.path.replace(/\/+$/, '') + '/' + file.name;
-                var localPath = toPanel.path.replace(/\/+$/, '') + '/' + file.name;
+                var remotePath = fromPanel.path.replace(/\/+$/, '') + '/' + fileName;
+                var localPath = toPanel.path.replace(/\/+$/, '') + '/' + fileName;
                 fetch('/api/v1/remote-host/sftp/remote-to-local', {
                     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
                     body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: remotePath, localPath: localPath })
                 }).then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-                  .then(function(d) { cb(d.success, d.error || null); })
-                  .catch(function(e) { cb(false, e.message || 'Download failed'); });
+                  .then(function(d) {
+                    ftLogActive--;
+                    if (d.success) { ftLogDone++; ftLog('Download complete: ' + ftLogTransfer(fileName, from, to, startTime), 'success'); }
+                    else { ftLogFail++; ftLog('Download failed: ' + fileName + ' - ' + (d.error || 'Unknown error'), 'error'); }
+                    ftLogUpdateQueue();
+                    cb(d.success, d.error || null);
+                  })
+                  .catch(function(e) {
+                    ftLogActive--; ftLogFail++;
+                    ftLog('Download error: ' + fileName + ' - ' + (e.message || 'Network error'), 'error');
+                    ftLogUpdateQueue();
+                    cb(false, e.message || 'Download failed');
+                  });
             } else {
                 fetch('/api/v1/remote-host/sftp/download', {
                     method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
-                    body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: fromPanel.path.replace(/\/+$/, '') + '/' + file.name })
+                    body: JSON.stringify({ hostConfigId: fromPanel.hostId, remotePath: fromPanel.path.replace(/\/+$/, '') + '/' + fileName })
                 }).then(function(r) {
                     if (!r.ok) throw new Error('fail');
                     return r.blob();
                 }).then(function(blob) {
+                    ftLogActive--;
+                    ftLogDone++;
+                    ftLog('Download complete: ' + ftLogTransfer(fileName, from, to, startTime), 'success');
+                    ftLogUpdateQueue();
                     var a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = file.name;
+                    a.download = fileName;
                     a.click();
                     URL.revokeObjectURL(a.href);
                     cb(true);
-                }).catch(function(){cb(false);});
+                }).catch(function(e){
+                    ftLogActive--; ftLogFail++;
+                    ftLog('Download error: ' + fileName + ' - ' + (e.message || 'Network error'), 'error');
+                    ftLogUpdateQueue();
+                    cb(false);
+                });
             }
         }
 
         function remoteToRemoteFt(fromPanel, toPanel, file, cb) {
+            var startTime = Date.now();
+            var from = fromPanel.hostName || 'Remote';
+            var to = toPanel.hostName || 'Remote';
+            ftLog('Starting transfer: ' + file.name + ' (' + from + ' -> ' + to + ')', 'info');
+            ftLogActive++;
+            ftLogUpdateQueue();
+
             var fromPath = fromPanel.path.replace(/\/+$/, '') + '/' + file.name;
             var toPath = toPanel.path.replace(/\/+$/, '') + '/' + file.name;
             fetch('/api/v1/remote-host/sftp/remote-to-remote', {
                 method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
                 body: JSON.stringify({ fromHostConfigId: fromPanel.hostId, fromPath: fromPath, toHostConfigId: toPanel.hostId, toPath: toPath })
-            }).then(function(r) { return r.json(); }).then(function(d) { cb(d.success, d.error || null); }).catch(function(e) { cb(false, e.message || 'Transfer failed'); });
+            }).then(function(r) { return r.json(); }).then(function(d) {
+                ftLogActive--;
+                if (d.success) { ftLogDone++; ftLog('Transfer complete: ' + ftLogTransfer(file.name, from, to, startTime), 'success'); }
+                else { ftLogFail++; ftLog('Transfer failed: ' + file.name + ' - ' + (d.error || 'Unknown error'), 'error'); }
+                ftLogUpdateQueue();
+                cb(d.success, d.error || null);
+            }).catch(function(e) {
+                ftLogActive--; ftLogFail++;
+                ftLog('Transfer error: ' + file.name + ' - ' + (e.message || 'Network error'), 'error');
+                ftLogUpdateQueue();
+                cb(false, e.message || 'Transfer failed');
+            });
         }
 
         // Event listeners
@@ -2151,6 +2305,12 @@
         document.getElementById('ft-close-btn').addEventListener('click', closeFileTransferModal);
         document.getElementById('ft-add-files-btn').addEventListener('click', function() { document.getElementById('ft-file-input').click(); });
         document.getElementById('ft-file-input').addEventListener('change', function(e) { addFtFiles(e.target.files); e.target.value = ''; });
+        document.getElementById('ft-log-clear').addEventListener('click', function() {
+            var body = document.getElementById('ft-log-body');
+            if (body) body.innerHTML = '';
+            ftLogDone = 0; ftLogFail = 0; ftLogActive = 0;
+            ftLogUpdateQueue();
+        });
 
         // Host dropdown toggles
         document.getElementById('ft-left-host').addEventListener('click', function(e) { e.stopPropagation(); toggleFtDropdown('left'); });
@@ -2231,7 +2391,9 @@
             panel.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (e.dataTransfer.types.indexOf('Files') !== -1) {
+                var hasFiles = e.dataTransfer.types.indexOf('Files') !== -1;
+                var hasText = e.dataTransfer.types.indexOf('text/plain') !== -1;
+                if (hasFiles || hasText) {
                     drop.classList.add('active');
                 }
             });
