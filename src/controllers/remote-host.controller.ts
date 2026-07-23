@@ -9,7 +9,7 @@ const PRIVATE_IP_PATTERNS = [
   /^169\.254\./, /^0\./, /^::1$/, /^fc00:/, /^fe80:/,
   /^100\.(6[4-9]|[7-9]\d|1[0-2][0-7])\./,
 ];
-const DANGEROUS_PATH_CHARS = /\.\.|~|[\x00-\x1f]/;
+const DANGEROUS_PATH_CHARS = /\.\.|~|[\u0000-\u001f]/;
 
 function validateLocalPath(localPath: string): string | null {
   const resolved = path.resolve(localPath);
