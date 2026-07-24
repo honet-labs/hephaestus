@@ -1662,6 +1662,11 @@
             body.scrollTop = body.scrollHeight;
         }
 
+        function ftLogTransfer(fileName, from, to, startTime) {
+            var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            return esc(fileName) + ' (' + esc(from) + ' &rarr; ' + esc(to) + ') - ' + elapsed + 's';
+        }
+
         function ftLogUpdateQueue() {
             var qEl = document.getElementById('ft-q-queued');
             var aEl = document.getElementById('ft-q-active');
