@@ -101,7 +101,7 @@ class BackupController {
       return res.json({ success: true, data: result, message: `Backup ${result.status}: ${result.filename}` });
     } catch (err: any) {
       console.error("[Backup] runBackup error:", err.message);
-      return res.status(500).json({ success: false, error: "Backup execution failed." });
+      return res.status(500).json({ success: false, error: err.message || "Backup execution failed." });
     }
   }
 
