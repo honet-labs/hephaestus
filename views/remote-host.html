@@ -2408,11 +2408,16 @@
             var drop = document.getElementById('ft-' + side + '-drop');
             if (!panel || !drop) return;
             panel.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
                 var hasFiles = e.dataTransfer.types.indexOf('Files') !== -1;
                 var hasText = e.dataTransfer.types.indexOf('text/plain') !== -1;
-                if (hasFiles || hasText) {
+                if (hasText) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                if (hasFiles) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     drop.classList.add('active');
                 }
             });
@@ -2447,10 +2452,9 @@
             var toSide = side === 'left' ? 'right' : 'left';
             var toPanel = toSide === 'left' ? ftPanelLeft : ftPanelRight;
             tbody.addEventListener('dragover', function(e) {
-                var data;
-                try { data = JSON.parse(e.dataTransfer.types[0] === 'text/plain' ? '' : ''); } catch(_) {}
                 if (e.dataTransfer.types.indexOf('text/plain') !== -1) {
                     e.preventDefault();
+                    e.stopPropagation();
                     e.dataTransfer.dropEffect = 'copy';
                 }
             });
