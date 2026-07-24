@@ -219,7 +219,9 @@ initDb()
       // Periodic session cleanup (every 6 hours)
       setInterval(async () => {
         try {
-          const { rows } = await dbPool.query("DELETE FROM user_sessions WHERE expires_at < NOW() RETURNING id");
+          const dbModule = require("./config/db");
+          const pool = dbModule.default || dbModule.pool;
+          const { rows } = await pool.query("DELETE FROM user_sessions WHERE expires_at < NOW() RETURNING id");
           if (rows.length > 0) console.log(`🧹 [Session] Cleaned up ${rows.length} expired sessions.`);
         } catch (err: any) {
           console.error("⚠️  [Session] Error cleaning expired sessions:", err.message);
