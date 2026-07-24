@@ -642,7 +642,7 @@ class BackupService {
     await new Promise<void>((resolve, reject) => {
       conn.on("ready", () => resolve());
       conn.on("error", (err: Error) => reject(err));
-      const connectOpts: any = { host: config.host, port: config.port || 22, username: config.username || "root" };
+      const connectOpts: any = { host: config.host, port: config.port || 22, username: config.username || "root", readyTimeout: 15000, keepaliveInterval: 10000 };
       if (config.sshAuth === "key" && config.sshKey) {
         connectOpts.privateKey = config.sshKey;
       } else {
@@ -651,14 +651,18 @@ class BackupService {
       conn.connect(connectOpts);
     });
 
-    const remotePath = `${config.path || "/backups"}/${filename}`;
+    const remoteDir = config.path || "/backups";
+    const remotePath = `${remoteDir}/${filename}`;
     await new Promise<void>((resolve, reject) => {
       conn.sftp((err, sftp) => {
         if (err) { conn.end(); return reject(err); }
-        const stream = sftp.createWriteStream(remotePath);
-        stream.on("close", () => { conn.end(); resolve(); });
-        stream.on("error", (e: Error) => { conn.end(); reject(e); });
-        stream.end(buffer);
+        // Create remote directory if it doesn't exist
+        sftp.mkdir(remoteDir, { mode: 0o755 }, () => {
+          const stream = sftp.createWriteStream(remotePath);
+          stream.on("close", () => { conn.end(); resolve(); });
+          stream.on("error", (e: Error) => { conn.end(); reject(e); });
+          stream.end(buffer);
+        });
       });
     });
   }

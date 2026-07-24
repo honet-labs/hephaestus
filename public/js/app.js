@@ -9650,20 +9650,21 @@ async function runBackupNow() {
 // ---- Backup History ----
 async function loadBackupHistory() {
   const tbody = document.getElementById('backup-history-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading...</td></tr>';
   try {
     const res = await fetch('/api/v1/backup/history');
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     const history = data.data || [];
     if (history.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">No backup history yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">No backup history yet.</td></tr>';
       return;
     }
     const statusColors = { success: '#10b981', failed: '#ef4444', running: '#58a6ff' };
     tbody.innerHTML = history.map(h => {
       const color = statusColors[h.status] || '#58a6ff';
       const time = h.startedAt ? new Date(h.startedAt).toLocaleString() : '-';
+      const errMsg = h.errorMessage ? `<span style="color:#ef4444;font-size:10px;" title="${escapeAttr(h.errorMessage)}">${escapeHtml(h.errorMessage.substring(0, 80))}${h.errorMessage.length > 80 ? '...' : ''}</span>` : '-';
       return `<tr>
         <td class="font-mono" style="font-size: 11px;">${time}</td>
         <td>${escapeHtml(h.dbName)}</td>
@@ -9672,11 +9673,12 @@ async function loadBackupHistory() {
         <td class="font-mono" style="font-size: 11px;">${escapeHtml(h.filename)}</td>
         <td>${formatBytes(h.fileSize)}</td>
         <td><span class="status-badge" style="background: ${color}20; color: ${color}; border: 1px solid ${color}40; font-size: 9px;">${escapeHtml(h.status.toUpperCase())}</span></td>
+        <td>${errMsg}</td>
         <td>${h.status === 'failed' ? `<button class="btn btn-danger" onclick="deleteBackupHistory('${escapeAttr(h.id)}')" style="padding: 2px 6px; font-size: 10px;">Del</button>` : ''}</td>
       </tr>`;
     }).join('');
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ef4444; padding: 20px;">${escapeHtml(e.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #ef4444; padding: 20px;">${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
