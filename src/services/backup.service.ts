@@ -346,7 +346,13 @@ class BackupService {
     const dest = await this.getRawDestination(destinationId);
     if (!dest) throw new Error("Backup destination not found.");
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const now = new Date();
+      const timestamp = now.getFullYear() + "-" +
+        String(now.getMonth() + 1).padStart(2, "0") + "-" +
+        String(now.getDate()).padStart(2, "0") + "T" +
+        String(now.getHours()).padStart(2, "0") + "-" +
+        String(now.getMinutes()).padStart(2, "0") + "-" +
+        String(now.getSeconds()).padStart(2, "0");
     const dumpFilename = `${rawCfg.databaseName}_${timestamp}.sql`;
 
     // Create history entry
