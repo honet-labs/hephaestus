@@ -9664,17 +9664,19 @@ async function loadBackupHistory() {
     tbody.innerHTML = history.map(h => {
       const color = statusColors[h.status] || '#58a6ff';
       const time = h.startedAt ? new Date(h.startedAt).toLocaleString() : '-';
-      const errMsg = h.errorMessage ? `<span style="color:#ef4444;font-size:10px;" title="${escapeAttr(h.errorMessage)}">${escapeHtml(h.errorMessage.substring(0, 80))}${h.errorMessage.length > 80 ? '...' : ''}</span>` : '-';
+      const errMsg = h.errorMessage ? `<span style="color:#ef4444;font-size:10px;" title="${escapeAttr(h.errorMessage)}">${escapeHtml(h.errorMessage.substring(0, 80))}${h.errorMessage.length > 80 ? '...' : ''}</span>` : 'N/A';
+      const size = formatBytes(h.fileSize);
+      const delBtn = h.status === 'failed' ? `<button class="btn btn-danger" onclick="deleteBackupHistory('${escapeAttr(h.id)}')" style="padding: 2px 6px; font-size: 10px;">Del</button>` : '';
       return `<tr>
         <td class="font-mono" style="font-size: 11px;">${time}</td>
         <td>${escapeHtml(h.dbName)}</td>
         <td><span class="status-badge" style="font-size: 9px;">${escapeHtml(h.dbType.toUpperCase())}</span></td>
         <td><span class="status-badge" style="font-size: 9px;">${escapeHtml(h.destType.toUpperCase())}</span></td>
         <td class="font-mono" style="font-size: 11px;">${escapeHtml(h.filename)}</td>
-        <td>${formatBytes(h.fileSize)}</td>
+        <td>${size}</td>
         <td><span class="status-badge" style="background: ${color}20; color: ${color}; border: 1px solid ${color}40; font-size: 9px;">${escapeHtml(h.status.toUpperCase())}</span></td>
         <td>${errMsg}</td>
-        <td>${h.status === 'failed' ? `<button class="btn btn-danger" onclick="deleteBackupHistory('${escapeAttr(h.id)}')" style="padding: 2px 6px; font-size: 10px;">Del</button>` : ''}</td>
+        <td>${delBtn}</td>
       </tr>`;
     }).join('');
   } catch (e) {
