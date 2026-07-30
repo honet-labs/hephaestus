@@ -396,7 +396,7 @@ function initAppOnce() {
 }
 
 // Navigation pages
-const pages = ['overview', 'settings', 'diagnostics', 'installer', 'monitoring', 'prometheus-config', 'dataprepper-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update', 'backup-db-configs', 'backup-destinations', 'backup-run', 'backup-history'];
+const pages = ['overview', 'settings', 'installer', 'monitoring', 'prometheus-config', 'dataprepper-config', 'snmp-query', 'mib-importer', 'oid-library', 'database', 'user-management', 'activity-logs', 'query-explorer', 'debugging', 'system-update', 'backup-db-configs', 'backup-destinations', 'backup-run', 'backup-history'];
 
 // Global Connection registry caches
 let grafanaConfigs = [];
@@ -472,7 +472,7 @@ const widgetGrafanaSub = document.getElementById('widget-grafana-sub');
 const widgetDatasourceUid = document.getElementById('widget-datasource-uid');
 const widgetScrapes = document.getElementById('widget-scrapes');
 const infraGrafanaDot = document.getElementById('infra-grafana-dot');
-const diagTime = document.getElementById('diag-time');
+
 
 // Alerts
 const feedbackAlert = document.getElementById('global-toast');
@@ -510,11 +510,6 @@ function initApp() {
   handleHashNavigation();
   window.addEventListener('hashchange', handleHashNavigation);
 
-  try {
-    if (diagTime) diagTime.textContent = new Date().toLocaleString();
-  } catch (e) {
-    console.warn('[Init] Failed to set diag time:', e);
-  }
   
   addLog('System', 'Initializing portal and modules...', 'INFO');
 
@@ -894,10 +889,6 @@ function showPage(pageId) {
   } else if (pageId === 'settings') {
     pageTitle.textContent = 'Add Connections';
     pageDesc.textContent = 'Manage API and service endpoint connections.';
-  } else if (pageId === 'diagnostics') {
-    pageTitle.textContent = 'System Diagnostics';
-    pageDesc.textContent = 'Informasi endpoint API backend dan diagnostik kesehatan sistem.';
-    diagTime.textContent = new Date().toLocaleString();
   } else if (pageId === 'installer') {
     navigate('overview');
     return;
@@ -8914,8 +8905,24 @@ async function loadDpPipelineFiles() {
 
     files.forEach(f => {
       const item = document.createElement('div');
-      item.textContent = f;
-      item.style.cssText = 'padding: 8px 12px; color: #e6edf3; font-size: 12px; cursor: pointer;';
+      item.style.cssText = 'padding: 6px 12px; color: #e6edf3; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;';
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = f;
+      nameSpan.style.cssText = 'flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+      const btnGroup = document.createElement('span');
+      btnGroup.style.cssText = 'display: flex; gap: 4px; flex-shrink: 0; margin-left: 8px;';
+      const renameBtn = document.createElement('button');
+      renameBtn.textContent = 'Rename';
+      renameBtn.style.cssText = 'padding: 2px 6px; font-size: 10px; background: rgba(88,166,255,0.15); color: #58a6ff; border: 1px solid rgba(88,166,255,0.3); border-radius: 3px; cursor: pointer;';
+      renameBtn.onclick = function(e) { e.stopPropagation(); showRenameDpFileModal(f); };
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Del';
+      deleteBtn.style.cssText = 'padding: 2px 6px; font-size: 10px; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 3px; cursor: pointer;';
+      deleteBtn.onclick = function(e) { e.stopPropagation(); deleteDpFile(f); };
+      btnGroup.appendChild(renameBtn);
+      btnGroup.appendChild(deleteBtn);
+      item.appendChild(nameSpan);
+      item.appendChild(btnGroup);
       item.onmouseenter = function() { this.style.background = '#21262d'; };
       item.onmouseleave = function() { this.style.background = 'transparent'; };
       item.onclick = function() { selectDpFile(f); };
@@ -9229,6 +9236,121 @@ my-pipeline:
     showFeedback('error', 'Creation Failed', e.message);
   } finally {
     if (createBtn) { createBtn.textContent = origBtnText; createBtn.disabled = false; }
+  }
+}
+
+let renameDpOriginalFilename = '';
+
+function showRenameDpFileModal(filename) {
+  renameDpOriginalFilename = filename;
+  const modal = document.getElementById('modal-rename-dp-file');
+  const input = document.getElementById('rename-dp-filename');
+  const errorEl = document.getElementById('rename-dp-filename-error');
+  if (modal) modal.classList.add('active');
+  if (input) { input.value = filename; input.focus(); input.select(); }
+  if (errorEl) errorEl.style.display = 'none';
+}
+
+function closeRenameDpFileModal() {
+  const modal = document.getElementById('modal-rename-dp-file');
+  if (modal) modal.classList.remove('active');
+}
+
+async function submitRenameDpFile() {
+  const input = document.getElementById('rename-dp-filename');
+  const errorEl = document.getElementById('rename-dp-filename-error');
+  const renameBtn = document.querySelector('#modal-rename-dp-file .btn-primary');
+  let newFilename = (input ? input.value : '').trim();
+
+  if (!newFilename) {
+    errorEl.textContent = 'Filename is required.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (newFilename.includes('/') || newFilename.includes('\\') || newFilename.includes('..')) {
+    errorEl.textContent = 'Invalid filename: path separators and .. are not allowed.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (!newFilename.endsWith('.yml') && !newFilename.endsWith('.yaml')) {
+    newFilename += '.yml';
+  }
+
+  if (newFilename === renameDpOriginalFilename) {
+    closeRenameDpFileModal();
+    return;
+  }
+
+  const existingOptions = dpFileDropdownFiles || [];
+  if (existingOptions.includes(newFilename)) {
+    errorEl.textContent = 'A file with this name already exists.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  errorEl.style.display = 'none';
+  const origBtnText = renameBtn ? renameBtn.textContent : '';
+  if (renameBtn) { renameBtn.textContent = 'Renaming...'; renameBtn.disabled = true; }
+
+  try {
+    const res = await fetch('/api/v1/dataprepper/pipeline/rename', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token')
+      },
+      body: JSON.stringify({
+        oldFilename: renameDpOriginalFilename,
+        newFilename: newFilename,
+        configId: dpConfigSelectedId || undefined
+      })
+    });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || result.message || 'Failed to rename file');
+
+    closeRenameDpFileModal();
+    await loadDpPipelineFiles();
+
+    if (dpCurrentFilename === renameDpOriginalFilename) {
+      selectDpFile(newFilename);
+    }
+
+    showFeedback('success', 'File Renamed', result.message || `Renamed to "${newFilename}".`);
+  } catch (e) {
+    errorEl.textContent = e.message;
+    errorEl.style.display = 'block';
+    showFeedback('error', 'Rename Failed', e.message);
+  } finally {
+    if (renameBtn) { renameBtn.textContent = origBtnText; renameBtn.disabled = false; }
+  }
+}
+
+async function deleteDpFile(filename) {
+  if (!confirm('Are you sure you want to delete "' + filename + '"?\n\nThis action cannot be undone.')) return;
+
+  try {
+    const url = '/api/v1/dataprepper/pipeline?filename=' + encodeURIComponent(filename) + (dpConfigSelectedId ? '&configId=' + encodeURIComponent(dpConfigSelectedId) : '');
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('hephaestus_session_token') }
+    });
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || result.message || 'Failed to delete file');
+
+    if (dpCurrentFilename === filename) {
+      dpCurrentFilename = '';
+      document.getElementById('dp-config-toolbar').style.display = 'none';
+      document.getElementById('dp-config-editor-wrapper').style.display = 'none';
+      document.getElementById('dp-config-info').style.display = 'none';
+      document.getElementById('dp-file-dropdown-label').textContent = 'Select a pipeline file...';
+    }
+
+    await loadDpPipelineFiles();
+    showFeedback('success', 'File Deleted', result.message || `File "${filename}" deleted.`);
+  } catch (e) {
+    showFeedback('error', 'Delete Failed', e.message);
   }
 }
 

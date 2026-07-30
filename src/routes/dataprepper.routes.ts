@@ -8,6 +8,8 @@ const router = Router();
 router.get("/pipelines", requireRole("ADMIN"), (req, res) => dataprepperController.listPipelines(req, res));
 router.get("/pipeline", requireRole("ADMIN"), (req, res) => dataprepperController.readPipeline(req, res));
 router.post("/pipeline", requireRole("ADMIN"), (req, res) => dataprepperController.savePipeline(req, res));
+router.post("/pipeline/rename", requireRole("ADMIN"), (req, res) => dataprepperController.renamePipeline(req, res));
+router.delete("/pipeline", requireRole("ADMIN"), (req, res) => dataprepperController.deletePipeline(req, res));
 router.post("/pipeline/validate", requireRole("ADMIN"), (req, res) => dataprepperController.validatePipeline(req, res));
 
 // Connection profiles

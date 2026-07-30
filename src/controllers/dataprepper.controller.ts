@@ -98,6 +98,47 @@ export class DataPrepperController {
   }
 
   /**
+   * POST /api/v1/dataprepper/pipeline/rename — Rename a pipeline file
+   */
+  public async renamePipeline(req: Request, res: Response) {
+    try {
+      const { oldFilename, newFilename, configId } = req.body;
+      if (!oldFilename || !newFilename) {
+        return res.status(400).json({ success: false, error: "oldFilename and newFilename are required." });
+      }
+      const result = await dataprepperService.renamePipelineFile(oldFilename, newFilename, configId);
+      if (result.success) {
+        await logActivity("DataPrepper Settings", "Rename Pipeline", `Renamed pipeline "${oldFilename}" to "${newFilename}"`, "SUCCESS");
+      }
+      return res.status(200).json(result);
+    } catch (err: any) {
+      console.error("[DataPrepper] renamePipeline error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to rename pipeline." });
+    }
+  }
+
+  /**
+   * DELETE /api/v1/dataprepper/pipeline — Delete a pipeline file
+   */
+  public async deletePipeline(req: Request, res: Response) {
+    try {
+      const filename = req.query.filename as string;
+      const configId = req.query.configId as string | undefined;
+      if (!filename) {
+        return res.status(400).json({ success: false, error: "filename query parameter is required." });
+      }
+      const result = await dataprepperService.deletePipelineFile(filename, configId);
+      if (result.success) {
+        await logActivity("DataPrepper Settings", "Delete Pipeline", `Deleted pipeline file "${filename}"`, "SUCCESS");
+      }
+      return res.status(200).json(result);
+    } catch (err: any) {
+      console.error("[DataPrepper] deletePipeline error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to delete pipeline." });
+    }
+  }
+
+  /**
    * POST /api/v1/dataprepper/configs — Save connection profile
    */
   public async saveConfigProfile(req: Request, res: Response) {

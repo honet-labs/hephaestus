@@ -390,6 +390,106 @@ export class DataPrepperService {
   }
 
   /**
+   * Rename a pipeline YAML file.
+   */
+  public async renamePipelineFile(oldFilename: string, newFilename: string, configId?: string): Promise<{ success: boolean; message: string }> {
+    const cfg = await this.getConfigToUse(configId);
+
+    // Security: prevent path traversal
+    const normalizedOld = path.posix.normalize(oldFilename);
+    if (normalizedOld.includes("..") || path.isAbsolute(oldFilename)) {
+      return { success: false, message: "Invalid old filename: path traversal is not allowed." };
+    }
+    const normalizedNew = path.posix.normalize(newFilename);
+    if (normalizedNew.includes("..") || path.isAbsolute(newFilename)) {
+      return { success: false, message: "Invalid new filename: path traversal is not allowed." };
+    }
+
+    const oldPath = path.join(cfg.pipelinesDir, oldFilename);
+    const newPath = path.join(cfg.pipelinesDir, newFilename);
+
+    if (cfg.mode === "local") {
+      try {
+        await fsPromises.access(oldPath);
+      } catch {
+        return { success: false, message: `Source file "${oldFilename}" not found.` };
+      }
+      try {
+        await fsPromises.access(newPath);
+        return { success: false, message: `A file named "${newFilename}" already exists.` };
+      } catch { /* good, file doesn't exist */ }
+      await fsPromises.rename(oldPath, newPath);
+      return { success: true, message: `File renamed from "${oldFilename}" to "${newFilename}".` };
+    } else {
+      let conn;
+      try {
+        conn = await this.getSSHConnection(cfg);
+        // Check source exists
+        try {
+          await this.readRemoteFile(conn, oldPath);
+        } catch {
+          return { success: false, message: `Source file "${oldFilename}" not found on remote.` };
+        }
+        // Check target doesn't exist
+        try {
+          await this.readRemoteFile(conn, newPath);
+          return { success: false, message: `A file named "${newFilename}" already exists on remote.` };
+        } catch { /* good, file doesn't exist */ }
+        const sudoPrefix = cfg.sshPassword ? `echo ${shellEscape(cfg.sshPassword)} | sudo -S ` : "";
+        await this.executeRemoteCommand(conn, `${sudoPrefix}mv ${shellEscape(oldPath)} ${shellEscape(newPath)}`);
+        return { success: true, message: `File renamed from "${oldFilename}" to "${newFilename}".` };
+      } catch (err: any) {
+        return { success: false, message: `Rename failed: ${err.message || err}` };
+      } finally {
+        if (conn) this.closeAndRemoveConnection(conn, cfg);
+      }
+    }
+  }
+
+  /**
+   * Delete a pipeline YAML file.
+   */
+  public async deletePipelineFile(filename: string, configId?: string): Promise<{ success: boolean; message: string }> {
+    const cfg = await this.getConfigToUse(configId);
+
+    // Security: prevent path traversal
+    const normalized = path.posix.normalize(filename);
+    if (normalized.includes("..") || path.isAbsolute(filename)) {
+      return { success: false, message: "Invalid filename: path traversal is not allowed." };
+    }
+
+    const filePath = path.join(cfg.pipelinesDir, filename);
+
+    if (cfg.mode === "local") {
+      try {
+        await fsPromises.access(filePath);
+      } catch {
+        return { success: false, message: `File "${filename}" not found.` };
+      }
+      await fsPromises.unlink(filePath);
+      return { success: true, message: `File "${filename}" deleted.` };
+    } else {
+      let conn;
+      try {
+        conn = await this.getSSHConnection(cfg);
+        // Check file exists
+        try {
+          await this.readRemoteFile(conn, filePath);
+        } catch {
+          return { success: false, message: `File "${filename}" not found on remote.` };
+        }
+        const sudoPrefix = cfg.sshPassword ? `echo ${shellEscape(cfg.sshPassword)} | sudo -S ` : "";
+        await this.executeRemoteCommand(conn, `${sudoPrefix}rm -f ${shellEscape(filePath)}`);
+        return { success: true, message: `File "${filename}" deleted.` };
+      } catch (err: any) {
+        return { success: false, message: `Delete failed: ${err.message || err}` };
+      } finally {
+        if (conn) this.closeAndRemoveConnection(conn, cfg);
+      }
+    }
+  }
+
+  /**
    * Validate a pipeline YAML file.
    */
   public validatePipeline(content: string): { valid: boolean; error?: string; pipelineNames?: string[] } {
