@@ -6154,6 +6154,11 @@ async function runActiveQuery() {
   }
 }
 
+function formatLocalTimestamp(epochSecs) {
+  if (!epochSecs) return '-';
+  return new Date(epochSecs * 1000).toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' }).replace('T', ' ');
+}
+
 function formatMetricValue(val, columnName) {
   if (val === undefined || val === null) {
     return '-';
@@ -6278,7 +6283,7 @@ function renderActiveDataTable(data) {
       
       rowsHtml += `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 11.5px;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-          <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${escapeHtml(row.timestampStr)}</td>
+          <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${formatLocalTimestamp(row.timestamp)}</td>
           <td style="padding: 8px; font-family: monospace; color: var(--text-muted);">${escapeHtml(ip)}</td>
           ${colsHtml}
         </tr>
@@ -6878,7 +6883,7 @@ function exportPanelToExcel(panelId) {
       rows.forEach(row => {
         const ipData = row[ip] || {};
         const dataRow = [
-          row.timestampStr,
+          formatLocalTimestamp(row.timestamp),
           ip
         ];
         
@@ -6930,7 +6935,7 @@ window.exportActivePanelToCsv = function() {
   rows.forEach(row => {
     ips.forEach(ip => {
       const ipData = row[ip] || {};
-      const csvRow = [row.timestampStr, ip];
+      const csvRow = [formatLocalTimestamp(row.timestamp), ip];
       columns.forEach(col => {
         const val = ipData[col];
         csvRow.push(val !== undefined && val !== null ? formatMetricValue(val, col) : '');
@@ -6977,7 +6982,7 @@ window.exportActivePanelToTxt = function() {
         const val = ipData[col];
         return val !== undefined && val !== null ? formatMetricValue(val, col) : '-';
       });
-      txt += `${row.timestampStr}\t${vals.join("\t")}\n`;
+      txt += `${formatLocalTimestamp(row.timestamp)}\t${vals.join("\t")}\n`;
     });
     
     const blob = new Blob([txt], { type: 'text/plain;charset=utf-8;' });
@@ -7410,7 +7415,7 @@ function updateChartPreview() {
   const theme = themeStyles[bgTheme] || themeStyles.grafana;
   const colors = colorPalettes[palette] || colorPalettes.grafana;
   
-  const rawTimestamps = rows.map(r => r.timestampStr).reverse();
+  const rawTimestamps = rows.map(r => formatLocalTimestamp(r.timestamp)).reverse();
   
   let timeRangeText = '';
   
@@ -7674,7 +7679,7 @@ window.exportActivePanelToChartImageWithOptions = function(selectedIp, selectedM
     const theme = themeStyles[bgTheme] || themeStyles.grafana;
     const colors = colorPalettes[palette] || colorPalettes.grafana;
     
-    const rawTimestamps = rows.map(r => r.timestampStr).reverse();
+    const rawTimestamps = rows.map(r => formatLocalTimestamp(r.timestamp)).reverse();
     
     let timeRangeText = '';
 
@@ -8294,7 +8299,7 @@ function renderActiveDataChart(data, type, splitMetrics) {
         };
       } else {
         canvas.style.height = '300px';
-        const xAxisData = chronologicalRows.map(r => r.timestampStr);
+        const xAxisData = chronologicalRows.map(r => formatLocalTimestamp(r.timestamp));
         const series = ips.map(ip => {
           const seriesData = chronologicalRows.map(row => {
             const val = (row[ip] || {})[col];
@@ -8422,7 +8427,7 @@ function renderActiveDataChart(data, type, splitMetrics) {
         ]
       };
     } else {
-      const xAxisData = chronologicalRows.map(r => r.timestampStr);
+      const xAxisData = chronologicalRows.map(r => formatLocalTimestamp(r.timestamp));
       const series = [];
       
       ips.forEach(ip => {
