@@ -7,343 +7,357 @@
     <link rel="icon" type="image/jpeg" href="/img/favicon.jpg">
     <style>
         :root {
-            color-scheme: dark;
-            --background: #0d1117;
-            --foreground: #c9d1d9;
-            --app-sidebar: #161b22;
-            --app-topbar: #0d1117;
-            --app-card: #161b22;
-            --app-card-dark: #0d1117;
-            --app-border: #30363d;
-            --text-white: #e6edf3;
-            --text-muted: #8b949e;
-            --btn-primary-bg: #1f6feb;
-            --btn-primary-color: #ffffff;
-            --btn-primary-hover: #388bfd;
+            --bg: #f5f5f5;
+            --card: #ffffff;
+            --border: #e0e0e0;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --accent: #2563eb;
             --success: #10b981;
-            --success-border: rgba(16, 185, 129, 0.3);
-            --error: #f85149;
-            --error-border: rgba(248, 81, 73, 0.3);
-            --warning: #d29922;
-            --accent: #58a6ff;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --purple: #7c3aed;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, button, input, select, textarea, span, p, a, label {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-size: 13px;
-        }
         body {
-            background-color: var(--background);
-            color: var(--foreground);
-            display: flex; flex-direction: column;
-            height: 100vh; overflow: hidden;
-        }
-        h1, h2, h3, h4 { font-weight: 600; color: var(--text-white); }
-
-        .header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 16px; background: var(--app-topbar); border-bottom: 1px solid var(--app-border);
-            flex-shrink: 0; height: 44px;
-        }
-        .header-left { display: flex; align-items: center; gap: 10px; }
-        .header h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .header h1 svg { width: 16px; height: 16px; color: var(--accent); }
-        .header-right { display: flex; align-items: center; gap: 8px; }
-        .back-link {
-            color: var(--text-muted); text-decoration: none; font-size: 11px;
-            padding: 4px 10px; border: 1px solid var(--app-border); border-radius: 4px;
-            transition: all 0.2s;
-        }
-        .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
-        .stats-badge {
-            font-size: 11px; color: var(--text-muted);
-            padding: 3px 8px; background: var(--app-card); border: 1px solid var(--app-border);
-            border-radius: 4px;
-        }
-        .stats-badge strong { color: var(--text-white); }
-
-        button.btn {
-            border-radius: 4px; padding: 6px 14px; font-weight: 600;
-            cursor: pointer; transition: all 0.15s; text-transform: uppercase;
-            font-size: 11px; letter-spacing: 0.5px; display: inline-flex;
-            align-items: center; gap: 5px; border: 1px solid transparent;
-        }
-        button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary { background-color: var(--btn-primary-bg); color: var(--btn-primary-color); }
-        .btn-primary:hover:not(:disabled) { background-color: var(--btn-primary-hover); }
-        .btn-secondary { background-color: var(--app-card); border: 1px solid var(--app-border); color: var(--foreground); }
-        .btn-secondary:hover:not(:disabled) { color: white; border-color: var(--accent); }
-        .btn-danger { background-color: rgba(248, 81, 73, 0.1); border: 1px solid var(--error-border); color: #f85149; }
-        .btn-danger:hover:not(:disabled) { background-color: var(--error); color: white; }
-        .btn-success { background-color: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-border); color: var(--success); }
-        .btn-success:hover:not(:disabled) { background-color: var(--success); color: white; }
-
-        .toolbar {
-            display: flex; align-items: center; padding: 8px 16px; gap: 8px;
-            flex-shrink: 0; background: var(--app-sidebar); border-bottom: 1px solid var(--app-border);
-            flex-wrap: wrap;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden;
         }
 
+        /* LEFT SIDEBAR */
+        .left-sidebar {
+            width: 180px; background: var(--card); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; flex-shrink: 0; z-index: 30;
+        }
+        .sidebar-section { padding: 16px; border-bottom: 1px solid var(--border); }
+        .sidebar-section h3 { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sidebar-btn {
+            display: flex; align-items: center; gap: 8px; width: 100%;
+            padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer;
+            font-size: 12px; font-weight: 600; margin-bottom: 6px; transition: all 0.15s;
+        }
+        .sidebar-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .btn-device { background: var(--accent); color: white; }
+        .btn-device:hover { background: #1d4ed8; }
+        .btn-connection { background: var(--success); color: white; }
+        .btn-connection:hover { background: #059669; }
+        .btn-vlan { background: var(--purple); color: white; }
+        .btn-vlan:hover { background: #6d28d9; }
+        .btn-isp { background: var(--warning); color: white; }
+        .btn-isp:hover { background: #d97706; }
+        .btn-app { background: #64748b; color: white; }
+        .btn-app:hover { background: #475569; }
+        .btn-scan { background: var(--accent); color: white; }
+        .btn-scan:hover { background: #1d4ed8; }
+
+        .export-btn {
+            display: flex; align-items: center; gap: 8px; width: 100%;
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+            cursor: pointer; font-size: 12px; font-weight: 600; margin-bottom: 6px;
+            background: white; color: var(--text); transition: all 0.15s;
+        }
+        .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .export-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+        .sidebar-footer { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--border); }
+        .sidebar-footer .stats-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+        .sidebar-footer .stats-row strong { color: var(--text); }
+
+        /* MAIN AREA */
+        .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* TOP BAR */
+        .top-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--border);
+            flex-shrink: 0; height: 42px;
+        }
+        .top-bar h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .top-bar h1 svg { width: 16px; height: 16px; color: var(--accent); }
+        .top-bar-right { display: flex; align-items: center; gap: 10px; }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 11px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px; }
+        .back-link:hover { color: var(--text); border-color: var(--text-muted); }
+
+        /* GRAPH */
+        .graph-wrap { flex: 1; position: relative; overflow: hidden; }
+        #topology-graph { width: 100%; height: 100%; background: var(--bg);
+            background-image: radial-gradient(circle, #d0d0d0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* SCAN BAR */
         .scan-bar {
             display: none; align-items: center; padding: 10px 16px; gap: 10px;
-            background: var(--app-card); border-bottom: 1px solid var(--app-border); flex-shrink: 0;
-            flex-wrap: wrap;
+            background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
         }
         .scan-bar.visible { display: flex; }
         .scan-bar label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
         .scan-bar input, .scan-bar select {
-            background: var(--app-card-dark); border: 1px solid var(--app-border);
-            color: var(--text-white); padding: 5px 8px; border-radius: 4px; font-size: 11px;
+            background: white; border: 1px solid var(--border); color: var(--text);
+            padding: 5px 8px; border-radius: 4px; font-size: 11px;
         }
         .scan-bar input:focus { border-color: var(--accent); outline: none; }
 
-        .graph-container {
-            flex: 1; position: relative; overflow: hidden;
+        /* RESULTS SIDEBAR */
+        .results-sidebar {
+            display: none; position: absolute; top: 0; left: 180px; bottom: 0;
+            width: 300px; background: var(--card); border-right: 1px solid var(--border);
+            z-index: 25; flex-direction: column;
         }
-        #topology-graph {
-            width: 100%; height: 100%; background: var(--background);
+        .results-sidebar.visible { display: flex; }
+        .results-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
         }
+        .results-header h3 { font-size: 12px; font-weight: 700; }
+        .results-count { font-size: 10px; color: var(--text-muted); background: #f0f0f0; padding: 2px 8px; border-radius: 10px; }
+        .results-actions { display: flex; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .results-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+        .result-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 14px; border-bottom: 1px solid #f0f0f0; transition: background 0.15s;
+        }
+        .result-item:hover { background: #f8f9fa; }
+        .result-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 2px solid; }
+        .result-info { flex: 1; min-width: 0; }
+        .result-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .result-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; margin-top: 2px; }
+        .result-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .result-actions button {
+            background: none; border: 1px solid var(--border); color: var(--text-muted);
+            border-radius: 3px; padding: 3px 6px; font-size: 9px; cursor: pointer; transition: all 0.15s;
+        }
+        .result-actions .btn-add { color: var(--success); border-color: rgba(16,185,129,0.3); }
+        .result-actions .btn-add:hover { background: var(--success); color: white; }
+        .result-actions .btn-dismiss:hover { color: var(--error); border-color: rgba(239,68,68,0.3); }
 
-        .legend {
-            position: absolute; bottom: 12px; left: 12px;
-            background: rgba(22, 27, 34, 0.92); border: 1px solid var(--app-border);
-            border-radius: 6px; padding: 8px 12px; display: flex; gap: 12px;
-            font-size: 10px; color: var(--text-muted); z-index: 10;
-            backdrop-filter: blur(4px);
-        }
-        .legend span { display: flex; align-items: center; gap: 4px; }
-        .legend .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .legend .tag {
-            padding: 1px 4px; border-radius: 2px; font-size: 9px; font-weight: 600;
-        }
-        .legend .sep { border-left: 1px solid var(--app-border); padding-left: 12px; }
-
+        /* STATUS BAR */
         .status-bar {
-            position: absolute; top: 12px; left: 12px;
-            background: rgba(22, 27, 34, 0.92); border: 1px solid var(--app-border);
+            position: absolute; bottom: 12px; left: 12px;
+            background: rgba(255,255,255,0.95); border: 1px solid var(--border);
             border-radius: 6px; padding: 8px 14px; z-index: 10;
             font-size: 11px; color: var(--text-muted); backdrop-filter: blur(4px);
         }
 
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.6); z-index: 1000; align-items: center; justify-content: center;
+        /* LEGEND */
+        .legend {
+            position: absolute; bottom: 12px; right: 12px;
+            background: rgba(255,255,255,0.95); border: 1px solid var(--border);
+            border-radius: 6px; padding: 8px 12px; display: flex; gap: 12px;
+            font-size: 10px; color: var(--text-muted); z-index: 10; backdrop-filter: blur(4px);
         }
-        .modal-overlay.active { display: flex; }
-        .modal-dialog {
-            background: var(--app-card); border: 1px solid var(--app-border); border-radius: 8px;
-            width: 95%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-        }
-        .modal-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 14px 20px; border-bottom: 1px solid var(--app-border);
-        }
-        .modal-header h3 { font-size: 14px; }
-        .modal-close {
-            background: none; border: none; color: var(--text-muted); font-size: 20px;
-            cursor: pointer; line-height: 1;
-        }
-        .modal-close:hover { color: var(--text-white); }
-        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-        .modal-footer {
-            padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px;
-            border-top: 1px solid var(--app-border);
-        }
-        .form-group label {
-            text-transform: uppercase; font-size: 10px; font-weight: 700;
-            color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 5px; display: block;
-        }
-        .form-group input, .form-group select {
-            width: 100%; background: var(--app-card-dark); border: 1px solid var(--app-border);
-            color: var(--text-white); padding: 7px 10px; border-radius: 4px; font-size: 12px;
-            box-sizing: border-box;
-        }
-        .form-group input:focus, .form-group select:focus { border-color: var(--accent); outline: none; }
-        .form-error { display: none; font-size: 11px; color: var(--error); margin-top: 4px; }
+        .legend span { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-        .toast {
-            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
-            padding: 10px 16px; border-radius: 6px; font-size: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: opacity 0.3s;
-            max-width: 400px;
+        /* TIPS PANEL */
+        .tips-panel {
+            position: absolute; top: 12px; right: 12px;
+            background: rgba(255,255,255,0.97); border: 1px solid var(--border);
+            border-radius: 8px; padding: 14px 16px; z-index: 10; width: 260px;
+            backdrop-filter: blur(4px); font-size: 11px;
         }
-        .toast.success { background: rgba(16,185,129,0.15); border: 1px solid var(--success-border); color: var(--success); }
-        .toast.error { background: rgba(248,81,73,0.15); border: 1px solid var(--error-border); color: var(--error); }
-        .toast.info { background: rgba(88,166,255,0.15); border: 1px solid rgba(88,166,255,0.3); color: var(--accent); }
+        .tips-panel h4 { font-size: 12px; margin-bottom: 8px; color: var(--warning); display: flex; align-items: center; gap: 6px; }
+        .tips-panel ul { list-style: none; padding: 0; }
+        .tips-panel li { padding: 3px 0; color: var(--text-muted); }
+        .tips-panel li strong { color: var(--text); }
+        .tips-close { position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-muted); }
 
+        /* NODE DETAIL PANEL */
         .node-detail-panel {
             display: none; position: absolute; top: 12px; right: 12px;
-            background: rgba(22, 27, 34, 0.95); border: 1px solid var(--app-border);
-            border-radius: 8px; padding: 16px; z-index: 10; width: 280px;
+            background: rgba(255,255,255,0.97); border: 1px solid var(--border);
+            border-radius: 8px; padding: 16px; z-index: 15; width: 280px;
             backdrop-filter: blur(4px);
         }
         .node-detail-panel.visible { display: block; }
         .node-detail-panel h4 { font-size: 13px; margin-bottom: 10px; }
         .node-detail-panel .detail-row {
             display: flex; justify-content: space-between; padding: 4px 0;
-            font-size: 11px; border-bottom: 1px solid rgba(48,54,61,0.5);
+            font-size: 11px; border-bottom: 1px solid #f0f0f0;
         }
         .node-detail-panel .detail-label { color: var(--text-muted); }
-        .node-detail-panel .detail-value { color: var(--text-white); font-family: monospace; }
-        .node-detail-panel .source-tag {
-            display: inline-block; padding: 2px 6px; border-radius: 3px;
-            font-size: 9px; font-weight: 600; margin-right: 4px;
-        }
+        .node-detail-panel .detail-value { color: var(--text); font-family: monospace; }
+        .source-tag { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; margin-right: 4px; }
 
-        .results-sidebar {
-            display: none; position: absolute; top: 0; left: 0; bottom: 0;
-            width: 300px; background: rgba(22, 27, 34, 0.97); border-right: 1px solid var(--app-border);
-            z-index: 20; flex-direction: column; backdrop-filter: blur(4px);
+        /* MODALS */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;
         }
-        .results-sidebar.visible { display: flex; }
-        .results-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 14px; border-bottom: 1px solid var(--app-border); flex-shrink: 0;
+        .modal-overlay.active { display: flex; }
+        .modal-dialog {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            width: 95%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         }
-        .results-header h3 { font-size: 12px; font-weight: 600; }
-        .results-header .results-count {
-            font-size: 10px; color: var(--text-muted); background: var(--app-card-dark);
-            padding: 2px 8px; border-radius: 10px;
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+        .modal-header h3 { font-size: 14px; }
+        .modal-close { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+        .modal-close:hover { color: var(--text); }
+        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+        .modal-footer { padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--border); }
+        .form-group label { text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 5px; display: block; }
+        .form-group input, .form-group select {
+            width: 100%; background: white; border: 1px solid var(--border);
+            color: var(--text); padding: 7px 10px; border-radius: 4px; font-size: 12px;
         }
-        .results-actions {
-            display: flex; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--app-border); flex-shrink: 0;
+        .form-group input:focus, .form-group select:focus { border-color: var(--accent); outline: none; }
+        .form-error { display: none; font-size: 11px; color: var(--error); margin-top: 4px; }
+
+        /* BUTTONS */
+        .btn { border-radius: 4px; padding: 6px 14px; font-weight: 600; cursor: pointer; font-size: 11px; border: 1px solid transparent; transition: all 0.15s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary { background: white; border: 1px solid var(--border); color: var(--text); }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--error); }
+        .btn-danger:hover { background: var(--error); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #059669; }
+
+        /* TOAST */
+        .toast {
+            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+            padding: 10px 16px; border-radius: 6px; font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 400px;
         }
-        .results-list {
-            flex: 1; overflow-y: auto; padding: 6px 0;
-        }
-        .results-list::-webkit-scrollbar { width: 6px; }
-        .results-list::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
-        .result-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 8px 14px; border-bottom: 1px solid rgba(48,54,61,0.4);
-            transition: background 0.15s; cursor: default;
-        }
-        .result-item:hover { background: rgba(88,166,255,0.05); }
-        .result-dot {
-            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
-        }
-        .result-info { flex: 1; min-width: 0; }
-        .result-name {
-            font-size: 12px; font-weight: 600; color: var(--text-white);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .result-meta {
-            font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; margin-top: 2px;
-        }
-        .result-meta span { display: flex; align-items: center; gap: 3px; }
-        .result-actions { display: flex; gap: 4px; flex-shrink: 0; }
-        .result-actions button {
-            background: none; border: 1px solid var(--app-border); color: var(--text-muted);
-            border-radius: 3px; padding: 3px 6px; font-size: 9px; cursor: pointer;
-            transition: all 0.15s;
-        }
-        .result-actions .btn-add { color: var(--success); border-color: var(--success-border); }
-        .result-actions .btn-add:hover { background: var(--success); color: white; }
-        .result-actions .btn-dismiss { color: var(--text-muted); }
-        .result-actions .btn-dismiss:hover { color: var(--error); border-color: var(--error-border); }
+        .toast.success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
+        .toast.error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--error); }
+        .toast.info { background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.3); color: var(--accent); }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <a href="/" class="back-link">&larr; Portal</a>
+    <!-- LEFT SIDEBAR -->
+    <div class="left-sidebar">
+        <div class="sidebar-section">
+            <h3>Add Elements</h3>
+            <button class="sidebar-btn btn-device" onclick="openAddDeviceModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Add Device
+            </button>
+            <button class="sidebar-btn btn-connection" onclick="openAddEdgeModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Add Connection
+            </button>
+            <button class="sidebar-btn btn-vlan" onclick="showToast('info','VLAN feature coming soon')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                Add VLAN
+            </button>
+            <button class="sidebar-btn btn-isp" onclick="showToast('info','ISP feature coming soon')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                Add ISP
+            </button>
+            <button class="sidebar-btn btn-app" onclick="showToast('info','Application feature coming soon')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Add Application
+            </button>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Scan</h3>
+            <button class="sidebar-btn btn-scan" onclick="toggleScanBar()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Auto Scan
+            </button>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Export</h3>
+            <button class="export-btn" onclick="exportPNG()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                PNG
+            </button>
+            <button class="export-btn" onclick="exportJSON()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                JSON
+            </button>
+        </div>
+
+        <div class="sidebar-section">
+            <h3>Import</h3>
+            <button class="export-btn" onclick="importJSON()" style="border-color:var(--accent);color:var(--accent);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import JSON
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="stats-row"><span>Nodes</span><strong id="stat-nodes">0</strong></div>
+            <div class="stats-row"><span>Edges</span><strong id="stat-edges">0</strong></div>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-area">
+        <div class="top-bar">
             <h1>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="5" r="3"></circle>
-                    <circle cx="5" cy="19" r="3"></circle>
-                    <circle cx="19" cy="19" r="3"></circle>
-                    <line x1="12" y1="8" x2="5" y2="16"></line>
-                    <line x1="12" y1="8" x2="19" y2="16"></line>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/></svg>
                 Network Topology
             </h1>
-        </div>
-        <div class="header-right">
-            <span class="stats-badge">Nodes: <strong id="stat-nodes">0</strong></span>
-            <span class="stats-badge">Edges: <strong id="stat-edges">0</strong></span>
-        </div>
-    </div>
-
-    <div class="toolbar">
-        <button class="btn btn-success" onclick="toggleScanBar()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            Auto Scan
-        </button>
-        <button class="btn btn-secondary" onclick="openAddDeviceModal()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Add Device
-        </button>
-        <button class="btn btn-secondary" onclick="openAddEdgeModal()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-            Add Connection
-        </button>
-        <button class="btn btn-danger" onclick="clearAll()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            Clear All
-        </button>
-        <div style="flex:1;"></div>
-        <button class="btn btn-secondary" onclick="loadGraph()" style="font-size:10px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-            Refresh
-        </button>
-    </div>
-
-    <div id="scan-bar" class="scan-bar">
-        <label>IP Range:</label>
-        <input type="text" id="ip-range" placeholder="10.11.12.0/24 or 10.11.12.1-10.11.12.50" style="min-width: 260px;">
-        <label>SNMP Community:</label>
-        <input type="text" id="snmp-community" value="public" style="width: 100px;">
-        <label>Version:</label>
-        <select id="snmp-version">
-            <option value="2c">v2c</option>
-            <option value="v1">v1</option>
-        </select>
-        <button class="btn btn-primary" onclick="runScan()">Run Scan</button>
-        <button class="btn btn-secondary" onclick="toggleScanBar()">Cancel</button>
-    </div>
-
-    <!-- RESULTS SIDEBAR -->
-    <div id="results-sidebar" class="results-sidebar">
-        <div class="results-header">
-            <h3 id="results-title">Discovered Devices</h3>
-            <span class="results-count" id="results-count">0</span>
-        </div>
-        <div class="results-actions">
-            <button class="btn btn-primary" onclick="addAllToCanvas()" style="font-size:10px;padding:4px 10px;">Add All to Canvas</button>
-            <button class="btn btn-secondary" onclick="clearPending()" style="font-size:10px;padding:4px 10px;">Clear</button>
-        </div>
-        <div class="results-list" id="results-list"></div>
-    </div>
-
-    <div class="graph-container">
-        <div id="topology-graph"></div>
-
-        <div class="status-bar" id="status-bar">Loading topology...</div>
-
-        <div class="legend">
-            <span><span class="dot" style="background:#10b981;"></span> Online</span>
-            <span><span class="dot" style="background:#f85149;"></span> Offline</span>
-            <span><span class="dot" style="background:#6b7280;"></span> Unknown</span>
-            <span class="sep"><span class="tag" style="background:rgba(88,166,255,0.15);color:#58a6ff;">PROM</span></span>
-            <span><span class="tag" style="background:rgba(16,185,129,0.15);color:#10b981;">KUMA</span></span>
-            <span><span class="tag" style="background:rgba(245,158,11,0.15);color:#f59e0b;">SNMP</span></span>
-            <span><span class="tag" style="background:rgba(139,148,158,0.15);color:#8b949e;">MANUAL</span></span>
-        </div>
-
-        <!-- Node Detail Panel -->
-        <div class="node-detail-panel" id="node-detail">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <h4 id="detail-name">-</h4>
-                <button class="modal-close" onclick="closeDetail()" style="font-size:16px;">&times;</button>
+            <div class="top-bar-right">
+                <a href="/" class="back-link">Back to Dashboard</a>
+                <button class="btn btn-secondary" onclick="loadGraph()" style="font-size:10px;padding:4px 10px;">Refresh</button>
+                <button class="btn btn-danger" onclick="clearAll()" style="font-size:10px;padding:4px 10px;">Clear All</button>
             </div>
-            <div class="detail-row"><span class="detail-label">IP</span><span class="detail-value" id="detail-ip">-</span></div>
-            <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value" id="detail-type">-</span></div>
-            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detail-status">-</span></div>
-            <div class="detail-row"><span class="detail-label">Sources</span><span id="detail-sources"></span></div>
-            <div id="detail-labels" style="margin-top:8px;"></div>
-            <div id="detail-interfaces"></div>
-            <div style="margin-top:10px;">
-                <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete Device</button>
+        </div>
+
+        <div id="scan-bar" class="scan-bar">
+            <label>IP Range:</label>
+            <input type="text" id="ip-range" placeholder="10.11.12.0/24 or 10.11.12.1-10.11.12.50" style="min-width: 260px;">
+            <label>SNMP Community:</label>
+            <input type="text" id="snmp-community" value="public" style="width: 100px;">
+            <label>Version:</label>
+            <select id="snmp-version"><option value="2c">v2c</option><option value="v1">v1</option></select>
+            <button class="btn btn-primary" onclick="runScan()">Run Scan</button>
+            <button class="btn btn-secondary" onclick="toggleScanBar()">Cancel</button>
+        </div>
+
+        <div class="graph-wrap" style="flex:1;position:relative;">
+            <div id="results-sidebar" class="results-sidebar">
+                <div class="results-header">
+                    <h3 id="results-title">Discovered Devices</h3>
+                    <span class="results-count" id="results-count">0</span>
+                </div>
+                <div class="results-actions">
+                    <button class="btn btn-primary" onclick="addAllToCanvas()" style="font-size:10px;padding:4px 10px;">Add All to Canvas</button>
+                    <button class="btn btn-secondary" onclick="clearPending()" style="font-size:10px;padding:4px 10px;">Clear</button>
+                </div>
+                <div class="results-list" id="results-list"></div>
+            </div>
+
+            <div id="topology-graph"></div>
+
+            <div class="status-bar" id="status-bar">Loading topology...</div>
+
+            <div class="legend">
+                <span><span class="dot" style="background:#10b981;"></span> Online</span>
+                <span><span class="dot" style="background:#ef4444;"></span> Offline</span>
+                <span><span class="dot" style="background:#9ca3af;"></span> Unknown</span>
+            </div>
+
+            <div class="tips-panel" id="tips-panel">
+                <button class="tips-close" onclick="document.getElementById('tips-panel').style.display='none'">&times;</button>
+                <h4>Tips Interaksi</h4>
+                <ul>
+                    <li><strong>Single click</strong> pada node &rarr; Info panel muncul</li>
+                    <li><strong>Double click</strong> pada node &rarr; Edit form</li>
+                    <li><strong>Drag &amp; Drop</strong> &rarr; Buat koneksi</li>
+                </ul>
+            </div>
+
+            <div class="node-detail-panel" id="node-detail">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <h4 id="detail-name">-</h4>
+                    <button class="modal-close" onclick="closeDetail()">&times;</button>
+                </div>
+                <div class="detail-row"><span class="detail-label">IP</span><span class="detail-value" id="detail-ip">-</span></div>
+                <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value" id="detail-type">-</span></div>
+                <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detail-status">-</span></div>
+                <div class="detail-row"><span class="detail-label">Sources</span><span id="detail-sources"></span></div>
+                <div id="detail-labels" style="margin-top:8px;"></div>
+                <div id="detail-interfaces"></div>
+                <div style="margin-top:10px;">
+                    <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete Device</button>
+                </div>
             </div>
         </div>
     </div>
@@ -351,30 +365,16 @@
     <!-- MODAL: ADD DEVICE -->
     <div id="modal-add-device" class="modal-overlay">
         <div class="modal-dialog">
-            <div class="modal-header">
-                <h3>Add Network Device</h3>
-                <button class="modal-close" onclick="closeModal('modal-add-device')">&times;</button>
-            </div>
+            <div class="modal-header"><h3>Add Network Device</h3><button class="modal-close" onclick="closeModal('modal-add-device')">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Device Name</label>
-                    <input type="text" id="dev-name" placeholder="e.g. Core-Switch-01">
-                </div>
-                <div class="form-group">
-                    <label>IP Address</label>
-                    <input type="text" id="dev-ip" placeholder="e.g. 10.11.12.1">
-                </div>
-                <div class="form-group">
-                    <label>Device Type</label>
+                <div class="form-group"><label>Device Name</label><input type="text" id="dev-name" placeholder="e.g. Core-Switch-01"></div>
+                <div class="form-group"><label>IP Address</label><input type="text" id="dev-ip" placeholder="e.g. 10.11.12.1"></div>
+                <div class="form-group"><label>Device Type</label>
                     <select id="dev-type">
-                        <option value="server">Server</option>
-                        <option value="switch">Switch</option>
-                        <option value="router">Router</option>
-                        <option value="firewall">Firewall</option>
-                        <option value="network">Network Device</option>
-                        <option value="web">Web Service</option>
-                        <option value="container">Container</option>
-                        <option value="unknown">Unknown</option>
+                        <option value="server">Server</option><option value="switch">Switch</option>
+                        <option value="router">Router</option><option value="firewall">Firewall</option>
+                        <option value="network">Network Device</option><option value="web">Web Service</option>
+                        <option value="container">Container</option><option value="unknown">Unknown</option>
                     </select>
                 </div>
                 <div id="dev-error" class="form-error"></div>
@@ -389,22 +389,16 @@
     <!-- MODAL: ADD EDGE -->
     <div id="modal-add-edge" class="modal-overlay">
         <div class="modal-dialog">
-            <div class="modal-header">
-                <h3>Add Connection</h3>
-                <button class="modal-close" onclick="closeModal('modal-add-edge')">&times;</button>
-            </div>
+            <div class="modal-header"><h3>Add Connection</h3><button class="modal-close" onclick="closeModal('modal-add-edge')">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Source Device</label>
-                    <select id="edge-source"></select>
-                </div>
-                <div class="form-group">
-                    <label>Target Device</label>
-                    <select id="edge-target"></select>
-                </div>
-                <div class="form-group">
-                    <label>Label (optional)</label>
-                    <input type="text" id="edge-label" placeholder="e.g. eth0, VLAN 100">
+                <div class="form-group"><label>Source Device</label><select id="edge-source"></select></div>
+                <div class="form-group"><label>Target Device</label><select id="edge-target"></select></div>
+                <div class="form-group"><label>Connection Type</label>
+                    <select id="edge-label">
+                        <option value="Ethernet">Ethernet</option><option value="Fiber Optic">Fiber Optic</option>
+                        <option value="Wireless">Wireless</option><option value="USB">USB</option>
+                        <option value="VPN">VPN</option><option value="">None</option>
+                    </select>
                 </div>
                 <div id="edge-error" class="form-error"></div>
             </div>
@@ -419,7 +413,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
     <script>
-    // ==================== STATE ====================
     let network = null;
     let nodesData = [];
     let edgesData = [];
@@ -428,19 +421,53 @@
     const token = localStorage.getItem('hephaestus_session_token') || '';
 
     const NODE_COLORS = {
-        server: '#58a6ff', switch: '#10b981', router: '#f59e0b',
-        firewall: '#f85149', network: '#a78bfa', web: '#56d364',
-        container: '#79c0ff', unknown: '#6b7280'
+        server: '#3b82f6', switch: '#10b981', router: '#f59e0b',
+        firewall: '#ef4444', network: '#8b5cf6', web: '#22c55e',
+        container: '#06b6d4', unknown: '#9ca3af'
     };
-    const STATUS_COLORS = { online: '#10b981', offline: '#f85149', unknown: '#6b7280' };
+    const STATUS_COLORS = { online: '#10b981', offline: '#ef4444', unknown: '#9ca3af' };
     const SOURCE_STYLES = {
-        PROM: { bg: 'rgba(88,166,255,0.15)', color: '#58a6ff' },
-        KUMA: { bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
-        SNMP: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
-        MANUAL: { bg: 'rgba(139,148,158,0.15)', color: '#8b949e' }
+        PROM: { bg: 'rgba(37,99,235,0.1)', color: '#2563eb' },
+        KUMA: { bg: 'rgba(16,185,129,0.1)', color: '#10b981' },
+        SNMP: { bg: 'rgba(245,158,11,0.1)', color: '#f59e0b' },
+        MANUAL: { bg: 'rgba(107,114,128,0.1)', color: '#6b7280' }
     };
 
-    // ==================== TOAST ====================
+    const DEVICE_ICONS = {
+        server: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/></svg>',
+        switch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><line x1="18" y1="10" x2="18" y2="14"/></svg>',
+        router: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><path d="M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>',
+        firewall: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+        network: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="12" y1="10" x2="12" y2="14"/></svg>',
+        web: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+        container: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+        unknown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    };
+
+    function getDeviceIcon(type) {
+        return DEVICE_ICONS[type] || DEVICE_ICONS.unknown;
+    }
+
+    function makeNodeHtml(n) {
+        const statusColor = STATUS_COLORS[n.status] || '#9ca3af';
+        const borderColor = statusColor;
+        const icon = getDeviceIcon(n.deviceType);
+        const statusBadge = `<span style="display:inline-block;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;background:${statusColor}20;color:${statusColor};text-transform:uppercase;">${n.status}</span>`;
+        const sources = (n.sources || []).map(s => {
+            const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
+            return `<span style="display:inline-block;padding:1px 4px;border-radius:2px;font-size:8px;font-weight:600;background:${ss.bg};color:${ss.color};text-transform:uppercase;margin-top:3px;">${s}</span>`;
+        }).join(' ');
+        const typeLabel = n.deviceType.charAt(0).toUpperCase() + n.deviceType.slice(1);
+        return `<div style="background:white;border:2px solid ${borderColor};border-radius:8px;padding:10px 12px;min-width:140px;max-width:180px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+            <div style="color:${borderColor};margin-bottom:4px;">${icon}</div>
+            <div style="font-size:12px;font-weight:700;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(n.name)}</div>
+            <div style="font-size:10px;color:#6b7280;margin:2px 0;">${esc(typeLabel)}</div>
+            <div style="font-size:10px;color:#1a1a2e;font-family:monospace;">${esc(n.ip)}</div>
+            <div style="margin-top:4px;">${statusBadge}</div>
+            <div style="margin-top:3px;">${sources}</div>
+        </div>`;
+    }
+
     function showToast(type, msg) {
         const t = document.getElementById('toast');
         t.className = 'toast ' + type;
@@ -449,9 +476,9 @@
         setTimeout(() => { t.style.display = 'none'; }, 4000);
     }
 
-    // ==================== MODAL ====================
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
     // ==================== GRAPH ====================
     function initGraph(nodes, edges) {
@@ -460,41 +487,52 @@
 
         nodesData = nodes.map(n => ({
             id: n.id,
-            label: (n.name && n.name !== n.ip) ? n.name + '\n' + n.ip : n.ip,
-            title: `<b>${n.name}</b><br>IP: ${n.ip}<br>Type: ${n.deviceType}<br>Status: ${n.status}<br>Sources: ${n.sources.join(', ')}<br>Interfaces: ${(n.interfaces || []).length}`,
-            color: {
-                background: NODE_COLORS[n.deviceType] || NODE_COLORS.unknown,
-                border: STATUS_COLORS[n.status] || STATUS_COLORS.unknown,
-                highlight: { background: '#58a6ff', border: '#79c0ff' }
-            },
-            shape: 'dot',
-            size: n.sources.includes('PROM') || n.sources.includes('KUMA') ? 22 : 16,
-            font: { color: '#e6edf3', size: 10, face: 'monospace', strokeWidth: 2, strokeColor: '#0d1117' },
-            borderWidth: 3,
+            label: makeNodeHtml(n),
+            shape: 'box',
+            margin: { top: 10, right: 10, bottom: 10, left: 10 },
+            color: { border: STATUS_COLORS[n.status] || '#9ca3af', background: 'white', highlight: { border: '#2563eb', background: '#f0f7ff' } },
+            font: { color: '#1a1a2e', size: 11, face: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif', multi: 'html', align: 'center', strokeWidth: 0 },
+            borderWidth: 0,
             x: n.x, y: n.y,
-            fixed: (n.x !== undefined && n.y !== null && n.x !== null) ? { x: true, y: true } : false,
+            fixed: (n.x != null && n.y != null) ? { x: true, y: true } : false,
             _raw: n
         }));
 
-        edgesData = edges.map(e => ({
-            id: e.id || `edge-${e.source}-${e.target}`,
-            from: e.source, to: e.target,
-            title: e.label || '',
-            color: { color: '#30363d', highlight: '#58a6ff' },
-            width: 1.5,
-            smooth: { type: 'continuous' },
-            font: { color: '#8b949e', size: 9, face: 'monospace', align: 'middle', strokeWidth: 0 },
-            arrows: { to: { enabled: false } }
-        }));
+        edgesData = edges.map(e => {
+            const label = e.label || '';
+            return {
+                id: e.id || `edge-${e.source}-${e.target}`,
+                from: e.source, to: e.target,
+                label: label,
+                font: { color: '#6b7280', size: 10, face: 'monospace', align: 'middle', strokeWidth: 2, strokeColor: 'white' },
+                color: { color: '#94a3b8', highlight: '#2563eb', hover: '#64748b' },
+                width: 2,
+                smooth: { type: 'cubicBezier', roundness: 0.3 },
+                arrows: { to: { enabled: true, scaleFactor: 0.5 } }
+            };
+        });
 
         const visNodes = new vis.DataSet(nodesData);
         const visEdges = new vis.DataSet(edgesData);
 
         network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, {
             physics: {
-                enabled: true, solver: 'forceAtlas2Based',
-                forceAtlas2Based: { gravitationalConstant: -40, centralGravity: 0.005, springLength: 150, springConstant: 0.08, damping: 0.4 },
-                stabilization: { iterations: 200, fit: true }
+                enabled: true,
+                solver: 'hierarchicalRepulsion',
+                hierarchicalRepulsion: { nodeDistance: 180, centralGravity: 0.0, springLength: 150, springConstant: 0.02, damping: 0.09 },
+                stabilization: { iterations: 300, fit: true }
+            },
+            layout: {
+                hierarchical: {
+                    direction: 'UD',
+                    sortMethod: 'directed',
+                    levelSeparation: 150,
+                    nodeSpacing: 200,
+                    treeSpacing: 200,
+                    blockShifting: true,
+                    edgeMinimization: true,
+                    parentCentralization: true
+                }
             },
             interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true }
         });
@@ -538,39 +576,32 @@
         document.getElementById('detail-type').textContent = n.deviceType;
         const st = document.getElementById('detail-status');
         st.textContent = n.status.toUpperCase();
-        st.style.color = STATUS_COLORS[n.status] || '#6b7280';
+        st.style.color = STATUS_COLORS[n.status] || '#9ca3af';
 
         const srcEl = document.getElementById('detail-sources');
-        srcEl.innerHTML = n.sources.map(s => {
+        srcEl.innerHTML = (n.sources || []).map(s => {
             const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
             return `<span class="source-tag" style="background:${ss.bg};color:${ss.color};">${s}</span>`;
         }).join('');
 
         const labelsEl = document.getElementById('detail-labels');
         const entries = Object.entries(n.labels || {});
-        labelsEl.innerHTML = entries.length ? '<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Labels:</div>' +
+        labelsEl.innerHTML = entries.length ? '<div style="font-size:10px;color:#6b7280;margin-bottom:4px;">Labels:</div>' +
             entries.map(([k, v]) => `<div class="detail-row"><span class="detail-label">${esc(k)}</span><span class="detail-value" style="font-size:10px;">${esc(String(v))}</span></div>`).join('') : '';
 
         const ifaces = n.interfaces || [];
         const ifaceEl = document.getElementById('detail-interfaces');
         if (ifaces.length > 0) {
-            let html = '<div style="font-size:10px;color:var(--text-muted);margin:8px 0 4px;">Interfaces (' + ifaces.length + '):</div>';
+            let html = '<div style="font-size:10px;color:#6b7280;margin:8px 0 4px;">Interfaces (' + ifaces.length + '):</div>';
             html += '<table style="width:100%;font-size:10px;border-collapse:collapse;">';
-            html += '<tr style="color:var(--text-muted);border-bottom:1px solid var(--app-border);"><th style="text-align:left;padding:2px 4px;">Name</th><th style="text-align:left;padding:2px 4px;">IP</th><th style="text-align:left;padding:2px 4px;">Speed</th><th style="text-align:left;padding:2px 4px;">Status</th></tr>';
+            html += '<tr style="color:#6b7280;border-bottom:1px solid #f0f0f0;"><th style="text-align:left;padding:2px 4px;">Name</th><th style="text-align:left;padding:2px 4px;">IP</th><th style="text-align:left;padding:2px 4px;">Speed</th><th style="text-align:left;padding:2px 4px;">Status</th></tr>';
             for (const iface of ifaces) {
-                const statusColor = iface.status === 'up' ? '#10b981' : iface.status === 'down' ? '#f85149' : '#6b7280';
-                html += `<tr style="border-bottom:1px solid rgba(48,54,61,0.5);">
-                    <td style="padding:2px 4px;color:var(--text-white);">${esc(iface.name)}</td>
-                    <td style="padding:2px 4px;color:var(--text-white);font-family:monospace;">${esc(iface.ip || '-')}</td>
-                    <td style="padding:2px 4px;color:var(--text-white);">${esc(iface.speedStr || '-')}</td>
-                    <td style="padding:2px 4px;color:${statusColor};">${iface.status.toUpperCase()}</td>
-                </tr>`;
+                const sc = iface.status === 'up' ? '#10b981' : iface.status === 'down' ? '#ef4444' : '#9ca3af';
+                html += `<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:2px 4px;">${esc(iface.name)}</td><td style="padding:2px 4px;font-family:monospace;">${esc(iface.ip || '-')}</td><td style="padding:2px 4px;">${esc(iface.speedStr || '-')}</td><td style="padding:2px 4px;color:${sc};">${iface.status.toUpperCase()}</td></tr>`;
             }
             html += '</table>';
             ifaceEl.innerHTML = html;
-        } else {
-            ifaceEl.innerHTML = '';
-        }
+        } else { ifaceEl.innerHTML = ''; }
 
         document.getElementById('node-detail').classList.add('visible');
     }
@@ -580,14 +611,9 @@
         selectedNodeId = null;
     }
 
-    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
     // ==================== API ====================
     async function apiFetch(url, opts = {}) {
-        const res = await fetch(url, {
-            ...opts,
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, ...(opts.headers || {}) }
-        });
+        const res = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, ...(opts.headers || {}) } });
         return res.json();
     }
 
@@ -604,8 +630,7 @@
     }
 
     function toggleScanBar() {
-        const bar = document.getElementById('scan-bar');
-        bar.classList.toggle('visible');
+        document.getElementById('scan-bar').classList.toggle('visible');
     }
 
     async function runScan() {
@@ -654,8 +679,7 @@
             });
             if (!data.success) throw new Error(data.error);
             closeModal('modal-add-device');
-            const node = data.data;
-            pendingNodes.push(node);
+            pendingNodes.push(data.data);
             renderPendingList('Added Devices');
             showToast('success', `Device "${name}" added to pending list`);
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
@@ -679,12 +703,12 @@
         const tgt = document.getElementById('edge-target');
         src.innerHTML = ''; tgt.innerHTML = '';
         nodesData.forEach(n => {
-            const label = n.label.split('\n')[0] + ' (' + (n._raw?.ip || '') + ')';
+            const label = n._raw?.name + ' (' + (n._raw?.ip || '') + ')';
             src.add(new Option(label, n.id));
             tgt.add(new Option(label, n.id));
         });
         if (!nodesData.length) { src.add(new Option('No devices', '')); tgt.add(new Option('No devices', '')); }
-        document.getElementById('edge-label').value = '';
+        document.getElementById('edge-label').value = 'Ethernet';
         document.getElementById('edge-error').style.display = 'none';
         openModal('modal-add-edge');
     }
@@ -692,7 +716,7 @@
     async function submitEdge() {
         const source = document.getElementById('edge-source').value;
         const target = document.getElementById('edge-target').value;
-        const label = document.getElementById('edge-label').value.trim();
+        const label = document.getElementById('edge-label').value;
         const errEl = document.getElementById('edge-error');
         if (!source || !target) { errEl.textContent = 'Source and target required.'; errEl.style.display = 'block'; return; }
         if (source === target) { errEl.textContent = 'Cannot connect device to itself.'; errEl.style.display = 'block'; return; }
@@ -719,6 +743,50 @@
         } catch (e) { showToast('error', 'Clear failed: ' + e.message); }
     }
 
+    // ==================== EXPORT / IMPORT ====================
+    function exportPNG() {
+        if (!network) return;
+        const canvas = document.getElementById('topology-graph').querySelector('canvas');
+        if (!canvas) { showToast('error', 'No canvas found'); return; }
+        const link = document.createElement('a');
+        link.download = 'network-topology.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('success', 'PNG exported');
+    }
+
+    function exportJSON() {
+        const data = { nodes: nodesData.map(n => n._raw), edges: edgesData.map(e => ({ source: e.from, target: e.to, label: e.label })) };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.download = 'network-topology.json';
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        showToast('success', 'JSON exported');
+    }
+
+    function importJSON() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                if (data.nodes) {
+                    for (const n of data.nodes) {
+                        await apiFetch('/api/v1/topology/device', { method: 'POST', body: JSON.stringify(n) });
+                    }
+                }
+                await loadGraph();
+                showToast('success', 'Imported ' + (data.nodes?.length || 0) + ' devices');
+            } catch (err) { showToast('error', 'Import failed: ' + err.message); }
+        };
+        input.click();
+    }
+
     // ==================== RESULTS SIDEBAR ====================
     function renderPendingList(title) {
         const sidebar = document.getElementById('results-sidebar');
@@ -730,26 +798,22 @@
         sidebar.classList.add('visible');
 
         if (pendingNodes.length === 0) {
-            list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No devices to add</div>';
+            list.innerHTML = '<div style="padding:20px;text-align:center;color:#6b7280;font-size:11px;">No devices to add</div>';
             return;
         }
 
         list.innerHTML = pendingNodes.map((n, i) => {
-            const statusColor = STATUS_COLORS[n.status] || '#6b7280';
-            const typeColor = NODE_COLORS[n.deviceType] || '#6b7280';
+            const statusColor = STATUS_COLORS[n.status] || '#9ca3af';
+            const typeColor = NODE_COLORS[n.deviceType] || '#9ca3af';
             const sources = (n.sources || []).map(s => {
                 const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
                 return `<span style="background:${ss.bg};color:${ss.color};padding:1px 4px;border-radius:2px;font-size:9px;font-weight:600;">${s}</span>`;
             }).join(' ');
-            return `<div class="result-item" data-idx="${i}">
+            return `<div class="result-item">
                 <span class="result-dot" style="background:${typeColor};border-color:${statusColor};"></span>
                 <div class="result-info">
                     <div class="result-name">${esc(n.name)}</div>
-                    <div class="result-meta">
-                        <span>${esc(n.ip)}</span>
-                        <span>${esc(n.deviceType)}</span>
-                        <span>${sources}</span>
-                    </div>
+                    <div class="result-meta"><span>${esc(n.ip)}</span><span>${esc(n.deviceType)}</span><span>${sources}</span></div>
                 </div>
                 <div class="result-actions">
                     <button class="btn-add" onclick="addToCanvas(${i})">Add</button>
@@ -762,41 +826,29 @@
     function addToCanvas(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
         const node = pendingNodes[idx];
-        const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
-        if (exists) {
+        if (nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id)) {
             showToast('info', `Device "${node.name}" already on canvas`);
             return;
         }
-        pendingNodes.splice(idx, 1);
-        pendingNodes.push(node);
-
         const visNode = {
             id: node.id,
-            label: (node.name && node.name !== node.ip) ? node.name + '\n' + node.ip : node.ip,
-            title: `<b>${node.name}</b><br>IP: ${node.ip}<br>Type: ${node.deviceType}<br>Status: ${node.status}<br>Sources: ${(node.sources || []).join(', ')}`,
-            color: {
-                background: NODE_COLORS[node.deviceType] || NODE_COLORS.unknown,
-                border: STATUS_COLORS[node.status] || STATUS_COLORS.unknown,
-                highlight: { background: '#58a6ff', border: '#79c0ff' }
-            },
-            shape: 'dot',
-            size: (node.sources || []).includes('PROM') || (node.sources || []).includes('KUMA') ? 22 : 16,
-            font: { color: '#e6edf3', size: 10, face: 'monospace', strokeWidth: 2, strokeColor: '#0d1117' },
-            borderWidth: 3,
+            label: makeNodeHtml(node),
+            shape: 'box',
+            margin: { top: 10, right: 10, bottom: 10, left: 10 },
+            color: { border: STATUS_COLORS[node.status] || '#9ca3af', background: 'white', highlight: { border: '#2563eb', background: '#f0f7ff' } },
+            font: { color: '#1a1a2e', size: 11, face: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif', multi: 'html', align: 'center', strokeWidth: 0 },
+            borderWidth: 0,
             _raw: node
         };
         nodesData.push(visNode);
-        if (network) {
-            network.body.data.nodes.add(visNode);
-        }
+        if (network) network.body.data.nodes.add(visNode);
         pendingNodes.splice(idx, 1);
         renderPendingList(document.getElementById('results-title').textContent);
+        document.getElementById('stat-nodes').textContent = nodesData.length;
         showToast('success', `"${node.name}" added to canvas`);
     }
 
     function dismissPending(idx) {
-        if (idx < 0 || idx >= pendingNodes.length) return;
-        const name = pendingNodes[idx].name;
         pendingNodes.splice(idx, 1);
         renderPendingList(document.getElementById('results-title').textContent);
     }
@@ -807,27 +859,19 @@
         const toAdd = [...pendingNodes];
         pendingNodes = [];
         for (const node of toAdd) {
-            const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
-            if (exists) continue;
+            if (nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id)) continue;
             const visNode = {
                 id: node.id,
-                label: (node.name && node.name !== node.ip) ? node.name + '\n' + node.ip : node.ip,
-                title: `<b>${node.name}</b><br>IP: ${node.ip}<br>Type: ${node.deviceType}<br>Status: ${node.status}<br>Sources: ${(node.sources || []).join(', ')}`,
-                color: {
-                    background: NODE_COLORS[node.deviceType] || NODE_COLORS.unknown,
-                    border: STATUS_COLORS[node.status] || STATUS_COLORS.unknown,
-                    highlight: { background: '#58a6ff', border: '#79c0ff' }
-                },
-                shape: 'dot',
-                size: (node.sources || []).includes('PROM') || (node.sources || []).includes('KUMA') ? 22 : 16,
-                font: { color: '#e6edf3', size: 10, face: 'monospace', strokeWidth: 2, strokeColor: '#0d1117' },
-                borderWidth: 3,
+                label: makeNodeHtml(node),
+                shape: 'box',
+                margin: { top: 10, right: 10, bottom: 10, left: 10 },
+                color: { border: STATUS_COLORS[node.status] || '#9ca3af', background: 'white', highlight: { border: '#2563eb', background: '#f0f7ff' } },
+                font: { color: '#1a1a2e', size: 11, face: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif', multi: 'html', align: 'center', strokeWidth: 0 },
+                borderWidth: 0,
                 _raw: node
             };
             nodesData.push(visNode);
-            if (network) {
-                network.body.data.nodes.add(visNode);
-            }
+            if (network) network.body.data.nodes.add(visNode);
             added++;
         }
         renderPendingList(document.getElementById('results-title').textContent);
