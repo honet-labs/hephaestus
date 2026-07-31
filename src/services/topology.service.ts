@@ -1,7 +1,7 @@
 import axios from "axios";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { query, pool } from "../config/db";
+import pool, { query } from "../config/db";
 import { config } from "../config/env";
 
 const execFileAsync = promisify(execFile);
