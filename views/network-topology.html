@@ -462,47 +462,38 @@
 
     // ==================== GRAPH ====================
 
-    const DEVICE_ICONS = {
-        server: '<svg viewBox="0 0 24 24" fill="none" stroke="STROKE_COLOR" stroke-width="1.5" width="28" height="28"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1" fill="STROKE_COLOR"/><circle cx="6" cy="18" r="1" fill="STROKE_COLOR"/></svg>',
-        switch: '<svg viewBox="0 0 24 24" fill="none" stroke="STROKE_COLOR" stroke-width="1.5" width="28" height="28"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><line x1="18" y1="10" x2="18" y2="14"/></svg>',
-        router: '<svg viewBox="0 0 24 24" fill="none" stroke="STROKE_COLOR" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>',
-        firewall: '<svg viewBox="0 0 24 24" fill="none" stroke="STROKE_COLOR" stroke-width="1.5" width="28" height="28"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-        network: '<svg viewBox="0 0 24 24" fill="none" stroke="STROKE_COLOR" stroke-width="1.5" width="28" height="28"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="12" y1="10" x2="12" y2="14"/></svg>',
-        web: '<svg viewBox="0 0 24 24" fill="none" stroke="STROKE_COLOR" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-        container: '<svg viewBox="0 0 24 24" fill="none" stroke="STROKE_COLOR" stroke-width="1.5" width="28" height="28"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
-        unknown: '<svg viewBox="0 0 24 24" fill="none" stroke="STROKE_COLOR" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
-    };
-
-    function makeNodeHtml(n) {
-        const sc = STATUS_COLORS[n.status] || '#6b7280';
-        const icon = (DEVICE_ICONS[n.deviceType] || DEVICE_ICONS.unknown).replace(/STROKE_COLOR/g, sc);
-        const typeLabel = n.deviceType.charAt(0).toUpperCase() + n.deviceType.slice(1);
-        const srcBadge = (n.sources || []).map(s => {
-            const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
-            return `<span style="background:${ss.bg};color:${ss.color};padding:1px 4px;border-radius:2px;font-size:8px;font-weight:700;">${s}</span>`;
-        }).join(' ');
-        return '<div style="background:#161b22;border:2px solid ' + sc + ';border-radius:6px;padding:8px 10px;min-width:130px;max-width:170px;text-align:center;font-family:monospace;">'
-            + '<div style="margin-bottom:3px;">' + icon + '</div>'
-            + '<div style="font-size:11px;font-weight:700;color:#e6edf3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(n.name) + '</div>'
-            + '<div style="font-size:9px;color:#8b949e;">' + esc(typeLabel) + '</div>'
-            + '<div style="font-size:10px;color:#58a6ff;font-family:monospace;">' + esc(n.ip) + '</div>'
-            + '<div style="margin-top:3px;"><span style="background:' + sc + '22;color:' + sc + ';padding:1px 5px;border-radius:2px;font-size:8px;font-weight:700;text-transform:uppercase;">' + n.status + '</span></div>'
-            + '<div style="margin-top:3px;">' + srcBadge + '</div>'
-            + '</div>';
-    }
-
     function initGraph(nodes, edges) {
         const container = document.getElementById('topology-graph');
         if (!container) return;
 
-        nodesData = nodes.map(n => ({
-            id: n.id,
-            label: makeNodeHtml(n),
-            shape: 'html',
-            x: n.x, y: n.y,
-            fixed: (n.x !== undefined && n.y !== null && n.x !== null) ? { x: true, y: true } : false,
-            _raw: n
-        }));
+        nodesData = nodes.map(n => {
+            const sc = STATUS_COLORS[n.status] || '#6b7280';
+            const srcTags = (n.sources || []).map(s => s).join('+');
+            const labelParts = [n.name];
+            if (n.deviceType !== 'unknown') labelParts.push(n.deviceType.toUpperCase());
+            labelParts.push(n.ip);
+            labelParts.push(n.status.toUpperCase());
+            if (srcTags) labelParts.push(srcTags);
+
+            return {
+                id: n.id,
+                label: labelParts.join('\n'),
+                title: `<b>${esc(n.name)}</b><br>IP: ${n.ip}<br>Type: ${n.deviceType}<br>Status: ${n.status}<br>Sources: ${(n.sources||[]).join(', ')}<br>Interfaces: ${(n.interfaces||[]).length}`,
+                shape: 'box',
+                margin: 10,
+                color: {
+                    background: '#161b22',
+                    border: sc,
+                    highlight: { background: '#1c2333', border: '#58a6ff' },
+                    hover: { background: '#1c2333', border: '#58a6ff' }
+                },
+                font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
+                borderWidth: 2,
+                x: n.x, y: n.y,
+                fixed: (n.x !== undefined && n.y !== null && n.x !== null) ? { x: true, y: true } : false,
+                _raw: n
+            };
+        });
 
         edgesData = edges.map(e => ({
             id: e.id || `edge-${e.source}-${e.target}`,
@@ -511,29 +502,25 @@
             title: e.label || '',
             font: { color: '#8b949e', size: 10, face: 'monospace', align: 'middle', strokeWidth: 2, strokeColor: '#0d1117' },
             color: { color: '#30363d', highlight: '#58a6ff', hover: '#58a6ff' },
-            width: 2,
-            smooth: { type: 'cubicBezier', roundness: 0.3 },
-            arrows: { to: { enabled: true, scaleFactor: 0.5 } }
+            width: 1.5,
+            smooth: { type: 'continuous' },
+            arrows: { to: { enabled: false } }
         }));
 
         const visNodes = new vis.DataSet(nodesData);
         const visEdges = new vis.DataSet(edgesData);
 
         network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, {
-            physics: false,
-            layout: {
-                hierarchical: {
-                    direction: 'UD',
-                    sortMethod: 'directed',
-                    levelSeparation: 200,
-                    nodeSpacing: 250,
-                    treeSpacing: 250,
-                    blockShifting: true,
-                    edgeMinimization: true,
-                    parentCentralization: true
-                }
+            physics: {
+                enabled: true, solver: 'forceAtlas2Based',
+                forceAtlas2Based: { gravitationalConstant: -40, centralGravity: 0.005, springLength: 150, springConstant: 0.08, damping: 0.4 },
+                stabilization: { iterations: 200, fit: true }
             },
             interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true }
+        });
+
+        network.once('stabilizationIterationsDone', function() {
+            network.setOptions({ physics: { enabled: false } });
         });
 
         network.on('dragEnd', async function(params) {
@@ -800,10 +787,21 @@
             showToast('info', `Device "${node.name}" already on canvas`);
             return;
         }
+        const labelParts = [node.name];
+        if (node.deviceType !== 'unknown') labelParts.push(node.deviceType.toUpperCase());
+        labelParts.push(node.ip);
+        labelParts.push(node.status.toUpperCase());
+        if (node.sources && node.sources.length) labelParts.push(node.sources.join('+'));
+        const sc = STATUS_COLORS[node.status] || '#6b7280';
         const visNode = {
             id: node.id,
-            label: makeNodeHtml(node),
-            shape: 'html',
+            label: labelParts.join('\n'),
+            title: `<b>${esc(node.name)}</b><br>IP: ${node.ip}<br>Type: ${node.deviceType}<br>Status: ${node.status}`,
+            shape: 'box',
+            margin: 10,
+            color: { background: '#161b22', border: sc, highlight: { background: '#1c2333', border: '#58a6ff' }, hover: { background: '#1c2333', border: '#58a6ff' } },
+            font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
+            borderWidth: 2,
             _raw: node
         };
         nodesData.push(visNode);
@@ -827,10 +825,21 @@
         for (const node of toAdd) {
             const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
             if (exists) continue;
+            const labelParts2 = [node.name];
+            if (node.deviceType !== 'unknown') labelParts2.push(node.deviceType.toUpperCase());
+            labelParts2.push(node.ip);
+            labelParts2.push(node.status.toUpperCase());
+            if (node.sources && node.sources.length) labelParts2.push(node.sources.join('+'));
+            const sc2 = STATUS_COLORS[node.status] || '#6b7280';
             const visNode = {
                 id: node.id,
-                label: makeNodeHtml(node),
-                shape: 'html',
+                label: labelParts2.join('\n'),
+                title: `<b>${esc(node.name)}</b><br>IP: ${node.ip}<br>Type: ${node.deviceType}<br>Status: ${node.status}`,
+                shape: 'box',
+                margin: 10,
+                color: { background: '#161b22', border: sc2, highlight: { background: '#1c2333', border: '#58a6ff' }, hover: { background: '#1c2333', border: '#58a6ff' } },
+                font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
+                borderWidth: 2,
                 _raw: node
             };
             nodesData.push(visNode);
