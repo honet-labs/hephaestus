@@ -699,7 +699,8 @@
         const tgt = document.getElementById('edge-target');
         src.innerHTML = ''; tgt.innerHTML = '';
         nodesData.forEach(n => {
-            const label = n.label.split('\n')[0] + ' (' + (n._raw?.ip || '') + ')';
+            const r = n._raw || {};
+            const label = (r.name || n.id) + ' (' + (r.ip || '') + ')';
             src.add(new Option(label, n.id));
             tgt.add(new Option(label, n.id));
         });
