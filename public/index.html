@@ -248,6 +248,14 @@
               <div class="menu-item-title">Grok Debugger</div>
             </div>
           </a>
+          <a href="#network-topology" id="menu-network-topology" class="menu-item">
+            <span class="menu-item-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"></circle><circle cx="5" cy="19" r="3"></circle><circle cx="19" cy="19" r="3"></circle><line x1="12" y1="8" x2="5" y2="16"></line><line x1="12" y1="8" x2="19" y2="16"></line></svg>
+            </span>
+            <div>
+              <div class="menu-item-title">Network Topology</div>
+            </div>
+          </a>
           <!-- SNMP Explorer Parent Menu -->
           <div class="menu-item-group" style="display: flex; flex-direction: column;">
             <a href="javascript:void(0)" id="menu-snmp-parent" class="menu-item" onclick="toggleSnmpSubmenu()" style="cursor: pointer;">
@@ -1100,6 +1108,130 @@
             <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
               <button class="btn btn-secondary" onclick="closeRenameDpFileModal()" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
               <button class="btn btn-primary" onclick="submitRenameDpFile()" style="padding: 8px 16px; font-size: 12px; height: auto;">Rename</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: NETWORK TOPOLOGY -->
+        <div id="page-network-topology" class="hidden">
+          <div class="page-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span id="topology-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #58a6ff;"></span>
+              <span style="font-size: 11px; color: var(--text-muted);">Nodes: <strong id="topology-node-count" style="color: var(--text-white);">0</strong> | Edges: <strong id="topology-edge-count" style="color: var(--text-white);">0</strong></span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-secondary" onclick="topologyAutoScan()" style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                Auto Scan
+              </button>
+              <button class="btn btn-secondary" onclick="showAddTopologyDeviceModal()" style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Add Device
+              </button>
+              <button class="btn btn-secondary" onclick="showAddTopologyEdgeModal()" style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                Add Connection
+              </button>
+              <button class="btn btn-danger" onclick="topologyClearAll()" style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Scan Settings Bar -->
+          <div id="topology-scan-bar" style="display: none; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <label style="font-size: 11px; color: var(--text-muted); white-space: nowrap;">SNMP IP Range:</label>
+            <input type="text" id="topology-ip-range" placeholder="e.g. 10.11.12.0/24 or 10.11.12.1-10.11.12.50" style="background: var(--bg-primary); color: var(--text-white); border: 1px solid var(--border-color); border-radius: 4px; padding: 5px 8px; font-size: 11px; min-width: 280px;">
+            <label style="font-size: 11px; color: var(--text-muted);">Community:</label>
+            <input type="text" id="topology-snmp-community" value="public" style="background: var(--bg-primary); color: var(--text-white); border: 1px solid var(--border-color); border-radius: 4px; padding: 5px 8px; font-size: 11px; width: 100px;">
+            <button class="btn btn-primary" onclick="topologyRunScan()" style="font-size: 11px; padding: 5px 12px;">Run Scan</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('topology-scan-bar').style.display='none'" style="font-size: 11px; padding: 5px 8px;">Cancel</button>
+          </div>
+
+          <!-- Topology Graph Container -->
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; position: relative;">
+            <div id="topology-graph" style="width: 100%; height: calc(100vh - 200px); min-height: 500px; background: #0d1117;"></div>
+
+            <!-- Graph Legend -->
+            <div style="position: absolute; bottom: 12px; left: 12px; background: rgba(13,17,23,0.9); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); z-index: 10;">
+              <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; margin-right: 3px;"></span>Online</span>
+              <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; margin-right: 3px;"></span>Offline</span>
+              <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #6b7280; margin-right: 3px;"></span>Unknown</span>
+              <span style="border-left: 1px solid var(--border-color); padding-left: 12px;"><span style="display: inline-block; padding: 1px 4px; background: rgba(88,166,255,0.15); color: #58a6ff; border-radius: 2px; font-size: 9px; margin-right: 3px;">PROM</span>Prometheus</span>
+              <span><span style="display: inline-block; padding: 1px 4px; background: rgba(16,185,129,0.15); color: #10b981; border-radius: 2px; font-size: 9px; margin-right: 3px;">KUMA</span>Uptime Kuma</span>
+              <span><span style="display: inline-block; padding: 1px 4px; background: rgba(245,158,11,0.15); color: #f59e0b; border-radius: 2px; font-size: 9px; margin-right: 3px;">SNMP</span>SNMP Scan</span>
+              <span><span style="display: inline-block; padding: 1px 4px; background: rgba(139,148,158,0.15); color: #8b949e; border-radius: 2px; font-size: 9px; margin-right: 3px;">MANUAL</span>Manual</span>
+            </div>
+          </div>
+
+          <!-- Error/Status -->
+          <div id="topology-status-msg" style="display: none; margin-top: 12px;" class="alert"></div>
+        </div>
+
+        <!-- MODAL: ADD TOPOLOGY DEVICE -->
+        <div id="modal-topology-device" class="modal-overlay">
+          <div class="modal-dialog" style="max-width: 420px; width: 95%;">
+            <div class="modal-header">
+              <h3 class="modal-title">Add Network Device</h3>
+              <button class="modal-close" onclick="closeModal('modal-topology-device')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Device Name</label>
+                <input type="text" id="topo-device-name" placeholder="e.g. Core-Switch-01" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              </div>
+              <div class="form-group">
+                <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">IP Address</label>
+                <input type="text" id="topo-device-ip" placeholder="e.g. 10.11.12.1" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              </div>
+              <div class="form-group">
+                <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Device Type</label>
+                <select id="topo-device-type" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  <option value="server">Server</option>
+                  <option value="switch">Switch</option>
+                  <option value="router">Router</option>
+                  <option value="firewall">Firewall</option>
+                  <option value="network">Network Device</option>
+                  <option value="web">Web Service</option>
+                  <option value="container">Container</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+              </div>
+              <div id="topo-device-error" style="display: none; font-size: 11px; color: var(--error);"></div>
+            </div>
+            <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="btn btn-secondary" onclick="closeModal('modal-topology-device')" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
+              <button class="btn btn-primary" onclick="submitAddTopologyDevice()" style="padding: 8px 16px; font-size: 12px; height: auto;">Add Device</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL: ADD TOPOLOGY EDGE -->
+        <div id="modal-topology-edge" class="modal-overlay">
+          <div class="modal-dialog" style="max-width: 420px; width: 95%;">
+            <div class="modal-header">
+              <h3 class="modal-title">Add Connection</h3>
+              <button class="modal-close" onclick="closeModal('modal-topology-edge')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Source Device</label>
+                <select id="topo-edge-source" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;"></select>
+              </div>
+              <div class="form-group">
+                <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Target Device</label>
+                <select id="topo-edge-target" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;"></select>
+              </div>
+              <div class="form-group">
+                <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Label (optional)</label>
+                <input type="text" id="topo-edge-label" placeholder="e.g. eth0, VLAN 100" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+              </div>
+              <div id="topo-edge-error" style="display: none; font-size: 11px; color: var(--error);"></div>
+            </div>
+            <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="btn btn-secondary" onclick="closeModal('modal-topology-edge')" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
+              <button class="btn btn-primary" onclick="submitAddTopologyEdge()" style="padding: 8px 16px; font-size: 12px; height: auto;">Add Connection</button>
             </div>
           </div>
         </div>
@@ -2753,6 +2885,7 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
   <script src="js/app.js?v=4.3.1"></script>
 </body>
 </html>

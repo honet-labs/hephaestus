@@ -532,6 +532,31 @@ export async function initDb() {
       group_name VARCHAR(255) DEFAULT 'Default',
       tags TEXT[] DEFAULT '{}',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 19. TopologyDevices - Manually added network devices for topology map
+    `CREATE TABLE IF NOT EXISTS topology_devices (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      ip_address VARCHAR(45) NOT NULL,
+      device_type VARCHAR(50) DEFAULT 'unknown',
+      status VARCHAR(20) DEFAULT 'unknown',
+      sources TEXT[] DEFAULT '{}',
+      labels JSONB DEFAULT '{}',
+      x DOUBLE PRECISION,
+      y DOUBLE PRECISION,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 20. TopologyEdges - Connections between devices
+    `CREATE TABLE IF NOT EXISTS topology_edges (
+      id SERIAL PRIMARY KEY,
+      source_id VARCHAR(50) NOT NULL REFERENCES topology_devices(id) ON DELETE CASCADE,
+      target_id VARCHAR(50) NOT NULL REFERENCES topology_devices(id) ON DELETE CASCADE,
+      label VARCHAR(100),
+      edge_type VARCHAR(50) DEFAULT 'ethernet',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(source_id, target_id)
     );`
   ];
 
@@ -580,7 +605,10 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_query_panels_created_at ON query_panels(created_at DESC);`,
     `CREATE INDEX IF NOT EXISTS idx_uptime_kuma_configs_is_active ON uptime_kuma_configs(is_active) WHERE is_active = true;`,
     `CREATE INDEX IF NOT EXISTS idx_backup_schedules_is_active ON backup_schedules(is_active) WHERE is_active = true;`,
-    `CREATE INDEX IF NOT EXISTS idx_backup_history_started_at ON backup_history(started_at DESC);`
+    `CREATE INDEX IF NOT EXISTS idx_backup_history_started_at ON backup_history(started_at DESC);`,
+    `CREATE INDEX IF NOT EXISTS idx_topology_devices_ip ON topology_devices(ip_address);`,
+    `CREATE INDEX IF NOT EXISTS idx_topology_edges_source ON topology_edges(source_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_topology_edges_target ON topology_edges(target_id);`
   ];
   await Promise.all(indexQueries.map(q => pool.query(q)));
 

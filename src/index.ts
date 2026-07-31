@@ -20,6 +20,7 @@ import dataprepperRoutes from "./routes/dataprepper.routes";
 import backupRoutes from "./routes/backup.routes";
 import remoteHostRoutes from "./routes/remote-host.routes";
 import vpsControlRoutes from "./routes/vps-control.routes";
+import topologyRoutes from "./routes/topology.routes";
 
 const app = express();
 
@@ -143,6 +144,7 @@ app.use("/api/v1/dataprepper", dataprepperRoutes);
 app.use("/api/v1/backup", backupRoutes);
 app.use("/api/v1/remote-host", remoteHostRoutes);
 app.use("/api/v1/vps", vpsControlRoutes);
+app.use("/api/v1/topology", topologyRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
