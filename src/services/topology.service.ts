@@ -16,8 +16,18 @@ export interface TopologyNode {
   status: "online" | "offline" | "unknown";
   sources: string[];
   labels: Record<string, any>;
+  interfaces?: NetworkInterface[];
   x?: number;
   y?: number;
+}
+
+export interface NetworkInterface {
+  name: string;
+  ip: string;
+  mac: string;
+  speed: number;
+  speedStr: string;
+  status: "up" | "down" | "unknown";
 }
 
 export interface TopologyEdge {
@@ -241,9 +251,18 @@ export class TopologyService {
 
   // ==================== SOURCE C: SNMP SCANNER ====================
 
+  private static readonly SYS_NAME_OID = "1.3.6.1.2.1.1.5.0";
+  private static readonly SYS_DESCR_OID = "1.3.6.1.2.1.1.1.0";
+  private static readonly IF_DESCR_OID = "1.3.6.1.2.1.2.2.1.2";
+  private static readonly IF_SPEED_OID = "1.3.6.1.2.1.2.2.1.5";
+  private static readonly IF_PHYS_ADDR_OID = "1.3.6.1.2.1.2.2.1.6";
+  private static readonly IF_OPER_STATUS_OID = "1.3.6.1.2.1.2.2.1.8";
+  private static readonly IP_AD_ENT_ADDR_OID = "1.3.6.1.2.1.4.20.1.1";
+
   /**
-   * Scan an IP range using ICMP ping + SNMP GET.
-   * For alive hosts, fetch sysName and sysDescr.
+   * Scan an IP range using ICMP ping + SNMP GET for sysName/sysDescr,
+   * then SNMP WALK IF-MIB to get interface details (ifDescr, ifSpeed, ifPhysAddress, ifOperStatus).
+   * Also walks ipAddrTable to map interface IPs.
    */
   async scanNetwork(
     ipRange: string,
@@ -256,7 +275,6 @@ export class TopologyService {
 
     console.log(`[Topology] Scanning ${ips.length} IPs in range ${ipRange}...`);
 
-    // Ping sweep in batches of 20
     const batchSize = 20;
     for (let i = 0; i < ips.length; i += batchSize) {
       const batch = ips.slice(i, i + batchSize);
@@ -266,6 +284,8 @@ export class TopologyService {
 
       for (const result of results) {
         if (result.alive) {
+          const interfaces = await this.snmpWalkInterfaces(result.ip, community, snmpVersion, timeout);
+
           nodes.push({
             id: `snmp-${result.ip}`,
             name: result.sysName || result.ip,
@@ -277,8 +297,10 @@ export class TopologyService {
               sysName: result.sysName,
               sysDescr: result.sysDescr,
               snmpCommunity: community,
-              snmpVersion
-            }
+              snmpVersion,
+              interfaceCount: interfaces.length
+            },
+            interfaces
           });
         }
       }
@@ -286,6 +308,114 @@ export class TopologyService {
 
     console.log(`[Topology] SNMP scan complete. Found ${nodes.length} alive hosts.`);
     return nodes;
+  }
+
+  /**
+   * SNMP WALK IF-MIB and ipAddrTable to get interface details for a host.
+   */
+  private async snmpWalkInterfaces(
+    ip: string,
+    community: string,
+    version: string,
+    timeout: number
+  ): Promise<NetworkInterface[]> {
+    const interfaces: NetworkInterface[] = [];
+    const versionFlag = version === "v1" ? "1" : "2c";
+
+    const [descrResult, speedResult, macResult, statusResult, ipAddrResult] = await Promise.all([
+      this.snmpWalkOid(ip, TopologyService.IF_DESCR_OID, community, versionFlag, timeout).catch(() => ""),
+      this.snmpWalkOid(ip, TopologyService.IF_SPEED_OID, community, versionFlag, timeout).catch(() => ""),
+      this.snmpWalkOid(ip, TopologyService.IF_PHYS_ADDR_OID, community, versionFlag, timeout).catch(() => ""),
+      this.snmpWalkOid(ip, TopologyService.IF_OPER_STATUS_OID, community, versionFlag, timeout).catch(() => ""),
+      this.snmpWalkOid(ip, TopologyService.IP_AD_ENT_ADDR_OID, community, versionFlag, timeout).catch(() => "")
+    ]);
+
+    const descrMap = this.parseWalkResult(descrResult);
+    const speedMap = this.parseWalkResult(speedResult);
+    const macMap = this.parseWalkResult(macResult);
+    const statusMap = this.parseWalkResult(statusResult);
+    const ipAddrMap = this.parseWalkResult(ipAddrResult);
+
+    for (const [idx, name] of descrMap) {
+      const speedRaw = parseInt(speedMap.get(idx) || "0") || 0;
+      const macRaw = macMap.get(idx) || "";
+      const operStatus = parseInt(statusMap.get(idx) || "0");
+      const ipAddr = ipAddrMap.get(idx) || "";
+
+      interfaces.push({
+        name: name || `if${idx}`,
+        ip: ipAddr,
+        mac: this.formatMac(macRaw),
+        speed: speedRaw,
+        speedStr: this.formatSpeed(speedRaw),
+        status: operStatus === 1 ? "up" : operStatus === 2 ? "down" : "unknown"
+      });
+    }
+
+    if (interfaces.length === 0 && ipAddrMap.size > 0) {
+      for (const [idx, ipAddr] of ipAddrMap) {
+        interfaces.push({
+          name: `ip${idx}`,
+          ip: ipAddr,
+          mac: "",
+          speed: 0,
+          speedStr: "-",
+          status: "up"
+        });
+      }
+    }
+
+    return interfaces;
+  }
+
+  private async snmpWalkOid(ip: string, oid: string, community: string, versionFlag: string, timeout: number): Promise<string> {
+    const args = ["-v", versionFlag, "-c", community, "-On", "-t", "2", "-r", "1", ip, oid];
+    try {
+      const { stdout } = await execFileAsync("snmpwalk", args, { timeout: timeout + 5000 });
+      return stdout;
+    } catch {
+      return "";
+    }
+  }
+
+  private parseWalkResult(output: string): Map<string, string> {
+    const map = new Map<string, string>();
+    const lines = output.split(/\r?\n/);
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const match = line.match(/^\.([\d.]+)\s*=\s*(.*?)$/);
+      if (match) {
+        const oidParts = match[1].split(".");
+        const idx = oidParts[oidParts.length - 1];
+        let value = match[2];
+        const colonIdx = value.indexOf(":");
+        if (colonIdx !== -1) {
+          value = value.substring(colonIdx + 1).trim();
+        }
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.substring(1, value.length - 1);
+        }
+        map.set(idx, value);
+      }
+    }
+    return map;
+  }
+
+  private formatMac(hexStr: string): string {
+    if (!hexStr) return "";
+    const cleaned = hexStr.replace(/[^0-9a-fA-F]/g, "");
+    if (cleaned.length === 12) {
+      return cleaned.match(/.{2}/g)?.join(":") || hexStr;
+    }
+    return hexStr;
+  }
+
+  private formatSpeed(bps: number): string {
+    if (!bps || bps === 0) return "-";
+    if (bps >= 1e9) return (bps / 1e9) + " Gbps";
+    if (bps >= 1e6) return (bps / 1e6) + " Mbps";
+    if (bps >= 1e3) return (bps / 1e3) + " Kbps";
+    return bps + " bps";
   }
 
   /**
@@ -419,7 +549,6 @@ export class TopologyService {
     for (const node of allNodes) {
       const existing = ipMap.get(node.ip);
       if (existing) {
-        // Merge: combine sources, prefer "online" status, merge labels
         existing.sources = [...new Set([...existing.sources, ...node.sources])];
         if (node.status === "online" && existing.status !== "online") {
           existing.status = "online";
@@ -430,6 +559,9 @@ export class TopologyService {
         }
         if (node.deviceType !== "unknown" && existing.deviceType === "unknown") {
           existing.deviceType = node.deviceType;
+        }
+        if (node.interfaces && node.interfaces.length > 0) {
+          existing.interfaces = node.interfaces;
         }
       } else {
         ipMap.set(node.ip, { ...node });
@@ -447,29 +579,26 @@ export class TopologyService {
    */
   async saveTopologyToDb(nodes: TopologyNode[]): Promise<void> {
     for (const node of nodes) {
-      // Check if device exists by IP to preserve x/y position
       const existing = await query(
         `SELECT id, x, y FROM topology_devices WHERE ip_address = $1`,
         [node.ip]
       );
 
       if (existing.rows.length > 0) {
-        // Update existing device
         await query(
           `UPDATE topology_devices
-           SET name = $1, device_type = $2, status = $3, sources = $4, labels = $5
-           WHERE ip_address = $6`,
-          [node.name, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), node.ip]
+           SET name = $1, device_type = $2, status = $3, sources = $4, labels = $5, interfaces = $6
+           WHERE ip_address = $7`,
+          [node.name, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), JSON.stringify(node.interfaces || []), node.ip]
         );
       } else {
-        // Insert new device
         await query(
-          `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, interfaces)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
            ON CONFLICT (id) DO UPDATE SET
              name = EXCLUDED.name, device_type = EXCLUDED.device_type,
-             status = EXCLUDED.status, sources = EXCLUDED.sources, labels = EXCLUDED.labels`,
-          [node.id, node.name, node.ip, node.deviceType, node.status, node.sources, JSON.stringify(node.labels)]
+             status = EXCLUDED.status, sources = EXCLUDED.sources, labels = EXCLUDED.labels, interfaces = EXCLUDED.interfaces`,
+          [node.id, node.name, node.ip, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), JSON.stringify(node.interfaces || [])]
         );
       }
     }
@@ -480,7 +609,7 @@ export class TopologyService {
    */
   async loadTopologyFromDb(): Promise<TopologyNode[]> {
     const res = await query(
-      `SELECT id, name, ip_address AS ip, device_type, status, sources, labels, x, y
+      `SELECT id, name, ip_address AS ip, device_type, status, sources, labels, interfaces, x, y
        FROM topology_devices ORDER BY created_at ASC`
     );
 
@@ -492,6 +621,7 @@ export class TopologyService {
       status: row.status,
       sources: row.sources || [],
       labels: row.labels || {},
+      interfaces: row.interfaces || [],
       x: row.x,
       y: row.y
     }));
@@ -641,14 +771,50 @@ export class TopologyService {
   }
 
   /**
-   * Auto-detect edges between nodes based on subnet proximity.
-   * Nodes in the same /24 subnet get connected.
+   * Auto-detect edges between nodes based on SNMP interface IP data.
+   * If device A has an interface with IP in same subnet as device B's IP, create edge.
+   * Falls back to subnet proximity if no interface data available.
    */
   private autoDetectEdges(nodes: TopologyNode[]): TopologyEdge[] {
     const edges: TopologyEdge[] = [];
+    const edgeSet = new Set<string>();
+
+    const addEdge = (src: string, tgt: string, label: string) => {
+      const key = [src, tgt].sort().join("|");
+      if (edgeSet.has(key)) return;
+      edgeSet.add(key);
+      edges.push({ source: src, target: tgt, label, edgeType: "ethernet" });
+    };
+
+    // Build IP -> nodeId index
+    const ipToNodeId = new Map<string, string>();
+    for (const node of nodes) {
+      ipToNodeId.set(node.ip, node.id);
+    }
+
+    // Pass 1: Connect based on interface IPs matching other devices
+    for (const node of nodes) {
+      if (!node.interfaces || node.interfaces.length === 0) continue;
+      for (const iface of node.interfaces) {
+        if (!iface.ip) continue;
+        const targetId = ipToNodeId.get(iface.ip);
+        if (targetId && targetId !== node.id) {
+          const label = iface.speedStr && iface.speedStr !== "-" ? iface.speedStr : iface.name;
+          addEdge(node.id, targetId, label);
+        }
+      }
+    }
+
+    // Pass 2: For nodes with no edges yet, fall back to same-subnet proximity
     const subnetMap = new Map<string, string[]>();
+    const connectedNodes = new Set<string>();
+    for (const edge of edges) {
+      connectedNodes.add(edge.source);
+      connectedNodes.add(edge.target);
+    }
 
     for (const node of nodes) {
+      if (connectedNodes.has(node.id)) continue;
       const parts = node.ip.split(".");
       if (parts.length !== 4) continue;
       const subnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
@@ -657,16 +823,10 @@ export class TopologyService {
       subnetMap.set(subnet, existing);
     }
 
-    // Connect nodes within same subnet in a chain
     for (const [, nodeIds] of subnetMap) {
       if (nodeIds.length < 2) continue;
       for (let i = 0; i < nodeIds.length - 1; i++) {
-        edges.push({
-          source: nodeIds[i],
-          target: nodeIds[i + 1],
-          label: "local",
-          edgeType: "ethernet"
-        });
+        addEdge(nodeIds[i], nodeIds[i + 1], "local");
       }
     }
 

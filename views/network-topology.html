@@ -276,6 +276,7 @@
             <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detail-status">-</span></div>
             <div class="detail-row"><span class="detail-label">Sources</span><span id="detail-sources"></span></div>
             <div id="detail-labels" style="margin-top:8px;"></div>
+            <div id="detail-interfaces"></div>
             <div style="margin-top:10px;">
                 <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete Device</button>
             </div>
@@ -393,8 +394,8 @@
 
         nodesData = nodes.map(n => ({
             id: n.id,
-            label: n.name + '\n' + n.ip,
-            title: `<b>${n.name}</b><br>IP: ${n.ip}<br>Type: ${n.deviceType}<br>Status: ${n.status}<br>Sources: ${n.sources.join(', ')}`,
+            label: (n.name && n.name !== n.ip) ? n.name + '\n' + n.ip : n.ip,
+            title: `<b>${n.name}</b><br>IP: ${n.ip}<br>Type: ${n.deviceType}<br>Status: ${n.status}<br>Sources: ${n.sources.join(', ')}<br>Interfaces: ${(n.interfaces || []).length}`,
             color: {
                 background: NODE_COLORS[n.deviceType] || NODE_COLORS.unknown,
                 border: STATUS_COLORS[n.status] || STATUS_COLORS.unknown,
@@ -412,11 +413,11 @@
         edgesData = edges.map(e => ({
             id: e.id || `edge-${e.source}-${e.target}`,
             from: e.source, to: e.target,
-            label: e.label || '',
+            title: e.label || '',
             color: { color: '#30363d', highlight: '#58a6ff' },
             width: 1.5,
             smooth: { type: 'continuous' },
-            font: { color: '#8b949e', size: 9, face: 'monospace', align: 'middle' },
+            font: { color: '#8b949e', size: 9, face: 'monospace', align: 'middle', strokeWidth: 0 },
             arrows: { to: { enabled: false } }
         }));
 
@@ -432,9 +433,14 @@
             interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true }
         });
 
+        network.once('stabilizationIterationsDone', function() {
+            network.setOptions({ physics: { enabled: false } });
+        });
+
         network.on('dragEnd', async function(params) {
             for (const nodeId of params.nodes) {
                 const pos = network.getPosition(nodeId);
+                nodesData.find(n => n.id === nodeId).fixed = { x: true, y: true };
                 try {
                     await fetch('/api/v1/topology/device/position', {
                         method: 'PUT',
@@ -479,6 +485,27 @@
         const entries = Object.entries(n.labels || {});
         labelsEl.innerHTML = entries.length ? '<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Labels:</div>' +
             entries.map(([k, v]) => `<div class="detail-row"><span class="detail-label">${esc(k)}</span><span class="detail-value" style="font-size:10px;">${esc(String(v))}</span></div>`).join('') : '';
+
+        const ifaces = n.interfaces || [];
+        const ifaceEl = document.getElementById('detail-interfaces');
+        if (ifaces.length > 0) {
+            let html = '<div style="font-size:10px;color:var(--text-muted);margin:8px 0 4px;">Interfaces (' + ifaces.length + '):</div>';
+            html += '<table style="width:100%;font-size:10px;border-collapse:collapse;">';
+            html += '<tr style="color:var(--text-muted);border-bottom:1px solid var(--app-border);"><th style="text-align:left;padding:2px 4px;">Name</th><th style="text-align:left;padding:2px 4px;">IP</th><th style="text-align:left;padding:2px 4px;">Speed</th><th style="text-align:left;padding:2px 4px;">Status</th></tr>';
+            for (const iface of ifaces) {
+                const statusColor = iface.status === 'up' ? '#10b981' : iface.status === 'down' ? '#f85149' : '#6b7280';
+                html += `<tr style="border-bottom:1px solid rgba(48,54,61,0.5);">
+                    <td style="padding:2px 4px;color:var(--text-white);">${esc(iface.name)}</td>
+                    <td style="padding:2px 4px;color:var(--text-white);font-family:monospace;">${esc(iface.ip || '-')}</td>
+                    <td style="padding:2px 4px;color:var(--text-white);">${esc(iface.speedStr || '-')}</td>
+                    <td style="padding:2px 4px;color:${statusColor};">${iface.status.toUpperCase()}</td>
+                </tr>`;
+            }
+            html += '</table>';
+            ifaceEl.innerHTML = html;
+        } else {
+            ifaceEl.innerHTML = '';
+        }
 
         document.getElementById('node-detail').classList.add('visible');
     }

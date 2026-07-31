@@ -543,6 +543,7 @@ export async function initDb() {
       status VARCHAR(20) DEFAULT 'unknown',
       sources TEXT[] DEFAULT '{}',
       labels JSONB DEFAULT '{}',
+      interfaces JSONB DEFAULT '[]',
       x DOUBLE PRECISION,
       y DOUBLE PRECISION,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -586,7 +587,8 @@ export async function initDb() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
     `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS group_name VARCHAR(255) DEFAULT 'Default';`,
-    `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`
+    `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`,
+    `ALTER TABLE topology_devices ADD COLUMN IF NOT EXISTS interfaces JSONB DEFAULT '[]';`
   ];
   await Promise.all(migrationQueries.map(q => pool.query(q)));
 
