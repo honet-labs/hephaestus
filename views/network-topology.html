@@ -223,6 +223,11 @@
         .toast.success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
         .toast.error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--error); }
         .toast.info { background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.3); color: var(--accent); }
+
+        /* vis-network HTML node overrides */
+        .vis-network .vis-update-active div[style*="border-radius:8px"] {
+            cursor: pointer !important;
+        }
     </style>
 </head>
 <body>
@@ -434,24 +439,24 @@
     };
 
     const DEVICE_ICONS = {
-        server: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/></svg>',
-        switch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><line x1="18" y1="10" x2="18" y2="14"/></svg>',
-        router: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><path d="M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>',
-        firewall: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-        network: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="12" y1="10" x2="12" y2="14"/></svg>',
-        web: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-        container: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
-        unknown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+        server: '<svg viewBox="0 0 24 24" fill="none" stroke="FILL_COLOR" stroke-width="1.5" width="28" height="28"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1" fill="FILL_COLOR"/><circle cx="6" cy="18" r="1" fill="FILL_COLOR"/></svg>',
+        switch: '<svg viewBox="0 0 24 24" fill="none" stroke="FILL_COLOR" stroke-width="1.5" width="28" height="28"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><line x1="18" y1="10" x2="18" y2="14"/></svg>',
+        router: '<svg viewBox="0 0 24 24" fill="none" stroke="FILL_COLOR" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>',
+        firewall: '<svg viewBox="0 0 24 24" fill="none" stroke="FILL_COLOR" stroke-width="1.5" width="28" height="28"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+        network: '<svg viewBox="0 0 24 24" fill="none" stroke="FILL_COLOR" stroke-width="1.5" width="28" height="28"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="12" y1="10" x2="12" y2="14"/></svg>',
+        web: '<svg viewBox="0 0 24 24" fill="none" stroke="FILL_COLOR" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+        container: '<svg viewBox="0 0 24 24" fill="none" stroke="FILL_COLOR" stroke-width="1.5" width="28" height="28"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+        unknown: '<svg viewBox="0 0 24 24" fill="none" stroke="FILL_COLOR" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
     };
 
-    function getDeviceIcon(type) {
-        return DEVICE_ICONS[type] || DEVICE_ICONS.unknown;
+    function getDeviceIcon(type, color) {
+        return (DEVICE_ICONS[type] || DEVICE_ICONS.unknown).replace(/FILL_COLOR/g, color);
     }
 
     function makeNodeHtml(n) {
         const statusColor = STATUS_COLORS[n.status] || '#9ca3af';
         const borderColor = statusColor;
-        const icon = getDeviceIcon(n.deviceType);
+        const icon = getDeviceIcon(n.deviceType, borderColor);
         const statusBadge = `<span style="display:inline-block;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;background:${statusColor}20;color:${statusColor};text-transform:uppercase;">${n.status}</span>`;
         const sources = (n.sources || []).map(s => {
             const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
@@ -459,7 +464,7 @@
         }).join(' ');
         const typeLabel = n.deviceType.charAt(0).toUpperCase() + n.deviceType.slice(1);
         return `<div style="background:white;border:2px solid ${borderColor};border-radius:8px;padding:10px 12px;min-width:140px;max-width:180px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-            <div style="color:${borderColor};margin-bottom:4px;">${icon}</div>
+            <div style="margin-bottom:4px;">${icon}</div>
             <div style="font-size:12px;font-weight:700;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(n.name)}</div>
             <div style="font-size:10px;color:#6b7280;margin:2px 0;">${esc(typeLabel)}</div>
             <div style="font-size:10px;color:#1a1a2e;font-family:monospace;">${esc(n.ip)}</div>
@@ -488,11 +493,7 @@
         nodesData = nodes.map(n => ({
             id: n.id,
             label: makeNodeHtml(n),
-            shape: 'box',
-            margin: { top: 10, right: 10, bottom: 10, left: 10 },
-            color: { border: STATUS_COLORS[n.status] || '#9ca3af', background: 'white', highlight: { border: '#2563eb', background: '#f0f7ff' } },
-            font: { color: '#1a1a2e', size: 11, face: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif', multi: 'html', align: 'center', strokeWidth: 0 },
-            borderWidth: 0,
+            shape: 'html',
             x: n.x, y: n.y,
             fixed: (n.x != null && n.y != null) ? { x: true, y: true } : false,
             _raw: n
@@ -516,29 +517,20 @@
         const visEdges = new vis.DataSet(edgesData);
 
         network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, {
-            physics: {
-                enabled: true,
-                solver: 'hierarchicalRepulsion',
-                hierarchicalRepulsion: { nodeDistance: 180, centralGravity: 0.0, springLength: 150, springConstant: 0.02, damping: 0.09 },
-                stabilization: { iterations: 300, fit: true }
-            },
+            physics: false,
             layout: {
                 hierarchical: {
                     direction: 'UD',
                     sortMethod: 'directed',
-                    levelSeparation: 150,
-                    nodeSpacing: 200,
-                    treeSpacing: 200,
+                    levelSeparation: 200,
+                    nodeSpacing: 250,
+                    treeSpacing: 250,
                     blockShifting: true,
                     edgeMinimization: true,
                     parentCentralization: true
                 }
             },
             interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true }
-        });
-
-        network.once('stabilizationIterationsDone', function() {
-            network.setOptions({ physics: { enabled: false } });
         });
 
         network.on('dragEnd', async function(params) {
@@ -833,11 +825,7 @@
         const visNode = {
             id: node.id,
             label: makeNodeHtml(node),
-            shape: 'box',
-            margin: { top: 10, right: 10, bottom: 10, left: 10 },
-            color: { border: STATUS_COLORS[node.status] || '#9ca3af', background: 'white', highlight: { border: '#2563eb', background: '#f0f7ff' } },
-            font: { color: '#1a1a2e', size: 11, face: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif', multi: 'html', align: 'center', strokeWidth: 0 },
-            borderWidth: 0,
+            shape: 'html',
             _raw: node
         };
         nodesData.push(visNode);
@@ -863,11 +851,7 @@
             const visNode = {
                 id: node.id,
                 label: makeNodeHtml(node),
-                shape: 'box',
-                margin: { top: 10, right: 10, bottom: 10, left: 10 },
-                color: { border: STATUS_COLORS[node.status] || '#9ca3af', background: 'white', highlight: { border: '#2563eb', background: '#f0f7ff' } },
-                font: { color: '#1a1a2e', size: 11, face: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif', multi: 'html', align: 'center', strokeWidth: 0 },
-                borderWidth: 0,
+                shape: 'html',
                 _raw: node
             };
             nodesData.push(visNode);
