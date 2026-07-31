@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Topology - Hephaestus</title>
+    <link rel="icon" type="image/jpeg" href="/img/favicon.jpg">
+    <style>
+        :root {
+            color-scheme: dark;
+            --background: #0d1117;
+            --foreground: #c9d1d9;
+            --app-sidebar: #161b22;
+            --app-topbar: #0d1117;
+            --app-card: #161b22;
+            --app-card-dark: #0d1117;
+            --app-border: #30363d;
+            --text-white: #e6edf3;
+            --text-muted: #8b949e;
+            --btn-primary-bg: #1f6feb;
+            --btn-primary-color: #ffffff;
+            --btn-primary-hover: #388bfd;
+            --success: #10b981;
+            --success-border: rgba(16, 185, 129, 0.3);
+            --error: #f85149;
+            --error-border: rgba(248, 81, 73, 0.3);
+            --warning: #d29922;
+            --accent: #58a6ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, button, input, select, textarea, span, p, a, label {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 13px;
+        }
+        body {
+            background-color: var(--background);
+            color: var(--foreground);
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+        }
+        h1, h2, h3, h4 { font-weight: 600; color: var(--text-white); }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 16px; background: var(--app-topbar); border-bottom: 1px solid var(--app-border);
+            flex-shrink: 0; height: 44px;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .header h1 svg { width: 16px; height: 16px; color: var(--accent); }
+        .header-right { display: flex; align-items: center; gap: 8px; }
+        .back-link {
+            color: var(--text-muted); text-decoration: none; font-size: 11px;
+            padding: 4px 10px; border: 1px solid var(--app-border); border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
+        .stats-badge {
+            font-size: 11px; color: var(--text-muted);
+            padding: 3px 8px; background: var(--app-card); border: 1px solid var(--app-border);
+            border-radius: 4px;
+        }
+        .stats-badge strong { color: var(--text-white); }
+
+        button.btn {
+            border-radius: 4px; padding: 6px 14px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; text-transform: uppercase;
+            font-size: 11px; letter-spacing: 0.5px; display: inline-flex;
+            align-items: center; gap: 5px; border: 1px solid transparent;
+        }
+        button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background-color: var(--btn-primary-bg); color: var(--btn-primary-color); }
+        .btn-primary:hover:not(:disabled) { background-color: var(--btn-primary-hover); }
+        .btn-secondary { background-color: var(--app-card); border: 1px solid var(--app-border); color: var(--foreground); }
+        .btn-secondary:hover:not(:disabled) { color: white; border-color: var(--accent); }
+        .btn-danger { background-color: rgba(248, 81, 73, 0.1); border: 1px solid var(--error-border); color: #f85149; }
+        .btn-danger:hover:not(:disabled) { background-color: var(--error); color: white; }
+        .btn-success { background-color: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-border); color: var(--success); }
+        .btn-success:hover:not(:disabled) { background-color: var(--success); color: white; }
+
+        .toolbar {
+            display: flex; align-items: center; padding: 8px 16px; gap: 8px;
+            flex-shrink: 0; background: var(--app-sidebar); border-bottom: 1px solid var(--app-border);
+            flex-wrap: wrap;
+        }
+
+        .scan-bar {
+            display: none; align-items: center; padding: 10px 16px; gap: 10px;
+            background: var(--app-card); border-bottom: 1px solid var(--app-border); flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .scan-bar.visible { display: flex; }
+        .scan-bar label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+        .scan-bar input, .scan-bar select {
+            background: var(--app-card-dark); border: 1px solid var(--app-border);
+            color: var(--text-white); padding: 5px 8px; border-radius: 4px; font-size: 11px;
+        }
+        .scan-bar input:focus { border-color: var(--accent); outline: none; }
+
+        .graph-container {
+            flex: 1; position: relative; overflow: hidden;
+        }
+        #topology-graph {
+            width: 100%; height: 100%; background: var(--background);
+        }
+
+        .legend {
+            position: absolute; bottom: 12px; left: 12px;
+            background: rgba(22, 27, 34, 0.92); border: 1px solid var(--app-border);
+            border-radius: 6px; padding: 8px 12px; display: flex; gap: 12px;
+            font-size: 10px; color: var(--text-muted); z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+        .legend span { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .legend .tag {
+            padding: 1px 4px; border-radius: 2px; font-size: 9px; font-weight: 600;
+        }
+        .legend .sep { border-left: 1px solid var(--app-border); padding-left: 12px; }
+
+        .status-bar {
+            position: absolute; top: 12px; left: 12px;
+            background: rgba(22, 27, 34, 0.92); border: 1px solid var(--app-border);
+            border-radius: 6px; padding: 8px 14px; z-index: 10;
+            font-size: 11px; color: var(--text-muted); backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-dialog {
+            background: var(--app-card); border: 1px solid var(--app-border); border-radius: 8px;
+            width: 95%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 20px; border-bottom: 1px solid var(--app-border);
+        }
+        .modal-header h3 { font-size: 14px; }
+        .modal-close {
+            background: none; border: none; color: var(--text-muted); font-size: 20px;
+            cursor: pointer; line-height: 1;
+        }
+        .modal-close:hover { color: var(--text-white); }
+        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+        .modal-footer {
+            padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px;
+            border-top: 1px solid var(--app-border);
+        }
+        .form-group label {
+            text-transform: uppercase; font-size: 10px; font-weight: 700;
+            color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 5px; display: block;
+        }
+        .form-group input, .form-group select {
+            width: 100%; background: var(--app-card-dark); border: 1px solid var(--app-border);
+            color: var(--text-white); padding: 7px 10px; border-radius: 4px; font-size: 12px;
+            box-sizing: border-box;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--accent); outline: none; }
+        .form-error { display: none; font-size: 11px; color: var(--error); margin-top: 4px; }
+
+        .toast {
+            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+            padding: 10px 16px; border-radius: 6px; font-size: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: opacity 0.3s;
+            max-width: 400px;
+        }
+        .toast.success { background: rgba(16,185,129,0.15); border: 1px solid var(--success-border); color: var(--success); }
+        .toast.error { background: rgba(248,81,73,0.15); border: 1px solid var(--error-border); color: var(--error); }
+        .toast.info { background: rgba(88,166,255,0.15); border: 1px solid rgba(88,166,255,0.3); color: var(--accent); }
+
+        .node-detail-panel {
+            display: none; position: absolute; top: 12px; right: 12px;
+            background: rgba(22, 27, 34, 0.95); border: 1px solid var(--app-border);
+            border-radius: 8px; padding: 16px; z-index: 10; width: 280px;
+            backdrop-filter: blur(4px);
+        }
+        .node-detail-panel.visible { display: block; }
+        .node-detail-panel h4 { font-size: 13px; margin-bottom: 10px; }
+        .node-detail-panel .detail-row {
+            display: flex; justify-content: space-between; padding: 4px 0;
+            font-size: 11px; border-bottom: 1px solid rgba(48,54,61,0.5);
+        }
+        .node-detail-panel .detail-label { color: var(--text-muted); }
+        .node-detail-panel .detail-value { color: var(--text-white); font-family: monospace; }
+        .node-detail-panel .source-tag {
+            display: inline-block; padding: 2px 6px; border-radius: 3px;
+            font-size: 9px; font-weight: 600; margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <a href="/" class="back-link">&larr; Portal</a>
+            <h1>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="5" r="3"></circle>
+                    <circle cx="5" cy="19" r="3"></circle>
+                    <circle cx="19" cy="19" r="3"></circle>
+                    <line x1="12" y1="8" x2="5" y2="16"></line>
+                    <line x1="12" y1="8" x2="19" y2="16"></line>
+                </svg>
+                Network Topology
+            </h1>
+        </div>
+        <div class="header-right">
+            <span class="stats-badge">Nodes: <strong id="stat-nodes">0</strong></span>
+            <span class="stats-badge">Edges: <strong id="stat-edges">0</strong></span>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button class="btn btn-success" onclick="toggleScanBar()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            Auto Scan
+        </button>
+        <button class="btn btn-secondary" onclick="openAddDeviceModal()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Add Device
+        </button>
+        <button class="btn btn-secondary" onclick="openAddEdgeModal()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            Add Connection
+        </button>
+        <button class="btn btn-danger" onclick="clearAll()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Clear All
+        </button>
+        <div style="flex:1;"></div>
+        <button class="btn btn-secondary" onclick="loadGraph()" style="font-size:10px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            Refresh
+        </button>
+    </div>
+
+    <div id="scan-bar" class="scan-bar">
+        <label>IP Range:</label>
+        <input type="text" id="ip-range" placeholder="10.11.12.0/24 or 10.11.12.1-10.11.12.50" style="min-width: 260px;">
+        <label>SNMP Community:</label>
+        <input type="text" id="snmp-community" value="public" style="width: 100px;">
+        <label>Version:</label>
+        <select id="snmp-version">
+            <option value="2c">v2c</option>
+            <option value="v1">v1</option>
+        </select>
+        <button class="btn btn-primary" onclick="runScan()">Run Scan</button>
+        <button class="btn btn-secondary" onclick="toggleScanBar()">Cancel</button>
+    </div>
+
+    <div class="graph-container">
+        <div id="topology-graph"></div>
+
+        <div class="status-bar" id="status-bar">Loading topology...</div>
+
+        <div class="legend">
+            <span><span class="dot" style="background:#10b981;"></span> Online</span>
+            <span><span class="dot" style="background:#f85149;"></span> Offline</span>
+            <span><span class="dot" style="background:#6b7280;"></span> Unknown</span>
+            <span class="sep"><span class="tag" style="background:rgba(88,166,255,0.15);color:#58a6ff;">PROM</span></span>
+            <span><span class="tag" style="background:rgba(16,185,129,0.15);color:#10b981;">KUMA</span></span>
+            <span><span class="tag" style="background:rgba(245,158,11,0.15);color:#f59e0b;">SNMP</span></span>
+            <span><span class="tag" style="background:rgba(139,148,158,0.15);color:#8b949e;">MANUAL</span></span>
+        </div>
+
+        <!-- Node Detail Panel -->
+        <div class="node-detail-panel" id="node-detail">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h4 id="detail-name">-</h4>
+                <button class="modal-close" onclick="closeDetail()" style="font-size:16px;">&times;</button>
+            </div>
+            <div class="detail-row"><span class="detail-label">IP</span><span class="detail-value" id="detail-ip">-</span></div>
+            <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value" id="detail-type">-</span></div>
+            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detail-status">-</span></div>
+            <div class="detail-row"><span class="detail-label">Sources</span><span id="detail-sources"></span></div>
+            <div id="detail-labels" style="margin-top:8px;"></div>
+            <div style="margin-top:10px;">
+                <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete Device</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD DEVICE -->
+    <div id="modal-add-device" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Add Network Device</h3>
+                <button class="modal-close" onclick="closeModal('modal-add-device')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Device Name</label>
+                    <input type="text" id="dev-name" placeholder="e.g. Core-Switch-01">
+                </div>
+                <div class="form-group">
+                    <label>IP Address</label>
+                    <input type="text" id="dev-ip" placeholder="e.g. 10.11.12.1">
+                </div>
+                <div class="form-group">
+                    <label>Device Type</label>
+                    <select id="dev-type">
+                        <option value="server">Server</option>
+                        <option value="switch">Switch</option>
+                        <option value="router">Router</option>
+                        <option value="firewall">Firewall</option>
+                        <option value="network">Network Device</option>
+                        <option value="web">Web Service</option>
+                        <option value="container">Container</option>
+                        <option value="unknown">Unknown</option>
+                    </select>
+                </div>
+                <div id="dev-error" class="form-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-add-device')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitDevice()">Add Device</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD EDGE -->
+    <div id="modal-add-edge" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Add Connection</h3>
+                <button class="modal-close" onclick="closeModal('modal-add-edge')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Source Device</label>
+                    <select id="edge-source"></select>
+                </div>
+                <div class="form-group">
+                    <label>Target Device</label>
+                    <select id="edge-target"></select>
+                </div>
+                <div class="form-group">
+                    <label>Label (optional)</label>
+                    <input type="text" id="edge-label" placeholder="e.g. eth0, VLAN 100">
+                </div>
+                <div id="edge-error" class="form-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-add-edge')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitEdge()">Add Connection</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" style="display:none;"></div>
+
+    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+    <script>
+    // ==================== STATE ====================
+    let network = null;
+    let nodesData = [];
+    let edgesData = [];
+    let selectedNodeId = null;
+    const token = localStorage.getItem('hephaestus_session_token') || '';
+
+    const NODE_COLORS = {
+        server: '#58a6ff', switch: '#10b981', router: '#f59e0b',
+        firewall: '#f85149', network: '#a78bfa', web: '#56d364',
+        container: '#79c0ff', unknown: '#6b7280'
+    };
+    const STATUS_COLORS = { online: '#10b981', offline: '#f85149', unknown: '#6b7280' };
+    const SOURCE_STYLES = {
+        PROM: { bg: 'rgba(88,166,255,0.15)', color: '#58a6ff' },
+        KUMA: { bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
+        SNMP: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
+        MANUAL: { bg: 'rgba(139,148,158,0.15)', color: '#8b949e' }
+    };
+
+    // ==================== TOAST ====================
+    function showToast(type, msg) {
+        const t = document.getElementById('toast');
+        t.className = 'toast ' + type;
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 4000);
+    }
+
+    // ==================== MODAL ====================
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    // ==================== GRAPH ====================
+    function initGraph(nodes, edges) {
+        const container = document.getElementById('topology-graph');
+        if (!container) return;
+
+        nodesData = nodes.map(n => ({
+            id: n.id,
+            label: n.name + '\n' + n.ip,
+            title: `<b>${n.name}</b><br>IP: ${n.ip}<br>Type: ${n.deviceType}<br>Status: ${n.status}<br>Sources: ${n.sources.join(', ')}`,
+            color: {
+                background: NODE_COLORS[n.deviceType] || NODE_COLORS.unknown,
+                border: STATUS_COLORS[n.status] || STATUS_COLORS.unknown,
+                highlight: { background: '#58a6ff', border: '#79c0ff' }
+            },
+            shape: 'dot',
+            size: n.sources.includes('PROM') || n.sources.includes('KUMA') ? 22 : 16,
+            font: { color: '#e6edf3', size: 10, face: 'monospace', strokeWidth: 2, strokeColor: '#0d1117' },
+            borderWidth: 3,
+            x: n.x, y: n.y,
+            fixed: (n.x !== undefined && n.y !== null && n.x !== null) ? { x: true, y: true } : false,
+            _raw: n
+        }));
+
+        edgesData = edges.map(e => ({
+            id: e.id || `edge-${e.source}-${e.target}`,
+            from: e.source, to: e.target,
+            label: e.label || '',
+            color: { color: '#30363d', highlight: '#58a6ff' },
+            width: 1.5,
+            smooth: { type: 'continuous' },
+            font: { color: '#8b949e', size: 9, face: 'monospace', align: 'middle' },
+            arrows: { to: { enabled: false } }
+        }));
+
+        const visNodes = new vis.DataSet(nodesData);
+        const visEdges = new vis.DataSet(edgesData);
+
+        network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, {
+            physics: {
+                enabled: true, solver: 'forceAtlas2Based',
+                forceAtlas2Based: { gravitationalConstant: -40, centralGravity: 0.005, springLength: 150, springConstant: 0.08, damping: 0.4 },
+                stabilization: { iterations: 200, fit: true }
+            },
+            interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true }
+        });
+
+        network.on('dragEnd', async function(params) {
+            for (const nodeId of params.nodes) {
+                const pos = network.getPosition(nodeId);
+                try {
+                    await fetch('/api/v1/topology/device/position', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ id: nodeId, x: pos.x, y: pos.y })
+                    });
+                } catch (e) {}
+            }
+        });
+
+        network.on('click', function(params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                selectedNodeId = nodeId;
+                const node = nodesData.find(n => n.id === nodeId);
+                if (node && node._raw) showDetail(node._raw);
+            } else {
+                closeDetail();
+            }
+        });
+
+        document.getElementById('stat-nodes').textContent = nodes.length;
+        document.getElementById('stat-edges').textContent = edges.length;
+        document.getElementById('status-bar').textContent = `${nodes.length} nodes, ${edges.length} edges loaded`;
+    }
+
+    function showDetail(n) {
+        document.getElementById('detail-name').textContent = n.name;
+        document.getElementById('detail-ip').textContent = n.ip;
+        document.getElementById('detail-type').textContent = n.deviceType;
+        const st = document.getElementById('detail-status');
+        st.textContent = n.status.toUpperCase();
+        st.style.color = STATUS_COLORS[n.status] || '#6b7280';
+
+        const srcEl = document.getElementById('detail-sources');
+        srcEl.innerHTML = n.sources.map(s => {
+            const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
+            return `<span class="source-tag" style="background:${ss.bg};color:${ss.color};">${s}</span>`;
+        }).join('');
+
+        const labelsEl = document.getElementById('detail-labels');
+        const entries = Object.entries(n.labels || {});
+        labelsEl.innerHTML = entries.length ? '<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Labels:</div>' +
+            entries.map(([k, v]) => `<div class="detail-row"><span class="detail-label">${esc(k)}</span><span class="detail-value" style="font-size:10px;">${esc(String(v))}</span></div>`).join('') : '';
+
+        document.getElementById('node-detail').classList.add('visible');
+    }
+
+    function closeDetail() {
+        document.getElementById('node-detail').classList.remove('visible');
+        selectedNodeId = null;
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // ==================== API ====================
+    async function apiFetch(url, opts = {}) {
+        const res = await fetch(url, {
+            ...opts,
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, ...(opts.headers || {}) }
+        });
+        return res.json();
+    }
+
+    async function loadGraph() {
+        document.getElementById('status-bar').textContent = 'Loading...';
+        try {
+            const data = await apiFetch('/api/v1/topology/graph');
+            if (!data.success) throw new Error(data.error);
+            initGraph(data.data.nodes || [], data.data.edges || []);
+        } catch (e) {
+            document.getElementById('status-bar').textContent = 'Failed to load: ' + e.message;
+            initGraph([], []);
+        }
+    }
+
+    function toggleScanBar() {
+        const bar = document.getElementById('scan-bar');
+        bar.classList.toggle('visible');
+    }
+
+    async function runScan() {
+        const ipRange = document.getElementById('ip-range').value.trim();
+        const community = document.getElementById('snmp-community').value.trim() || 'public';
+        const version = document.getElementById('snmp-version').value;
+        document.getElementById('status-bar').textContent = 'Scanning network...';
+        try {
+            const data = await apiFetch('/api/v1/topology/scan', {
+                method: 'POST',
+                body: JSON.stringify({ ipRange: ipRange || undefined, snmpCommunity: community, snmpVersion: version })
+            });
+            if (!data.success) throw new Error(data.error);
+            initGraph(data.data.nodes || [], data.data.edges || []);
+            document.getElementById('scan-bar').classList.remove('visible');
+            showToast('success', `Scan complete: ${data.data.meta.totalNodes} nodes found`);
+        } catch (e) {
+            document.getElementById('status-bar').textContent = 'Scan failed';
+            showToast('error', 'Scan failed: ' + e.message);
+        }
+    }
+
+    // ==================== ADD DEVICE ====================
+    function openAddDeviceModal() {
+        document.getElementById('dev-name').value = '';
+        document.getElementById('dev-ip').value = '';
+        document.getElementById('dev-type').value = 'server';
+        document.getElementById('dev-error').style.display = 'none';
+        openModal('modal-add-device');
+    }
+
+    async function submitDevice() {
+        const name = document.getElementById('dev-name').value.trim();
+        const ip = document.getElementById('dev-ip').value.trim();
+        const deviceType = document.getElementById('dev-type').value;
+        const errEl = document.getElementById('dev-error');
+        if (!name || !ip) { errEl.textContent = 'Name and IP are required.'; errEl.style.display = 'block'; return; }
+        try {
+            const data = await apiFetch('/api/v1/topology/device', {
+                method: 'POST', body: JSON.stringify({ name, ip, deviceType })
+            });
+            if (!data.success) throw new Error(data.error);
+            closeModal('modal-add-device');
+            await loadGraph();
+            showToast('success', `Device "${name}" added`);
+        } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    }
+
+    // ==================== DELETE DEVICE ====================
+    async function deleteSelectedNode() {
+        if (!selectedNodeId) return;
+        if (!confirm('Delete this device?')) return;
+        try {
+            await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId), { method: 'DELETE' });
+            closeDetail();
+            await loadGraph();
+            showToast('success', 'Device deleted');
+        } catch (e) { showToast('error', 'Delete failed: ' + e.message); }
+    }
+
+    // ==================== ADD EDGE ====================
+    function openAddEdgeModal() {
+        const src = document.getElementById('edge-source');
+        const tgt = document.getElementById('edge-target');
+        src.innerHTML = ''; tgt.innerHTML = '';
+        nodesData.forEach(n => {
+            const label = n.label.split('\n')[0] + ' (' + (n._raw?.ip || '') + ')';
+            src.add(new Option(label, n.id));
+            tgt.add(new Option(label, n.id));
+        });
+        if (!nodesData.length) { src.add(new Option('No devices', '')); tgt.add(new Option('No devices', '')); }
+        document.getElementById('edge-label').value = '';
+        document.getElementById('edge-error').style.display = 'none';
+        openModal('modal-add-edge');
+    }
+
+    async function submitEdge() {
+        const source = document.getElementById('edge-source').value;
+        const target = document.getElementById('edge-target').value;
+        const label = document.getElementById('edge-label').value.trim();
+        const errEl = document.getElementById('edge-error');
+        if (!source || !target) { errEl.textContent = 'Source and target required.'; errEl.style.display = 'block'; return; }
+        if (source === target) { errEl.textContent = 'Cannot connect device to itself.'; errEl.style.display = 'block'; return; }
+        try {
+            const data = await apiFetch('/api/v1/topology/edge', {
+                method: 'POST', body: JSON.stringify({ source, target, label: label || undefined })
+            });
+            if (!data.success) throw new Error(data.error);
+            closeModal('modal-add-edge');
+            await loadGraph();
+            showToast('success', 'Connection added');
+        } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    }
+
+    // ==================== CLEAR ALL ====================
+    async function clearAll() {
+        if (!confirm('Delete ALL topology data? This cannot be undone.')) return;
+        try {
+            for (const n of nodesData) {
+                await apiFetch('/api/v1/topology/device/' + encodeURIComponent(n.id), { method: 'DELETE' });
+            }
+            await loadGraph();
+            showToast('success', 'All topology data cleared');
+        } catch (e) { showToast('error', 'Clear failed: ' + e.message); }
+    }
+
+    // ==================== INIT ====================
+    document.addEventListener('DOMContentLoaded', loadGraph);
+    </script>
+</body>
+</html>

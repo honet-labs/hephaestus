@@ -118,8 +118,12 @@ app.get("/grok-debugger", (req: Request, res: Response) => {
 
 // Remote Host Terminal page (no auth middleware - page verifies session via JS)
 app.get("/remote-host", (req: Request, res: Response) => {
-  res.sendFile("remote-host.html", { root: require("path").join(__dirname, "../views") });
-});
+    res.sendFile("remote-host.html", { root: require("path").join(__dirname, "../views") });
+  });
+
+  app.get("/network-topology", (req: Request, res: Response) => {
+    res.sendFile("network-topology.html", { root: require("path").join(__dirname, "../views") });
+  });
 
 import { authMiddleware } from "./middleware/auth.middleware";
 import setupRoutes from "./routes/setup.routes";
