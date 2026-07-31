@@ -251,8 +251,6 @@ export class TopologyService {
 
   // ==================== SOURCE C: SNMP SCANNER ====================
 
-  private static readonly SYS_NAME_OID = "1.3.6.1.2.1.1.5.0";
-  private static readonly SYS_DESCR_OID = "1.3.6.1.2.1.1.1.0";
   private static readonly IF_DESCR_OID = "1.3.6.1.2.1.2.2.1.2";
   private static readonly IF_SPEED_OID = "1.3.6.1.2.1.2.2.1.5";
   private static readonly IF_PHYS_ADDR_OID = "1.3.6.1.2.1.2.2.1.6";
