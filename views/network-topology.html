@@ -640,13 +640,10 @@
             });
             if (!data.success) throw new Error(data.error);
             document.getElementById('scan-bar').classList.remove('visible');
-            const nodes = data.data.nodes || [];
-            const existingIps = new Set(nodesData.map(n => n._raw?.ip));
-            const newNodes = nodes.filter(n => !existingIps.has(n.ip));
-            pendingNodes = newNodes;
+            pendingNodes = data.data.nodes || [];
             renderPendingList('Scan Results');
-            document.getElementById('status-bar').textContent = `Scan found ${nodes.length} devices (${newNodes.length} new)`;
-            showToast('success', `Scan complete: ${nodes.length} found, ${newNodes.length} new`);
+            document.getElementById('status-bar').textContent = `Scan found ${pendingNodes.length} devices`;
+            showToast('success', `Scan complete: ${pendingNodes.length} devices found`);
         } catch (e) {
             document.getElementById('status-bar').textContent = 'Scan failed';
             showToast('error', 'Scan failed: ' + e.message);
