@@ -35,12 +35,13 @@ export class TopologyController {
    */
   public async scanCandidates(req: Request, res: Response) {
     try {
-      const { prometheusUrl, ipRange, snmpCommunity, snmpVersion } = req.body || {};
+      const { prometheusUrl, ipRange, snmpCommunity, snmpVersion, useNmap } = req.body || {};
       const nodes = await topologyService.scanOnly({
         prometheusUrl,
         ipRange,
         snmpCommunity: snmpCommunity || "public",
-        snmpVersion: snmpVersion || "2c"
+        snmpVersion: snmpVersion || "2c",
+        useNmap: !!useNmap
       });
       await logActivity("Network Topology", "Scan", `Scanned: ${nodes.length} candidates found`, "SUCCESS");
       return res.status(200).json({ success: true, data: { nodes, edges: [], meta: { totalNodes: nodes.length, totalEdges: 0 } } });

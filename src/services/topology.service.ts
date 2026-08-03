@@ -741,24 +741,76 @@ export class TopologyService {
   // ==================== FULL TOPOLOGY BUILD ====================
 
   /**
+   * Discover live hosts using nmap ping scan (-sn).
+   * Returns IPs with latency info.
+   */
+  async discoverWithNmap(ipRange: string): Promise<TopologyNode[]> {
+    const nodes: TopologyNode[] = [];
+    try {
+      const { execSync } = require("child_process");
+      const output = execSync(`nmap -sn ${ipRange}`, { timeout: 60000, encoding: "utf-8" });
+      const lines = output.split("\n");
+      let currentIp = "";
+      let currentHostname = "";
+      for (const line of lines) {
+        const reportMatch = line.match(/Nmap scan report for (.+?)(?:\s+\((.+?)\))?$/);
+        if (reportMatch) {
+          const hostnameOrIp = reportMatch[1].trim();
+          const ipMatch = hostnameOrIp.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+          if (ipMatch) {
+            currentIp = ipMatch[1];
+            currentHostname = hostnameOrIp !== currentIp ? hostnameOrIp : "";
+          }
+        }
+        const latencyMatch = line.match(/Host is up \((.+?)s latency\)/);
+        if (currentIp && latencyMatch) {
+          nodes.push({
+            id: `nmap-${currentIp}`,
+            name: currentHostname || currentIp,
+            ip: currentIp,
+            deviceType: "unknown",
+            status: "online",
+            sources: ["NMAP"],
+            labels: { latency: latencyMatch[1] + "s" }
+          });
+          currentIp = "";
+          currentHostname = "";
+        }
+      }
+      console.log(`[Topology] Nmap discovered ${nodes.length} hosts in ${ipRange}`);
+    } catch (err: any) {
+      console.error(`[Topology] Nmap error: ${err.message}`);
+    }
+    return nodes;
+  }
+
+  /**
    * Scan network and return candidates WITHOUT saving to DB.
-   * Fetches from Prometheus targets, Uptime Kuma, and SNMP scan.
+   * Fetches from Prometheus targets, Uptime Kuma, SNMP, and Nmap.
    */
   async scanOnly(options: {
     prometheusUrl?: string;
     ipRange?: string;
     snmpCommunity?: string;
     snmpVersion?: string;
+    useNmap?: boolean;
   }): Promise<TopologyNode[]> {
     const allNodes: TopologyNode[] = [];
 
     // Fetch from Prometheus and Uptime Kuma in parallel
-    const [promNodes, kumaNodes, manualNodes] = await Promise.all([
+    const basePromises: Promise<TopologyNode[]>[] = [
       this.fetchFromPrometheus(options.prometheusUrl).catch(() => []),
       this.fetchFromUptimeKuma().catch(() => []),
       this.loadTopologyFromDb().then(nodes => nodes.filter(n => n.sources.includes("MANUAL")))
-    ]);
-    allNodes.push(...promNodes, ...kumaNodes, ...manualNodes);
+    ];
+
+    // Add nmap if requested and IP range provided
+    if (options.useNmap && options.ipRange) {
+      basePromises.push(this.discoverWithNmap(options.ipRange).catch(() => []));
+    }
+
+    const results = await Promise.all(basePromises);
+    for (const r of results) allNodes.push(...r);
 
     // SNMP scan if IP range provided
     if (options.ipRange) {

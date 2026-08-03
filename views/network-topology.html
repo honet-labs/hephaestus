@@ -539,6 +539,12 @@
             <label>Version</label>
             <select id="snmp-version"><option value="2c">v2c</option><option value="v1">v1</option></select>
         </div>
+        <div class="scan-group" id="scan-nmap-toggle" style="align-self:flex-end;">
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;text-transform:none;font-weight:400;color:var(--text);">
+                <input type="checkbox" id="use-nmap" style="accent-color:var(--purple);">
+                Nmap
+            </label>
+        </div>
         <div style="display:flex;gap:6px;align-self:flex-end;">
             <button class="btn btn-primary" id="btn-scan" onclick="runScan()">Start Scan</button>
             <button class="btn btn-ghost" onclick="toggleScanBar()">Cancel</button>
@@ -604,6 +610,7 @@
             <span><span class="tag" style="background:var(--accent-bg);color:var(--accent);">PROM</span></span>
             <span><span class="tag" style="background:var(--green-bg);color:var(--green);">KUMA</span></span>
             <span><span class="tag" style="background:var(--yellow-bg);color:var(--yellow);">SNMP</span></span>
+            <span><span class="tag" style="background:var(--purple-bg);color:var(--purple);">NMAP</span></span>
             <span><span class="tag" style="background:rgba(139,148,158,0.12);color:var(--text-muted);">MANUAL</span></span>
         </div>
 
@@ -799,6 +806,7 @@
         PROM: { bg: 'rgba(88,166,255,0.15)', color: '#58a6ff' },
         KUMA: { bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
         SNMP: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
+        NMAP: { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa' },
         MANUAL: { bg: 'rgba(139,148,158,0.15)', color: '#8b949e' }
     };
     const EDGE_TYPE_COLORS = {
@@ -1315,21 +1323,25 @@
         const snmpFields = document.getElementById('scan-snmp-fields');
         const snmpCommunity = document.getElementById('scan-snmp-community');
         const snmpVersion = document.getElementById('scan-snmp-version');
+        const nmapToggle = document.getElementById('scan-nmap-toggle');
         if (source === 'prometheus') {
             promFields.classList.remove('hidden');
             snmpFields.classList.add('hidden');
             snmpCommunity.classList.add('hidden');
             snmpVersion.classList.add('hidden');
+            nmapToggle.classList.add('hidden');
         } else if (source === 'snmp') {
             promFields.classList.add('hidden');
             snmpFields.classList.remove('hidden');
             snmpCommunity.classList.remove('hidden');
             snmpVersion.classList.remove('hidden');
+            nmapToggle.classList.remove('hidden');
         } else {
             promFields.classList.remove('hidden');
             snmpFields.classList.remove('hidden');
             snmpCommunity.classList.remove('hidden');
             snmpVersion.classList.remove('hidden');
+            nmapToggle.classList.remove('hidden');
         }
     }
 
@@ -1355,6 +1367,10 @@
             }
             if (source === 'snmp' || source === 'both') {
                 if (ipRange) body.ipRange = ipRange;
+            }
+            if (document.getElementById('use-nmap') && document.getElementById('use-nmap').checked) {
+                body.useNmap = true;
+                if (!body.ipRange && ipRange) body.ipRange = ipRange;
             }
             const data = await apiFetch('/api/v1/topology/scan', {
                 method: 'POST',
