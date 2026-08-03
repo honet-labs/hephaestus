@@ -83,18 +83,34 @@ export class TopologyService {
     let authToken = "";
 
     if (!url) {
-      // Try to get from active Prometheus config
+      // Try to get from active Grafana config
       const configRes = await query(
-        `SELECT host, token FROM grafana_configs WHERE is_active = true LIMIT 1`
+        `SELECT host, token, datasource_uid FROM grafana_configs WHERE is_active = true LIMIT 1`
       );
       if (configRes.rows.length === 0) {
-        console.log("[Topology] No active Prometheus/Grafana config found, skipping Prometheus source.");
-        return nodes;
+        // Fallback: try prometheus_configs for a direct Prometheus URL
+        const promRes = await query(
+          `SELECT reload_url FROM prometheus_configs WHERE is_active = true LIMIT 1`
+        );
+        if (promRes.rows.length === 0) {
+          console.log("[Topology] No active Prometheus/Grafana config found, skipping Prometheus source.");
+          return nodes;
+        }
+        // Derive base URL from reload_url (e.g. http://prometheus:9090/-/reload → http://prometheus:9090)
+        const reloadUrl = promRes.rows[0].reload_url as string;
+        url = reloadUrl.replace(/\/-\/reload\/?$/, "");
+      } else {
+        // Use Grafana datasource proxy to query Prometheus targets
+        const grafana = configRes.rows[0];
+        const dsUid = grafana.datasource_uid || "prometheus";
+        url = `${grafana.host}/api/datasources/proxy/uid/${dsUid}/api/v1/targets`;
+        authToken = grafana.token || "";
       }
-      // Use Grafana datasource proxy to query Prometheus targets
-      const grafana = configRes.rows[0];
-      url = `${grafana.host}/api/datasources/proxy/uid/prometheus/api/v1/targets`;
-      authToken = grafana.token || "";
+    }
+
+    // Auto-append /api/v1/targets if user gave a bare base URL
+    if (url && !url.includes("/api/v1/")) {
+      url = url.replace(/\/+$/, "") + "/api/v1/targets";
     }
 
     try {

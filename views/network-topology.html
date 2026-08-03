@@ -161,10 +161,11 @@
 
         /* ========== LEGEND ========== */
         .legend {
-            position: absolute; bottom: 12px; left: 12px;
+            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
             background: rgba(22,27,34,0.95); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 8px 12px; z-index: 35;
-            backdrop-filter: blur(8px); display: flex; gap: 12px; flex-wrap: wrap;
+            border-radius: 20px; padding: 5px 14px; z-index: 35;
+            backdrop-filter: blur(8px); display: flex; gap: 10px; flex-wrap: wrap;
+            font-size: 10px;
         }
         .legend span { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
         .legend .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -610,7 +611,6 @@
             <span><span class="dot" style="background:var(--text-dim);"></span> Unknown</span>
             <span class="sep"></span>
             <span><span class="tag" style="background:var(--accent-bg);color:var(--accent);">PROM</span></span>
-            <span><span class="tag" style="background:var(--green-bg);color:var(--green);">KUMA</span></span>
             <span><span class="tag" style="background:var(--yellow-bg);color:var(--yellow);">SNMP</span></span>
             <span><span class="tag" style="background:var(--purple-bg);color:var(--purple);">NMAP</span></span>
             <span><span class="tag" style="background:rgba(139,148,158,0.12);color:var(--text-muted);">MANUAL</span></span>
