@@ -588,7 +588,16 @@ export async function initDb() {
     );`,
     `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS group_name VARCHAR(255) DEFAULT 'Default';`,
     `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`,
-    `ALTER TABLE topology_devices ADD COLUMN IF NOT EXISTS interfaces JSONB DEFAULT '[]';`
+    `ALTER TABLE topology_devices ADD COLUMN IF NOT EXISTS interfaces JSONB DEFAULT '[]';`,
+
+    // topology_pending: persist scan results across sessions/devices
+    `CREATE TABLE IF NOT EXISTS topology_pending (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      device_data JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+    `CREATE INDEX IF NOT EXISTS idx_topology_pending_user ON topology_pending(user_id);`
   ];
   await Promise.all(migrationQueries.map(q => pool.query(q)));
 

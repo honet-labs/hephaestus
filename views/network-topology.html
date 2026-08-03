@@ -797,32 +797,28 @@
     let sidebarVisible = false;
     let selectedIndices = new Set();
     const token = localStorage.getItem('hephaestus_session_token') || '';
-    const PENDING_STORAGE_KEY = 'topology_pending_nodes';
 
-    // Load pending nodes from localStorage on startup
-    function loadPendingFromStorage() {
+    // Load pending nodes from DB on startup
+    async function loadPendingFromDB() {
         try {
-            const saved = localStorage.getItem(PENDING_STORAGE_KEY);
-            if (saved) {
-                pendingNodes = JSON.parse(saved);
-                if (pendingNodes.length > 0) {
-                    renderPendingList('Scan Results');
-                    document.getElementById('results-sidebar').classList.add('visible');
-                    sidebarVisible = true;
-                    document.getElementById('sidebar-toggle').classList.add('shifted');
-                    document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
-                }
+            const data = await apiFetch('/api/v1/topology/pending');
+            if (data.success && data.data && data.data.length > 0) {
+                pendingNodes = data.data;
+                renderPendingList('Scan Results');
+                document.getElementById('results-sidebar').classList.add('visible');
+                sidebarVisible = true;
+                document.getElementById('sidebar-toggle').classList.add('shifted');
+                document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
             }
         } catch (e) {}
     }
 
-    function savePendingToStorage() {
+    function savePendingToDB() {
         try {
-            if (pendingNodes.length > 0) {
-                localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(pendingNodes));
-            } else {
-                localStorage.removeItem(PENDING_STORAGE_KEY);
-            }
+            apiFetch('/api/v1/topology/pending', {
+                method: 'POST',
+                body: JSON.stringify({ nodes: pendingNodes })
+            }).catch(() => {});
         } catch (e) {}
     }
 
@@ -1409,7 +1405,7 @@
             if (!data.success) throw new Error(data.error);
             document.getElementById('scan-bar').classList.remove('visible');
             pendingNodes = data.data.nodes || [];
-            savePendingToStorage();
+            savePendingToDB();
             renderPendingList('Scan Results');
             updateStatus(`Scan found ${pendingNodes.length} devices`);
             showToast('success', `Scan complete: ${pendingNodes.length} devices found`);
@@ -1681,7 +1677,7 @@
         if (network) network.body.data.nodes.add(visNode);
         pendingNodes.splice(idx, 1);
         selectedIndices.delete(idx);
-        savePendingToStorage();
+        savePendingToDB();
         renderPendingList(document.getElementById('results-title').textContent);
         updateEmptyState(nodesData.length);
         document.getElementById('stat-nodes').textContent = nodesData.length;
@@ -1692,7 +1688,7 @@
         if (idx < 0 || idx >= pendingNodes.length) return;
         pendingNodes.splice(idx, 1);
         selectedIndices.delete(idx);
-        savePendingToStorage();
+        savePendingToDB();
         renderPendingList(document.getElementById('results-title').textContent);
     }
 
@@ -1715,7 +1711,7 @@
                 }
                 for (const idx of toAdd) { pendingNodes.splice(idx, 1); }
                 selectedIndices.clear();
-                savePendingToStorage();
+                savePendingToDB();
                 renderPendingList(document.getElementById('results-title').textContent);
                 updateEmptyState(nodesData.length);
                 document.getElementById('stat-nodes').textContent = nodesData.length;
@@ -1732,7 +1728,7 @@
     function clearPending() {
         pendingNodes = [];
         selectedIndices.clear();
-        savePendingToStorage();
+        savePendingToDB();
         renderPendingList(document.getElementById('results-title').textContent);
     }
 
@@ -1785,7 +1781,7 @@
     /* ==================== INIT ==================== */
     document.addEventListener('DOMContentLoaded', function() {
         loadGraph();
-        loadPendingFromStorage();
+        loadPendingFromDB();
     });
     </script>
 </body>

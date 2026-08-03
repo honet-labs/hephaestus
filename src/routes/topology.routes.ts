@@ -20,6 +20,11 @@ router.put("/device/position", requireRole("ADMIN"), (req, res) => topologyContr
 router.post("/edge", requireRole("ADMIN"), (req, res) => topologyController.addEdge(req, res));
 router.delete("/edge/:id", requireRole("ADMIN"), (req, res) => topologyController.deleteEdge(req, res));
 
+// Pending nodes (scan results)
+router.get("/pending", requireRole("ADMIN"), (req, res) => topologyController.getPendingNodes(req, res));
+router.post("/pending", requireRole("ADMIN"), (req, res) => topologyController.savePendingNodes(req, res));
+router.delete("/pending", requireRole("ADMIN"), (req, res) => topologyController.clearPendingNodes(req, res));
+
 // Device actions
 router.get("/device/:id/ping", requireRole("ADMIN"), (req, res) => topologyController.pingDevice(req, res));
 router.get("/device/:id/snmp-walk", requireRole("ADMIN"), (req, res) => topologyController.snmpWalkDevice(req, res));

@@ -738,6 +738,40 @@ export class TopologyService {
     return res.rows;
   }
 
+  // ==================== PENDING NODES (scan results) ====================
+
+  async getPendingNodes(userId: number): Promise<any[]> {
+    const res = await query(
+      `SELECT id, device_data, created_at FROM topology_pending WHERE user_id = $1 ORDER BY created_at ASC`,
+      [userId]
+    );
+    return res.rows.map((row: any) => ({ ...row.device_data, _pendingId: row.id }));
+  }
+
+  async savePendingNode(userId: number, deviceData: any): Promise<void> {
+    await query(
+      `INSERT INTO topology_pending (user_id, device_data) VALUES ($1, $2)`,
+      [userId, JSON.stringify(deviceData)]
+    );
+  }
+
+  async savePendingNodes(userId: number, devices: any[]): Promise<void> {
+    for (const d of devices) {
+      await query(
+        `INSERT INTO topology_pending (user_id, device_data) VALUES ($1, $2)`,
+        [userId, JSON.stringify(d)]
+      );
+    }
+  }
+
+  async deletePendingNode(userId: number, pendingId: number): Promise<void> {
+    await query(`DELETE FROM topology_pending WHERE id = $1 AND user_id = $2`, [pendingId, userId]);
+  }
+
+  async clearPendingNodes(userId: number): Promise<void> {
+    await query(`DELETE FROM topology_pending WHERE user_id = $1`, [userId]);
+  }
+
   // ==================== FULL TOPOLOGY BUILD ====================
 
   /**

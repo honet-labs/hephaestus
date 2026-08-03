@@ -258,6 +258,49 @@ export class TopologyController {
       return res.status(200).json({ success: true, output: err.stdout || err.message });
     }
   }
+
+  // ==================== PENDING NODES ====================
+
+  public async getPendingNodes(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ success: false, error: "Unauthorized." });
+      const nodes = await topologyService.getPendingNodes(userId);
+      return res.status(200).json({ success: true, data: nodes });
+    } catch (err: any) {
+      console.error("[Topology] getPendingNodes error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to load pending nodes." });
+    }
+  }
+
+  public async savePendingNodes(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ success: false, error: "Unauthorized." });
+      const { nodes } = req.body;
+      if (!nodes || !Array.isArray(nodes)) {
+        return res.status(400).json({ success: false, error: "nodes array is required." });
+      }
+      await topologyService.clearPendingNodes(userId);
+      await topologyService.savePendingNodes(userId, nodes);
+      return res.status(200).json({ success: true, data: { saved: nodes.length } });
+    } catch (err: any) {
+      console.error("[Topology] savePendingNodes error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to save pending nodes." });
+    }
+  }
+
+  public async clearPendingNodes(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ success: false, error: "Unauthorized." });
+      await topologyService.clearPendingNodes(userId);
+      return res.status(200).json({ success: true });
+    } catch (err: any) {
+      console.error("[Topology] clearPendingNodes error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to clear pending nodes." });
+    }
+  }
 }
 
 export const topologyController = new TopologyController();
