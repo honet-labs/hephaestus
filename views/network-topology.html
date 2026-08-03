@@ -502,8 +502,10 @@
 
     <!-- SCAN BAR -->
     <div id="scan-bar" class="scan-bar">
-        <label>Target:</label>
-        <input type="text" id="ip-range" placeholder="10.11.12.0/24 or 10.11.12.1-10.11.12.50" style="min-width:240px;">
+        <label>Prometheus:</label>
+        <input type="text" id="prometheus-url" placeholder="Auto-detect from Grafana config (or http://prometheus:9090)" style="min-width:280px;">
+        <label>IP Range:</label>
+        <input type="text" id="ip-range" placeholder="10.11.12.0/24 (optional, for SNMP scan)" style="min-width:240px;">
         <label>Community:</label>
         <input type="text" id="snmp-community" value="public" style="width:80px;">
         <label>Version:</label>
@@ -1274,6 +1276,7 @@
     }
 
     async function runScan() {
+        const prometheusUrl = document.getElementById('prometheus-url').value.trim();
         const ipRange = document.getElementById('ip-range').value.trim();
         const community = document.getElementById('snmp-community').value.trim() || 'public';
         const version = document.getElementById('snmp-version').value;
@@ -1287,9 +1290,12 @@
         updateStatus('Scanning network...');
 
         try {
+            const body = { snmpCommunity: community, snmpVersion: version };
+            if (prometheusUrl) body.prometheusUrl = prometheusUrl;
+            if (ipRange) body.ipRange = ipRange;
             const data = await apiFetch('/api/v1/topology/scan', {
                 method: 'POST',
-                body: JSON.stringify({ ipRange: ipRange || undefined, snmpCommunity: community, snmpVersion: version })
+                body: JSON.stringify(body)
             });
             if (!data.success) throw new Error(data.error);
             document.getElementById('scan-bar').classList.remove('visible');

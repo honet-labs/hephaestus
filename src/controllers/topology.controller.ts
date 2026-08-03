@@ -31,12 +31,13 @@ export class TopologyController {
 
   /**
    * POST /api/v1/topology/scan — Run scan and return candidates (NOT saved to DB)
-   * Body: { ipRange?, snmpCommunity?, snmpVersion? }
+   * Body: { prometheusUrl?, ipRange?, snmpCommunity?, snmpVersion? }
    */
   public async scanCandidates(req: Request, res: Response) {
     try {
-      const { ipRange, snmpCommunity, snmpVersion } = req.body || {};
+      const { prometheusUrl, ipRange, snmpCommunity, snmpVersion } = req.body || {};
       const nodes = await topologyService.scanOnly({
+        prometheusUrl,
         ipRange,
         snmpCommunity: snmpCommunity || "public",
         snmpVersion: snmpVersion || "2c"

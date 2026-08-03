@@ -737,18 +737,23 @@ export class TopologyService {
 
   /**
    * Scan network and return candidates WITHOUT saving to DB.
-   * Used by the scan endpoint so results go to sidebar first.
+   * Fetches from Prometheus targets, Uptime Kuma, and SNMP scan.
    */
   async scanOnly(options: {
+    prometheusUrl?: string;
     ipRange?: string;
     snmpCommunity?: string;
     snmpVersion?: string;
   }): Promise<TopologyNode[]> {
     const allNodes: TopologyNode[] = [];
 
-    // Fetch existing manual nodes from DB
-    const manualNodes = await this.loadTopologyFromDb().then(nodes => nodes.filter(n => n.sources.includes("MANUAL")));
-    allNodes.push(...manualNodes);
+    // Fetch from Prometheus and Uptime Kuma in parallel
+    const [promNodes, kumaNodes, manualNodes] = await Promise.all([
+      this.fetchFromPrometheus(options.prometheusUrl).catch(() => []),
+      this.fetchFromUptimeKuma().catch(() => []),
+      this.loadTopologyFromDb().then(nodes => nodes.filter(n => n.sources.includes("MANUAL")))
+    ]);
+    allNodes.push(...promNodes, ...kumaNodes, ...manualNodes);
 
     // SNMP scan if IP range provided
     if (options.ipRange) {
