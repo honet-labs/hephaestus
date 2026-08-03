@@ -447,6 +447,107 @@
         MANUAL: { bg: 'rgba(139,148,158,0.15)', color: '#8b949e' }
     };
 
+    // ==================== DEVICE ICONS (canvas-generated) ====================
+    function generateDeviceIcon(type, status) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64; canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        const sc = STATUS_COLORS[status] || '#6b7280';
+        const tc = NODE_COLORS[type] || '#6b7280';
+
+        // Background circle
+        ctx.beginPath();
+        ctx.arc(32, 32, 28, 0, Math.PI * 2);
+        ctx.fillStyle = '#161b22';
+        ctx.fill();
+        ctx.strokeStyle = sc;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = tc;
+        ctx.strokeStyle = tc;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        switch(type) {
+            case 'router':
+                // Router: circle with 4 arrows
+                ctx.beginPath(); ctx.arc(32, 32, 10, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(32, 14); ctx.lineTo(32, 8); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(32, 50); ctx.lineTo(32, 56); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(14, 32); ctx.lineTo(8, 32); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(50, 32); ctx.lineTo(56, 32); ctx.stroke();
+                // Arrow heads
+                ctx.beginPath(); ctx.moveTo(28, 12); ctx.lineTo(32, 6); ctx.lineTo(36, 12); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(28, 52); ctx.lineTo(32, 58); ctx.lineTo(36, 52); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(12, 28); ctx.lineTo(6, 32); ctx.lineTo(12, 36); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(52, 28); ctx.lineTo(58, 32); ctx.lineTo(52, 36); ctx.stroke();
+                break;
+            case 'switch':
+                // Switch: rectangle with ports
+                ctx.strokeRect(14, 20, 36, 24);
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillRect(18 + i * 8, 26, 4, 4);
+                    ctx.fillRect(18 + i * 8, 34, 4, 4);
+                }
+                break;
+            case 'firewall':
+                // Firewall: shield with flame
+                ctx.beginPath();
+                ctx.moveTo(32, 12); ctx.lineTo(48, 20); ctx.lineTo(48, 36); ctx.quadraticCurveTo(48, 52, 32, 56); ctx.quadraticCurveTo(16, 52, 16, 36); ctx.lineTo(16, 20); ctx.closePath();
+                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(32, 24); ctx.lineTo(36, 34); ctx.lineTo(30, 38); ctx.lineTo(34, 46); ctx.stroke();
+                break;
+            case 'server':
+                // Server: stacked rectangles
+                ctx.strokeRect(16, 12, 32, 12);
+                ctx.strokeRect(16, 28, 32, 12);
+                ctx.strokeRect(16, 44, 32, 12);
+                ctx.beginPath(); ctx.arc(22, 18, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(22, 34, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(22, 50, 2, 0, Math.PI * 2); ctx.fill();
+                break;
+            case 'web':
+                // Web: globe
+                ctx.beginPath(); ctx.arc(32, 32, 18, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.ellipse(32, 32, 8, 18, 0, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(14, 32); ctx.lineTo(50, 32); ctx.stroke();
+                break;
+            case 'container':
+                // Container: hexagon
+                ctx.beginPath();
+                ctx.moveTo(32, 12); ctx.lineTo(50, 22); ctx.lineTo(50, 42); ctx.lineTo(32, 52); ctx.lineTo(14, 42); ctx.lineTo(14, 22); ctx.closePath();
+                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(14, 32); ctx.lineTo(50, 32); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(32, 12); ctx.lineTo(32, 32); ctx.stroke();
+                break;
+            case 'network':
+                // Network: two stacked boxes
+                ctx.strokeRect(14, 14, 36, 16);
+                ctx.strokeRect(14, 36, 36, 16);
+                ctx.beginPath(); ctx.moveTo(32, 30); ctx.lineTo(32, 36); ctx.stroke();
+                break;
+            default:
+                // Unknown: question mark
+                ctx.beginPath(); ctx.arc(32, 30, 14, 0, Math.PI * 2); ctx.stroke();
+                ctx.fillStyle = tc;
+                ctx.font = 'bold 20px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('?', 32, 30);
+                break;
+        }
+        return canvas.toDataURL();
+    }
+
+    const iconCache = {};
+    function getDeviceIconUrl(type, status) {
+        const key = type + '_' + status;
+        if (!iconCache[key]) iconCache[key] = generateDeviceIcon(type, status);
+        return iconCache[key];
+    }
+
     // ==================== TOAST ====================
     function showToast(type, msg) {
         const t = document.getElementById('toast');
@@ -468,27 +569,20 @@
 
         nodesData = nodes.map(n => {
             const sc = STATUS_COLORS[n.status] || '#6b7280';
-            const srcTags = (n.sources || []).map(s => s).join('+');
             const labelParts = [n.name];
             if (n.deviceType !== 'unknown') labelParts.push(n.deviceType.toUpperCase());
             labelParts.push(n.ip);
             labelParts.push(n.status.toUpperCase());
-            if (srcTags) labelParts.push(srcTags);
+            if (n.sources && n.sources.length) labelParts.push(n.sources.join('+'));
 
             return {
                 id: n.id,
+                image: getDeviceIconUrl(n.deviceType, n.status),
                 label: labelParts.join('\n'),
+                shape: 'image',
+                imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
                 title: `<b>${esc(n.name)}</b><br>IP: ${n.ip}<br>Type: ${n.deviceType}<br>Status: ${n.status}<br>Sources: ${(n.sources||[]).join(', ')}<br>Interfaces: ${(n.interfaces||[]).length}`,
-                shape: 'box',
-                margin: 10,
-                color: {
-                    background: '#161b22',
-                    border: sc,
-                    highlight: { background: '#1c2333', border: '#58a6ff' },
-                    hover: { background: '#1c2333', border: '#58a6ff' }
-                },
                 font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
-                borderWidth: 2,
                 x: n.x, y: n.y,
                 fixed: (n.x !== undefined && n.y !== null && n.x !== null) ? { x: true, y: true } : false,
                 _raw: n
@@ -790,16 +884,14 @@
         labelParts.push(node.ip);
         labelParts.push(node.status.toUpperCase());
         if (node.sources && node.sources.length) labelParts.push(node.sources.join('+'));
-        const sc = STATUS_COLORS[node.status] || '#6b7280';
         const visNode = {
             id: node.id,
+            image: getDeviceIconUrl(node.deviceType, node.status),
             label: labelParts.join('\n'),
+            shape: 'image',
+            imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
             title: `<b>${esc(node.name)}</b><br>IP: ${node.ip}<br>Type: ${node.deviceType}<br>Status: ${node.status}`,
-            shape: 'box',
-            margin: 10,
-            color: { background: '#161b22', border: sc, highlight: { background: '#1c2333', border: '#58a6ff' }, hover: { background: '#1c2333', border: '#58a6ff' } },
             font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
-            borderWidth: 2,
             _raw: node
         };
         nodesData.push(visNode);
@@ -828,16 +920,14 @@
             labelParts2.push(node.ip);
             labelParts2.push(node.status.toUpperCase());
             if (node.sources && node.sources.length) labelParts2.push(node.sources.join('+'));
-            const sc2 = STATUS_COLORS[node.status] || '#6b7280';
             const visNode = {
                 id: node.id,
+                image: getDeviceIconUrl(node.deviceType, node.status),
                 label: labelParts2.join('\n'),
+                shape: 'image',
+                imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
                 title: `<b>${esc(node.name)}</b><br>IP: ${node.ip}<br>Type: ${node.deviceType}<br>Status: ${node.status}`,
-                shape: 'box',
-                margin: 10,
-                color: { background: '#161b22', border: sc2, highlight: { background: '#1c2333', border: '#58a6ff' }, hover: { background: '#1c2333', border: '#58a6ff' } },
                 font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
-                borderWidth: 2,
                 _raw: node
             };
             nodesData.push(visNode);

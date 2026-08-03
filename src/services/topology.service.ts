@@ -381,19 +381,23 @@ export class TopologyService {
     const lines = output.split(/\r?\n/);
     for (const line of lines) {
       if (!line.trim()) continue;
-      const match = line.match(/^\.([\d.]+)\s*=\s*(.*?)$/);
+      // Format: .1.3.6.1.2.1.2.2.1.8.1 = INTEGER: 1
+      // or:     .1.3.6.1.2.1.2.2.1.2.1 = STRING: "eth0"
+      const match = line.match(/^\.([\d.]+)\s*=\s*(.*)$/);
       if (match) {
         const oidParts = match[1].split(".");
         const idx = oidParts[oidParts.length - 1];
-        let value = match[2];
-        const colonIdx = value.indexOf(":");
-        if (colonIdx !== -1) {
-          value = value.substring(colonIdx + 1).trim();
+        let rawValue = match[2].trim();
+        // Strip type prefix: "INTEGER: 1" -> "1", "STRING: eth0" -> "eth0"
+        const colonMatch = rawValue.match(/^(\w+):\s*(.*)/);
+        if (colonMatch) {
+          rawValue = colonMatch[2].trim();
         }
-        if (value.startsWith('"') && value.endsWith('"')) {
-          value = value.substring(1, value.length - 1);
+        // Strip surrounding quotes
+        if (rawValue.startsWith('"') && rawValue.endsWith('"')) {
+          rawValue = rawValue.substring(1, rawValue.length - 1);
         }
-        map.set(idx, value);
+        map.set(idx, rawValue);
       }
     }
     return map;

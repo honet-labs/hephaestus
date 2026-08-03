@@ -115,12 +115,24 @@ export class TopologyController {
       if (!source || !target) {
         return res.status(400).json({ success: false, error: "source and target are required." });
       }
+      if (source === target) {
+        return res.status(400).json({ success: false, error: "Cannot connect a device to itself." });
+      }
+      // Verify both devices exist
+      const srcCheck = await (await import("../config/db")).query("SELECT id FROM topology_devices WHERE id = $1", [source]);
+      const tgtCheck = await (await import("../config/db")).query("SELECT id FROM topology_devices WHERE id = $1", [target]);
+      if (srcCheck.rows.length === 0) {
+        return res.status(400).json({ success: false, error: `Source device "${source}" not found. Try refreshing the page.` });
+      }
+      if (tgtCheck.rows.length === 0) {
+        return res.status(400).json({ success: false, error: `Target device "${target}" not found. Try refreshing the page.` });
+      }
       const edge = await topologyService.addEdge(source, target, label, edgeType);
       await logActivity("Network Topology", "Add Edge", `Added connection "${source}" -> "${target}"`, "SUCCESS");
       return res.status(200).json({ success: true, data: edge });
     } catch (err: any) {
       console.error("[Topology] addEdge error:", err.message);
-      return res.status(500).json({ success: false, error: "Failed to add edge." });
+      return res.status(500).json({ success: false, error: "Failed to add edge: " + err.message });
     }
   }
 
