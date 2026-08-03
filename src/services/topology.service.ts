@@ -673,28 +673,33 @@ export class TopologyService {
    * Preserves position if device already exists.
    */
   async saveDeviceToDb(node: TopologyNode): Promise<void> {
-    const existing = await query(
-      `SELECT id, x, y FROM topology_devices WHERE ip_address = $1`,
-      [node.ip]
-    );
+    try {
+      const existing = await query(
+        `SELECT id, x, y FROM topology_devices WHERE ip_address = $1`,
+        [node.ip]
+      );
 
-    if (existing.rows.length > 0) {
-      await query(
-        `UPDATE topology_devices
-         SET name = $1, device_type = $2, status = $3, sources = $4, labels = $5, interfaces = $6
-         WHERE ip_address = $7`,
-        [node.name, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), JSON.stringify(node.interfaces || []), node.ip]
-      );
-    } else {
-      const id = node.id || `device-${node.ip}-${Date.now()}`;
-      await query(
-        `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, interfaces, x, y)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         ON CONFLICT (id) DO UPDATE SET
-           name = EXCLUDED.name, device_type = EXCLUDED.device_type, status = EXCLUDED.status,
-           sources = EXCLUDED.sources, labels = EXCLUDED.labels, interfaces = EXCLUDED.interfaces`,
-        [id, node.name, node.ip, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), JSON.stringify(node.interfaces || []), node.x || null, node.y || null]
-      );
+      if (existing.rows.length > 0) {
+        await query(
+          `UPDATE topology_devices
+           SET name = $1, device_type = $2, status = $3, sources = $4, labels = $5, interfaces = $6
+           WHERE ip_address = $7`,
+          [node.name, node.deviceType, node.status, node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), node.ip]
+        );
+      } else {
+        const id = node.id || `device-${node.ip}-${Date.now()}`;
+        await query(
+          `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, interfaces, x, y)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           ON CONFLICT (id) DO UPDATE SET
+             name = EXCLUDED.name, device_type = EXCLUDED.device_type, status = EXCLUDED.status,
+             sources = EXCLUDED.sources, labels = EXCLUDED.labels, interfaces = EXCLUDED.interfaces`,
+          [id, node.name, node.ip, node.deviceType || "unknown", node.status || "unknown", node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), node.x || null, node.y || null]
+        );
+      }
+    } catch (err: any) {
+      console.error("[Topology] saveDeviceToDb error:", err.message, "node:", node?.ip);
+      throw err;
     }
   }
 

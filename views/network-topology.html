@@ -1573,10 +1573,14 @@
         const node = pendingNodes[idx];
         const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
         if (exists) { showToast('info', `"${node.name}" already on canvas`); return; }
-        // Save to DB first
+        // Save to DB first — block if fails
         try {
-            await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify(node) });
-        } catch (e) { /* continue anyway */ }
+            const res = await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify(node) });
+            if (!res.success) throw new Error(res.error || 'Save failed');
+        } catch (e) {
+            showToast('error', `Failed to save "${node.name}": ${e.message}`);
+            return;
+        }
         const visNode = buildNodeData(node);
         nodesData.push(visNode);
         if (network) network.body.data.nodes.add(visNode);
@@ -1596,11 +1600,15 @@
         if (pendingNodes.length === 0) return;
         let added = 0;
         const toAdd = [...pendingNodes];
-        pendingNodes = [];
         // Save all to DB first
         try {
-            await apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: toAdd }) });
-        } catch (e) { /* continue anyway */ }
+            const res = await apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: toAdd }) });
+            if (!res.success) throw new Error(res.error || 'Bulk save failed');
+        } catch (e) {
+            showToast('error', `Failed to save devices: ${e.message}`);
+            return;
+        }
+        pendingNodes = [];
         for (const node of toAdd) {
             const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
             if (exists) continue;

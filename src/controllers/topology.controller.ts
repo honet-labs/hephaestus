@@ -57,9 +57,10 @@ export class TopologyController {
   public async saveDevice(req: Request, res: Response) {
     try {
       const node = req.body;
-      if (!node.ip) {
+      if (!node || !node.ip) {
         return res.status(400).json({ success: false, error: "ip is required." });
       }
+      console.log("[Topology] saveDevice:", node.name, node.ip, "sources:", node.sources);
       await topologyService.saveDeviceToDb(node);
       await logActivity("Network Topology", "Save Device", `Saved device "${node.name}" (${node.ip}) to database`, "SUCCESS");
       return res.status(200).json({ success: true, data: node });
