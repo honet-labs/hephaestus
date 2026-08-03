@@ -1403,6 +1403,8 @@
             await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId), { method: 'DELETE' });
             closeDetail();
             await loadGraph();
+            // Re-render sidebar to update "Added" → "Add" status
+            if (pendingNodes.length > 0) renderPendingList(document.getElementById('results-title').textContent);
             showToast('success', `"${name}" deleted`);
         } catch (e) { showToast('error', 'Delete failed: ' + e.message); }
     }
