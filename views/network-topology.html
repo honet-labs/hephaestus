@@ -1295,6 +1295,7 @@
     function toggleScanBar() {
         const bar = document.getElementById('scan-bar');
         bar.classList.toggle('visible');
+        if (bar.classList.contains('visible')) onScanSourceChange();
     }
 
     function onScanSourceChange() {
