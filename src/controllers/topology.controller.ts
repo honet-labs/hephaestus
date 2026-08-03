@@ -225,7 +225,8 @@ export class TopologyController {
         return res.status(404).json({ success: false, error: "Device not found." });
       }
       const ip = result.rows[0].ip_address;
-      const output = execSync(`ping -n 4 ${ip}`, { timeout: 10000, encoding: "utf-8" });
+      // Use -c (count) not -n — BusyBox/Alpine compatibility
+      const output = execSync(`ping -c 4 -W 3 ${ip}`, { timeout: 15000, encoding: "utf-8" });
       return res.status(200).json({ success: true, output });
     } catch (err: any) {
       return res.status(200).json({ success: true, output: err.stdout || err.message });
