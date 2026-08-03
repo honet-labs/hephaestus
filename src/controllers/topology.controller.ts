@@ -281,7 +281,6 @@ export class TopologyController {
       if (!nodes || !Array.isArray(nodes)) {
         return res.status(400).json({ success: false, error: "nodes array is required." });
       }
-      await topologyService.clearPendingNodes(userId);
       await topologyService.savePendingNodes(userId, nodes);
       return res.status(200).json({ success: true, data: { saved: nodes.length } });
     } catch (err: any) {
@@ -294,7 +293,14 @@ export class TopologyController {
     try {
       const userId = (req as any).user?.id;
       if (!userId) return res.status(401).json({ success: false, error: "Unauthorized." });
-      await topologyService.clearPendingNodes(userId);
+      const { ids } = req.body;
+      if (ids && Array.isArray(ids) && ids.length > 0) {
+        for (const id of ids) {
+          await topologyService.deletePendingNode(userId, id);
+        }
+      } else {
+        await topologyService.clearPendingNodes(userId);
+      }
       return res.status(200).json({ success: true });
     } catch (err: any) {
       console.error("[Topology] clearPendingNodes error:", err.message);

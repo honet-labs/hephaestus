@@ -804,6 +804,7 @@
             const data = await apiFetch('/api/v1/topology/pending');
             if (data.success && data.data && data.data.length > 0) {
                 pendingNodes = data.data;
+                pendingNodes.forEach(n => n._saved = true);
                 renderPendingList('Scan Results');
                 document.getElementById('results-sidebar').classList.add('visible');
                 sidebarVisible = true;
@@ -815,9 +816,23 @@
 
     function savePendingToDB() {
         try {
+            const unsaved = pendingNodes.filter(n => !n._saved);
+            if (unsaved.length === 0) return;
             apiFetch('/api/v1/topology/pending', {
                 method: 'POST',
-                body: JSON.stringify({ nodes: pendingNodes })
+                body: JSON.stringify({ nodes: unsaved })
+            }).then(() => {
+                unsaved.forEach(n => n._saved = true);
+            }).catch(() => {});
+        } catch (e) {}
+    }
+
+    function deletePendingFromDB(ids) {
+        if (!ids || ids.length === 0) return;
+        try {
+            apiFetch('/api/v1/topology/pending', {
+                method: 'DELETE',
+                body: JSON.stringify({ ids })
             }).catch(() => {});
         } catch (e) {}
     }
@@ -1675,8 +1690,10 @@
         const visNode = buildNodeData(node);
         nodesData.push(visNode);
         if (network) network.body.data.nodes.add(visNode);
+        const removedId = node._pendingId;
         pendingNodes.splice(idx, 1);
         selectedIndices.delete(idx);
+        if (removedId) deletePendingFromDB([removedId]);
         savePendingToDB();
         renderPendingList(document.getElementById('results-title').textContent);
         updateEmptyState(nodesData.length);
@@ -1686,8 +1703,10 @@
 
     function dismissPending(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
+        const removedId = pendingNodes[idx]._pendingId;
         pendingNodes.splice(idx, 1);
         selectedIndices.delete(idx);
+        if (removedId) deletePendingFromDB([removedId]);
         savePendingToDB();
         renderPendingList(document.getElementById('results-title').textContent);
     }
@@ -1711,6 +1730,7 @@
                 }
                 for (const idx of toAdd) { pendingNodes.splice(idx, 1); }
                 selectedIndices.clear();
+                deletePendingFromDB(nodesToSave.map(n => n._pendingId).filter(Boolean));
                 savePendingToDB();
                 renderPendingList(document.getElementById('results-title').textContent);
                 updateEmptyState(nodesData.length);
@@ -1726,9 +1746,9 @@
     }
 
     function clearPending() {
+        apiFetch('/api/v1/topology/pending', { method: 'DELETE' }).catch(() => {});
         pendingNodes = [];
         selectedIndices.clear();
-        savePendingToDB();
         renderPendingList(document.getElementById('results-title').textContent);
     }
 
