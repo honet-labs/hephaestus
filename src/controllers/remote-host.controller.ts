@@ -4,11 +4,6 @@ import { logActivity } from "../config/db";
 import path from "path";
 
 const LOCAL_ALLOWED_ROOTS = ["/app/data", "/home", "/tmp", "/var/tmp"];
-const PRIVATE_IP_PATTERNS = [
-  /^127\./, /^10\./, /^172\.(1[6-9]|2\d|3[01])\./, /^192\.168\./,
-  /^169\.254\./, /^0\./, /^::1$/, /^fc00:/, /^fe80:/,
-  /^100\.(6[4-9]|[7-9]\d|1[0-2][0-7])\./,
-];
 const DANGEROUS_PATH_CHARS = /\.\.|~/;
 
 function validateLocalPath(localPath: string): string | null {
@@ -27,12 +22,6 @@ function validateRemotePath(remotePath: string): string {
   }
   if (remotePath.length > 4096) throw new Error("Invalid remote path");
   return remotePath;
-}
-
-function isPrivateOrReservedIP(host: string): boolean {
-  const h = host.trim().toLowerCase();
-  if (["localhost", "127.0.0.1", "::1", "0.0.0.0", "169.254.169.254", "metadata.google.internal"].includes(h)) return true;
-  return PRIVATE_IP_PATTERNS.some(p => p.test(h));
 }
 
 function validatePort(port: any): number {
@@ -56,9 +45,6 @@ class RemoteHostController {
       const { id, name, host, port, username, authType, password, sshKey, groupName, tags } = req.body;
       if (!name || !host || !username) {
         return res.status(400).json({ success: false, error: "Missing required fields." });
-      }
-      if (isPrivateOrReservedIP(host)) {
-        return res.status(400).json({ success: false, error: "Connecting to private/reserved IPs is not allowed." });
       }
       const validPort = validatePort(port || 22);
       const cfg = await remoteHostService.saveConfig({
@@ -88,9 +74,6 @@ class RemoteHostController {
       const { host, port, username, authType, password, sshKey } = req.body;
       if (!host || !username) {
         return res.status(400).json({ success: false, error: "Host and username are required." });
-      }
-      if (isPrivateOrReservedIP(host)) {
-        return res.status(400).json({ success: false, error: "Connecting to private/reserved IPs is not allowed." });
       }
       const validPort = validatePort(port || 22);
       const result = await remoteHostService.testConnection({

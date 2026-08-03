@@ -185,12 +185,12 @@ export class SnmpService {
     
     if (source.url) {
       const parsedUrl = new URL(source.url);
-      const blockedHosts = ["169.254.169.254", "localhost", "127.0.0.1", "0.0.0.0", "::1", "metadata.google.internal"];
+      const blockedHosts = ["169.254.169.254", "metadata.google.internal"];
       if (!["http:", "https:"].includes(parsedUrl.protocol)) {
         throw new Error("Only HTTP and HTTPS URLs are allowed for MIB import.");
       }
-      if (blockedHosts.includes(parsedUrl.hostname) || parsedUrl.hostname.startsWith("10.") || parsedUrl.hostname.startsWith("192.168.") || /^172\.(1[6-9]|2\d|3[01])\./.test(parsedUrl.hostname)) {
-        throw new Error("Importing MIBs from internal/private network addresses is not allowed.");
+      if (blockedHosts.includes(parsedUrl.hostname)) {
+        throw new Error("Importing MIBs from this host is not allowed.");
       }
       const response = await axios.get(source.url, { timeout: 10000, maxRedirects: 0 });
       content = response.data;
