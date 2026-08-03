@@ -237,7 +237,7 @@ initDb()
       // WebSocket server for Remote Host terminal (attached to same HTTP server)
       const { WebSocketServer } = require("ws");
       const MAX_WS_CONNECTIONS = 10;
-      const WS_PING_INTERVAL = 15000;
+      const WS_PING_INTERVAL = 45000; // 45 seconds — safe for browser-throttled background tabs
       const WS_MAX_PAYLOAD = 64 * 1024; // 64KB
       let wsConnectionCount = 0;
       wss = new WebSocketServer({ server, path: "/ws/remote-host", maxPayload: WS_MAX_PAYLOAD });

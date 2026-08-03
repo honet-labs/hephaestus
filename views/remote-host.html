@@ -1342,20 +1342,25 @@
             var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             var url = protocol + '//' + location.host + '/ws/remote-host?cols=' + tab.term.cols + '&rows=' + tab.term.rows;
             tab.ws = new WebSocket(url);
+            tab._reconnectAttempts = tab._reconnectAttempts || 0;
             tab.ws.onopen = function() {
+                tab._reconnectAttempts = 0;
                 tab.ws.send(JSON.stringify({ type: 'auth', token: sessionToken, hostId: srv.id }));
             };
+            // Client-side keepalive — 45 seconds to match server
+            if (tab._pingInterval) clearInterval(tab._pingInterval);
             tab._pingInterval = setInterval(function() {
                 if (tab.ws && tab.ws.readyState === WebSocket.OPEN) {
                     tab.ws.send(JSON.stringify({ type: 'ping' }));
                 }
-            }, 15000);
+            }, 45000);
             tab.ws.onmessage = function(ev) {
                 try {
                     var msg = JSON.parse(ev.data);
                     if (msg.type === 'data') { tab.term.write(msg.data); }
                     else if (msg.type === 'connected') {
                         tab.status = 'connected';
+                        tab._reconnectAttempts = 0;
                         statusEl.textContent = 'Connected';
                         statusEl.className = 'terminal-status connected';
                         if (overlayEl) overlayEl.classList.remove('active');
@@ -1372,6 +1377,8 @@
                         if (overlayEl) overlayEl.classList.add('active');
                         renderTabs();
                         renderHome();
+                        // Auto-reconnect with exponential backoff
+                        autoReconnect(tab, srv);
                     }
                     else if (msg.type === 'error') {
                         tab.status = 'error';
@@ -1395,6 +1402,8 @@
                     if (overlayEl) overlayEl.classList.add('active');
                     renderTabs();
                     renderHome();
+                    // Auto-reconnect with exponential backoff
+                    autoReconnect(tab, srv);
                 }
             };
             tab.ws.onerror = function() {
@@ -1404,6 +1413,40 @@
             };
         }
 
+        function autoReconnect(tab, srv) {
+            if (tab._reconnectTimer) return; // already reconnecting
+            var maxAttempts = 10;
+            var attempt = (tab._reconnectAttempts || 0) + 1;
+            if (attempt > maxAttempts) {
+                tab._reconnectAttempts = 0;
+                return; // give up after 10 attempts
+            }
+            tab._reconnectAttempts = attempt;
+            var delay = Math.min(1000 * Math.pow(1.5, attempt - 1), 30000); // 1s, 1.5s, 2.25s, ... max 30s
+            if (tab.statusEl) tab.statusEl.textContent = 'Reconnecting in ' + Math.round(delay/1000) + 's...';
+            tab._reconnectTimer = setTimeout(function() {
+                tab._reconnectTimer = null;
+                if (tab.status === 'connected' || tab.status === 'connecting') return; // already reconnected
+                reconnectTab(tab.id);
+            }, delay);
+        }
+
+        // When tab becomes visible again, reconnect if disconnected
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) return;
+            for (var i = 0; i < tabs.length; i++) {
+                var tab = tabs[i];
+                if (tab.id === activeTabId && tab.status === 'disconnected' && tab.serverId) {
+                    var srv = null;
+                    for (var j = 0; j < servers.length; j++) { if (servers[j].id === tab.serverId) { srv = servers[j]; break; } }
+                    if (srv) {
+                        tab._reconnectAttempts = 0;
+                        reconnectTab(tab.id);
+                    }
+                }
+            }
+        });
+
         function reconnectTab(tabId) {
             var tab = null;
             for (var i = 0; i < tabs.length; i++) { if (tabs[i].id === tabId) { tab = tabs[i]; break; } }
@@ -1412,6 +1455,8 @@
             for (var i = 0; i < servers.length; i++) { if (servers[i].id === tab.serverId) { srv = servers[i]; break; } }
             if (!srv) return;
             if (tab.ws) { try { tab.ws.close(); } catch(_){} tab.ws = null; }
+            if (tab._pingInterval) { clearInterval(tab._pingInterval); tab._pingInterval = null; }
+            if (tab._reconnectTimer) { clearTimeout(tab._reconnectTimer); tab._reconnectTimer = null; }
             tab.status = 'connecting';
             tab.statusEl.textContent = 'Reconnecting...';
             tab.statusEl.className = 'terminal-status connecting';

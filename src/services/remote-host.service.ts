@@ -185,10 +185,10 @@ class RemoteHostService {
             }
             if (userId) {
               const { query } = require("../config/db");
-              // Extend session but cap at 7 days from creation to prevent perpetual sessions
+              // Extend session by 24 hours, capped at 7 days from creation
               query(
                 `UPDATE user_sessions SET expires_at = LEAST(NOW() + INTERVAL '24 hours', created_at + INTERVAL '7 days')
-                 WHERE user_id = $1 AND expires_at > NOW()`,
+                 WHERE user_id = $1 AND expires_at > NOW() - INTERVAL '1 hour'`,
                 [userId]
               ).catch(() => {});
             }
