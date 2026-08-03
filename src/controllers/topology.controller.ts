@@ -171,6 +171,50 @@ export class TopologyController {
       return res.status(500).json({ success: false, error: "SNMP scan failed: " + err.message });
     }
   }
+
+  /**
+   * GET /api/v1/topology/device/:id/ping — Ping a device
+   */
+  public async pingDevice(req: Request, res: Response) {
+    try {
+      const { execSync } = require("child_process");
+      const deviceId = req.params.id;
+      const result = await (await import("../config/db")).query("SELECT ip_address FROM topology_devices WHERE id = $1", [deviceId]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, error: "Device not found." });
+      }
+      const ip = result.rows[0].ip_address;
+      const output = execSync(`ping -n 4 ${ip}`, { timeout: 10000, encoding: "utf-8" });
+      return res.status(200).json({ success: true, output });
+    } catch (err: any) {
+      return res.status(200).json({ success: true, output: err.stdout || err.message });
+    }
+  }
+
+  /**
+   * GET /api/v1/topology/device/:id/snmp-walk — SNMP walk a device
+   */
+  public async snmpWalkDevice(req: Request, res: Response) {
+    try {
+      const { execSync } = require("child_process");
+      const deviceId = req.params.id;
+      const result = await (await import("../config/db")).query(
+        "SELECT ip_address, labels FROM topology_devices WHERE id = $1", [deviceId]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, error: "Device not found." });
+      }
+      const ip = result.rows[0].ip_address;
+      const labels = result.rows[0].labels || {};
+      const community = labels.snmp_community || "public";
+      const version = labels.snmp_version || "2c";
+      const verFlag = version === "1" ? "-v1" : "-v2c";
+      const output = execSync(`snmpwalk ${verFlag} -c ${community} ${ip} .1`, { timeout: 15000, encoding: "utf-8" });
+      return res.status(200).json({ success: true, output });
+    } catch (err: any) {
+      return res.status(200).json({ success: true, output: err.stdout || err.message });
+    }
+  }
 }
 
 export const topologyController = new TopologyController();

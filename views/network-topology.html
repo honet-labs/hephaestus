@@ -8,300 +8,483 @@
     <style>
         :root {
             color-scheme: dark;
-            --background: #0d1117;
-            --foreground: #c9d1d9;
-            --app-sidebar: #161b22;
-            --app-topbar: #0d1117;
-            --app-card: #161b22;
-            --app-card-dark: #0d1117;
-            --app-border: #30363d;
-            --text-white: #e6edf3;
+            --bg: #0d1117;
+            --bg-card: #161b22;
+            --bg-elevated: #1c2128;
+            --border: #30363d;
+            --border-light: #3d444d;
+            --text: #e6edf3;
             --text-muted: #8b949e;
-            --btn-primary-bg: #1f6feb;
-            --btn-primary-color: #ffffff;
-            --btn-primary-hover: #388bfd;
-            --success: #10b981;
-            --success-border: rgba(16, 185, 129, 0.3);
-            --error: #f85149;
-            --error-border: rgba(248, 81, 73, 0.3);
-            --warning: #d29922;
+            --text-dim: #656d76;
             --accent: #58a6ff;
+            --accent-bg: rgba(88,166,255,0.12);
+            --green: #10b981;
+            --green-bg: rgba(16,185,129,0.12);
+            --red: #f85149;
+            --red-bg: rgba(248,81,73,0.12);
+            --yellow: #d29922;
+            --yellow-bg: rgba(210,153,34,0.12);
+            --purple: #a78bfa;
+            --purple-bg: rgba(167,139,250,0.12);
+            --cyan: #79c0ff;
+            --radius: 6px;
+            --radius-sm: 4px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, button, input, select, textarea, span, p, a, label {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-size: 13px;
-        }
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            background-color: var(--background);
-            color: var(--foreground);
-            display: flex; flex-direction: column;
-            height: 100vh; overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 13px; background: var(--bg); color: var(--text);
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+            user-select: none;
         }
-        h1, h2, h3, h4 { font-weight: 600; color: var(--text-white); }
+        h1,h2,h3,h4 { font-weight: 600; color: var(--text); }
 
+        /* ========== HEADER ========== */
         .header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0 16px; background: var(--app-topbar); border-bottom: 1px solid var(--app-border);
-            flex-shrink: 0; height: 44px;
+            padding: 0 16px; height: 44px; background: var(--bg-card);
+            border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 50;
         }
-        .header-left { display: flex; align-items: center; gap: 10px; }
-        .header h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header h1 { font-size: 14px; display: flex; align-items: center; gap: 8px; }
         .header h1 svg { width: 16px; height: 16px; color: var(--accent); }
         .header-right { display: flex; align-items: center; gap: 8px; }
         .back-link {
             color: var(--text-muted); text-decoration: none; font-size: 11px;
-            padding: 4px 10px; border: 1px solid var(--app-border); border-radius: 4px;
-            transition: all 0.2s;
+            padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            transition: all 0.15s;
         }
-        .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
-        .stats-badge {
-            font-size: 11px; color: var(--text-muted);
-            padding: 3px 8px; background: var(--app-card); border: 1px solid var(--app-border);
-            border-radius: 4px;
+        .back-link:hover { color: var(--text); border-color: var(--text-muted); }
+        .badge {
+            font-size: 11px; color: var(--text-muted); padding: 3px 8px;
+            background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
         }
-        .stats-badge strong { color: var(--text-white); }
+        .badge strong { color: var(--text); }
 
+        /* ========== BUTTONS ========== */
         button.btn {
-            border-radius: 4px; padding: 6px 14px; font-weight: 600;
+            border-radius: var(--radius-sm); padding: 6px 12px; font-weight: 600;
             cursor: pointer; transition: all 0.15s; text-transform: uppercase;
-            font-size: 11px; letter-spacing: 0.5px; display: inline-flex;
+            font-size: 10px; letter-spacing: 0.5px; display: inline-flex;
             align-items: center; gap: 5px; border: 1px solid transparent;
+            font-family: inherit; white-space: nowrap;
         }
-        button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary { background-color: var(--btn-primary-bg); color: var(--btn-primary-color); }
-        .btn-primary:hover:not(:disabled) { background-color: var(--btn-primary-hover); }
-        .btn-secondary { background-color: var(--app-card); border: 1px solid var(--app-border); color: var(--foreground); }
-        .btn-secondary:hover:not(:disabled) { color: white; border-color: var(--accent); }
-        .btn-danger { background-color: rgba(248, 81, 73, 0.1); border: 1px solid var(--error-border); color: #f85149; }
-        .btn-danger:hover:not(:disabled) { background-color: var(--error); color: white; }
-        .btn-success { background-color: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-border); color: var(--success); }
-        .btn-success:hover:not(:disabled) { background-color: var(--success); color: white; }
+        button.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn-primary:hover:not(:disabled) { background: #79c0ff; }
+        .btn-ghost { background: transparent; border-color: var(--border); color: var(--text-muted); }
+        .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
+        .btn-danger { background: var(--red-bg); border-color: rgba(248,81,73,0.3); color: var(--red); }
+        .btn-danger:hover:not(:disabled) { background: var(--red); color: #fff; }
+        .btn-success { background: var(--green-bg); border-color: rgba(16,185,129,0.3); color: var(--green); }
+        .btn-success:hover:not(:disabled) { background: var(--green); color: #fff; }
+        .btn-icon {
+            padding: 5px; background: transparent; border: 1px solid var(--border);
+            color: var(--text-muted); border-radius: var(--radius-sm); cursor: pointer;
+            transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-icon:hover { color: var(--accent); border-color: var(--accent); }
+        .btn-icon.active { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
 
+        /* ========== TOOLBAR ========== */
         .toolbar {
-            display: flex; align-items: center; padding: 8px 16px; gap: 8px;
-            flex-shrink: 0; background: var(--app-sidebar); border-bottom: 1px solid var(--app-border);
-            flex-wrap: wrap;
+            display: flex; align-items: center; padding: 6px 12px; gap: 6px;
+            background: var(--bg-card); border-bottom: 1px solid var(--border);
+            flex-shrink: 0; z-index: 40;
         }
+        .toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+        .search-box {
+            position: relative; display: flex; align-items: center;
+        }
+        .search-box input {
+            background: var(--bg); border: 1px solid var(--border); color: var(--text);
+            padding: 5px 8px 5px 28px; border-radius: var(--radius-sm); font-size: 11px;
+            width: 180px; transition: all 0.2s; font-family: inherit;
+        }
+        .search-box input:focus { border-color: var(--accent); outline: none; width: 240px; }
+        .search-box svg { position: absolute; left: 8px; width: 12px; height: 12px; color: var(--text-dim); pointer-events: none; }
 
+        /* ========== SCAN BAR ========== */
         .scan-bar {
-            display: none; align-items: center; padding: 10px 16px; gap: 10px;
-            background: var(--app-card); border-bottom: 1px solid var(--app-border); flex-shrink: 0;
-            flex-wrap: wrap;
+            display: none; align-items: center; padding: 8px 12px; gap: 8px;
+            background: var(--bg-elevated); border-bottom: 1px solid var(--border);
+            flex-shrink: 0; flex-wrap: wrap;
         }
         .scan-bar.visible { display: flex; }
-        .scan-bar label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+        .scan-bar label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
         .scan-bar input, .scan-bar select {
-            background: var(--app-card-dark); border: 1px solid var(--app-border);
-            color: var(--text-white); padding: 5px 8px; border-radius: 4px; font-size: 11px;
+            background: var(--bg); border: 1px solid var(--border); color: var(--text);
+            padding: 5px 8px; border-radius: var(--radius-sm); font-size: 11px; font-family: inherit;
         }
-        .scan-bar input:focus { border-color: var(--accent); outline: none; }
+        .scan-bar input:focus, .scan-bar select:focus { border-color: var(--accent); outline: none; }
+        .scan-progress {
+            display: none; align-items: center; gap: 8px; font-size: 11px; color: var(--accent);
+        }
+        .scan-progress.visible { display: flex; }
+        .scan-spinner {
+            width: 14px; height: 14px; border: 2px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* ========== GRAPH ========== */
         .graph-container {
             flex: 1; position: relative; overflow: hidden;
         }
         #topology-graph {
-            width: 100%; height: 100%; background: var(--background);
+            width: 100%; height: 100%;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle, #21262d 1px, transparent 1px);
+            background-size: 24px 24px;
         }
 
+        /* ========== ZOOM CONTROLS ========== */
+        .zoom-controls {
+            position: absolute; bottom: 12px; right: 12px;
+            display: flex; flex-direction: column; gap: 2px; z-index: 10;
+        }
+        .zoom-controls button {
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            background: rgba(22,27,34,0.95); border: 1px solid var(--border);
+            color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+            font-size: 14px; font-weight: 600;
+        }
+        .zoom-controls button:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+        .zoom-controls button:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+        .zoom-controls button:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* ========== LEGEND ========== */
         .legend {
             position: absolute; bottom: 12px; left: 12px;
-            background: rgba(22, 27, 34, 0.92); border: 1px solid var(--app-border);
-            border-radius: 6px; padding: 8px 12px; display: flex; gap: 12px;
-            font-size: 10px; color: var(--text-muted); z-index: 10;
-            backdrop-filter: blur(4px);
+            background: rgba(22,27,34,0.95); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 8px 12px; z-index: 10;
+            backdrop-filter: blur(8px); display: flex; gap: 12px; flex-wrap: wrap;
         }
-        .legend span { display: flex; align-items: center; gap: 4px; }
+        .legend span { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
         .legend .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         .legend .tag {
-            padding: 1px 4px; border-radius: 2px; font-size: 9px; font-weight: 600;
+            padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 700;
         }
-        .legend .sep { border-left: 1px solid var(--app-border); padding-left: 12px; }
+        .legend .sep { border-left: 1px solid var(--border); padding-left: 12px; }
 
+        /* ========== STATUS BAR ========== */
         .status-bar {
-            position: absolute; top: 12px; left: 12px;
-            background: rgba(22, 27, 34, 0.92); border: 1px solid var(--app-border);
-            border-radius: 6px; padding: 8px 14px; z-index: 10;
-            font-size: 11px; color: var(--text-muted); backdrop-filter: blur(4px);
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            background: rgba(22,27,34,0.95); border: 1px solid var(--border);
+            border-radius: 20px; padding: 5px 14px; z-index: 10;
+            font-size: 11px; color: var(--text-muted); backdrop-filter: blur(8px);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .status-dot {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
 
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.6); z-index: 1000; align-items: center; justify-content: center;
+        /* ========== NODE DETAIL PANEL ========== */
+        .detail-panel {
+            display: none; position: absolute; top: 10px; right: 10px;
+            background: rgba(22,27,34,0.97); border: 1px solid var(--border);
+            border-radius: var(--radius); z-index: 20; width: 300px;
+            backdrop-filter: blur(12px); box-shadow: var(--shadow-lg);
+            max-height: calc(100% - 20px); overflow-y: auto;
         }
-        .modal-overlay.active { display: flex; }
-        .modal-dialog {
-            background: var(--app-card); border: 1px solid var(--app-border); border-radius: 8px;
-            width: 95%; max-width: 420px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        .detail-panel.visible { display: block; }
+        .detail-panel::-webkit-scrollbar { width: 4px; }
+        .detail-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+        .detail-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
         }
-        .modal-header {
+        .detail-header h3 { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+        .detail-header .detail-sub { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+        .detail-section {
+            padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.5);
+        }
+        .detail-section:last-child { border-bottom: none; }
+        .detail-section-title {
+            font-size: 9px; text-transform: uppercase; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 0.8px; margin-bottom: 6px;
+        }
+        .detail-row {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 14px 20px; border-bottom: 1px solid var(--app-border);
+            padding: 3px 0; font-size: 11px;
         }
-        .modal-header h3 { font-size: 14px; }
-        .modal-close {
-            background: none; border: none; color: var(--text-muted); font-size: 20px;
-            cursor: pointer; line-height: 1;
-        }
-        .modal-close:hover { color: var(--text-white); }
-        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-        .modal-footer {
-            padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px;
-            border-top: 1px solid var(--app-border);
-        }
-        .form-group label {
-            text-transform: uppercase; font-size: 10px; font-weight: 700;
-            color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 5px; display: block;
-        }
-        .form-group input, .form-group select {
-            width: 100%; background: var(--app-card-dark); border: 1px solid var(--app-border);
-            color: var(--text-white); padding: 7px 10px; border-radius: 4px; font-size: 12px;
-            box-sizing: border-box;
-        }
-        .form-group input:focus, .form-group select:focus { border-color: var(--accent); outline: none; }
-        .form-error { display: none; font-size: 11px; color: var(--error); margin-top: 4px; }
-
-        .toast {
-            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
-            padding: 10px 16px; border-radius: 6px; font-size: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4); transition: opacity 0.3s;
-            max-width: 400px;
-        }
-        .toast.success { background: rgba(16,185,129,0.15); border: 1px solid var(--success-border); color: var(--success); }
-        .toast.error { background: rgba(248,81,73,0.15); border: 1px solid var(--error-border); color: var(--error); }
-        .toast.info { background: rgba(88,166,255,0.15); border: 1px solid rgba(88,166,255,0.3); color: var(--accent); }
-
-        .node-detail-panel {
-            display: none; position: absolute; top: 12px; right: 12px;
-            background: rgba(22, 27, 34, 0.95); border: 1px solid var(--app-border);
-            border-radius: 8px; padding: 16px; z-index: 10; width: 280px;
-            backdrop-filter: blur(4px);
-        }
-        .node-detail-panel.visible { display: block; }
-        .node-detail-panel h4 { font-size: 13px; margin-bottom: 10px; }
-        .node-detail-panel .detail-row {
-            display: flex; justify-content: space-between; padding: 4px 0;
-            font-size: 11px; border-bottom: 1px solid rgba(48,54,61,0.5);
-        }
-        .node-detail-panel .detail-label { color: var(--text-muted); }
-        .node-detail-panel .detail-value { color: var(--text-white); font-family: monospace; }
-        .node-detail-panel .source-tag {
+        .detail-label { color: var(--text-muted); }
+        .detail-value { color: var(--text); font-family: monospace; font-size: 11px; }
+        .source-tag {
             display: inline-block; padding: 2px 6px; border-radius: 3px;
-            font-size: 9px; font-weight: 600; margin-right: 4px;
+            font-size: 9px; font-weight: 700;
+        }
+        .iface-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .iface-table th {
+            text-align: left; padding: 3px 6px; color: var(--text-dim);
+            border-bottom: 1px solid var(--border); font-weight: 600;
+        }
+        .iface-table td { padding: 3px 6px; border-bottom: 1px solid rgba(48,54,61,0.4); }
+        .iface-table tr:hover td { background: rgba(88,166,255,0.04); }
+        .iface-status { display: inline-flex; align-items: center; gap: 4px; }
+        .iface-status .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .detail-actions { padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap; }
+        .detail-connections { font-size: 10px; }
+        .detail-connections .conn-item {
+            display: flex; align-items: center; gap: 6px; padding: 3px 0;
+            color: var(--text-muted);
+        }
+        .detail-connections .conn-item .conn-dot {
+            width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
         }
 
+        /* ========== RESULTS SIDEBAR ========== */
         .results-sidebar {
             display: none; position: absolute; top: 0; left: 0; bottom: 0;
-            width: 300px; background: rgba(22, 27, 34, 0.97); border-right: 1px solid var(--app-border);
-            z-index: 20; flex-direction: column; backdrop-filter: blur(4px);
+            width: 300px; background: rgba(22,27,34,0.98); border-right: 1px solid var(--border);
+            z-index: 30; flex-direction: column; backdrop-filter: blur(12px);
+            box-shadow: 4px 0 20px rgba(0,0,0,0.3);
         }
         .results-sidebar.visible { display: flex; }
         .results-header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 14px; border-bottom: 1px solid var(--app-border); flex-shrink: 0;
+            padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
         }
-        .results-header h3 { font-size: 12px; font-weight: 600; }
-        .results-header .results-count {
-            font-size: 10px; color: var(--text-muted); background: var(--app-card-dark);
-            padding: 2px 8px; border-radius: 10px;
+        .results-header h3 { font-size: 12px; }
+        .results-count {
+            font-size: 10px; color: var(--accent); background: var(--accent-bg);
+            padding: 2px 8px; border-radius: 10px; font-weight: 700;
         }
         .results-actions {
-            display: flex; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--app-border); flex-shrink: 0;
+            display: flex; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
         }
-        .results-list {
-            flex: 1; overflow-y: auto; padding: 6px 0;
+        .results-search {
+            padding: 6px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
         }
-        .results-list::-webkit-scrollbar { width: 6px; }
-        .results-list::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
+        .results-search input {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            color: var(--text); padding: 5px 8px; border-radius: var(--radius-sm);
+            font-size: 11px; font-family: inherit;
+        }
+        .results-search input:focus { border-color: var(--accent); outline: none; }
+        .results-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+        .results-list::-webkit-scrollbar { width: 4px; }
+        .results-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
         .result-item {
             display: flex; align-items: center; gap: 10px;
-            padding: 8px 14px; border-bottom: 1px solid rgba(48,54,61,0.4);
-            transition: background 0.15s; cursor: default;
+            padding: 8px 14px; border-bottom: 1px solid rgba(48,54,61,0.3);
+            transition: background 0.12s; cursor: default;
         }
         .result-item:hover { background: rgba(88,166,255,0.05); }
-        .result-dot {
-            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 2px solid;
+        .result-item.already-added { opacity: 0.4; }
+        .result-icon {
+            width: 32px; height: 32px; flex-shrink: 0;
         }
         .result-info { flex: 1; min-width: 0; }
         .result-name {
-            font-size: 12px; font-weight: 600; color: var(--text-white);
+            font-size: 11px; font-weight: 600; color: var(--text);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .result-meta {
-            font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; margin-top: 2px;
+            font-size: 10px; color: var(--text-dim); display: flex; gap: 6px; margin-top: 2px;
         }
-        .result-meta span { display: flex; align-items: center; gap: 3px; }
-        .result-actions { display: flex; gap: 4px; flex-shrink: 0; }
-        .result-actions button {
-            background: none; border: 1px solid var(--app-border); color: var(--text-muted);
-            border-radius: 3px; padding: 3px 6px; font-size: 9px; cursor: pointer;
-            transition: all 0.15s;
+        .result-actions-btn { display: flex; gap: 4px; flex-shrink: 0; }
+        .result-actions-btn button {
+            background: none; border: 1px solid var(--border); color: var(--text-dim);
+            border-radius: var(--radius-sm); padding: 3px 6px; font-size: 9px;
+            cursor: pointer; transition: all 0.15s; font-family: inherit;
         }
-        .result-actions .btn-add { color: var(--success); border-color: var(--success-border); }
-        .result-actions .btn-add:hover { background: var(--success); color: white; }
-        .result-actions .btn-dismiss { color: var(--text-muted); }
-        .result-actions .btn-dismiss:hover { color: var(--error); border-color: var(--error-border); }
+        .result-actions-btn .btn-add { color: var(--green); border-color: rgba(16,185,129,0.3); }
+        .result-actions-btn .btn-add:hover { background: var(--green); color: #fff; }
+        .result-actions-btn .btn-dismiss:hover { color: var(--red); border-color: rgba(248,81,73,0.3); }
+
+        /* ========== CONTEXT MENU ========== */
+        .context-menu {
+            display: none; position: fixed; z-index: 100;
+            background: var(--bg-elevated); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow-lg);
+            min-width: 180px; padding: 4px 0;
+        }
+        .context-menu.visible { display: block; }
+        .context-menu-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 12px; font-size: 11px; color: var(--text);
+            cursor: pointer; transition: background 0.1s;
+        }
+        .context-menu-item:hover { background: var(--accent-bg); color: var(--accent); }
+        .context-menu-item.danger { color: var(--red); }
+        .context-menu-item.danger:hover { background: var(--red-bg); }
+        .context-menu-item svg { width: 12px; height: 12px; flex-shrink: 0; }
+        .context-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+        .context-menu-item .shortcut {
+            margin-left: auto; font-size: 10px; color: var(--text-dim); font-family: monospace;
+        }
+
+        /* ========== TOAST ========== */
+        .toast-container {
+            position: fixed; bottom: 16px; right: 16px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .toast {
+            padding: 10px 16px; border-radius: var(--radius); font-size: 12px;
+            box-shadow: var(--shadow); animation: toastIn 0.2s ease-out;
+            max-width: 400px; display: flex; align-items: center; gap: 8px;
+        }
+        @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+        .toast.success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--green); }
+        .toast.error { background: rgba(248,81,73,0.15); border: 1px solid rgba(248,81,73,0.3); color: var(--red); }
+        .toast.info { background: var(--accent-bg); border: 1px solid rgba(88,166,255,0.3); color: var(--accent); }
+        .toast.warning { background: var(--yellow-bg); border: 1px solid rgba(210,153,34,0.3); color: var(--yellow); }
+
+        /* ========== MODAL ========== */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-dialog {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+            width: 95%; max-width: 420px; box-shadow: var(--shadow-lg);
+            animation: modalIn 0.2s ease-out;
+        }
+        @keyframes modalIn { from { opacity:0; transform: scale(0.95); } to { opacity:1; transform: scale(1); } }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 20px; border-bottom: 1px solid var(--border);
+        }
+        .modal-header h3 { font-size: 14px; }
+        .modal-close {
+            background: none; border: none; color: var(--text-muted); font-size: 20px;
+            cursor: pointer; line-height: 1; padding: 4px;
+        }
+        .modal-close:hover { color: var(--text); }
+        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+        .modal-footer {
+            padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px;
+            border-top: 1px solid var(--border);
+        }
+        .form-group label {
+            text-transform: uppercase; font-size: 10px; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 0.5px; margin-bottom: 5px; display: block;
+        }
+        .form-group input, .form-group select {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            color: var(--text); padding: 7px 10px; border-radius: var(--radius-sm);
+            font-size: 12px; font-family: inherit;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--accent); outline: none; }
+        .form-error { display: none; font-size: 11px; color: var(--red); margin-top: 4px; }
+
+        /* ========== EMPTY STATE ========== */
+        .empty-state {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; z-index: 5; pointer-events: none;
+        }
+        .empty-state.hidden { display: none; }
+        .empty-state svg { width: 80px; height: 80px; color: var(--text-dim); opacity: 0.3; margin-bottom: 16px; }
+        .empty-state h3 { font-size: 16px; color: var(--text-muted); margin-bottom: 6px; }
+        .empty-state p { font-size: 12px; color: var(--text-dim); max-width: 300px; }
+
+        /* ========== KEYBOARD HINT ========== */
+        .keyboard-hint {
+            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+            background: rgba(22,27,34,0.95); border: 1px solid var(--border);
+            border-radius: 20px; padding: 4px 12px; z-index: 10;
+            font-size: 10px; color: var(--text-dim); display: none;
+        }
+        .keyboard-hint kbd {
+            display: inline-block; padding: 1px 4px; background: var(--bg);
+            border: 1px solid var(--border); border-radius: 3px; font-family: monospace;
+            font-size: 9px; margin: 0 2px;
+        }
     </style>
 </head>
 <body>
+    <!-- HEADER -->
     <div class="header">
         <div class="header-left">
             <a href="/" class="back-link">&larr; Portal</a>
             <h1>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="5" r="3"></circle>
-                    <circle cx="5" cy="19" r="3"></circle>
-                    <circle cx="19" cy="19" r="3"></circle>
-                    <line x1="12" y1="8" x2="5" y2="16"></line>
-                    <line x1="12" y1="8" x2="19" y2="16"></line>
+                    <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+                    <line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/>
                 </svg>
                 Network Topology
             </h1>
         </div>
         <div class="header-right">
-            <span class="stats-badge">Nodes: <strong id="stat-nodes">0</strong></span>
-            <span class="stats-badge">Edges: <strong id="stat-edges">0</strong></span>
+            <span class="badge">Nodes: <strong id="stat-nodes">0</strong></span>
+            <span class="badge">Edges: <strong id="stat-edges">0</strong></span>
+            <span class="badge" id="stat-zoom" style="display:none;">Zoom: <strong>100%</strong></span>
         </div>
     </div>
 
-    <div class="toolbar">
+    <!-- TOOLBAR -->
+    <div class="toolbar" id="toolbar">
         <button class="btn btn-success" onclick="toggleScanBar()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            Auto Scan
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Scan
         </button>
-        <button class="btn btn-secondary" onclick="openAddDeviceModal()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Add Device
+        <button class="btn btn-ghost" onclick="openAddDeviceModal()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Device
         </button>
-        <button class="btn btn-secondary" onclick="openAddEdgeModal()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-            Add Connection
+        <button class="btn btn-ghost" onclick="openAddEdgeModal()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Link
         </button>
-        <button class="btn btn-danger" onclick="clearAll()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            Clear All
-        </button>
+        <div class="sep"></div>
+        <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="search-input" placeholder="Search devices... (Ctrl+F)" oninput="filterNodes(this.value)">
+        </div>
         <div style="flex:1;"></div>
-        <button class="btn btn-secondary" onclick="loadGraph()" style="font-size:10px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-            Refresh
+        <button class="btn-icon" onclick="autoLayout()" title="Auto Layout (L)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </button>
+        <button class="btn-icon" id="btn-fit" onclick="fitGraph()" title="Fit View (0)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        </button>
+        <button class="btn-icon" id="btn-physics" onclick="togglePhysics()" title="Toggle Physics (P)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+        </button>
+        <div class="sep"></div>
+        <button class="btn-icon" onclick="exportTopology()" title="Export JSON">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button class="btn-icon" onclick="document.getElementById('import-input').click()" title="Import JSON">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </button>
+        <input type="file" id="import-input" accept=".json" style="display:none" onchange="importTopology(event)">
+        <div class="sep"></div>
+        <button class="btn btn-danger" onclick="clearAll()" style="padding:5px 10px;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Clear
         </button>
     </div>
 
+    <!-- SCAN BAR -->
     <div id="scan-bar" class="scan-bar">
-        <label>IP Range:</label>
-        <input type="text" id="ip-range" placeholder="10.11.12.0/24 or 10.11.12.1-10.11.12.50" style="min-width: 260px;">
-        <label>SNMP Community:</label>
-        <input type="text" id="snmp-community" value="public" style="width: 100px;">
+        <label>Target:</label>
+        <input type="text" id="ip-range" placeholder="10.11.12.0/24 or 10.11.12.1-10.11.12.50" style="min-width:240px;">
+        <label>Community:</label>
+        <input type="text" id="snmp-community" value="public" style="width:80px;">
         <label>Version:</label>
-        <select id="snmp-version">
-            <option value="2c">v2c</option>
-            <option value="v1">v1</option>
-        </select>
-        <button class="btn btn-primary" onclick="runScan()">Run Scan</button>
-        <button class="btn btn-secondary" onclick="toggleScanBar()">Cancel</button>
+        <select id="snmp-version"><option value="2c">v2c</option><option value="v1">v1</option></select>
+        <button class="btn btn-primary" id="btn-scan" onclick="runScan()">Start Scan</button>
+        <button class="btn btn-ghost" onclick="toggleScanBar()">Cancel</button>
+        <div class="scan-progress" id="scan-progress">
+            <div class="scan-spinner"></div>
+            <span id="scan-progress-text">Scanning...</span>
+        </div>
     </div>
 
+    <!-- GRAPH -->
     <div class="graph-container">
         <!-- RESULTS SIDEBAR -->
         <div id="results-sidebar" class="results-sidebar">
@@ -310,49 +493,134 @@
                 <span class="results-count" id="results-count">0</span>
             </div>
             <div class="results-actions">
-                <button class="btn btn-primary" onclick="addAllToCanvas()" style="font-size:10px;padding:4px 10px;">Add All to Canvas</button>
-                <button class="btn btn-secondary" onclick="clearPending()" style="font-size:10px;padding:4px 10px;">Clear</button>
+                <button class="btn btn-primary" onclick="addAllToCanvas()" style="font-size:10px;padding:4px 10px;">Add All</button>
+                <button class="btn btn-ghost" onclick="selectAll()" style="font-size:10px;padding:4px 10px;">Select All</button>
+                <button class="btn btn-ghost" onclick="clearPending()" style="font-size:10px;padding:4px 10px;">Clear</button>
+            </div>
+            <div class="results-search">
+                <input type="text" id="sidebar-search" placeholder="Filter devices..." oninput="filterSidebar(this.value)">
             </div>
             <div class="results-list" id="results-list"></div>
         </div>
 
         <div id="topology-graph"></div>
 
-        <div class="status-bar" id="status-bar">Loading topology...</div>
-
-        <div class="legend">
-            <span><span class="dot" style="background:#10b981;"></span> Online</span>
-            <span><span class="dot" style="background:#f85149;"></span> Offline</span>
-            <span><span class="dot" style="background:#6b7280;"></span> Unknown</span>
-            <span class="sep"><span class="tag" style="background:rgba(88,166,255,0.15);color:#58a6ff;">PROM</span></span>
-            <span><span class="tag" style="background:rgba(16,185,129,0.15);color:#10b981;">KUMA</span></span>
-            <span><span class="tag" style="background:rgba(245,158,11,0.15);color:#f59e0b;">SNMP</span></span>
-            <span><span class="tag" style="background:rgba(139,148,158,0.15);color:#8b949e;">MANUAL</span></span>
+        <!-- EMPTY STATE -->
+        <div class="empty-state" id="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+                <line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/>
+            </svg>
+            <h3>No devices yet</h3>
+            <p>Scan your network or manually add devices to build your topology map</p>
         </div>
 
-        <!-- Node Detail Panel -->
-        <div class="node-detail-panel" id="node-detail">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <h4 id="detail-name">-</h4>
-                <button class="modal-close" onclick="closeDetail()" style="font-size:16px;">&times;</button>
+        <!-- STATUS BAR -->
+        <div class="status-bar" id="status-bar">
+            <span class="status-dot"></span>
+            <span id="status-text">Loading topology...</span>
+        </div>
+
+        <!-- ZOOM CONTROLS -->
+        <div class="zoom-controls">
+            <button onclick="zoomIn()" title="Zoom In (+)">+</button>
+            <button onclick="zoomOut()" title="Zoom Out (-)">-</button>
+            <button onclick="fitGraph()" title="Fit (0)" style="font-size:11px;">FIT</button>
+        </div>
+
+        <!-- LEGEND -->
+        <div class="legend">
+            <span><span class="dot" style="background:var(--green);"></span> Online</span>
+            <span><span class="dot" style="background:var(--red);"></span> Offline</span>
+            <span><span class="dot" style="background:var(--text-dim);"></span> Unknown</span>
+            <span class="sep"></span>
+            <span><span class="tag" style="background:var(--accent-bg);color:var(--accent);">PROM</span></span>
+            <span><span class="tag" style="background:var(--green-bg);color:var(--green);">KUMA</span></span>
+            <span><span class="tag" style="background:var(--yellow-bg);color:var(--yellow);">SNMP</span></span>
+            <span><span class="tag" style="background:rgba(139,148,158,0.12);color:var(--text-muted);">MANUAL</span></span>
+        </div>
+
+        <!-- NODE DETAIL PANEL -->
+        <div class="detail-panel" id="detail-panel">
+            <div class="detail-header">
+                <div>
+                    <h3 id="detail-name">-</h3>
+                    <div class="detail-sub" id="detail-ip">-</div>
+                </div>
+                <button class="modal-close" onclick="closeDetail()">&times;</button>
             </div>
-            <div class="detail-row"><span class="detail-label">IP</span><span class="detail-value" id="detail-ip">-</span></div>
-            <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value" id="detail-type">-</span></div>
-            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detail-status">-</span></div>
-            <div class="detail-row"><span class="detail-label">Sources</span><span id="detail-sources"></span></div>
-            <div id="detail-labels" style="margin-top:8px;"></div>
-            <div id="detail-interfaces"></div>
-            <div style="margin-top:10px;">
-                <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete Device</button>
+            <div class="detail-section">
+                <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value" id="detail-type">-</span></div>
+                <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detail-status">-</span></div>
+                <div class="detail-row"><span class="detail-label">Sources</span><span id="detail-sources"></span></div>
             </div>
+            <div class="detail-section" id="detail-labels-section" style="display:none;">
+                <div class="detail-section-title">Labels</div>
+                <div id="detail-labels"></div>
+            </div>
+            <div class="detail-section" id="detail-interfaces-section" style="display:none;">
+                <div class="detail-section-title">Interfaces</div>
+                <div id="detail-interfaces"></div>
+            </div>
+            <div class="detail-section" id="detail-connections-section" style="display:none;">
+                <div class="detail-section-title">Connections</div>
+                <div class="detail-connections" id="detail-connections"></div>
+            </div>
+            <div class="detail-actions">
+                <button class="btn btn-ghost" onclick="pingDevice()" style="font-size:10px;padding:4px 8px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                    Ping
+                </button>
+                <button class="btn btn-ghost" onclick="snmpWalkDevice()" style="font-size:10px;padding:4px 8px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
+                    SNMP Walk
+                </button>
+                <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete</button>
+            </div>
+        </div>
+
+        <!-- KEYBOARD HINT -->
+        <div class="keyboard-hint" id="keyboard-hint">
+            <kbd>Del</kbd> Delete &nbsp; <kbd>Esc</kbd> Close &nbsp; <kbd>+</kbd><kbd>-</kbd> Zoom &nbsp; <kbd>0</kbd> Fit &nbsp; <kbd>P</kbd> Physics &nbsp; <kbd>L</kbd> Layout
         </div>
     </div>
+
+    <!-- CONTEXT MENU -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" onclick="contextAction('details')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            View Details
+        </div>
+        <div class="context-menu-item" onclick="contextAction('ping')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            Ping
+            <span class="shortcut">Ctrl+P</span>
+        </div>
+        <div class="context-menu-sep"></div>
+        <div class="context-menu-item" onclick="contextAction('connect')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Connect to...
+        </div>
+        <div class="context-menu-item" onclick="contextAction('position')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/></svg>
+            Reset Position
+        </div>
+        <div class="context-menu-sep"></div>
+        <div class="context-menu-item danger" onclick="contextAction('delete')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Delete
+            <span class="shortcut">Del</span>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
 
     <!-- MODAL: ADD DEVICE -->
     <div id="modal-add-device" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-header">
-                <h3>Add Network Device</h3>
+                <h3>Add Device</h3>
                 <button class="modal-close" onclick="closeModal('modal-add-device')">&times;</button>
             </div>
             <div class="modal-body">
@@ -380,7 +648,7 @@
                 <div id="dev-error" class="form-error"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('modal-add-device')">Cancel</button>
+                <button class="btn btn-ghost" onclick="closeModal('modal-add-device')">Cancel</button>
                 <button class="btn btn-primary" onclick="submitDevice()">Add Device</button>
             </div>
         </div>
@@ -416,22 +684,37 @@
                 <div id="edge-error" class="form-error"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('modal-add-edge')">Cancel</button>
+                <button class="btn btn-ghost" onclick="closeModal('modal-add-edge')">Cancel</button>
                 <button class="btn btn-primary" onclick="submitEdge()">Add Connection</button>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="toast" style="display:none;"></div>
+    <!-- MODAL: PING RESULT -->
+    <div id="modal-ping" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="ping-title">Ping Result</h3>
+                <button class="modal-close" onclick="closeModal('modal-ping')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="ping-output" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;color:var(--green);font-family:monospace;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></pre>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
     <script>
-    // ==================== STATE ====================
+    /* ==================== STATE ==================== */
     let network = null;
     let nodesData = [];
     let edgesData = [];
     let selectedNodeId = null;
+    let contextNodeId = null;
     let pendingNodes = [];
+    let physicsEnabled = false;
+    let autoRefreshTimer = null;
+    let searchQuery = '';
     const token = localStorage.getItem('hephaestus_session_token') || '';
 
     const NODE_COLORS = {
@@ -446,184 +729,203 @@
         SNMP: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
         MANUAL: { bg: 'rgba(139,148,158,0.15)', color: '#8b949e' }
     };
+    const EDGE_TYPE_COLORS = {
+        'Ethernet': '#30363d', 'Fiber Optic': '#58a6ff',
+        'Wireless': '#a78bfa', 'USB': '#10b981', 'VPN': '#f59e0b', '': '#30363d'
+    };
 
-    // ==================== DEVICE ICONS (canvas-generated) ====================
-    function generateDeviceIcon(type, status) {
+    /* ==================== DEVICE ICONS ==================== */
+    function generateDeviceIcon(type, status, size) {
+        size = size || 64;
         const canvas = document.createElement('canvas');
-        canvas.width = 64; canvas.height = 64;
+        canvas.width = size; canvas.height = size;
         const ctx = canvas.getContext('2d');
+        const s = size / 64;
         const sc = STATUS_COLORS[status] || '#6b7280';
         const tc = NODE_COLORS[type] || '#6b7280';
 
-        // Background circle
         ctx.beginPath();
-        ctx.arc(32, 32, 28, 0, Math.PI * 2);
+        ctx.arc(32*s, 32*s, 28*s, 0, Math.PI * 2);
         ctx.fillStyle = '#161b22';
         ctx.fill();
         ctx.strokeStyle = sc;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3*s;
         ctx.stroke();
 
         ctx.fillStyle = tc;
         ctx.strokeStyle = tc;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2*s;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
         switch(type) {
             case 'router':
-                // Router: circle with 4 arrows
-                ctx.beginPath(); ctx.arc(32, 32, 10, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(32, 14); ctx.lineTo(32, 8); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(32, 50); ctx.lineTo(32, 56); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(14, 32); ctx.lineTo(8, 32); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(50, 32); ctx.lineTo(56, 32); ctx.stroke();
-                // Arrow heads
-                ctx.beginPath(); ctx.moveTo(28, 12); ctx.lineTo(32, 6); ctx.lineTo(36, 12); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(28, 52); ctx.lineTo(32, 58); ctx.lineTo(36, 52); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(12, 28); ctx.lineTo(6, 32); ctx.lineTo(12, 36); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(52, 28); ctx.lineTo(58, 32); ctx.lineTo(52, 36); ctx.stroke();
+                ctx.beginPath(); ctx.arc(32*s, 32*s, 10*s, 0, Math.PI * 2); ctx.stroke();
+                [[32,14,32,8],[32,50,32,56],[14,32,8,32],[50,32,56,32]].forEach(([x1,y1,x2,y2]) => {
+                    ctx.beginPath(); ctx.moveTo(x1*s,y1*s); ctx.lineTo(x2*s,y2*s); ctx.stroke();
+                });
+                [[28,12,32,6,36,12],[28,52,32,58,36,52],[12,28,6,32,12,36],[52,28,58,32,52,36]].forEach(([x1,y1,x2,y2,x3,y3]) => {
+                    ctx.beginPath(); ctx.moveTo(x1*s,y1*s); ctx.lineTo(x2*s,y2*s); ctx.lineTo(x3*s,y3*s); ctx.stroke();
+                });
                 break;
             case 'switch':
-                // Switch: rectangle with ports
-                ctx.strokeRect(14, 20, 36, 24);
+                ctx.strokeRect(14*s, 20*s, 36*s, 24*s);
                 for (let i = 0; i < 4; i++) {
-                    ctx.fillRect(18 + i * 8, 26, 4, 4);
-                    ctx.fillRect(18 + i * 8, 34, 4, 4);
+                    ctx.fillRect((18+i*8)*s, 26*s, 4*s, 4*s);
+                    ctx.fillRect((18+i*8)*s, 34*s, 4*s, 4*s);
                 }
                 break;
             case 'firewall':
-                // Firewall: shield with flame
                 ctx.beginPath();
-                ctx.moveTo(32, 12); ctx.lineTo(48, 20); ctx.lineTo(48, 36); ctx.quadraticCurveTo(48, 52, 32, 56); ctx.quadraticCurveTo(16, 52, 16, 36); ctx.lineTo(16, 20); ctx.closePath();
-                ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(32, 24); ctx.lineTo(36, 34); ctx.lineTo(30, 38); ctx.lineTo(34, 46); ctx.stroke();
+                ctx.moveTo(32*s,12*s); ctx.lineTo(48*s,20*s); ctx.lineTo(48*s,36*s);
+                ctx.quadraticCurveTo(48*s,52*s,32*s,56*s);
+                ctx.quadraticCurveTo(16*s,52*s,16*s,36*s);
+                ctx.lineTo(16*s,20*s); ctx.closePath(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(32*s,24*s); ctx.lineTo(36*s,34*s);
+                ctx.lineTo(30*s,38*s); ctx.lineTo(34*s,46*s); ctx.stroke();
                 break;
             case 'server':
-                // Server: stacked rectangles
-                ctx.strokeRect(16, 12, 32, 12);
-                ctx.strokeRect(16, 28, 32, 12);
-                ctx.strokeRect(16, 44, 32, 12);
-                ctx.beginPath(); ctx.arc(22, 18, 2, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(22, 34, 2, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(22, 50, 2, 0, Math.PI * 2); ctx.fill();
+                [[16,12],[16,28],[16,44]].forEach(([x,y]) => {
+                    ctx.strokeRect(x*s, y*s, 32*s, 12*s);
+                    ctx.beginPath(); ctx.arc(22*s, (y+6)*s, 2*s, 0, Math.PI*2); ctx.fill();
+                });
                 break;
             case 'web':
-                // Web: globe
-                ctx.beginPath(); ctx.arc(32, 32, 18, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.ellipse(32, 32, 8, 18, 0, 0, Math.PI * 2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(14, 32); ctx.lineTo(50, 32); ctx.stroke();
+                ctx.beginPath(); ctx.arc(32*s,32*s,18*s,0,Math.PI*2); ctx.stroke();
+                ctx.beginPath(); ctx.ellipse(32*s,32*s,8*s,18*s,0,0,Math.PI*2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(14*s,32*s); ctx.lineTo(50*s,32*s); ctx.stroke();
                 break;
             case 'container':
-                // Container: hexagon
                 ctx.beginPath();
-                ctx.moveTo(32, 12); ctx.lineTo(50, 22); ctx.lineTo(50, 42); ctx.lineTo(32, 52); ctx.lineTo(14, 42); ctx.lineTo(14, 22); ctx.closePath();
-                ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(14, 32); ctx.lineTo(50, 32); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(32, 12); ctx.lineTo(32, 32); ctx.stroke();
+                ctx.moveTo(32*s,12*s); ctx.lineTo(50*s,22*s); ctx.lineTo(50*s,42*s);
+                ctx.lineTo(32*s,52*s); ctx.lineTo(14*s,42*s); ctx.lineTo(14*s,22*s);
+                ctx.closePath(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(14*s,32*s); ctx.lineTo(50*s,32*s); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(32*s,12*s); ctx.lineTo(32*s,32*s); ctx.stroke();
                 break;
             case 'network':
-                // Network: two stacked boxes
-                ctx.strokeRect(14, 14, 36, 16);
-                ctx.strokeRect(14, 36, 36, 16);
-                ctx.beginPath(); ctx.moveTo(32, 30); ctx.lineTo(32, 36); ctx.stroke();
+                ctx.strokeRect(14*s,14*s,36*s,16*s);
+                ctx.strokeRect(14*s,36*s,36*s,16*s);
+                ctx.beginPath(); ctx.moveTo(32*s,30*s); ctx.lineTo(32*s,36*s); ctx.stroke();
                 break;
             default:
-                // Unknown: question mark
-                ctx.beginPath(); ctx.arc(32, 30, 14, 0, Math.PI * 2); ctx.stroke();
-                ctx.fillStyle = tc;
-                ctx.font = 'bold 20px monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('?', 32, 30);
+                ctx.beginPath(); ctx.arc(32*s,30*s,14*s,0,Math.PI*2); ctx.stroke();
+                ctx.fillStyle = tc; ctx.font = `bold ${20*s}px monospace`;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('?', 32*s, 30*s);
                 break;
         }
         return canvas.toDataURL();
     }
 
     const iconCache = {};
-    function getDeviceIconUrl(type, status) {
-        const key = type + '_' + status;
-        if (!iconCache[key]) iconCache[key] = generateDeviceIcon(type, status);
+    function getDeviceIconUrl(type, status, size) {
+        const key = `${type}_${status}_${size||64}`;
+        if (!iconCache[key]) iconCache[key] = generateDeviceIcon(type, status, size);
         return iconCache[key];
     }
 
-    // ==================== TOAST ====================
+    /* ==================== TOAST ==================== */
     function showToast(type, msg) {
-        const t = document.getElementById('toast');
+        const container = document.getElementById('toast-container');
+        const t = document.createElement('div');
         t.className = 'toast ' + type;
         t.textContent = msg;
-        t.style.display = 'block';
-        setTimeout(() => { t.style.display = 'none'; }, 4000);
+        container.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 4000);
     }
 
-    // ==================== MODAL ====================
+    /* ==================== MODAL ==================== */
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-    // ==================== GRAPH ====================
+    /* ==================== GRAPH ==================== */
+    function buildNodeData(n) {
+        const labelParts = [n.name];
+        if (n.deviceType && n.deviceType !== 'unknown') labelParts.push(n.deviceType.toUpperCase());
+        labelParts.push(n.ip);
+        labelParts.push((n.status || 'unknown').toUpperCase());
+        if (n.sources && n.sources.length) labelParts.push(n.sources.join('+'));
+        return {
+            id: n.id,
+            image: getDeviceIconUrl(n.deviceType || 'unknown', n.status || 'unknown'),
+            label: labelParts.join('\n'),
+            shape: 'image',
+            imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
+            title: buildNodeTooltip(n),
+            font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
+            x: n.x, y: n.y,
+            fixed: (n.x != null && n.y != null) ? { x: true, y: true } : false,
+            _raw: n
+        };
+    }
 
-    function initGraph(nodes, edges) {
-        const container = document.getElementById('topology-graph');
-        if (!container) return;
+    function buildNodeTooltip(n) {
+        let html = `<div style="font-family:monospace;font-size:12px;">`;
+        html += `<b>${esc(n.name)}</b><br>`;
+        html += `IP: ${esc(n.ip)}<br>`;
+        html += `Type: ${esc(n.deviceType || 'unknown')}<br>`;
+        html += `Status: <span style="color:${STATUS_COLORS[n.status]||'#6b7280'};">${(n.status||'unknown').toUpperCase()}</span><br>`;
+        html += `Sources: ${(n.sources||[]).join(', ')}<br>`;
+        html += `Interfaces: ${(n.interfaces||[]).length}`;
+        if (n.interfaces && n.interfaces.length > 0) {
+            html += `<br><hr style="border-color:#30363d;margin:4px 0;">`;
+            for (const iface of n.interfaces) {
+                const st = STATUS_COLORS[iface.status] || '#6b7280';
+                html += `<span style="color:${st};">●</span> ${esc(iface.name)} ${iface.ip ? '('+esc(iface.ip)+')' : ''}<br>`;
+            }
+        }
+        html += `</div>`;
+        return html;
+    }
 
-        nodesData = nodes.map(n => {
-            const sc = STATUS_COLORS[n.status] || '#6b7280';
-            const labelParts = [n.name];
-            if (n.deviceType !== 'unknown') labelParts.push(n.deviceType.toUpperCase());
-            labelParts.push(n.ip);
-            labelParts.push(n.status.toUpperCase());
-            if (n.sources && n.sources.length) labelParts.push(n.sources.join('+'));
-
-            return {
-                id: n.id,
-                image: getDeviceIconUrl(n.deviceType, n.status),
-                label: labelParts.join('\n'),
-                shape: 'image',
-                imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
-                title: `<b>${esc(n.name)}</b><br>IP: ${n.ip}<br>Type: ${n.deviceType}<br>Status: ${n.status}<br>Sources: ${(n.sources||[]).join(', ')}<br>Interfaces: ${(n.interfaces||[]).length}`,
-                font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
-                x: n.x, y: n.y,
-                fixed: (n.x !== undefined && n.y !== null && n.x !== null) ? { x: true, y: true } : false,
-                _raw: n
-            };
-        });
-
-        edgesData = edges.map(e => ({
+    function buildEdgeData(e) {
+        const ec = EDGE_TYPE_COLORS[e.label] || '#30363d';
+        return {
             id: e.id || `edge-${e.source}-${e.target}`,
             from: e.source, to: e.target,
             label: e.label || '',
             title: e.label || '',
             font: { color: '#8b949e', size: 10, face: 'monospace', align: 'middle', strokeWidth: 2, strokeColor: '#0d1117' },
-            color: { color: '#30363d', highlight: '#58a6ff', hover: '#58a6ff' },
+            color: { color: ec, highlight: '#58a6ff', hover: '#58a6ff' },
             width: 1.5,
             smooth: { type: 'continuous' },
-            arrows: { to: { enabled: false } }
-        }));
+            arrows: { to: { enabled: false } },
+            _raw: e
+        };
+    }
+
+    function initGraph(nodes, edges) {
+        const container = document.getElementById('topology-graph');
+        if (!container) return;
+
+        nodesData = nodes.map(buildNodeData);
+        edgesData = edges.map(buildEdgeData);
 
         const visNodes = new vis.DataSet(nodesData);
         const visEdges = new vis.DataSet(edgesData);
 
         network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, {
             physics: {
-                enabled: true, solver: 'forceAtlas2Based',
+                enabled: physicsEnabled, solver: 'forceAtlas2Based',
                 forceAtlas2Based: { gravitationalConstant: -40, centralGravity: 0.005, springLength: 150, springConstant: 0.08, damping: 0.4 },
                 stabilization: { iterations: 200, fit: true }
             },
-            interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true }
+            interaction: { hover: true, tooltipDelay: 150, zoomView: true, dragView: true, multiselect: false, navigationButtons: false },
+            edges: { smooth: { type: 'continuous' } }
         });
 
         network.once('stabilizationIterationsDone', function() {
-            network.setOptions({ physics: { enabled: false } });
+            if (!physicsEnabled) network.setOptions({ physics: { enabled: false } });
         });
 
         network.on('dragEnd', async function(params) {
             for (const nodeId of params.nodes) {
                 const pos = network.getPosition(nodeId);
                 try {
-                    await fetch('/api/v1/topology/device/position', {
+                    await apiFetch('/api/v1/topology/device/position', {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                         body: JSON.stringify({ id: nodeId, x: pos.x, y: pos.y })
                     });
                 } catch (e) {}
@@ -641,62 +943,116 @@
             }
         });
 
+        network.on('doubleClick', function(params) {
+            if (params.nodes.length > 0) {
+                const node = nodesData.find(n => n.id === params.nodes[0]);
+                if (node && node._raw) showDetail(node._raw);
+            }
+        });
+
+        network.on('oncontext', function(params) {
+            params.event.preventDefault();
+            const nodeId = network.getNodesAt(params.pointer.DOM)[0];
+            if (nodeId) {
+                contextNodeId = nodeId;
+                selectedNodeId = nodeId;
+                showContextMenu(params.event.clientX, params.event.clientY);
+                const node = nodesData.find(n => n.id === nodeId);
+                if (node && node._raw) showDetail(node._raw);
+            } else {
+                hideContextMenu();
+            }
+        });
+
+        network.on('zoom', function() {
+            const zoom = Math.round(network.getScale() * 100);
+            const el = document.getElementById('stat-zoom');
+            el.style.display = 'inline-flex';
+            el.querySelector('strong').textContent = zoom + '%';
+        });
+
         document.getElementById('stat-nodes').textContent = nodes.length;
         document.getElementById('stat-edges').textContent = edges.length;
-        document.getElementById('status-bar').textContent = `${nodes.length} nodes, ${edges.length} edges loaded`;
+        updateEmptyState(nodes.length);
+        updateStatus(`${nodes.length} nodes, ${edges.length} edges`);
     }
 
+    function updateEmptyState(count) {
+        document.getElementById('empty-state').classList.toggle('hidden', count > 0);
+    }
+
+    function updateStatus(text) {
+        document.getElementById('status-text').textContent = text;
+    }
+
+    /* ==================== DETAIL PANEL ==================== */
     function showDetail(n) {
         document.getElementById('detail-name').textContent = n.name;
         document.getElementById('detail-ip').textContent = n.ip;
-        document.getElementById('detail-type').textContent = n.deviceType;
+        document.getElementById('detail-type').textContent = n.deviceType || 'unknown';
         const st = document.getElementById('detail-status');
-        st.textContent = n.status.toUpperCase();
+        st.textContent = (n.status || 'unknown').toUpperCase();
         st.style.color = STATUS_COLORS[n.status] || '#6b7280';
 
         const srcEl = document.getElementById('detail-sources');
-        srcEl.innerHTML = n.sources.map(s => {
+        srcEl.innerHTML = (n.sources || []).map(s => {
             const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
             return `<span class="source-tag" style="background:${ss.bg};color:${ss.color};">${s}</span>`;
         }).join('');
 
         const labelsEl = document.getElementById('detail-labels');
+        const labelsSection = document.getElementById('detail-labels-section');
         const entries = Object.entries(n.labels || {});
-        labelsEl.innerHTML = entries.length ? '<div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Labels:</div>' +
-            entries.map(([k, v]) => `<div class="detail-row"><span class="detail-label">${esc(k)}</span><span class="detail-value" style="font-size:10px;">${esc(String(v))}</span></div>`).join('') : '';
+        if (entries.length > 0) {
+            labelsSection.style.display = '';
+            labelsEl.innerHTML = entries.map(([k, v]) =>
+                `<div class="detail-row"><span class="detail-label">${esc(k)}</span><span class="detail-value" style="font-size:10px;">${esc(String(v))}</span></div>`
+            ).join('');
+        } else { labelsSection.style.display = 'none'; }
 
         const ifaces = n.interfaces || [];
+        const ifaceSection = document.getElementById('detail-interfaces-section');
         const ifaceEl = document.getElementById('detail-interfaces');
         if (ifaces.length > 0) {
-            let html = '<div style="font-size:10px;color:var(--text-muted);margin:8px 0 4px;">Interfaces (' + ifaces.length + '):</div>';
-            html += '<table style="width:100%;font-size:10px;border-collapse:collapse;">';
-            html += '<tr style="color:var(--text-muted);border-bottom:1px solid var(--app-border);"><th style="text-align:left;padding:2px 4px;">Name</th><th style="text-align:left;padding:2px 4px;">IP</th><th style="text-align:left;padding:2px 4px;">Speed</th><th style="text-align:left;padding:2px 4px;">Status</th></tr>';
+            ifaceSection.style.display = '';
+            let html = '<table class="iface-table">';
+            html += '<tr><th>Name</th><th>IP</th><th>Speed</th><th>Status</th></tr>';
             for (const iface of ifaces) {
-                const statusColor = iface.status === 'up' ? '#10b981' : iface.status === 'down' ? '#f85149' : '#6b7280';
-                html += `<tr style="border-bottom:1px solid rgba(48,54,61,0.5);">
-                    <td style="padding:2px 4px;color:var(--text-white);">${esc(iface.name)}</td>
-                    <td style="padding:2px 4px;color:var(--text-white);font-family:monospace;">${esc(iface.ip || '-')}</td>
-                    <td style="padding:2px 4px;color:var(--text-white);">${esc(iface.speedStr || '-')}</td>
-                    <td style="padding:2px 4px;color:${statusColor};">${iface.status.toUpperCase()}</td>
+                const sc = iface.status === 'up' ? '#10b981' : iface.status === 'down' ? '#f85149' : '#6b7280';
+                html += `<tr>
+                    <td style="color:var(--text);">${esc(iface.name)}</td>
+                    <td style="font-family:monospace;color:var(--text);">${esc(iface.ip || '-')}</td>
+                    <td style="color:var(--text);">${esc(iface.speedStr || '-')}</td>
+                    <td><span class="iface-status"><span class="dot" style="background:${sc};"></span>${(iface.status||'unknown').toUpperCase()}</span></td>
                 </tr>`;
             }
             html += '</table>';
             ifaceEl.innerHTML = html;
-        } else {
-            ifaceEl.innerHTML = '';
-        }
+        } else { ifaceSection.style.display = 'none'; }
 
-        document.getElementById('node-detail').classList.add('visible');
+        const connSection = document.getElementById('detail-connections-section');
+        const connEl = document.getElementById('detail-connections');
+        const conns = edgesData.filter(e => e.from === n.id || e.to === n.id);
+        if (conns.length > 0) {
+            connSection.style.display = '';
+            connEl.innerHTML = conns.map(e => {
+                const otherId = e.from === n.id ? e.to : e.from;
+                const otherNode = nodesData.find(nd => nd.id === otherId);
+                const otherName = otherNode ? otherNode._raw.name : otherId;
+                const otherIp = otherNode ? otherNode._raw.ip : '';
+                return `<div class="conn-item"><span class="conn-dot"></span>${esc(otherName)} (${esc(otherIp)})${e.label ? ' — '+esc(e.label) : ''}</div>`;
+            }).join('');
+        } else { connSection.style.display = 'none'; }
+
+        document.getElementById('detail-panel').classList.add('visible');
     }
 
     function closeDetail() {
-        document.getElementById('node-detail').classList.remove('visible');
+        document.getElementById('detail-panel').classList.remove('visible');
         selectedNodeId = null;
     }
 
-    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-    // ==================== API ====================
+    /* ==================== API ==================== */
     async function apiFetch(url, opts = {}) {
         const res = await fetch(url, {
             ...opts,
@@ -706,17 +1062,132 @@
     }
 
     async function loadGraph() {
-        document.getElementById('status-bar').textContent = 'Loading...';
+        updateStatus('Loading topology...');
         try {
             const data = await apiFetch('/api/v1/topology/graph');
             if (!data.success) throw new Error(data.error);
             initGraph(data.data.nodes || [], data.data.edges || []);
         } catch (e) {
-            document.getElementById('status-bar').textContent = 'Failed to load: ' + e.message;
+            updateStatus('Failed to load: ' + e.message);
             initGraph([], []);
         }
     }
 
+    /* ==================== ZOOM ==================== */
+    function zoomIn() { if (network) { const s = network.getScale(); network.moveTo({ scale: s * 1.3 }); } }
+    function zoomOut() { if (network) { const s = network.getScale(); network.moveTo({ scale: s / 1.3 }); } }
+    function fitGraph() { if (network) network.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } }); }
+
+    /* ==================== PHYSICS ==================== */
+    function togglePhysics() {
+        physicsEnabled = !physicsEnabled;
+        if (network) network.setOptions({ physics: { enabled: physicsEnabled } });
+        document.getElementById('btn-physics').classList.toggle('active', physicsEnabled);
+        showToast('info', 'Physics ' + (physicsEnabled ? 'enabled' : 'disabled'));
+    }
+
+    /* ==================== AUTO LAYOUT ==================== */
+    function autoLayout() {
+        if (!network || nodesData.length === 0) return;
+        const centerX = 0, centerY = 0;
+        const radius = Math.max(200, nodesData.length * 60);
+        const angleStep = (2 * Math.PI) / nodesData.length;
+        const updates = [];
+        nodesData.forEach((n, i) => {
+            const angle = angleStep * i - Math.PI / 2;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            updates.push({ id: n.id, x, y });
+        });
+        network.body.data.nodes.update(updates);
+        network.setOptions({ physics: { enabled: true, solver: 'forceAtlas2Based',
+            forceAtlas2Based: { gravitationalConstant: -60, centralGravity: 0.01, springLength: 200, springConstant: 0.05, damping: 0.4 },
+            stabilization: { iterations: 100, fit: true }
+        }});
+        physicsEnabled = true;
+        document.getElementById('btn-physics').classList.add('active');
+        setTimeout(() => {
+            network.setOptions({ physics: { enabled: false } });
+            physicsEnabled = false;
+            document.getElementById('btn-physics').classList.remove('active');
+            nodesData.forEach(n => {
+                const pos = network.getPosition(n.id);
+                if (pos) { n.x = pos.x; n.y = pos.y; }
+            });
+        }, 2000);
+    }
+
+    /* ==================== SEARCH/FILTER ==================== */
+    function filterNodes(query) {
+        searchQuery = query.toLowerCase();
+        if (!network) return;
+        const allIds = nodesData.map(n => n.id);
+        if (!searchQuery) {
+            network.body.data.nodes.update(allIds.map(id => ({ id, opacity: 1 })));
+            return;
+        }
+        const matchIds = nodesData.filter(n => {
+            const r = n._raw || {};
+            const searchStr = `${r.name} ${r.ip} ${r.deviceType} ${r.status} ${(r.sources||[]).join(' ')}`.toLowerCase();
+            return searchStr.includes(searchQuery);
+        }).map(n => n.id);
+        const update = allIds.map(id => ({ id, opacity: matchIds.includes(id) ? 1 : 0.15 }));
+        network.body.data.nodes.update(update);
+    }
+
+    function filterSidebar(query) {
+        const q = query.toLowerCase();
+        document.querySelectorAll('#results-list .result-item').forEach(item => {
+            const text = item.dataset.searchText || '';
+            item.style.display = text.includes(q) ? '' : 'none';
+        });
+    }
+
+    /* ==================== CONTEXT MENU ==================== */
+    function showContextMenu(x, y) {
+        const menu = document.getElementById('context-menu');
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        menu.classList.add('visible');
+    }
+    function hideContextMenu() {
+        document.getElementById('context-menu').classList.remove('visible');
+        contextNodeId = null;
+    }
+    document.addEventListener('click', hideContextMenu);
+
+    function contextAction(action) {
+        hideContextMenu();
+        const nodeId = contextNodeId || selectedNodeId;
+        if (!nodeId) return;
+        const node = nodesData.find(n => n.id === nodeId);
+        switch (action) {
+            case 'details':
+                if (node && node._raw) showDetail(node._raw);
+                break;
+            case 'ping':
+                if (node && node._raw) { selectedNodeId = nodeId; pingDevice(); }
+                break;
+            case 'connect':
+                openAddEdgeModal();
+                if (node) {
+                    const srcEl = document.getElementById('edge-source');
+                    for (let i = 0; i < srcEl.options.length; i++) {
+                        if (srcEl.options[i].value === nodeId) { srcEl.selectedIndex = i; break; }
+                    }
+                }
+                break;
+            case 'position':
+                if (network) network.body.data.nodes.update({ id: nodeId, x: 0, y: 0 });
+                break;
+            case 'delete':
+                selectedNodeId = nodeId;
+                deleteSelectedNode();
+                break;
+        }
+    }
+
+    /* ==================== SCAN ==================== */
     function toggleScanBar() {
         const bar = document.getElementById('scan-bar');
         bar.classList.toggle('visible');
@@ -726,7 +1197,15 @@
         const ipRange = document.getElementById('ip-range').value.trim();
         const community = document.getElementById('snmp-community').value.trim() || 'public';
         const version = document.getElementById('snmp-version').value;
-        document.getElementById('status-bar').textContent = 'Scanning network...';
+        const btnScan = document.getElementById('btn-scan');
+        const progress = document.getElementById('scan-progress');
+
+        btnScan.disabled = true;
+        btnScan.textContent = 'Scanning...';
+        progress.classList.add('visible');
+        document.getElementById('scan-progress-text').textContent = 'Scanning network...';
+        updateStatus('Scanning network...');
+
         try {
             const data = await apiFetch('/api/v1/topology/scan', {
                 method: 'POST',
@@ -736,15 +1215,19 @@
             document.getElementById('scan-bar').classList.remove('visible');
             pendingNodes = data.data.nodes || [];
             renderPendingList('Scan Results');
-            document.getElementById('status-bar').textContent = `Scan found ${pendingNodes.length} devices`;
+            updateStatus(`Scan found ${pendingNodes.length} devices`);
             showToast('success', `Scan complete: ${pendingNodes.length} devices found`);
         } catch (e) {
-            document.getElementById('status-bar').textContent = 'Scan failed';
+            updateStatus('Scan failed');
             showToast('error', 'Scan failed: ' + e.message);
+        } finally {
+            btnScan.disabled = false;
+            btnScan.textContent = 'Start Scan';
+            progress.classList.remove('visible');
         }
     }
 
-    // ==================== ADD DEVICE ====================
+    /* ==================== ADD DEVICE ==================== */
     function openAddDeviceModal() {
         document.getElementById('dev-name').value = '';
         document.getElementById('dev-ip').value = '';
@@ -768,23 +1251,25 @@
             const node = data.data;
             pendingNodes.push(node);
             renderPendingList('Added Devices');
-            showToast('success', `Device "${name}" added to pending list`);
+            showToast('success', `"${name}" added to pending list`);
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     }
 
-    // ==================== DELETE DEVICE ====================
+    /* ==================== DELETE DEVICE ==================== */
     async function deleteSelectedNode() {
         if (!selectedNodeId) return;
-        if (!confirm('Delete this device?')) return;
+        const node = nodesData.find(n => n.id === selectedNodeId);
+        const name = node ? node._raw.name : selectedNodeId;
+        if (!confirm(`Delete "${name}"?`)) return;
         try {
             await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId), { method: 'DELETE' });
             closeDetail();
             await loadGraph();
-            showToast('success', 'Device deleted');
+            showToast('success', `"${name}" deleted`);
         } catch (e) { showToast('error', 'Delete failed: ' + e.message); }
     }
 
-    // ==================== ADD EDGE ====================
+    /* ==================== ADD EDGE ==================== */
     function openAddEdgeModal() {
         const src = document.getElementById('edge-source');
         const tgt = document.getElementById('edge-target');
@@ -819,7 +1304,7 @@
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     }
 
-    // ==================== CLEAR ALL ====================
+    /* ==================== CLEAR ALL ==================== */
     async function clearAll() {
         if (!confirm('Delete ALL topology data? This cannot be undone.')) return;
         try {
@@ -831,7 +1316,76 @@
         } catch (e) { showToast('error', 'Clear failed: ' + e.message); }
     }
 
-    // ==================== RESULTS SIDEBAR ====================
+    /* ==================== PING / SNMP ==================== */
+    async function pingDevice() {
+        const node = nodesData.find(n => n.id === selectedNodeId);
+        if (!node) { showToast('error', 'No device selected'); return; }
+        const ip = node._raw.ip;
+        document.getElementById('ping-title').textContent = `Ping ${node._raw.name} (${ip})`;
+        document.getElementById('ping-output').textContent = 'Pinging...';
+        openModal('modal-ping');
+        try {
+            const data = await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId) + '/ping');
+            document.getElementById('ping-output').textContent = data.output || data.error || JSON.stringify(data, null, 2);
+        } catch (e) {
+            document.getElementById('ping-output').textContent = 'Error: ' + e.message;
+        }
+    }
+
+    async function snmpWalkDevice() {
+        const node = nodesData.find(n => n.id === selectedNodeId);
+        if (!node) { showToast('error', 'No device selected'); return; }
+        const ip = node._raw.ip;
+        document.getElementById('ping-title').textContent = `SNMP Walk ${node._raw.name} (${ip})`;
+        document.getElementById('ping-output').textContent = 'Walking SNMP...';
+        openModal('modal-ping');
+        try {
+            const data = await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId) + '/snmp-walk');
+            document.getElementById('ping-output').textContent = data.output || data.error || JSON.stringify(data, null, 2);
+        } catch (e) {
+            document.getElementById('ping-output').textContent = 'Error: ' + e.message;
+        }
+    }
+
+    /* ==================== EXPORT / IMPORT ==================== */
+    function exportTopology() {
+        const data = {
+            nodes: nodesData.map(n => n._raw),
+            edges: edgesData.map(e => e._raw)
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'topology-' + new Date().toISOString().slice(0,10) + '.json';
+        a.click(); URL.revokeObjectURL(url);
+        showToast('success', 'Topology exported');
+    }
+
+    function importTopology(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.nodes) {
+                    for (const n of data.nodes) {
+                        await apiFetch('/api/v1/topology/device', {
+                            method: 'POST', body: JSON.stringify({ name: n.name, ip: n.ip, deviceType: n.deviceType })
+                        });
+                    }
+                }
+                await loadGraph();
+                showToast('success', 'Topology imported');
+            } catch (err) {
+                showToast('error', 'Import failed: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    /* ==================== RESULTS SIDEBAR ==================== */
     function renderPendingList(title) {
         const sidebar = document.getElementById('results-sidebar');
         const list = document.getElementById('results-list');
@@ -842,7 +1396,7 @@
         sidebar.classList.add('visible');
 
         if (pendingNodes.length === 0) {
-            list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No devices to add</div>';
+            list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:11px;">No devices to add</div>';
             return;
         }
 
@@ -853,19 +1407,25 @@
                 const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
                 return `<span style="background:${ss.bg};color:${ss.color};padding:1px 4px;border-radius:2px;font-size:9px;font-weight:600;">${s}</span>`;
             }).join(' ');
-            return `<div class="result-item" data-idx="${i}">
-                <span class="result-dot" style="background:${typeColor};border-color:${statusColor};"></span>
+            const alreadyOnCanvas = nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id);
+            const searchText = `${n.name} ${n.ip} ${n.deviceType} ${n.status} ${(n.sources||[]).join(' ')}`.toLowerCase();
+            return `<div class="result-item ${alreadyOnCanvas ? 'already-added' : ''}" data-idx="${i}" data-search-text="${esc(searchText)}">
+                <img class="result-icon" src="${getDeviceIconUrl(n.deviceType, n.status, 32)}" alt="${esc(n.deviceType)}">
                 <div class="result-info">
                     <div class="result-name">${esc(n.name)}</div>
                     <div class="result-meta">
                         <span>${esc(n.ip)}</span>
-                        <span>${esc(n.deviceType)}</span>
-                        <span>${sources}</span>
+                        <span style="color:${typeColor};">${esc(n.deviceType)}</span>
+                        <span style="color:${statusColor};">${(n.status||'unknown').toUpperCase()}</span>
                     </div>
+                    <div style="margin-top:2px;">${sources}</div>
                 </div>
-                <div class="result-actions">
-                    <button class="btn-add" onclick="addToCanvas(${i})">Add</button>
-                    <button class="btn-dismiss" onclick="dismissPending(${i})">x</button>
+                <div class="result-actions-btn">
+                    ${alreadyOnCanvas
+                        ? '<button style="color:var(--text-dim);border:none;cursor:default;font-size:9px;">Added</button>'
+                        : `<button class="btn-add" onclick="addToCanvas(${i})">Add</button>`
+                    }
+                    <button class="btn-dismiss" onclick="dismissPending(${i})">&times;</button>
                 </div>
             </div>`;
         }).join('');
@@ -875,34 +1435,18 @@
         if (idx < 0 || idx >= pendingNodes.length) return;
         const node = pendingNodes[idx];
         const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
-        if (exists) {
-            showToast('info', `Device "${node.name}" already on canvas`);
-            return;
-        }
-        const labelParts = [node.name];
-        if (node.deviceType !== 'unknown') labelParts.push(node.deviceType.toUpperCase());
-        labelParts.push(node.ip);
-        labelParts.push(node.status.toUpperCase());
-        if (node.sources && node.sources.length) labelParts.push(node.sources.join('+'));
-        const visNode = {
-            id: node.id,
-            image: getDeviceIconUrl(node.deviceType, node.status),
-            label: labelParts.join('\n'),
-            shape: 'image',
-            imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
-            title: `<b>${esc(node.name)}</b><br>IP: ${node.ip}<br>Type: ${node.deviceType}<br>Status: ${node.status}`,
-            font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
-            _raw: node
-        };
+        if (exists) { showToast('info', `"${node.name}" already on canvas`); return; }
+        const visNode = buildNodeData(node);
         nodesData.push(visNode);
         if (network) network.body.data.nodes.add(visNode);
         renderPendingList(document.getElementById('results-title').textContent);
+        updateEmptyState(nodesData.length);
+        document.getElementById('stat-nodes').textContent = nodesData.length;
         showToast('success', `"${node.name}" added to canvas`);
     }
 
     function dismissPending(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
-        const name = pendingNodes[idx].name;
         pendingNodes.splice(idx, 1);
         renderPendingList(document.getElementById('results-title').textContent);
     }
@@ -915,30 +1459,20 @@
         for (const node of toAdd) {
             const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
             if (exists) continue;
-            const labelParts2 = [node.name];
-            if (node.deviceType !== 'unknown') labelParts2.push(node.deviceType.toUpperCase());
-            labelParts2.push(node.ip);
-            labelParts2.push(node.status.toUpperCase());
-            if (node.sources && node.sources.length) labelParts2.push(node.sources.join('+'));
-            const visNode = {
-                id: node.id,
-                image: getDeviceIconUrl(node.deviceType, node.status),
-                label: labelParts2.join('\n'),
-                shape: 'image',
-                imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
-                title: `<b>${esc(node.name)}</b><br>IP: ${node.ip}<br>Type: ${node.deviceType}<br>Status: ${node.status}`,
-                font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
-                _raw: node
-            };
+            const visNode = buildNodeData(node);
             nodesData.push(visNode);
-            if (network) {
-                network.body.data.nodes.add(visNode);
-            }
+            if (network) network.body.data.nodes.add(visNode);
             added++;
         }
         renderPendingList(document.getElementById('results-title').textContent);
+        updateEmptyState(nodesData.length);
         document.getElementById('stat-nodes').textContent = nodesData.length;
         showToast('success', `${added} device(s) added to canvas`);
+    }
+
+    function selectAll() {
+        if (pendingNodes.length === 0) return;
+        addAllToCanvas();
     }
 
     function clearPending() {
@@ -946,7 +1480,53 @@
         renderPendingList(document.getElementById('results-title').textContent);
     }
 
-    // ==================== INIT ====================
+    /* ==================== KEYBOARD SHORTCUTS ==================== */
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+        switch(e.key) {
+            case 'Delete':
+            case 'Backspace':
+                if (selectedNodeId) { e.preventDefault(); deleteSelectedNode(); }
+                break;
+            case 'Escape':
+                closeDetail();
+                hideContextMenu();
+                document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+                break;
+            case '=':
+            case '+':
+                e.preventDefault(); zoomIn(); break;
+            case '-':
+                e.preventDefault(); zoomOut(); break;
+            case '0':
+                e.preventDefault(); fitGraph(); break;
+            case 'p':
+            case 'P':
+                if (!e.ctrlKey && !e.metaKey) { togglePhysics(); }
+                break;
+            case 'l':
+            case 'L':
+                if (!e.ctrlKey && !e.metaKey) { autoLayout(); }
+                break;
+            case 'f':
+            case 'F':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    document.getElementById('search-input').focus();
+                }
+                break;
+            case 'r':
+            case 'R':
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    loadGraph();
+                }
+                break;
+        }
+    });
+
+    /* ==================== INIT ==================== */
     document.addEventListener('DOMContentLoaded', loadGraph);
     </script>
 </body>
