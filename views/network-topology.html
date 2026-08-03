@@ -278,8 +278,8 @@
         .results-list::-webkit-scrollbar { width: 4px; }
         .results-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
         .result-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 8px 14px; border-bottom: 1px solid rgba(48,54,61,0.3);
+            display: flex; align-items: flex-start; gap: 8px;
+            padding: 8px 10px; border-bottom: 1px solid rgba(48,54,61,0.3);
             transition: background 0.12s; cursor: default;
         }
         .result-item:hover { background: rgba(88,166,255,0.05); }
@@ -287,15 +287,17 @@
         .result-icon {
             width: 32px; height: 32px; flex-shrink: 0;
         }
-        .result-info { flex: 1; min-width: 0; }
+        .result-info { flex: 1; min-width: 0; overflow: hidden; }
         .result-name {
             font-size: 11px; font-weight: 600; color: var(--text);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .result-meta {
             font-size: 10px; color: var(--text-dim); display: flex; gap: 6px; margin-top: 2px;
+            flex-wrap: nowrap; overflow: hidden;
         }
-        .result-actions-btn { display: flex; gap: 4px; flex-shrink: 0; }
+        .result-meta span { white-space: nowrap; }
+        .result-actions-btn { display: flex; gap: 4px; flex-shrink: 0; align-self: center; }
         .result-actions-btn button {
             background: none; border: 1px solid var(--border); color: var(--text-dim);
             border-radius: var(--radius-sm); padding: 3px 6px; font-size: 9px;
@@ -795,6 +797,34 @@
     let sidebarVisible = false;
     let selectedIndices = new Set();
     const token = localStorage.getItem('hephaestus_session_token') || '';
+    const PENDING_STORAGE_KEY = 'topology_pending_nodes';
+
+    // Load pending nodes from localStorage on startup
+    function loadPendingFromStorage() {
+        try {
+            const saved = localStorage.getItem(PENDING_STORAGE_KEY);
+            if (saved) {
+                pendingNodes = JSON.parse(saved);
+                if (pendingNodes.length > 0) {
+                    renderPendingList('Scan Results');
+                    document.getElementById('results-sidebar').classList.add('visible');
+                    sidebarVisible = true;
+                    document.getElementById('sidebar-toggle').classList.add('shifted');
+                    document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
+                }
+            }
+        } catch (e) {}
+    }
+
+    function savePendingToStorage() {
+        try {
+            if (pendingNodes.length > 0) {
+                localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(pendingNodes));
+            } else {
+                localStorage.removeItem(PENDING_STORAGE_KEY);
+            }
+        } catch (e) {}
+    }
 
     const NODE_COLORS = {
         server: '#58a6ff', switch: '#10b981', router: '#f59e0b',
@@ -1379,6 +1409,7 @@
             if (!data.success) throw new Error(data.error);
             document.getElementById('scan-bar').classList.remove('visible');
             pendingNodes = data.data.nodes || [];
+            savePendingToStorage();
             renderPendingList('Scan Results');
             updateStatus(`Scan found ${pendingNodes.length} devices`);
             showToast('success', `Scan complete: ${pendingNodes.length} devices found`);
@@ -1648,7 +1679,9 @@
         const visNode = buildNodeData(node);
         nodesData.push(visNode);
         if (network) network.body.data.nodes.add(visNode);
+        pendingNodes.splice(idx, 1);
         selectedIndices.delete(idx);
+        savePendingToStorage();
         renderPendingList(document.getElementById('results-title').textContent);
         updateEmptyState(nodesData.length);
         document.getElementById('stat-nodes').textContent = nodesData.length;
@@ -1659,6 +1692,7 @@
         if (idx < 0 || idx >= pendingNodes.length) return;
         pendingNodes.splice(idx, 1);
         selectedIndices.delete(idx);
+        savePendingToStorage();
         renderPendingList(document.getElementById('results-title').textContent);
     }
 
@@ -1681,6 +1715,7 @@
                 }
                 for (const idx of toAdd) { pendingNodes.splice(idx, 1); }
                 selectedIndices.clear();
+                savePendingToStorage();
                 renderPendingList(document.getElementById('results-title').textContent);
                 updateEmptyState(nodesData.length);
                 document.getElementById('stat-nodes').textContent = nodesData.length;
@@ -1697,6 +1732,7 @@
     function clearPending() {
         pendingNodes = [];
         selectedIndices.clear();
+        savePendingToStorage();
         renderPendingList(document.getElementById('results-title').textContent);
     }
 
@@ -1747,7 +1783,10 @@
     });
 
     /* ==================== INIT ==================== */
-    document.addEventListener('DOMContentLoaded', loadGraph);
+    document.addEventListener('DOMContentLoaded', function() {
+        loadGraph();
+        loadPendingFromStorage();
+    });
     </script>
 </body>
 </html>
