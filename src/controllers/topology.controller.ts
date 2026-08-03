@@ -30,23 +30,62 @@ export class TopologyController {
   }
 
   /**
-   * POST /api/v1/topology/scan — Run full aggregation scan
-   * Body: { prometheusUrl?, ipRange?, snmpCommunity?, snmpVersion? }
+   * POST /api/v1/topology/scan — Run scan and return candidates (NOT saved to DB)
+   * Body: { ipRange?, snmpCommunity?, snmpVersion? }
    */
-  public async scanTopology(req: Request, res: Response) {
+  public async scanCandidates(req: Request, res: Response) {
     try {
-      const { prometheusUrl, ipRange, snmpCommunity, snmpVersion } = req.body || {};
-      const graph = await topologyService.buildTopology({
-        prometheusUrl,
+      const { ipRange, snmpCommunity, snmpVersion } = req.body || {};
+      const nodes = await topologyService.scanOnly({
         ipRange,
         snmpCommunity: snmpCommunity || "public",
         snmpVersion: snmpVersion || "2c"
       });
-      await logActivity("Network Topology", "Scan", `Scanned topology: ${graph.meta.totalNodes} nodes, ${graph.meta.totalEdges} edges`, "SUCCESS");
-      return res.status(200).json({ success: true, data: graph });
+      await logActivity("Network Topology", "Scan", `Scanned: ${nodes.length} candidates found`, "SUCCESS");
+      return res.status(200).json({ success: true, data: { nodes, edges: [], meta: { totalNodes: nodes.length, totalEdges: 0 } } });
     } catch (err: any) {
-      console.error("[Topology] scanTopology error:", err.message);
+      console.error("[Topology] scanCandidates error:", err.message);
       return res.status(500).json({ success: false, error: "Scan failed: " + err.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/topology/device/save — Save a single device to DB (from sidebar)
+   * Body: TopologyNode
+   */
+  public async saveDevice(req: Request, res: Response) {
+    try {
+      const node = req.body;
+      if (!node.ip) {
+        return res.status(400).json({ success: false, error: "ip is required." });
+      }
+      await topologyService.saveDeviceToDb(node);
+      await logActivity("Network Topology", "Save Device", `Saved device "${node.name}" (${node.ip}) to database`, "SUCCESS");
+      return res.status(200).json({ success: true, data: node });
+    } catch (err: any) {
+      console.error("[Topology] saveDevice error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to save device: " + err.message });
+    }
+  }
+
+  /**
+   * POST /api/v1/topology/device/save-all — Save multiple devices to DB
+   * Body: { nodes: TopologyNode[] }
+   */
+  public async saveAllDevices(req: Request, res: Response) {
+    try {
+      const { nodes } = req.body;
+      if (!nodes || !Array.isArray(nodes)) {
+        return res.status(400).json({ success: false, error: "nodes array is required." });
+      }
+      for (const node of nodes) {
+        await topologyService.saveDeviceToDb(node);
+      }
+      await logActivity("Network Topology", "Save All", `Saved ${nodes.length} devices to database`, "SUCCESS");
+      return res.status(200).json({ success: true, data: { saved: nodes.length } });
+    } catch (err: any) {
+      console.error("[Topology] saveAllDevices error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to save devices: " + err.message });
     }
   }
 

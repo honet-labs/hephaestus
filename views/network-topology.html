@@ -160,7 +160,7 @@
         .legend {
             position: absolute; bottom: 12px; left: 12px;
             background: rgba(22,27,34,0.95); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 8px 12px; z-index: 10;
+            border-radius: var(--radius); padding: 8px 12px; z-index: 35;
             backdrop-filter: blur(8px); display: flex; gap: 12px; flex-wrap: wrap;
         }
         .legend span { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
@@ -302,6 +302,20 @@
         .result-actions-btn .btn-add:hover { background: var(--green); color: #fff; }
         .result-actions-btn .btn-dismiss:hover { color: var(--red); border-color: rgba(248,81,73,0.3); }
 
+        .sidebar-toggle {
+            position: absolute; top: 50%; left: 0; transform: translateY(-50%);
+            width: 20px; height: 48px; background: rgba(22,27,34,0.95);
+            border: 1px solid var(--border); border-left: none;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            color: var(--text-muted); cursor: pointer; z-index: 31;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; font-size: 12px;
+        }
+        .sidebar-toggle:hover { color: var(--accent); border-color: var(--accent); }
+        .sidebar-toggle.shifted { left: 300px; }
+        .results-sidebar { transition: transform 0.25s ease; }
+        .results-sidebar.collapsed { transform: translateX(-100%); }
+
         /* ========== CONTEXT MENU ========== */
         .context-menu {
             display: none; position: fixed; z-index: 100;
@@ -349,7 +363,7 @@
         .modal-overlay.active { display: flex; }
         .modal-dialog {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-            width: 95%; max-width: 420px; box-shadow: var(--shadow-lg);
+            width: 95%; max-width: 800px; box-shadow: var(--shadow-lg);
             animation: modalIn 0.2s ease-out;
         }
         @keyframes modalIn { from { opacity:0; transform: scale(0.95); } to { opacity:1; transform: scale(1); } }
@@ -391,6 +405,24 @@
         .empty-state p { font-size: 12px; color: var(--text-dim); max-width: 300px; }
 
         /* ========== KEYBOARD HINT ========== */
+        .custom-tooltip {
+            display: none; position: fixed; z-index: 200;
+            background: rgba(22,27,34,0.97); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 10px 14px;
+            font-size: 11px; color: var(--text); max-width: 320px;
+            box-shadow: var(--shadow-lg); pointer-events: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
+        }
+        .custom-tooltip.visible { display: block; }
+        .custom-tooltip .tt-name { font-weight: 700; font-size: 12px; margin-bottom: 4px; }
+        .custom-tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; }
+        .custom-tooltip .tt-label { color: var(--text-dim); }
+        .custom-tooltip .tt-val { font-family: monospace; }
+        .custom-tooltip .tt-iface { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 4px; }
+        .custom-tooltip .tt-iface-item { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+        .custom-tooltip .tt-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
         .keyboard-hint {
             position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
             background: rgba(22,27,34,0.95); border: 1px solid var(--border);
@@ -502,6 +534,7 @@
             </div>
             <div class="results-list" id="results-list"></div>
         </div>
+        <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">&#9654;</button>
 
         <div id="topology-graph"></div>
 
@@ -616,6 +649,9 @@
     <!-- TOAST CONTAINER -->
     <div class="toast-container" id="toast-container"></div>
 
+    <!-- CUSTOM TOOLTIP -->
+    <div class="custom-tooltip" id="custom-tooltip"></div>
+
     <!-- MODAL: ADD DEVICE -->
     <div id="modal-add-device" class="modal-overlay">
         <div class="modal-dialog">
@@ -715,6 +751,7 @@
     let physicsEnabled = false;
     let autoRefreshTimer = null;
     let searchQuery = '';
+    let sidebarVisible = false;
     const token = localStorage.getItem('hephaestus_session_token') || '';
 
     const NODE_COLORS = {
@@ -840,6 +877,23 @@
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+    /* ==================== SIDEBAR TOGGLE ==================== */
+    function toggleSidebar() {
+        const sidebar = document.getElementById('results-sidebar');
+        const toggle = document.getElementById('sidebar-toggle');
+        sidebarVisible = !sidebarVisible;
+        if (sidebarVisible) {
+            sidebar.classList.add('visible');
+            sidebar.classList.remove('collapsed');
+            toggle.classList.add('shifted');
+            toggle.innerHTML = '&#9664;';
+        } else {
+            sidebar.classList.remove('visible');
+            toggle.classList.remove('shifted');
+            toggle.innerHTML = '&#9654;';
+        }
+    }
+
     /* ==================== GRAPH ==================== */
     function buildNodeData(n) {
         const labelParts = [n.name];
@@ -853,7 +907,6 @@
             label: labelParts.join('\n'),
             shape: 'image',
             imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
-            title: buildNodeTooltip(n),
             font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
             x: n.x, y: n.y,
             fixed: (n.x != null && n.y != null) ? { x: true, y: true } : false,
@@ -861,22 +914,21 @@
         };
     }
 
-    function buildNodeTooltip(n) {
-        let html = `<div style="font-family:monospace;font-size:12px;">`;
-        html += `<b>${esc(n.name)}</b><br>`;
-        html += `IP: ${esc(n.ip)}<br>`;
-        html += `Type: ${esc(n.deviceType || 'unknown')}<br>`;
-        html += `Status: <span style="color:${STATUS_COLORS[n.status]||'#6b7280'};">${(n.status||'unknown').toUpperCase()}</span><br>`;
-        html += `Sources: ${(n.sources||[]).join(', ')}<br>`;
-        html += `Interfaces: ${(n.interfaces||[]).length}`;
+    function buildTooltipHtml(n) {
+        let html = `<div class="tt-name">${esc(n.name)}</div>`;
+        html += `<div class="tt-row"><span class="tt-label">IP</span><span class="tt-val">${esc(n.ip)}</span></div>`;
+        html += `<div class="tt-row"><span class="tt-label">Type</span><span class="tt-val">${esc(n.deviceType || 'unknown')}</span></div>`;
+        const sc = STATUS_COLORS[n.status] || '#6b7280';
+        html += `<div class="tt-row"><span class="tt-label">Status</span><span class="tt-val" style="color:${sc};">${(n.status||'unknown').toUpperCase()}</span></div>`;
+        html += `<div class="tt-row"><span class="tt-label">Sources</span><span class="tt-val">${(n.sources||[]).join(', ')}</span></div>`;
         if (n.interfaces && n.interfaces.length > 0) {
-            html += `<br><hr style="border-color:#30363d;margin:4px 0;">`;
-            for (const iface of n.interfaces) {
-                const st = STATUS_COLORS[iface.status] || '#6b7280';
-                html += `<span style="color:${st};">●</span> ${esc(iface.name)} ${iface.ip ? '('+esc(iface.ip)+')' : ''}<br>`;
+            html += `<div class="tt-iface">Interfaces (${n.interfaces.length}):</div>`;
+            for (const iface of n.interfaces.slice(0, 8)) {
+                const ist = iface.status === 'up' ? '#10b981' : iface.status === 'down' ? '#f85149' : '#6b7280';
+                html += `<div class="tt-iface-item"><span class="tt-dot" style="background:${ist};"></span>${esc(iface.name)}${iface.ip ? ' ('+esc(iface.ip)+')' : ''}</div>`;
             }
+            if (n.interfaces.length > 8) html += `<div class="tt-iface-item" style="color:var(--text-dim);">... +${n.interfaces.length - 8} more</div>`;
         }
-        html += `</div>`;
         return html;
     }
 
@@ -885,7 +937,7 @@
         return {
             id: e.id || `edge-${e.source}-${e.target}`,
             from: e.source, to: e.target,
-            label: e.label || '',
+            label: e.label || undefined,
             title: e.label || '',
             font: { color: '#8b949e', size: 10, face: 'monospace', align: 'middle', strokeWidth: 2, strokeColor: '#0d1117' },
             color: { color: ec, highlight: '#58a6ff', hover: '#58a6ff' },
@@ -969,6 +1021,35 @@
             const el = document.getElementById('stat-zoom');
             el.style.display = 'inline-flex';
             el.querySelector('strong').textContent = zoom + '%';
+        });
+
+        // Custom tooltip on hover
+        const tooltipEl = document.getElementById('custom-tooltip');
+        network.on('hoverNode', function(params) {
+            const node = nodesData.find(n => n.id === params.node);
+            if (node && node._raw) {
+                tooltipEl.innerHTML = buildTooltipHtml(node._raw);
+                tooltipEl.classList.add('visible');
+            }
+        });
+        network.on('blurNode', function() {
+            tooltipEl.classList.remove('visible');
+        });
+        network.on('hoverEdge', function(params) {
+            const edge = edgesData.find(e => e.id === params.edge);
+            if (edge && edge.label) {
+                tooltipEl.innerHTML = `<div style="font-weight:700;">${esc(edge.label)}</div>`;
+                tooltipEl.classList.add('visible');
+            }
+        });
+        network.on('blurEdge', function() {
+            tooltipEl.classList.remove('visible');
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (tooltipEl.classList.contains('visible')) {
+                tooltipEl.style.left = (e.clientX + 14) + 'px';
+                tooltipEl.style.top = (e.clientY + 14) + 'px';
+            }
         });
 
         document.getElementById('stat-nodes').textContent = nodes.length;
@@ -1431,11 +1512,15 @@
         }).join('');
     }
 
-    function addToCanvas(idx) {
+    async function addToCanvas(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
         const node = pendingNodes[idx];
         const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
         if (exists) { showToast('info', `"${node.name}" already on canvas`); return; }
+        // Save to DB first
+        try {
+            await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify(node) });
+        } catch (e) { /* continue anyway */ }
         const visNode = buildNodeData(node);
         nodesData.push(visNode);
         if (network) network.body.data.nodes.add(visNode);
@@ -1451,11 +1536,15 @@
         renderPendingList(document.getElementById('results-title').textContent);
     }
 
-    function addAllToCanvas() {
+    async function addAllToCanvas() {
         if (pendingNodes.length === 0) return;
         let added = 0;
         const toAdd = [...pendingNodes];
         pendingNodes = [];
+        // Save all to DB first
+        try {
+            await apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: toAdd }) });
+        } catch (e) { /* continue anyway */ }
         for (const node of toAdd) {
             const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
             if (exists) continue;

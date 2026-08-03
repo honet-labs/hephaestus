@@ -669,6 +669,36 @@ export class TopologyService {
   }
 
   /**
+   * Save a single device to DB (called when user clicks "Add" from sidebar).
+   * Preserves position if device already exists.
+   */
+  async saveDeviceToDb(node: TopologyNode): Promise<void> {
+    const existing = await query(
+      `SELECT id, x, y FROM topology_devices WHERE ip_address = $1`,
+      [node.ip]
+    );
+
+    if (existing.rows.length > 0) {
+      await query(
+        `UPDATE topology_devices
+         SET name = $1, device_type = $2, status = $3, sources = $4, labels = $5, interfaces = $6
+         WHERE ip_address = $7`,
+        [node.name, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), JSON.stringify(node.interfaces || []), node.ip]
+      );
+    } else {
+      const id = node.id || `device-${node.ip}-${Date.now()}`;
+      await query(
+        `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, interfaces, x, y)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (id) DO UPDATE SET
+           name = EXCLUDED.name, device_type = EXCLUDED.device_type, status = EXCLUDED.status,
+           sources = EXCLUDED.sources, labels = EXCLUDED.labels, interfaces = EXCLUDED.interfaces`,
+        [id, node.name, node.ip, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), JSON.stringify(node.interfaces || []), node.x || null, node.y || null]
+      );
+    }
+  }
+
+  /**
    * Update device position (for drag-and-drop).
    */
   async updateDevicePosition(deviceId: string, x: number, y: number): Promise<void> {
@@ -704,6 +734,35 @@ export class TopologyService {
   }
 
   // ==================== FULL TOPOLOGY BUILD ====================
+
+  /**
+   * Scan network and return candidates WITHOUT saving to DB.
+   * Used by the scan endpoint so results go to sidebar first.
+   */
+  async scanOnly(options: {
+    ipRange?: string;
+    snmpCommunity?: string;
+    snmpVersion?: string;
+  }): Promise<TopologyNode[]> {
+    const allNodes: TopologyNode[] = [];
+
+    // Fetch existing manual nodes from DB
+    const manualNodes = await this.loadTopologyFromDb().then(nodes => nodes.filter(n => n.sources.includes("MANUAL")));
+    allNodes.push(...manualNodes);
+
+    // SNMP scan if IP range provided
+    if (options.ipRange) {
+      const snmpNodes = await this.scanNetwork(
+        options.ipRange,
+        options.snmpCommunity || "public",
+        options.snmpVersion || "2c"
+      );
+      allNodes.push(...snmpNodes);
+    }
+
+    // Deduplicate and merge (but DO NOT save to DB)
+    return this.mergeNodes(allNodes);
+  }
 
   /**
    * Build complete topology by aggregating all sources.
@@ -828,7 +887,7 @@ export class TopologyService {
     for (const [, nodeIds] of subnetMap) {
       if (nodeIds.length < 2) continue;
       for (let i = 0; i < nodeIds.length - 1; i++) {
-        addEdge(nodeIds[i], nodeIds[i + 1], "local");
+        addEdge(nodeIds[i], nodeIds[i + 1], "");
       }
     }
 
