@@ -500,6 +500,9 @@
         <button class="btn-icon" id="btn-physics" onclick="togglePhysics()" title="Toggle Physics (P)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
         </button>
+        <button class="btn-icon" id="btn-label-toggle" onclick="toggleLabel()" title="Toggle Label Format">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+        </button>
         <div class="sep"></div>
         <button class="btn-icon" onclick="exportTopology()" title="Export JSON">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -689,6 +692,20 @@
         </div>
     </div>
 
+    <!-- EDGE CONTEXT MENU -->
+    <div class="context-menu" id="edge-context-menu">
+        <div class="context-menu-item" onclick="edgeContextAction('edit')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit Label
+        </div>
+        <div class="context-menu-sep"></div>
+        <div class="context-menu-item danger" onclick="edgeContextAction('delete')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Delete Edge
+            <span class="shortcut">Del</span>
+        </div>
+    </div>
+
     <!-- TOAST CONTAINER -->
     <div class="toast-container" id="toast-container"></div>
 
@@ -790,6 +807,7 @@
     let edgesData = [];
     let selectedNodeId = null;
     let contextNodeId = null;
+    let contextEdgeId = null;
     let pendingNodes = [];
     let physicsEnabled = false;
     let autoRefreshTimer = null;
@@ -979,16 +997,17 @@
     }
 
     /* ==================== GRAPH ==================== */
+    let labelShowIp = true;
+    let labelShowName = true;
+
     function buildNodeData(n) {
-        const labelParts = [n.name];
-        if (n.deviceType && n.deviceType !== 'unknown') labelParts.push(n.deviceType.toUpperCase());
-        labelParts.push(n.ip);
-        labelParts.push((n.status || 'unknown').toUpperCase());
-        if (n.sources && n.sources.length) labelParts.push(n.sources.join('+'));
+        const labelParts = [];
+        if (labelShowName) labelParts.push(n.name);
+        if (labelShowIp) labelParts.push(n.ip);
         return {
             id: n.id,
             image: getDeviceIconUrl(n.deviceType || 'unknown', n.status || 'unknown'),
-            label: labelParts.join('\n'),
+            label: labelParts.join('\n') || n.ip,
             shape: 'image',
             imagePadding: { left: 5, right: 5, top: 5, bottom: 5 },
             font: { color: '#e6edf3', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#0d1117' },
@@ -1088,12 +1107,18 @@
         network.on('oncontext', function(params) {
             params.event.preventDefault();
             const nodeId = network.getNodesAt(params.pointer.DOM)[0];
+            const edgeId = !nodeId ? network.getEdgesAt(params.pointer.DOM)[0] : null;
             if (nodeId) {
                 contextNodeId = nodeId;
+                contextEdgeId = null;
                 selectedNodeId = nodeId;
-                showContextMenu(params.event.clientX, params.event.clientY);
+                showContextMenu(params.event.clientX, params.event.clientY, 'node');
                 const node = nodesData.find(n => n.id === nodeId);
                 if (node && node._raw) showDetail(node._raw);
+            } else if (edgeId) {
+                contextNodeId = null;
+                contextEdgeId = edgeId;
+                showContextMenu(params.event.clientX, params.event.clientY, 'edge');
             } else {
                 hideContextMenu();
             }
@@ -1250,6 +1275,23 @@
         showToast('info', 'Physics ' + (physicsEnabled ? 'enabled' : 'disabled'));
     }
 
+    /* ==================== LABEL TOGGLE ==================== */
+    function toggleLabel() {
+        if (labelShowName && labelShowIp) { labelShowName = true; labelShowIp = false; }
+        else if (labelShowName && !labelShowIp) { labelShowName = false; labelShowIp = true; }
+        else if (!labelShowName && labelShowIp) { labelShowName = true; labelShowIp = true; }
+        const updates = nodesData.map(n => {
+            const r = n._raw || {};
+            const labelParts = [];
+            if (labelShowName) labelParts.push(r.name);
+            if (labelShowIp) labelParts.push(r.ip);
+            return { id: n.id, label: labelParts.join('\n') || r.ip };
+        });
+        if (network) network.body.data.nodes.update(updates);
+        const mode = (labelShowName ? 'Name' : '') + (labelShowName && labelShowIp ? '+' : '') + (labelShowIp ? 'IP' : '');
+        showToast('info', 'Label: ' + mode);
+    }
+
     /* ==================== AUTO LAYOUT ==================== */
     function autoLayout() {
         if (!network || nodesData.length === 0) return;
@@ -1308,15 +1350,26 @@
     }
 
     /* ==================== CONTEXT MENU ==================== */
-    function showContextMenu(x, y) {
-        const menu = document.getElementById('context-menu');
-        menu.style.left = x + 'px';
-        menu.style.top = y + 'px';
-        menu.classList.add('visible');
+    function showContextMenu(x, y, type) {
+        const nodeMenu = document.getElementById('context-menu');
+        const edgeMenu = document.getElementById('edge-context-menu');
+        if (type === 'edge') {
+            nodeMenu.classList.remove('visible');
+            edgeMenu.style.left = x + 'px';
+            edgeMenu.style.top = y + 'px';
+            edgeMenu.classList.add('visible');
+        } else {
+            edgeMenu.classList.remove('visible');
+            nodeMenu.style.left = x + 'px';
+            nodeMenu.style.top = y + 'px';
+            nodeMenu.classList.add('visible');
+        }
     }
     function hideContextMenu() {
         document.getElementById('context-menu').classList.remove('visible');
+        document.getElementById('edge-context-menu').classList.remove('visible');
         contextNodeId = null;
+        contextEdgeId = null;
     }
     document.addEventListener('click', hideContextMenu);
 
@@ -1348,6 +1401,40 @@
                 selectedNodeId = nodeId;
                 deleteSelectedNode();
                 break;
+        }
+    }
+
+    function edgeContextAction(action) {
+        hideContextMenu();
+        if (!contextEdgeId) return;
+        if (action === 'delete') {
+            const edge = edgesData.find(e => e.id === contextEdgeId);
+            const label = edge ? (edge.label || 'connection') : 'connection';
+            if (!confirm(`Delete "${label}" connection?`)) return;
+            apiFetch('/api/v1/topology/edge/' + encodeURIComponent(contextEdgeId), { method: 'DELETE' })
+                .then(res => {
+                    if (!res.success) throw new Error(res.error);
+                    if (network) network.body.data.edges.remove(contextEdgeId);
+                    edgesData = edgesData.filter(e => e.id !== contextEdgeId);
+                    document.getElementById('stat-edges').textContent = edgesData.length;
+                    closeDetail();
+                    showToast('success', 'Connection deleted');
+                })
+                .catch(e => showToast('error', 'Delete failed: ' + e.message));
+        } else if (action === 'edit') {
+            const edge = edgesData.find(e => e.id === contextEdgeId);
+            const newLabel = prompt('Edge label:', edge ? (edge.label || '') : '');
+            if (newLabel === null) return;
+            const edgeRaw = edge ? edge._raw : {};
+            apiFetch('/api/v1/topology/edge/' + encodeURIComponent(contextEdgeId), {
+                method: 'PUT',
+                body: JSON.stringify({ label: newLabel || undefined, source: edgeRaw.source, target: edgeRaw.target })
+            }).then(res => {
+                if (!res.success) throw new Error(res.error);
+                if (network) network.body.data.edges.update({ id: contextEdgeId, label: newLabel || undefined });
+                if (edge) { edge.label = newLabel || undefined; edge._raw.label = newLabel || undefined; }
+                showToast('success', 'Edge updated');
+            }).catch(e => showToast('error', 'Update failed: ' + e.message));
         }
     }
 
@@ -1419,11 +1506,17 @@
             });
             if (!data.success) throw new Error(data.error);
             document.getElementById('scan-bar').classList.remove('visible');
-            pendingNodes = data.data.nodes || [];
+            const newNodes = data.data.nodes || [];
+            const existingIps = new Set([
+                ...pendingNodes.map(n => n.ip),
+                ...nodesData.map(n => n._raw?.ip).filter(Boolean)
+            ]);
+            const deduped = newNodes.filter(n => !existingIps.has(n.ip));
+            pendingNodes.push(...deduped);
             savePendingToDB();
             renderPendingList('Scan Results');
-            updateStatus(`Scan found ${pendingNodes.length} devices`);
-            showToast('success', `Scan complete: ${pendingNodes.length} devices found`);
+            updateStatus(`Scan found ${deduped.length} new device(s) (${newNodes.length - deduped.length} duplicates skipped)`);
+            showToast('success', `Scan complete: ${deduped.length} new device(s) found`);
         } catch (e) {
             updateStatus('Scan failed');
             showToast('error', 'Scan failed: ' + e.message);
@@ -1631,7 +1724,8 @@
                 const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
                 return `<span style="background:${ss.bg};color:${ss.color};padding:1px 4px;border-radius:2px;font-size:9px;font-weight:600;">${s}</span>`;
             }).join(' ');
-            const alreadyOnCanvas = nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id);
+            const alreadyOnCanvas = n._added || nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id);
+            if (alreadyOnCanvas) n._added = true;
             const isChecked = selectedIndices.has(i);
             const searchText = `${n.name} ${n.ip} ${n.deviceType} ${n.status} ${(n.sources||[]).join(' ')}`.toLowerCase();
             return `<div class="result-item ${isChecked ? 'selected' : ''} ${alreadyOnCanvas ? 'already-added' : ''}" data-idx="${i}" data-search-text="${esc(searchText)}">
@@ -1678,8 +1772,9 @@
     async function addToCanvas(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
         const node = pendingNodes[idx];
+        if (node._added) { showToast('info', `"${node.name}" already on canvas`); return; }
         const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
-        if (exists) { showToast('info', `"${node.name}" already on canvas`); return; }
+        if (exists) { node._added = true; renderPendingList(document.getElementById('results-title').textContent); showToast('info', `"${node.name}" already on canvas`); return; }
         try {
             const res = await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify(node) });
             if (!res.success) throw new Error(res.error || 'Save failed');
@@ -1690,11 +1785,7 @@
         const visNode = buildNodeData(node);
         nodesData.push(visNode);
         if (network) network.body.data.nodes.add(visNode);
-        const removedId = node._pendingId;
-        pendingNodes.splice(idx, 1);
-        selectedIndices.delete(idx);
-        if (removedId) deletePendingFromDB([removedId]);
-        savePendingToDB();
+        node._added = true;
         renderPendingList(document.getElementById('results-title').textContent);
         updateEmptyState(nodesData.length);
         document.getElementById('stat-nodes').textContent = nodesData.length;
@@ -1714,24 +1805,22 @@
     function addSelectedToCanvas() {
         if (selectedIndices.size === 0) return;
         const toAdd = [...selectedIndices].sort((a,b) => b - a);
-        const nodesToSave = toAdd.map(i => pendingNodes[i]);
+        const nodesToSave = toAdd.map(i => pendingNodes[i]).filter(n => !n._added);
+        if (nodesToSave.length === 0) { showToast('info', 'All selected devices already on canvas'); return; }
         apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: nodesToSave }) })
             .then(res => {
                 if (!res.success) throw new Error(res.error);
                 let added = 0;
-                for (const idx of toAdd) {
-                    const node = pendingNodes[idx];
+                for (const node of nodesToSave) {
                     const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
-                    if (exists) continue;
+                    if (exists) { node._added = true; continue; }
                     const visNode = buildNodeData(node);
                     nodesData.push(visNode);
                     if (network) network.body.data.nodes.add(visNode);
+                    node._added = true;
                     added++;
                 }
-                for (const idx of toAdd) { pendingNodes.splice(idx, 1); }
                 selectedIndices.clear();
-                deletePendingFromDB(nodesToSave.map(n => n._pendingId).filter(Boolean));
-                savePendingToDB();
                 renderPendingList(document.getElementById('results-title').textContent);
                 updateEmptyState(nodesData.length);
                 document.getElementById('stat-nodes').textContent = nodesData.length;
@@ -1760,6 +1849,7 @@
             case 'Delete':
             case 'Backspace':
                 if (selectedNodeId) { e.preventDefault(); deleteSelectedNode(); }
+                else if (contextEdgeId) { e.preventDefault(); edgeContextAction('delete'); }
                 break;
             case 'Escape':
                 closeDetail();
@@ -1799,9 +1889,16 @@
     });
 
     /* ==================== INIT ==================== */
-    document.addEventListener('DOMContentLoaded', function() {
-        loadGraph();
-        loadPendingFromDB();
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadGraph();
+        await loadPendingFromDB();
+        // Mark pending nodes as added if already on canvas
+        for (const n of pendingNodes) {
+            if (nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id)) {
+                n._added = true;
+            }
+        }
+        if (pendingNodes.length > 0) renderPendingList(document.getElementById('results-title').textContent || 'Scan Results');
     });
     </script>
 </body>

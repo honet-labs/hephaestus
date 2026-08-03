@@ -192,6 +192,17 @@ export class TopologyController {
     }
   }
 
+  public async updateEdge(req: Request, res: Response) {
+    try {
+      const { label } = req.body;
+      await topologyService.updateEdge(parseInt(req.params.id), label);
+      return res.status(200).json({ success: true, message: "Edge updated." });
+    } catch (err: any) {
+      console.error("[Topology] updateEdge error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to update edge." });
+    }
+  }
+
   /**
    * POST /api/v1/topology/scan/snmp — Quick SNMP scan for a single IP or small range
    * Body: { ipRange, community?, version? }

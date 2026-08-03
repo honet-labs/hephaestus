@@ -272,6 +272,7 @@ export class TopologyService {
   private static readonly IF_PHYS_ADDR_OID = "1.3.6.1.2.1.2.2.1.6";
   private static readonly IF_OPER_STATUS_OID = "1.3.6.1.2.1.2.2.1.8";
   private static readonly IP_AD_ENT_ADDR_OID = "1.3.6.1.2.1.4.20.1.1";
+  private static readonly IP_AD_ENT_IF_INDEX_OID = "1.3.6.1.2.1.4.20.1.2";
 
   /**
    * Scan an IP range using ICMP ping + SNMP GET for sysName/sysDescr,
@@ -336,12 +337,13 @@ export class TopologyService {
     const interfaces: NetworkInterface[] = [];
     const versionFlag = version === "v1" ? "1" : "2c";
 
-    const [descrResult, speedResult, macResult, statusResult, ipAddrResult] = await Promise.all([
+    const [descrResult, speedResult, macResult, statusResult, ipAddrResult, ipIfIndexResult] = await Promise.all([
       this.snmpWalkOid(ip, TopologyService.IF_DESCR_OID, community, versionFlag, timeout).catch(() => ""),
       this.snmpWalkOid(ip, TopologyService.IF_SPEED_OID, community, versionFlag, timeout).catch(() => ""),
       this.snmpWalkOid(ip, TopologyService.IF_PHYS_ADDR_OID, community, versionFlag, timeout).catch(() => ""),
       this.snmpWalkOid(ip, TopologyService.IF_OPER_STATUS_OID, community, versionFlag, timeout).catch(() => ""),
-      this.snmpWalkOid(ip, TopologyService.IP_AD_ENT_ADDR_OID, community, versionFlag, timeout).catch(() => "")
+      this.snmpWalkOid(ip, TopologyService.IP_AD_ENT_ADDR_OID, community, versionFlag, timeout).catch(() => ""),
+      this.snmpWalkOid(ip, TopologyService.IP_AD_ENT_IF_INDEX_OID, community, versionFlag, timeout).catch(() => "")
     ]);
 
     const descrMap = this.parseWalkResult(descrResult);
@@ -349,12 +351,20 @@ export class TopologyService {
     const macMap = this.parseWalkResult(macResult);
     const statusMap = this.parseWalkResult(statusResult);
     const ipAddrMap = this.parseWalkResult(ipAddrResult);
+    const ipIfIndexMap = this.parseWalkResult(ipIfIndexResult);
+
+    // Build ipAddrMap keyed by interface index using ipAdEntIfIndex
+    const ifaceIpMap = new Map<string, string>();
+    for (const [ip, ifIdx] of ipIfIndexMap) {
+      const existingIp = ifaceIpMap.get(ifIdx);
+      if (!existingIp) ifaceIpMap.set(ifIdx, ip);
+    }
 
     for (const [idx, name] of descrMap) {
       const speedRaw = parseInt(speedMap.get(idx) || "0") || 0;
       const macRaw = macMap.get(idx) || "";
       const operStatus = parseInt(statusMap.get(idx) || "0");
-      const ipAddr = ipAddrMap.get(idx) || "";
+      const ipAddr = ifaceIpMap.get(idx) || "";
 
       interfaces.push({
         name: name || `if${idx}`,
@@ -366,11 +376,11 @@ export class TopologyService {
       });
     }
 
-    if (interfaces.length === 0 && ipAddrMap.size > 0) {
-      for (const [idx, ipAddr] of ipAddrMap) {
+    if (interfaces.length === 0 && ipIfIndexMap.size > 0) {
+      for (const [ip, ifIdx] of ipIfIndexMap) {
         interfaces.push({
-          name: `ip${idx}`,
-          ip: ipAddr,
+          name: `ip${ifIdx}`,
+          ip: ip,
           mac: "",
           speed: 0,
           speedStr: "-",
@@ -744,6 +754,10 @@ export class TopologyService {
 
   async deleteEdge(edgeId: number): Promise<void> {
     await query(`DELETE FROM topology_edges WHERE id = $1`, [edgeId]);
+  }
+
+  async updateEdge(edgeId: number, label?: string): Promise<void> {
+    await query(`UPDATE topology_edges SET label = $1 WHERE id = $2`, [label || null, edgeId]);
   }
 
   async loadEdges(): Promise<TopologyEdge[]> {

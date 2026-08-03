@@ -18,6 +18,7 @@ router.put("/device/position", requireRole("ADMIN"), (req, res) => topologyContr
 
 // Edge operations
 router.post("/edge", requireRole("ADMIN"), (req, res) => topologyController.addEdge(req, res));
+router.put("/edge/:id", requireRole("ADMIN"), (req, res) => topologyController.updateEdge(req, res));
 router.delete("/edge/:id", requireRole("ADMIN"), (req, res) => topologyController.deleteEdge(req, res));
 
 // Pending nodes (scan results)
