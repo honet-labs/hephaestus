@@ -302,20 +302,20 @@
         <button class="btn btn-secondary" onclick="toggleScanBar()">Cancel</button>
     </div>
 
-    <!-- RESULTS SIDEBAR -->
-    <div id="results-sidebar" class="results-sidebar">
-        <div class="results-header">
-            <h3 id="results-title">Discovered Devices</h3>
-            <span class="results-count" id="results-count">0</span>
-        </div>
-        <div class="results-actions">
-            <button class="btn btn-primary" onclick="addAllToCanvas()" style="font-size:10px;padding:4px 10px;">Add All to Canvas</button>
-            <button class="btn btn-secondary" onclick="clearPending()" style="font-size:10px;padding:4px 10px;">Clear</button>
-        </div>
-        <div class="results-list" id="results-list"></div>
-    </div>
-
     <div class="graph-container">
+        <!-- RESULTS SIDEBAR -->
+        <div id="results-sidebar" class="results-sidebar">
+            <div class="results-header">
+                <h3 id="results-title">Discovered Devices</h3>
+                <span class="results-count" id="results-count">0</span>
+            </div>
+            <div class="results-actions">
+                <button class="btn btn-primary" onclick="addAllToCanvas()" style="font-size:10px;padding:4px 10px;">Add All to Canvas</button>
+                <button class="btn btn-secondary" onclick="clearPending()" style="font-size:10px;padding:4px 10px;">Clear</button>
+            </div>
+            <div class="results-list" id="results-list"></div>
+        </div>
+
         <div id="topology-graph"></div>
 
         <div class="status-bar" id="status-bar">Loading topology...</div>
