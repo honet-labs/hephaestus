@@ -694,6 +694,7 @@
 
     <!-- EDGE CONTEXT MENU -->
     <div class="context-menu" id="edge-context-menu">
+        <div id="edge-list-items"></div>
         <div class="context-menu-item" onclick="edgeContextAction('edit')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Edit Label
@@ -808,6 +809,7 @@
     let selectedNodeId = null;
     let contextNodeId = null;
     let contextEdgeId = null;
+    let contextEdgeIds = [];
     let pendingNodes = [];
     let physicsEnabled = false;
     let autoRefreshTimer = null;
@@ -1107,17 +1109,19 @@
         network.on('oncontext', function(params) {
             params.event.preventDefault();
             const nodeId = network.getNodesAt(params.pointer.DOM)[0];
-            const edgeId = !nodeId ? network.getEdgesAt(params.pointer.DOM)[0] : null;
+            const edgeIds = !nodeId ? network.getEdgesAt(params.pointer.DOM) : [];
             if (nodeId) {
                 contextNodeId = nodeId;
                 contextEdgeId = null;
+                contextEdgeIds = [];
                 selectedNodeId = nodeId;
                 showContextMenu(params.event.clientX, params.event.clientY, 'node');
                 const node = nodesData.find(n => n.id === nodeId);
                 if (node && node._raw) showDetail(node._raw);
-            } else if (edgeId) {
+            } else if (edgeIds.length > 0) {
                 contextNodeId = null;
-                contextEdgeId = edgeId;
+                contextEdgeIds = edgeIds;
+                contextEdgeId = edgeIds[0];
                 showContextMenu(params.event.clientX, params.event.clientY, 'edge');
             } else {
                 hideContextMenu();
@@ -1355,6 +1359,25 @@
         const edgeMenu = document.getElementById('edge-context-menu');
         if (type === 'edge') {
             nodeMenu.classList.remove('visible');
+            // Build edge list dynamically
+            const listEl = document.getElementById('edge-list-items');
+            if (contextEdgeIds.length > 1) {
+                listEl.innerHTML = contextEdgeIds.map(eid => {
+                    const e = edgesData.find(ed => ed.id === eid);
+                    const fromNode = e ? nodesData.find(n => n.id === (e.from || e._raw?.source)) : null;
+                    const toNode = e ? nodesData.find(n => n.id === (e.to || e._raw?.target)) : null;
+                    const label = e ? (e.label || 'connection') : eid;
+                    const fromName = fromNode ? fromNode._raw?.name || fromNode.id : '?';
+                    const toName = toNode ? toNode._raw?.name || toNode.id : '?';
+                    return `<div class="context-menu-item" onclick="deleteEdgeById('${eid}')" style="flex-direction:column;align-items:flex-start;gap:2px;">
+                        <span style="font-weight:600;">${esc(label)}</span>
+                        <span style="font-size:9px;color:var(--text-dim);">${esc(fromName)} → ${esc(toName)}</span>
+                    </div>`;
+                }).join('');
+                listEl.style.display = '';
+            } else {
+                listEl.style.display = 'none';
+            }
             edgeMenu.style.left = x + 'px';
             edgeMenu.style.top = y + 'px';
             edgeMenu.classList.add('visible');
@@ -1370,6 +1393,7 @@
         document.getElementById('edge-context-menu').classList.remove('visible');
         contextNodeId = null;
         contextEdgeId = null;
+        contextEdgeIds = [];
     }
     document.addEventListener('click', hideContextMenu);
 
@@ -1404,23 +1428,30 @@
         }
     }
 
+    function deleteEdgeById(edgeId) {
+        const edge = edgesData.find(e => e.id === edgeId);
+        const label = edge ? (edge.label || 'connection') : 'connection';
+        const fromNode = edge ? nodesData.find(n => n.id === (edge.from || edge._raw?.source)) : null;
+        const toNode = edge ? nodesData.find(n => n.id === (edge.to || edge._raw?.target)) : null;
+        const desc = fromNode && toNode ? `${fromNode._raw?.name || '?'} → ${toNode._raw?.name || '?'}` : label;
+        if (!confirm(`Delete "${label}" (${desc})?`)) return;
+        apiFetch('/api/v1/topology/edge/' + encodeURIComponent(edgeId), { method: 'DELETE' })
+            .then(res => {
+                if (!res.success) throw new Error(res.error);
+                if (network) network.body.data.edges.remove(edgeId);
+                edgesData = edgesData.filter(e => e.id !== edgeId);
+                document.getElementById('stat-edges').textContent = edgesData.length;
+                closeDetail();
+                showToast('success', `Edge "${label}" deleted`);
+            })
+            .catch(e => showToast('error', 'Delete failed: ' + e.message));
+    }
+
     function edgeContextAction(action) {
         hideContextMenu();
         if (!contextEdgeId) return;
         if (action === 'delete') {
-            const edge = edgesData.find(e => e.id === contextEdgeId);
-            const label = edge ? (edge.label || 'connection') : 'connection';
-            if (!confirm(`Delete "${label}" connection?`)) return;
-            apiFetch('/api/v1/topology/edge/' + encodeURIComponent(contextEdgeId), { method: 'DELETE' })
-                .then(res => {
-                    if (!res.success) throw new Error(res.error);
-                    if (network) network.body.data.edges.remove(contextEdgeId);
-                    edgesData = edgesData.filter(e => e.id !== contextEdgeId);
-                    document.getElementById('stat-edges').textContent = edgesData.length;
-                    closeDetail();
-                    showToast('success', 'Connection deleted');
-                })
-                .catch(e => showToast('error', 'Delete failed: ' + e.message));
+            deleteEdgeById(contextEdgeId);
         } else if (action === 'edit') {
             const edge = edgesData.find(e => e.id === contextEdgeId);
             const newLabel = prompt('Edge label:', edge ? (edge.label || '') : '');
