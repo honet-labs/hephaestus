@@ -778,6 +778,10 @@
                         <option value="">None</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Edge Label (optional)</label>
+                    <input type="text" id="edge-custom-label" placeholder="e.g. ether1-eth0, WAN, LAN">
+                </div>
                 <div id="edge-error" class="form-error"></div>
             </div>
             <div class="modal-footer">
@@ -807,6 +811,8 @@
     let nodesData = [];
     let edgesData = [];
     let selectedNodeId = null;
+    let connectMode = false;
+    let connectSourceId = null;
     let contextNodeId = null;
     let contextEdgeId = null;
     let contextEdgeIds = [];
@@ -1089,6 +1095,17 @@
         });
 
         network.on('click', function(params) {
+            if (connectMode) {
+                if (params.nodes.length > 0) {
+                    const targetId = params.nodes[0];
+                    if (targetId === connectSourceId) return;
+                    exitConnectMode();
+                    openAddEdgeModalWith(connectSourceId, targetId);
+                } else {
+                    exitConnectMode();
+                }
+                return;
+            }
             if (params.nodes.length > 0) {
                 const nodeId = params.nodes[0];
                 selectedNodeId = nodeId;
@@ -1410,13 +1427,7 @@
                 if (node && node._raw) { selectedNodeId = nodeId; pingDevice(); }
                 break;
             case 'connect':
-                openAddEdgeModal();
-                if (node) {
-                    const srcEl = document.getElementById('edge-source');
-                    for (let i = 0; i < srcEl.options.length; i++) {
-                        if (srcEl.options[i].value === nodeId) { srcEl.selectedIndex = i; break; }
-                    }
-                }
+                enterConnectMode(nodeId);
                 break;
             case 'position':
                 if (network) network.body.data.nodes.update({ id: nodeId, x: 0, y: 0 });
@@ -1603,6 +1614,44 @@
     }
 
     /* ==================== ADD EDGE ==================== */
+    function enterConnectMode(sourceId) {
+        connectMode = true;
+        connectSourceId = sourceId;
+        const srcNode = nodesData.find(n => n.id === sourceId);
+        const name = srcNode ? (srcNode._raw?.name || sourceId) : sourceId;
+        showToast('info', `Click target node to connect from "${name}"`);
+        document.getElementById('topology-graph').style.cursor = 'crosshair';
+    }
+
+    function exitConnectMode() {
+        connectMode = false;
+        connectSourceId = null;
+        document.getElementById('topology-graph').style.cursor = '';
+    }
+
+    function openAddEdgeModalWith(sourceId, targetId) {
+        const src = document.getElementById('edge-source');
+        const tgt = document.getElementById('edge-target');
+        src.innerHTML = ''; tgt.innerHTML = '';
+        nodesData.forEach(n => {
+            const r = n._raw || {};
+            const label = (r.name || n.id) + ' (' + (r.ip || '') + ')';
+            src.add(new Option(label, n.id));
+            tgt.add(new Option(label, n.id));
+        });
+        if (!nodesData.length) { src.add(new Option('No devices', '')); tgt.add(new Option('No devices', '')); }
+        // Pre-select source and target
+        for (let i = 0; i < src.options.length; i++) {
+            if (src.options[i].value === sourceId) { src.selectedIndex = i; break; }
+        }
+        for (let i = 0; i < tgt.options.length; i++) {
+            if (tgt.options[i].value === targetId) { tgt.selectedIndex = i; break; }
+        }
+        document.getElementById('edge-label').value = 'Ethernet';
+        document.getElementById('edge-error').style.display = 'none';
+        openModal('modal-add-edge');
+    }
+
     function openAddEdgeModal() {
         const src = document.getElementById('edge-source');
         const tgt = document.getElementById('edge-target');
@@ -1615,6 +1664,7 @@
         });
         if (!nodesData.length) { src.add(new Option('No devices', '')); tgt.add(new Option('No devices', '')); }
         document.getElementById('edge-label').value = 'Ethernet';
+        document.getElementById('edge-custom-label').value = '';
         document.getElementById('edge-error').style.display = 'none';
         openModal('modal-add-edge');
     }
@@ -1622,16 +1672,19 @@
     async function submitEdge() {
         const source = document.getElementById('edge-source').value;
         const target = document.getElementById('edge-target').value;
-        const label = document.getElementById('edge-label').value;
+        const typeLabel = document.getElementById('edge-label').value;
+        const customLabel = document.getElementById('edge-custom-label').value.trim();
+        const label = customLabel || typeLabel || undefined;
         const errEl = document.getElementById('edge-error');
         if (!source || !target) { errEl.textContent = 'Source and target required.'; errEl.style.display = 'block'; return; }
         if (source === target) { errEl.textContent = 'Cannot connect device to itself.'; errEl.style.display = 'block'; return; }
         try {
             const data = await apiFetch('/api/v1/topology/edge', {
-                method: 'POST', body: JSON.stringify({ source, target, label: label || undefined })
+                method: 'POST', body: JSON.stringify({ source, target, label })
             });
             if (!data.success) throw new Error(data.error);
             closeModal('modal-add-edge');
+            document.getElementById('edge-custom-label').value = '';
             await loadGraph();
             showToast('success', 'Connection added');
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
@@ -1883,6 +1936,7 @@
                 else if (contextEdgeId) { e.preventDefault(); edgeContextAction('delete'); }
                 break;
             case 'Escape':
+                if (connectMode) { exitConnectMode(); }
                 closeDetail();
                 hideContextMenu();
                 document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
