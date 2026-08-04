@@ -153,7 +153,7 @@ export class TopologyController {
    */
   public async addEdge(req: Request, res: Response) {
     try {
-      const { source, target, label, edgeType } = req.body;
+      const { source, target, label, edgeType, sourceLabel, targetLabel } = req.body;
       if (!source || !target) {
         return res.status(400).json({ success: false, error: "source and target are required." });
       }
@@ -169,7 +169,7 @@ export class TopologyController {
       if (tgtCheck.rows.length === 0) {
         return res.status(400).json({ success: false, error: `Target device "${target}" not found. Try refreshing the page.` });
       }
-      const edge = await topologyService.addEdge(source, target, label, edgeType);
+      const edge = await topologyService.addEdge(source, target, label, edgeType, sourceLabel, targetLabel);
       await logActivity("Network Topology", "Add Edge", `Added connection "${source}" -> "${target}"`, "SUCCESS");
       return res.status(200).json({ success: true, data: edge });
     } catch (err: any) {
@@ -194,8 +194,8 @@ export class TopologyController {
 
   public async updateEdge(req: Request, res: Response) {
     try {
-      const { label } = req.body;
-      await topologyService.updateEdge(parseInt(req.params.id), label);
+      const { label, sourceLabel, targetLabel } = req.body;
+      await topologyService.updateEdge(parseInt(req.params.id), label, sourceLabel, targetLabel);
       return res.status(200).json({ success: true, message: "Edge updated." });
     } catch (err: any) {
       console.error("[Topology] updateEdge error:", err.message);

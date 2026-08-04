@@ -589,6 +589,8 @@ export async function initDb() {
     `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS group_name VARCHAR(255) DEFAULT 'Default';`,
     `ALTER TABLE remote_host_configs ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}';`,
     `ALTER TABLE topology_devices ADD COLUMN IF NOT EXISTS interfaces JSONB DEFAULT '[]';`,
+    `ALTER TABLE topology_edges ADD COLUMN IF NOT EXISTS source_label VARCHAR(100);`,
+    `ALTER TABLE topology_edges ADD COLUMN IF NOT EXISTS target_label VARCHAR(100);`,
 
     // topology_pending: persist scan results across sessions/devices
     `CREATE TABLE IF NOT EXISTS topology_pending (

@@ -778,9 +778,15 @@
                         <option value="">None</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Edge Label (optional)</label>
-                    <input type="text" id="edge-custom-label" placeholder="e.g. ether1-eth0, WAN, LAN">
+                <div style="display:flex;gap:8px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Source Interface (A)</label>
+                        <input type="text" id="edge-source-label" placeholder="e.g. ETH1, eth0">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Target Interface (B)</label>
+                        <input type="text" id="edge-target-label" placeholder="e.g. ETH2, eth1">
+                    </div>
                 </div>
                 <div id="edge-error" class="form-error"></div>
             </div>
@@ -792,8 +798,47 @@
     </div>
 
     <!-- MODAL: PING RESULT -->
+    <div id="modal-edit-edge" class="modal-overlay">
+        <div class="modal-dialog" style="max-width:420px;">
+            <div class="modal-header">
+                <h3>Edit Connection</h3>
+                <button class="modal-close" onclick="closeModal('modal-edit-edge')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-edge-id">
+                <div class="form-group">
+                    <label>Connection Type</label>
+                    <select id="edit-edge-type">
+                        <option value="Ethernet">Ethernet</option>
+                        <option value="Fiber Optic">Fiber Optic</option>
+                        <option value="Wireless">Wireless</option>
+                        <option value="USB">USB</option>
+                        <option value="VPN">VPN</option>
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Source Interface (A)</label>
+                        <input type="text" id="edit-edge-source-label" placeholder="e.g. ETH1, eth0">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Target Interface (B)</label>
+                        <input type="text" id="edit-edge-target-label" placeholder="e.g. ETH2, eth1">
+                    </div>
+                </div>
+                <div id="edit-edge-error" class="form-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal('modal-edit-edge')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitEditEdge()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PING RESULT -->
     <div id="modal-ping" class="modal-overlay">
-        <div class="modal-dialog">
+        <div class="modal-dialog" style="max-width:600px;">
             <div class="modal-header">
                 <h3 id="ping-title">Ping Result</h3>
                 <button class="modal-close" onclick="closeModal('modal-ping')">&times;</button>
@@ -1044,11 +1089,16 @@
 
     function buildEdgeData(e) {
         const ec = EDGE_TYPE_COLORS[e.label] || '#30363d';
+        const srcLbl = e.sourceLabel || '';
+        const tgtLbl = e.targetLabel || '';
+        const typeLbl = e.label || '';
+        const parts = [srcLbl, typeLbl, tgtLbl].filter(Boolean);
+        const displayLabel = parts.length > 1 ? parts.join(' | ') : (parts[0] || undefined);
         return {
             id: e.id || `edge-${e.source}-${e.target}`,
             from: e.source, to: e.target,
-            label: e.label || undefined,
-            title: e.label || '',
+            label: displayLabel,
+            title: [srcLbl ? 'A: ' + srcLbl : '', typeLbl ? 'Type: ' + typeLbl : '', tgtLbl ? 'B: ' + tgtLbl : ''].filter(Boolean).join('\n'),
             font: { color: '#8b949e', size: 10, face: 'monospace', align: 'middle', strokeWidth: 2, strokeColor: '#0d1117' },
             color: { color: ec, highlight: '#58a6ff', hover: '#58a6ff' },
             width: 1.5,
@@ -1465,18 +1515,14 @@
             deleteEdgeById(contextEdgeId);
         } else if (action === 'edit') {
             const edge = edgesData.find(e => e.id === contextEdgeId);
-            const newLabel = prompt('Edge label:', edge ? (edge.label || '') : '');
-            if (newLabel === null) return;
-            const edgeRaw = edge ? edge._raw : {};
-            apiFetch('/api/v1/topology/edge/' + encodeURIComponent(contextEdgeId), {
-                method: 'PUT',
-                body: JSON.stringify({ label: newLabel || undefined, source: edgeRaw.source, target: edgeRaw.target })
-            }).then(res => {
-                if (!res.success) throw new Error(res.error);
-                if (network) network.body.data.edges.update({ id: contextEdgeId, label: newLabel || undefined });
-                if (edge) { edge.label = newLabel || undefined; edge._raw.label = newLabel || undefined; }
-                showToast('success', 'Edge updated');
-            }).catch(e => showToast('error', 'Update failed: ' + e.message));
+            if (!edge) return;
+            const raw = edge._raw || {};
+            // Populate edit modal
+            document.getElementById('edit-edge-id').value = contextEdgeId;
+            document.getElementById('edit-edge-type').value = raw.label || 'Ethernet';
+            document.getElementById('edit-edge-source-label').value = raw.sourceLabel || '';
+            document.getElementById('edit-edge-target-label').value = raw.targetLabel || '';
+            openModal('modal-edit-edge');
         }
     }
 
@@ -1664,7 +1710,8 @@
         });
         if (!nodesData.length) { src.add(new Option('No devices', '')); tgt.add(new Option('No devices', '')); }
         document.getElementById('edge-label').value = 'Ethernet';
-        document.getElementById('edge-custom-label').value = '';
+        document.getElementById('edge-source-label').value = '';
+        document.getElementById('edge-target-label').value = '';
         document.getElementById('edge-error').style.display = 'none';
         openModal('modal-add-edge');
     }
@@ -1673,24 +1720,46 @@
         const source = document.getElementById('edge-source').value;
         const target = document.getElementById('edge-target').value;
         const typeLabel = document.getElementById('edge-label').value;
-        const customLabel = document.getElementById('edge-custom-label').value.trim();
-        const label = customLabel || typeLabel || undefined;
+        const sourceLabel = document.getElementById('edge-source-label').value.trim();
+        const targetLabel = document.getElementById('edge-target-label').value.trim();
+        const label = typeLabel || undefined;
         const errEl = document.getElementById('edge-error');
         if (!source || !target) { errEl.textContent = 'Source and target required.'; errEl.style.display = 'block'; return; }
         if (source === target) { errEl.textContent = 'Cannot connect device to itself.'; errEl.style.display = 'block'; return; }
         try {
             const data = await apiFetch('/api/v1/topology/edge', {
-                method: 'POST', body: JSON.stringify({ source, target, label })
+                method: 'POST', body: JSON.stringify({ source, target, label, sourceLabel, targetLabel })
             });
             if (!data.success) throw new Error(data.error);
             closeModal('modal-add-edge');
-            document.getElementById('edge-custom-label').value = '';
+            document.getElementById('edge-source-label').value = '';
+            document.getElementById('edge-target-label').value = '';
             await loadGraph();
             showToast('success', 'Connection added');
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     }
 
     /* ==================== CLEAR ALL ==================== */
+    function submitEditEdge() {
+        const edgeId = document.getElementById('edit-edge-id').value;
+        const label = document.getElementById('edit-edge-type').value || undefined;
+        const sourceLabel = document.getElementById('edit-edge-source-label').value.trim();
+        const targetLabel = document.getElementById('edit-edge-target-label').value.trim();
+        if (!edgeId) return;
+        apiFetch('/api/v1/topology/edge/' + encodeURIComponent(edgeId), {
+            method: 'PUT',
+            body: JSON.stringify({ label, sourceLabel, targetLabel })
+        }).then(res => {
+            if (!res.success) throw new Error(res.error);
+            closeModal('modal-edit-edge');
+            loadGraph();
+            showToast('success', 'Connection updated');
+        }).catch(e => {
+            document.getElementById('edit-edge-error').textContent = e.message;
+            document.getElementById('edit-edge-error').style.display = 'block';
+        });
+    }
+
     async function clearAll() {
         if (!confirm('Delete ALL topology data? This cannot be undone.')) return;
         try {

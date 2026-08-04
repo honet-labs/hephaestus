@@ -36,6 +36,8 @@ export interface TopologyEdge {
   target: string;
   label?: string;
   edgeType: string;
+  sourceLabel?: string;
+  targetLabel?: string;
 }
 
 export interface TopologyGraph {
@@ -741,28 +743,28 @@ export class TopologyService {
 
   // ==================== EDGE OPERATIONS ====================
 
-  async addEdge(source: string, target: string, label?: string, edgeType?: string): Promise<TopologyEdge> {
+  async addEdge(source: string, target: string, label?: string, edgeType?: string, sourceLabel?: string, targetLabel?: string): Promise<TopologyEdge> {
     const res = await query(
-      `INSERT INTO topology_edges (source_id, target_id, label, edge_type)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (source_id, target_id) DO UPDATE SET label = EXCLUDED.label, edge_type = EXCLUDED.edge_type
+      `INSERT INTO topology_edges (source_id, target_id, label, edge_type, source_label, target_label)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (source_id, target_id) DO UPDATE SET label = EXCLUDED.label, edge_type = EXCLUDED.edge_type, source_label = EXCLUDED.source_label, target_label = EXCLUDED.target_label
        RETURNING id`,
-      [source, target, label || null, edgeType || "ethernet"]
+      [source, target, label || null, edgeType || "ethernet", sourceLabel || null, targetLabel || null]
     );
-    return { id: res.rows[0].id, source, target, label, edgeType: edgeType || "ethernet" };
+    return { id: res.rows[0].id, source, target, label, edgeType: edgeType || "ethernet", sourceLabel, targetLabel };
   }
 
   async deleteEdge(edgeId: number): Promise<void> {
     await query(`DELETE FROM topology_edges WHERE id = $1`, [edgeId]);
   }
 
-  async updateEdge(edgeId: number, label?: string): Promise<void> {
-    await query(`UPDATE topology_edges SET label = $1 WHERE id = $2`, [label || null, edgeId]);
+  async updateEdge(edgeId: number, label?: string, sourceLabel?: string, targetLabel?: string): Promise<void> {
+    await query(`UPDATE topology_edges SET label = $1, source_label = $2, target_label = $3 WHERE id = $4`, [label || null, sourceLabel || null, targetLabel || null, edgeId]);
   }
 
   async loadEdges(): Promise<TopologyEdge[]> {
     const res = await query(
-      `SELECT id, source_id AS source, target_id AS target, label, edge_type AS edgeType
+      `SELECT id, source_id AS source, target_id AS target, label, edge_type AS edgeType, source_label AS "sourceLabel", target_label AS "targetLabel"
        FROM topology_edges ORDER BY id ASC`
     );
     return res.rows;
