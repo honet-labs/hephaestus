@@ -161,8 +161,8 @@ class RemoteHostService {
         }
       });
 
-      ssh.on("close", (hadError: boolean) => {
-        console.log(`[RemoteHost] SSH closed ${cfg.host}:${cfg.port} hadError=${hadError}`);
+      ssh.on("close", () => {
+        console.log(`[RemoteHost] SSH closed ${cfg.host}:${cfg.port}`);
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: "disconnected" }));
           ws.close();
