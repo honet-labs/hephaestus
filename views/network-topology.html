@@ -856,6 +856,7 @@
     let nodesData = [];
     let edgesData = [];
     let selectedNodeId = null;
+    let selectedEdgeId = null;
     let connectMode = false;
     let connectSourceId = null;
     let contextNodeId = null;
@@ -1161,6 +1162,9 @@
                 selectedNodeId = nodeId;
                 const node = nodesData.find(n => n.id === nodeId);
                 if (node && node._raw) showDetail(node._raw);
+            } else if (params.edges.length > 0) {
+                const edge = edgesData.find(e => e.id === params.edges[0]);
+                if (edge) showEdgeDetail(edge);
             } else {
                 closeDetail();
             }
@@ -1170,6 +1174,8 @@
             if (params.nodes.length > 0) {
                 const node = nodesData.find(n => n.id === params.nodes[0]);
                 if (node && node._raw) showDetail(node._raw);
+            } else if (params.edges.length > 0) {
+                openEditEdgeModal(params.edges[0]);
             }
         });
 
@@ -1247,6 +1253,7 @@
 
     /* ==================== DETAIL PANEL ==================== */
     function showDetail(n) {
+        selectedEdgeId = null;
         document.getElementById('detail-name').textContent = n.name;
         document.getElementById('detail-ip').textContent = n.ip;
         document.getElementById('detail-type').textContent = n.deviceType || 'unknown';
@@ -1304,12 +1311,60 @@
             }).join('');
         } else { connSection.style.display = 'none'; }
 
+        const actionsEl = document.querySelector('.detail-actions');
+        actionsEl.innerHTML =
+            '<button class="btn btn-ghost" onclick="pingDevice()" style="font-size:10px;padding:4px 8px;">' +
+            '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Ping</button>' +
+            '<button class="btn btn-ghost" onclick="snmpWalkDevice()" style="font-size:10px;padding:4px 8px;">' +
+            '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg> SNMP Walk</button>' +
+            '<button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete</button>';
+
         document.getElementById('detail-panel').classList.add('visible');
     }
 
     function closeDetail() {
         document.getElementById('detail-panel').classList.remove('visible');
         selectedNodeId = null;
+        selectedEdgeId = null;
+    }
+
+    function showEdgeDetail(edge) {
+        selectedEdgeId = edge.id;
+        selectedNodeId = null;
+        const raw = edge._raw || {};
+        const fromNode = nodesData.find(n => n.id === edge.from);
+        const toNode = nodesData.find(n => n.id === edge.to);
+        const fromName = fromNode ? (fromNode._raw?.name || fromNode.id) : edge.from;
+        const fromIp = fromNode ? (fromNode._raw?.ip || '') : '';
+        const toName = toNode ? (toNode._raw?.name || toNode.id) : edge.to;
+        const toIp = toNode ? (toNode._raw?.ip || '') : '';
+        const label = edge.label || 'Connection';
+        const sourceLabel = raw.sourceLabel || '';
+        const targetLabel = raw.targetLabel || '';
+
+        document.getElementById('detail-name').textContent = label;
+        document.getElementById('detail-ip').textContent = sourceLabel && targetLabel ? sourceLabel + ' → ' + targetLabel : fromName + ' → ' + toName;
+        document.getElementById('detail-type').textContent = 'edge';
+        const st = document.getElementById('detail-status');
+        st.textContent = 'LINK';
+        st.style.color = '#3b82f6';
+        document.getElementById('detail-sources').innerHTML = '';
+
+        document.getElementById('detail-labels-section').style.display = 'none';
+        document.getElementById('detail-interfaces-section').style.display = 'none';
+
+        const connSection = document.getElementById('detail-connections-section');
+        connSection.style.display = '';
+        document.getElementById('detail-connections').innerHTML =
+            '<div class="conn-item"><span class="conn-dot"></span><strong>A:</strong> ' + esc(fromName) + ' (' + esc(fromIp) + ')' + (sourceLabel ? ' — ' + esc(sourceLabel) : '') + '</div>' +
+            '<div class="conn-item"><span class="conn-dot"></span><strong>B:</strong> ' + esc(toName) + ' (' + esc(toIp) + ')' + (targetLabel ? ' — ' + esc(targetLabel) : '') + '</div>';
+
+        const actionsEl = document.querySelector('.detail-actions');
+        actionsEl.innerHTML =
+            '<button class="btn btn-ghost" onclick="openEditEdgeModal(selectedEdgeId)" style="font-size:10px;padding:4px 8px;">Edit</button>' +
+            '<button class="btn btn-danger" onclick="deleteEdgeById(selectedEdgeId)" style="font-size:10px;padding:4px 8px;">Delete</button>';
+
+        document.getElementById('detail-panel').classList.add('visible');
     }
 
     /* ==================== API ==================== */
@@ -1508,21 +1563,25 @@
             .catch(e => showToast('error', 'Delete failed: ' + e.message));
     }
 
+    function openEditEdgeModal(edgeId) {
+        const edge = edgesData.find(e => e.id === edgeId);
+        if (!edge) return;
+        const raw = edge._raw || {};
+        document.getElementById('edit-edge-id').value = edgeId;
+        document.getElementById('edit-edge-type').value = raw.label || 'Ethernet';
+        document.getElementById('edit-edge-source-label').value = raw.sourceLabel || '';
+        document.getElementById('edit-edge-target-label').value = raw.targetLabel || '';
+        document.getElementById('edit-edge-error').style.display = 'none';
+        openModal('modal-edit-edge');
+    }
+
     function edgeContextAction(action) {
         hideContextMenu();
         if (!contextEdgeId) return;
         if (action === 'delete') {
             deleteEdgeById(contextEdgeId);
         } else if (action === 'edit') {
-            const edge = edgesData.find(e => e.id === contextEdgeId);
-            if (!edge) return;
-            const raw = edge._raw || {};
-            // Populate edit modal
-            document.getElementById('edit-edge-id').value = contextEdgeId;
-            document.getElementById('edit-edge-type').value = raw.label || 'Ethernet';
-            document.getElementById('edit-edge-source-label').value = raw.sourceLabel || '';
-            document.getElementById('edit-edge-target-label').value = raw.targetLabel || '';
-            openModal('modal-edit-edge');
+            openEditEdgeModal(contextEdgeId);
         }
     }
 
@@ -2002,6 +2061,7 @@
             case 'Delete':
             case 'Backspace':
                 if (selectedNodeId) { e.preventDefault(); deleteSelectedNode(); }
+                else if (selectedEdgeId) { e.preventDefault(); deleteEdgeById(selectedEdgeId); }
                 else if (contextEdgeId) { e.preventDefault(); edgeContextAction('delete'); }
                 break;
             case 'Escape':
