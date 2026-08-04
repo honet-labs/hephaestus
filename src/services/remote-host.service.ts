@@ -153,14 +153,16 @@ class RemoteHostService {
         });
       });
 
-      ssh.on("error", (err: Error) => {
+      ssh.on("error", (err: any) => {
+        console.error(`[RemoteHost] SSH error ${cfg.host}:${cfg.port} code=${err.code}: ${err.message}`);
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: "error", message: `SSH error: ${err.message}` }));
           ws.close();
         }
       });
 
-      ssh.on("close", () => {
+      ssh.on("close", (hadError: boolean) => {
+        console.log(`[RemoteHost] SSH closed ${cfg.host}:${cfg.port} hadError=${hadError}`);
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: "disconnected" }));
           ws.close();
@@ -206,20 +208,38 @@ class RemoteHostService {
         ssh.end();
       });
 
-      // Connect
+      // Connect — algorithms compatible with MikroTik RouterOS SSH
       const connectOpts: any = {
         host: cfg.host,
         port: cfg.port || 22,
         username: cfg.username,
         keepaliveInterval: 15000,
         keepaliveCountMax: 10,
-        readyTimeout: 10000,
+        readyTimeout: 30000,
+        algorithms: {
+          kex: [
+            "ecdh-sha2-nistp256",
+            "ecdh-sha2-nistp384",
+            "ecdh-sha2-nistp521",
+            "diffie-hellman-group-exchange-sha256",
+            "diffie-hellman-group14-sha256",
+            "diffie-hellman-group14-sha1",
+          ],
+          hostKey: [
+            "ssh-rsa",
+            "ssh-ed25519",
+            "ecdsa-sha2-nistp256",
+            "ecdsa-sha2-nistp384",
+            "ecdsa-sha2-nistp521",
+          ],
+        },
       };
       if (cfg.authType === "key" && cfg.sshKey) {
         connectOpts.privateKey = cfg.sshKey;
       } else {
         connectOpts.password = cfg.password || "";
       }
+      console.log(`[RemoteHost] SSH connecting to ${cfg.host}:${connectOpts.port} as ${cfg.username} (auth=${cfg.authType})`);
       ssh.connect(connectOpts);
     }).catch((err) => {
       ws.send(JSON.stringify({ type: "error", message: `Failed to load config: ${err.message}` }));
@@ -235,8 +255,8 @@ class RemoteHostService {
       const ssh = new Client();
       const timeout = setTimeout(() => {
         ssh.end();
-        resolve({ success: false, message: "Connection timed out (10s)." });
-      }, 10000);
+        resolve({ success: false, message: "Connection timed out (30s)." });
+      }, 30000);
 
       ssh.on("ready", () => {
         clearTimeout(timeout);
@@ -253,6 +273,24 @@ class RemoteHostService {
         host: params.host,
         port: params.port || 22,
         username: params.username,
+        readyTimeout: 30000,
+        algorithms: {
+          kex: [
+            "ecdh-sha2-nistp256",
+            "ecdh-sha2-nistp384",
+            "ecdh-sha2-nistp521",
+            "diffie-hellman-group-exchange-sha256",
+            "diffie-hellman-group14-sha256",
+            "diffie-hellman-group14-sha1",
+          ],
+          hostKey: [
+            "ssh-rsa",
+            "ssh-ed25519",
+            "ecdsa-sha2-nistp256",
+            "ecdsa-sha2-nistp384",
+            "ecdsa-sha2-nistp521",
+          ],
+        },
       };
       if (params.authType === "key" && params.sshKey) {
         connectOpts.privateKey = params.sshKey;
