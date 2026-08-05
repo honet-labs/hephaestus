@@ -612,11 +612,14 @@ export async function initDb() {
     // Add sheet_id FK to devices and edges
     `ALTER TABLE topology_devices ADD COLUMN IF NOT EXISTS sheet_id INTEGER REFERENCES topology_sheets(id) ON DELETE CASCADE;`,
     `ALTER TABLE topology_edges ADD COLUMN IF NOT EXISTS sheet_id INTEGER REFERENCES topology_sheets(id) ON DELETE CASCADE;`,
-    // Seed default "Main" sheet if no sheets exist
-    `INSERT INTO topology_sheets (name, sort_order) SELECT 'Main', 0 WHERE NOT EXISTS (SELECT 1 FROM topology_sheets);`,
-    // Backfill existing data to Main sheet
-    `UPDATE topology_devices SET sheet_id = (SELECT id FROM topology_sheets WHERE name = 'Main' LIMIT 1) WHERE sheet_id IS NULL;`,
-    `UPDATE topology_edges SET sheet_id = (SELECT id FROM topology_sheets WHERE name = 'Main' LIMIT 1) WHERE sheet_id IS NULL;`,
+    // Seed default "Tab 1" sheet if no sheets exist
+    `INSERT INTO topology_sheets (name, sort_order) SELECT 'Tab 1', 0 WHERE NOT EXISTS (SELECT 1 FROM topology_sheets);`,
+    // Backfill existing data to Tab 1
+    `UPDATE topology_devices SET sheet_id = (SELECT id FROM topology_sheets WHERE name = 'Tab 1' LIMIT 1) WHERE sheet_id IS NULL;`,
+    `UPDATE topology_edges SET sheet_id = (SELECT id FROM topology_sheets WHERE name = 'Tab 1' LIMIT 1) WHERE sheet_id IS NULL;`,
+    // Fix UNIQUE constraint to include sheet_id (same devices can be connected in different sheets)
+    `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'topology_edges_source_id_target_id_key' AND conrelid = 'topology_edges'::regclass) THEN ALTER TABLE topology_edges DROP CONSTRAINT topology_edges_source_id_target_id_key; END IF; END $$;`,
+    `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'topology_edges_sheet_source_target_key' AND conrelid = 'topology_edges'::regclass) THEN ALTER TABLE topology_edges ADD CONSTRAINT topology_edges_sheet_source_target_key UNIQUE (source_id, target_id, sheet_id); END IF; END $$;`,
 
     // topology_pending: persist scan results across sessions/devices
     `CREATE TABLE IF NOT EXISTS topology_pending (

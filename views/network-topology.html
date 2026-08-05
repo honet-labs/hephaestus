@@ -19,6 +19,7 @@
             --prometheus-orange-muted: rgba(164, 129, 129, 0.15);
             --text-white: #ffffff;
             --text-muted: #a0a0a0;
+            --text-dim: #6b7280;
             --success: #10b981;
             --error: #ef4444;
             --warning: #f59e0b;
@@ -1158,11 +1159,11 @@
     /* ==================== SHEET MANAGEMENT ==================== */
     async function loadSheets() {
         try {
-            const data = await apiFetch('/api/v1/topology/sheets');
-            sheets = data || [];
+            const res = await apiFetch('/api/v1/topology/sheets');
+            sheets = res.data || [];
             if (sheets.length === 0) {
-                const created = await apiFetch('/api/v1/topology/sheets', { method: 'POST', body: JSON.stringify({ name: 'Main' }) });
-                sheets = [created];
+                const createRes = await apiFetch('/api/v1/topology/sheets', { method: 'POST', body: JSON.stringify({ name: 'Tab 1' }) });
+                sheets = [createRes.data];
             }
             if (!activeSheetId || !sheets.find(s => s.id === activeSheetId)) {
                 activeSheetId = sheets[0].id;
@@ -1170,7 +1171,7 @@
             renderSheetTabs();
         } catch (e) {
             console.error('[Sheets] load error:', e);
-            sheets = [{ id: 1, name: 'Main' }];
+            sheets = [{ id: 1, name: 'Tab 1' }];
             activeSheetId = 1;
             renderSheetTabs();
         }
@@ -1178,7 +1179,7 @@
 
     function renderSheetTabs() {
         const bar = document.getElementById('sheet-bar');
-        let html = '<div class="sheet-add" id="sheet-add-btn" onclick="addSheet()" title="New Sheet">+</div>';
+        let html = '<div class="sheet-add" id="sheet-add-btn" onclick="addSheet()" title="New Tab">+</div>';
         for (const s of sheets) {
             const active = s.id === activeSheetId ? ' active' : '';
             html += '<div class="sheet-tab' + active + '" data-sheet="' + s.id + '" title="' + esc(s.name) + ' (' + (s.device_count || 0) + ' devices)">' +
@@ -1189,10 +1190,11 @@
     }
 
     async function addSheet() {
-        const name = prompt('Sheet name:');
+        const name = prompt('Tab name:');
         if (!name || !name.trim()) return;
         try {
-            const sheet = await apiFetch('/api/v1/topology/sheets', { method: 'POST', body: JSON.stringify({ name: name.trim() }) });
+            const res = await apiFetch('/api/v1/topology/sheets', { method: 'POST', body: JSON.stringify({ name: name.trim() }) });
+            const sheet = res.data;
             sheets.push(sheet);
             await switchSheet(sheet.id);
         } catch (e) { showToast('error', 'Failed: ' + e.message); }
@@ -1203,12 +1205,13 @@
         activeSheetId = sheetId;
         renderSheetTabs();
         await loadGraph();
+        if (pendingNodes.length > 0) renderPendingList(document.getElementById('results-title').textContent || 'Scan Results');
     }
 
     async function renameSheet(sheetId) {
         const sheet = sheets.find(s => s.id === sheetId);
         if (!sheet) return;
-        const name = prompt('Rename sheet:', sheet.name);
+        const name = prompt('Rename tab:', sheet.name);
         if (!name || !name.trim()) return;
         try {
             await apiFetch('/api/v1/topology/sheets/' + sheetId, { method: 'PUT', body: JSON.stringify({ name: name.trim() }) });
@@ -1218,9 +1221,9 @@
     }
 
     async function deleteSheet(sheetId) {
-        if (sheets.length <= 1) { showToast('error', 'Cannot delete the last sheet.'); return; }
+        if (sheets.length <= 1) { showToast('error', 'Cannot delete the last tab.'); return; }
         const sheet = sheets.find(s => s.id === sheetId);
-        if (!confirm('Delete sheet "' + (sheet ? sheet.name : '') + '" and all its devices/edges?')) return;
+        if (!confirm('Delete tab "' + (sheet ? sheet.name : '') + '" and all its devices/edges?')) return;
         try {
             await apiFetch('/api/v1/topology/sheets/' + sheetId, { method: 'DELETE' });
             sheets = sheets.filter(s => s.id !== sheetId);
@@ -2060,8 +2063,8 @@
                 const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
                 return `<span style="background:${ss.bg};color:${ss.color};padding:1px 4px;border-radius:2px;font-size:9px;font-weight:600;">${s}</span>`;
             }).join(' ');
-            const alreadyOnCanvas = n._added || nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id);
-            if (alreadyOnCanvas) n._added = true;
+            const alreadyOnCanvas = nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id);
+            n._added = alreadyOnCanvas;
             const isChecked = selectedIndices.has(i);
             const searchText = `${n.name} ${n.ip} ${n.deviceType} ${n.status} ${(n.sources||[]).join(' ')}`.toLowerCase();
             return `<div class="result-item ${isChecked ? 'selected' : ''} ${alreadyOnCanvas ? 'already-added' : ''}" data-idx="${i}" data-search-text="${esc(searchText)}">
@@ -2112,7 +2115,7 @@
         const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
         if (exists) { node._added = true; renderPendingList(document.getElementById('results-title').textContent); showToast('info', `"${node.name}" already on canvas`); return; }
         try {
-            const res = await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify(node) });
+            const res = await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify({ ...node, sheetId: activeSheetId }) });
             if (!res.success) throw new Error(res.error || 'Save failed');
         } catch (e) {
             showToast('error', `Failed to save "${node.name}": ${e.message}`);
@@ -2263,7 +2266,7 @@
         var tab = e.target.closest('.sheet-tab');
         if (tab) {
             e.preventDefault();
-            var action = prompt('Sheet action:\n1 = Rename\n2 = Delete', '1');
+            var action = prompt('Tab action:\n1 = Rename\n2 = Delete', '1');
             if (action === '1') renameSheet(parseInt(tab.dataset.sheet));
             else if (action === '2') deleteSheet(parseInt(tab.dataset.sheet));
         }
