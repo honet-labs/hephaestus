@@ -637,11 +637,16 @@ export class TopologyService {
   /**
    * Load all topology nodes from database.
    */
-  async loadTopologyFromDb(): Promise<TopologyNode[]> {
-    const res = await query(
-      `SELECT id, name, ip_address AS ip, device_type, status, sources, labels, interfaces, x, y
-       FROM topology_devices ORDER BY created_at ASC`
-    );
+  async loadTopologyFromDb(sheetId?: number): Promise<TopologyNode[]> {
+    let sql = `SELECT id, name, ip_address AS ip, device_type, status, sources, labels, interfaces, x, y
+       FROM topology_devices`;
+    const params: any[] = [];
+    if (sheetId) {
+      sql += ` WHERE sheet_id = $1`;
+      params.push(sheetId);
+    }
+    sql += ` ORDER BY created_at ASC`;
+    const res = await query(sql, params);
 
     return res.rows.map((row: any) => ({
       id: row.id,
@@ -666,6 +671,7 @@ export class TopologyService {
     deviceType?: string;
     x?: number;
     y?: number;
+    sheetId?: number;
   }): Promise<TopologyNode> {
     const id = `manual-${device.ip}-${Date.now()}`;
     const node: TopologyNode = {
@@ -681,9 +687,9 @@ export class TopologyService {
     };
 
     await query(
-      `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, x, y)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [node.id, node.name, node.ip, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), node.x, node.y]
+      `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, x, y, sheet_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [node.id, node.name, node.ip, node.deviceType, node.status, node.sources, JSON.stringify(node.labels), node.x, node.y, device.sheetId || null]
     );
 
     return node;
@@ -700,29 +706,29 @@ export class TopologyService {
    * Save a single device to DB (called when user clicks "Add" from sidebar).
    * Preserves position if device already exists.
    */
-  async saveDeviceToDb(node: TopologyNode): Promise<void> {
+  async saveDeviceToDb(node: TopologyNode, sheetId?: number): Promise<void> {
     try {
       const existing = await query(
-        `SELECT id, x, y FROM topology_devices WHERE ip_address = $1`,
-        [node.ip]
+        `SELECT id, x, y FROM topology_devices WHERE ip_address = $1 AND (sheet_id = $2 OR ($2 IS NULL AND sheet_id IS NULL))`,
+        [node.ip, sheetId || null]
       );
 
       if (existing.rows.length > 0) {
         await query(
           `UPDATE topology_devices
            SET name = $1, device_type = $2, status = $3, sources = $4, labels = $5, interfaces = $6
-           WHERE ip_address = $7`,
-          [node.name, node.deviceType, node.status, node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), node.ip]
+           WHERE ip_address = $7 AND (sheet_id = $8 OR ($8 IS NULL AND sheet_id IS NULL))`,
+          [node.name, node.deviceType, node.status, node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), node.ip, sheetId || null]
         );
       } else {
         const id = node.id || `device-${node.ip}-${Date.now()}`;
         await query(
-          `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, interfaces, x, y)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, interfaces, x, y, sheet_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
            ON CONFLICT (id) DO UPDATE SET
              name = EXCLUDED.name, device_type = EXCLUDED.device_type, status = EXCLUDED.status,
              sources = EXCLUDED.sources, labels = EXCLUDED.labels, interfaces = EXCLUDED.interfaces`,
-          [id, node.name, node.ip, node.deviceType || "unknown", node.status || "unknown", node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), node.x || null, node.y || null]
+          [id, node.name, node.ip, node.deviceType || "unknown", node.status || "unknown", node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), node.x || null, node.y || null, sheetId || null]
         );
       }
     } catch (err: any) {
@@ -743,13 +749,13 @@ export class TopologyService {
 
   // ==================== EDGE OPERATIONS ====================
 
-  async addEdge(source: string, target: string, label?: string, edgeType?: string, sourceLabel?: string, targetLabel?: string): Promise<TopologyEdge> {
+  async addEdge(source: string, target: string, label?: string, edgeType?: string, sourceLabel?: string, targetLabel?: string, sheetId?: number): Promise<TopologyEdge> {
     const res = await query(
-      `INSERT INTO topology_edges (source_id, target_id, label, edge_type, source_label, target_label)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO topology_edges (source_id, target_id, label, edge_type, source_label, target_label, sheet_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (source_id, target_id) DO UPDATE SET label = EXCLUDED.label, edge_type = EXCLUDED.edge_type, source_label = EXCLUDED.source_label, target_label = EXCLUDED.target_label
        RETURNING id`,
-      [source, target, label || null, edgeType || "ethernet", sourceLabel || null, targetLabel || null]
+      [source, target, label || null, edgeType || "ethernet", sourceLabel || null, targetLabel || null, sheetId || null]
     );
     return { id: res.rows[0].id, source, target, label, edgeType: edgeType || "ethernet", sourceLabel, targetLabel };
   }
@@ -762,11 +768,16 @@ export class TopologyService {
     await query(`UPDATE topology_edges SET label = $1, source_label = $2, target_label = $3 WHERE id = $4`, [label || null, sourceLabel || null, targetLabel || null, edgeId]);
   }
 
-  async loadEdges(): Promise<TopologyEdge[]> {
-    const res = await query(
-      `SELECT id, source_id AS source, target_id AS target, label, edge_type AS edgeType, source_label AS "sourceLabel", target_label AS "targetLabel"
-       FROM topology_edges ORDER BY id ASC`
-    );
+  async loadEdges(sheetId?: number): Promise<TopologyEdge[]> {
+    let sql = `SELECT id, source_id AS source, target_id AS target, label, edge_type AS edgeType, source_label AS "sourceLabel", target_label AS "targetLabel"
+       FROM topology_edges`;
+    const params: any[] = [];
+    if (sheetId) {
+      sql += ` WHERE sheet_id = $1`;
+      params.push(sheetId);
+    }
+    sql += ` ORDER BY id ASC`;
+    const res = await query(sql, params);
     return res.rows;
   }
 
@@ -848,6 +859,44 @@ export class TopologyService {
       console.error(`[Topology] Nmap error: ${err.message}`);
     }
     return nodes;
+  }
+
+  // ==================== SHEET OPERATIONS ====================
+
+  async getSheets(): Promise<any[]> {
+    const res = await query(
+      `SELECT s.*,
+        (SELECT COUNT(*) FROM topology_devices WHERE sheet_id = s.id) AS device_count,
+        (SELECT COUNT(*) FROM topology_edges WHERE sheet_id = s.id) AS edge_count
+       FROM topology_sheets s ORDER BY s.sort_order, s.id`
+    );
+    return res.rows;
+  }
+
+  async createSheet(name: string): Promise<any> {
+    const maxOrder = await query(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM topology_sheets`);
+    const res = await query(
+      `INSERT INTO topology_sheets (name, sort_order) VALUES ($1, $2) RETURNING *`,
+      [name, maxOrder.rows[0].next]
+    );
+    return res.rows[0];
+  }
+
+  async updateSheet(id: number, name: string): Promise<any> {
+    const res = await query(
+      `UPDATE topology_sheets SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [name, id]
+    );
+    return res.rows[0] || null;
+  }
+
+  async deleteSheet(id: number): Promise<boolean> {
+    const res = await query(`DELETE FROM topology_sheets WHERE id = $1`, [id]);
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  async reorderSheet(id: number, sortOrder: number): Promise<void> {
+    await query(`UPDATE topology_sheets SET sort_order = $1, updated_at = NOW() WHERE id = $2`, [sortOrder, id]);
   }
 
   /**

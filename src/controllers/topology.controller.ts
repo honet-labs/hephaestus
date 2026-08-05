@@ -8,8 +8,9 @@ export class TopologyController {
    */
   public async getGraph(req: Request, res: Response) {
     try {
-      const nodes = await topologyService.loadTopologyFromDb();
-      const edges = await topologyService.loadEdges();
+      const sheetId = req.query.sheetId ? parseInt(req.query.sheetId as string) : undefined;
+      const nodes = await topologyService.loadTopologyFromDb(sheetId);
+      const edges = await topologyService.loadEdges(sheetId);
       return res.status(200).json({
         success: true,
         data: {
@@ -61,8 +62,9 @@ export class TopologyController {
       if (!node || !node.ip) {
         return res.status(400).json({ success: false, error: "ip is required." });
       }
-      console.log("[Topology] saveDevice:", node.name, node.ip, "sources:", node.sources);
-      await topologyService.saveDeviceToDb(node);
+      const sheetId = node.sheetId ? parseInt(node.sheetId) : undefined;
+      console.log("[Topology] saveDevice:", node.name, node.ip, "sources:", node.sources, "sheet:", sheetId);
+      await topologyService.saveDeviceToDb(node, sheetId);
       await logActivity("Network Topology", "Save Device", `Saved device "${node.name}" (${node.ip}) to database`, "SUCCESS");
       return res.status(200).json({ success: true, data: node });
     } catch (err: any) {
@@ -73,16 +75,17 @@ export class TopologyController {
 
   /**
    * POST /api/v1/topology/device/save-all — Save multiple devices to DB
-   * Body: { nodes: TopologyNode[] }
+   * Body: { nodes: TopologyNode[], sheetId?: number }
    */
   public async saveAllDevices(req: Request, res: Response) {
     try {
-      const { nodes } = req.body;
+      const { nodes, sheetId } = req.body;
       if (!nodes || !Array.isArray(nodes)) {
         return res.status(400).json({ success: false, error: "nodes array is required." });
       }
+      const sid = sheetId ? parseInt(sheetId) : undefined;
       for (const node of nodes) {
-        await topologyService.saveDeviceToDb(node);
+        await topologyService.saveDeviceToDb(node, sid);
       }
       await logActivity("Network Topology", "Save All", `Saved ${nodes.length} devices to database`, "SUCCESS");
       return res.status(200).json({ success: true, data: { saved: nodes.length } });
@@ -98,7 +101,7 @@ export class TopologyController {
    */
   public async addDevice(req: Request, res: Response) {
     try {
-      const { name, ip, deviceType, x, y } = req.body;
+      const { name, ip, deviceType, x, y, sheetId } = req.body;
       if (!name || !ip) {
         return res.status(400).json({ success: false, error: "name and ip are required." });
       }
@@ -106,7 +109,7 @@ export class TopologyController {
       if (!ipRegex.test(ip)) {
         return res.status(400).json({ success: false, error: "Invalid IP address format." });
       }
-      const node = await topologyService.addManualDevice({ name, ip, deviceType, x, y });
+      const node = await topologyService.addManualDevice({ name, ip, deviceType, x, y, sheetId: sheetId ? parseInt(sheetId) : undefined });
       await logActivity("Network Topology", "Add Device", `Added manual device "${name}" (${ip})`, "SUCCESS");
       return res.status(200).json({ success: true, data: node });
     } catch (err: any) {
@@ -153,7 +156,7 @@ export class TopologyController {
    */
   public async addEdge(req: Request, res: Response) {
     try {
-      const { source, target, label, edgeType, sourceLabel, targetLabel } = req.body;
+      const { source, target, label, edgeType, sourceLabel, targetLabel, sheetId } = req.body;
       if (!source || !target) {
         return res.status(400).json({ success: false, error: "source and target are required." });
       }
@@ -169,7 +172,7 @@ export class TopologyController {
       if (tgtCheck.rows.length === 0) {
         return res.status(400).json({ success: false, error: `Target device "${target}" not found. Try refreshing the page.` });
       }
-      const edge = await topologyService.addEdge(source, target, label, edgeType, sourceLabel, targetLabel);
+      const edge = await topologyService.addEdge(source, target, label, edgeType, sourceLabel, targetLabel, sheetId ? parseInt(sheetId) : undefined);
       await logActivity("Network Topology", "Add Edge", `Added connection "${source}" -> "${target}"`, "SUCCESS");
       return res.status(200).json({ success: true, data: edge });
     } catch (err: any) {
@@ -316,6 +319,75 @@ export class TopologyController {
     } catch (err: any) {
       console.error("[Topology] clearPendingNodes error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to clear pending nodes." });
+    }
+  }
+
+  // ==================== SHEET OPERATIONS ====================
+
+  public async getSheets(req: Request, res: Response) {
+    try {
+      const sheets = await topologyService.getSheets();
+      return res.status(200).json({ success: true, data: sheets });
+    } catch (err: any) {
+      console.error("[Topology] getSheets error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to load sheets." });
+    }
+  }
+
+  public async createSheet(req: Request, res: Response) {
+    try {
+      const { name } = req.body;
+      if (!name || !name.trim()) {
+        return res.status(400).json({ success: false, error: "Sheet name is required." });
+      }
+      const sheet = await topologyService.createSheet(name.trim());
+      return res.status(201).json({ success: true, data: sheet });
+    } catch (err: any) {
+      console.error("[Topology] createSheet error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to create sheet." });
+    }
+  }
+
+  public async updateSheet(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { name } = req.body;
+      if (!name || !name.trim()) {
+        return res.status(400).json({ success: false, error: "Sheet name is required." });
+      }
+      const sheet = await topologyService.updateSheet(parseInt(id), name.trim());
+      if (!sheet) return res.status(404).json({ success: false, error: "Sheet not found." });
+      return res.status(200).json({ success: true, data: sheet });
+    } catch (err: any) {
+      console.error("[Topology] updateSheet error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to update sheet." });
+    }
+  }
+
+  public async deleteSheet(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const deleted = await topologyService.deleteSheet(parseInt(id));
+      if (!deleted) return res.status(404).json({ success: false, error: "Sheet not found." });
+      return res.status(200).json({ success: true });
+    } catch (err: any) {
+      console.error("[Topology] deleteSheet error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to delete sheet." });
+    }
+  }
+
+  public async reorderSheet(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { sort_order } = req.body;
+      if (sort_order === undefined) {
+        return res.status(400).json({ success: false, error: "sort_order is required." });
+      }
+      await topologyService.reorderSheet(parseInt(id), sort_order);
+      return res.status(200).json({ success: true });
+    } catch (err: any) {
+      console.error("[Topology] reorderSheet error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to reorder sheet." });
     }
   }
 }

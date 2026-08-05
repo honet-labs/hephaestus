@@ -4,6 +4,13 @@ import { requireRole } from "../middleware/role.middleware";
 
 const router = Router();
 
+// Sheet operations
+router.get("/sheets", requireRole("ADMIN"), (req, res) => topologyController.getSheets(req, res));
+router.post("/sheets", requireRole("ADMIN"), (req, res) => topologyController.createSheet(req, res));
+router.put("/sheets/:id", requireRole("ADMIN"), (req, res) => topologyController.updateSheet(req, res));
+router.delete("/sheets/:id", requireRole("ADMIN"), (req, res) => topologyController.deleteSheet(req, res));
+router.put("/sheets/:id/reorder", requireRole("ADMIN"), (req, res) => topologyController.reorderSheet(req, res));
+
 // Graph operations
 router.get("/graph", requireRole("ADMIN"), (req, res) => topologyController.getGraph(req, res));
 router.post("/scan", requireRole("ADMIN"), (req, res) => topologyController.scanCandidates(req, res));

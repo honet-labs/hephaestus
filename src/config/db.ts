@@ -558,6 +558,15 @@ export async function initDb() {
       edge_type VARCHAR(50) DEFAULT 'ethernet',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(source_id, target_id)
+    );`,
+
+    // 21. TopologySheets - Workspace sheets for organizing topology maps
+    `CREATE TABLE IF NOT EXISTS topology_sheets (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
@@ -592,6 +601,23 @@ export async function initDb() {
     `ALTER TABLE topology_edges ADD COLUMN IF NOT EXISTS source_label VARCHAR(100);`,
     `ALTER TABLE topology_edges ADD COLUMN IF NOT EXISTS target_label VARCHAR(100);`,
 
+    // topology_sheets: workspace sheets for organizing topology maps
+    `CREATE TABLE IF NOT EXISTS topology_sheets (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+    // Add sheet_id FK to devices and edges
+    `ALTER TABLE topology_devices ADD COLUMN IF NOT EXISTS sheet_id INTEGER REFERENCES topology_sheets(id) ON DELETE CASCADE;`,
+    `ALTER TABLE topology_edges ADD COLUMN IF NOT EXISTS sheet_id INTEGER REFERENCES topology_sheets(id) ON DELETE CASCADE;`,
+    // Seed default "Main" sheet if no sheets exist
+    `INSERT INTO topology_sheets (name, sort_order) SELECT 'Main', 0 WHERE NOT EXISTS (SELECT 1 FROM topology_sheets);`,
+    // Backfill existing data to Main sheet
+    `UPDATE topology_devices SET sheet_id = (SELECT id FROM topology_sheets WHERE name = 'Main' LIMIT 1) WHERE sheet_id IS NULL;`,
+    `UPDATE topology_edges SET sheet_id = (SELECT id FROM topology_sheets WHERE name = 'Main' LIMIT 1) WHERE sheet_id IS NULL;`,
+
     // topology_pending: persist scan results across sessions/devices
     `CREATE TABLE IF NOT EXISTS topology_pending (
       id SERIAL PRIMARY KEY,
@@ -621,7 +647,9 @@ export async function initDb() {
     `CREATE INDEX IF NOT EXISTS idx_backup_history_started_at ON backup_history(started_at DESC);`,
     `CREATE INDEX IF NOT EXISTS idx_topology_devices_ip ON topology_devices(ip_address);`,
     `CREATE INDEX IF NOT EXISTS idx_topology_edges_source ON topology_edges(source_id);`,
-    `CREATE INDEX IF NOT EXISTS idx_topology_edges_target ON topology_edges(target_id);`
+    `CREATE INDEX IF NOT EXISTS idx_topology_edges_target ON topology_edges(target_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_topology_devices_sheet ON topology_devices(sheet_id);`,
+    `CREATE INDEX IF NOT EXISTS idx_topology_edges_sheet ON topology_edges(sheet_id);`
   ];
   await Promise.all(indexQueries.map(q => pool.query(q)));
 
