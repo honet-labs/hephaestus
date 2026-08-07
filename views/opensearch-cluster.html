@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenSearch Cluster - Hephaestus</title>
+    <style>
+        :root {
+            --background: #242424;
+            --foreground: #cbd5e1;
+            --app-sidebar: rgb(65, 73, 81);
+            --app-topbar: #1e1e1e;
+            --app-card: #2e2e2e;
+            --app-card-dark: #1f1f1f;
+            --app-border: #3c3c3c;
+            --text-white: #ffffff;
+            --text-muted: #a0a0a0;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --accent: #58a6ff;
+            --fail-bg: rgba(239, 68, 68, 0.12);
+            --fail-text: #ef4444;
+            --radius: 6px;
+            --prometheus-orange: #a48181;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--app-topbar); border-bottom: 1px solid var(--app-border); flex-shrink: 0; }
+        .header h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; color: var(--text-white); }
+        .header h1 svg { width: 20px; height: 20px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 12px; padding: 4px 10px; border: 1px solid var(--app-border); border-radius: var(--radius); transition: all 0.2s; }
+        .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
+        .container { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+        .main-content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+        .status-bar { display: flex; align-items: center; gap: 16px; padding: 8px 20px; background: var(--app-card); border-bottom: 1px solid var(--app-border); flex-shrink: 0; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .status-dot.green { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-dot.yellow { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+        .status-dot.red { background: var(--error); box-shadow: 0 0 8px var(--error); }
+        .status-dot.gray { background: var(--text-muted); }
+        .cluster-info { display: flex; gap: 20px; flex-wrap: wrap; }
+        .cluster-info-item { display: flex; flex-direction: column; gap: 2px; }
+        .cluster-info-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .cluster-info-value { font-size: 13px; font-weight: 500; color: var(--text-white); }
+        .tabs { display: flex; gap: 0; padding: 0 20px; background: var(--app-card); border-bottom: 1px solid var(--app-border); flex-shrink: 0; }
+        .tab { padding: 10px 16px; font-size: 12px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab:hover { color: var(--text-white); }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 16px 20px; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .grid { display: grid; gap: 16px; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .card { background: var(--app-card); border: 1px solid var(--app-border); border-radius: var(--radius); padding: 16px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .card-title { font-size: 14px; font-weight: 600; color: var(--text-white); }
+        .card-subtitle { font-size: 11px; color: var(--text-muted); }
+        .stat-value { font-size: 24px; font-weight: 700; color: var(--text-white); }
+        .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .progress-bar { height: 6px; background: var(--app-card-dark); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+        .progress-fill.green { background: var(--success); }
+        .progress-fill.yellow { background: var(--warning); }
+        .progress-fill.red { background: var(--error); }
+        .progress-fill.blue { background: var(--accent); }
+        .progress-fill.orange { background: var(--prometheus-orange); }
+        .node-card { background: var(--app-card); border: 1px solid var(--app-border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+        .node-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .node-name { font-size: 14px; font-weight: 600; color: var(--text-white); }
+        .node-role { font-size: 11px; padding: 2px 8px; background: var(--app-card-dark); border-radius: 3px; color: var(--text-muted); }
+        .node-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .metric { display: flex; flex-direction: column; gap: 4px; }
+        .metric-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-value { font-size: 14px; font-weight: 600; color: var(--text-white); }
+        .metric-bar { height: 4px; background: var(--app-card-dark); border-radius: 2px; overflow: hidden; }
+        .metric-fill { height: 100%; border-radius: 2px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 8px 12px; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--app-border); background: var(--app-card-dark); }
+        td { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid var(--app-border); }
+        tr:hover { background: var(--app-card-dark); }
+        .health-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 500; }
+        .health-badge.green { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .health-badge.yellow { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .health-badge.red { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+        .shard-cell { display: flex; gap: 2px; flex-wrap: wrap; }
+        .shard-box { width: 14px; height: 14px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 600; color: var(--text-white); }
+        .shard-box.primary { background: var(--success); }
+        .shard-box.replica { background: var(--accent); }
+        .shard-box.unassigned { background: var(--error); }
+        .shard-box.relocating { background: var(--warning); }
+        .shard-box.initializing { background: var(--prometheus-orange); }
+        .config-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .config-modal.show { display: flex; }
+        .config-form { background: var(--app-card); border: 1px solid var(--app-border); border-radius: var(--radius); padding: 20px; width: 400px; max-height: 80vh; overflow-y: auto; }
+        .config-form h3 { margin-bottom: 16px; color: var(--text-white); }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+        .form-group input { width: 100%; padding: 8px 12px; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 4px; color: var(--text-white); font-size: 13px; }
+        .form-group input:focus { outline: none; border-color: var(--accent); }
+        .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+        .btn { padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; border: none; transition: all 0.2s; }
+        .btn-primary { background: var(--accent); color: var(--text-white); }
+        .btn-primary:hover { background: #4a90e2; }
+        .btn-secondary { background: var(--app-card-dark); color: var(--text-muted); border: 1px solid var(--app-border); }
+        .btn-secondary:hover { color: var(--text-white); border-color: var(--text-muted); }
+        .btn-danger { background: var(--error); color: var(--text-white); }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-sm { padding: 4px 10px; font-size: 11px; }
+        .btn-icon { background: none; border: 1px solid var(--app-border); color: var(--text-muted); cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: all 0.15s; }
+        .btn-icon:hover { color: var(--text-white); border-color: var(--text-muted); }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; }
+        .empty-state h3 { color: var(--text-white); margin-bottom: 8px; }
+        .empty-state p { color: var(--text-muted); margin-bottom: 16px; }
+        .loading { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
+        .spinner { width: 16px; height: 16px; border: 2px solid var(--app-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-msg { color: var(--error); font-size: 12px; margin-top: 4px; }
+        .success-msg { color: var(--success); font-size: 12px; margin-top: 4px; }
+        .config-list { margin-bottom: 16px; }
+        .config-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 4px; margin-bottom: 8px; }
+        .config-item.active { border-color: var(--success); }
+        .config-item-info { display: flex; flex-direction: column; gap: 2px; }
+        .config-item-name { font-size: 13px; font-weight: 500; color: var(--text-white); }
+        .config-item-host { font-size: 11px; color: var(--text-muted); }
+        .config-item-actions { display: flex; gap: 6px; }
+        .shard-legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+        .shard-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
+        .shard-legend-color { width: 12px; height: 12px; border-radius: 2px; }
+        .node-shard-matrix { display: grid; gap: 2px; margin-top: 8px; }
+        .node-shard-row { display: flex; gap: 2px; align-items: center; }
+        .node-shard-label { font-size: 11px; color: var(--text-muted); width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } .node-metrics { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            OpenSearch Cluster Monitor
+        </h1>
+        <div class="header-right">
+            <button class="btn-icon" onclick="showConfigModal()" title="Settings">⚙️</button>
+            <button class="btn-icon" onclick="refreshAll()" title="Refresh">🔄</button>
+            <a href="/" class="back-link">← Back to Portal</a>
+        </div>
+    </div>
+    <div class="status-bar" id="statusBar">
+        <div class="status-indicator">
+            <div class="status-dot gray" id="clusterStatusDot"></div>
+            <span id="clusterStatusText">Disconnected</span>
+        </div>
+        <div class="cluster-info" id="clusterInfo" style="display: none;">
+            <div class="cluster-info-item">
+                <span class="cluster-info-label">Cluster</span>
+                <span class="cluster-info-value" id="clusterName">-</span>
+            </div>
+            <div class="cluster-info-item">
+                <span class="cluster-info-label">Nodes</span>
+                <span class="cluster-info-value" id="nodeCount">-</span>
+            </div>
+            <div class="cluster-info-item">
+                <span class="cluster-info-label">Data Nodes</span>
+                <span class="cluster-info-value" id="dataNodeCount">-</span>
+            </div>
+            <div class="cluster-info-item">
+                <span class="cluster-info-label">Active Shards</span>
+                <span class="cluster-info-value" id="activeShards">-</span>
+            </div>
+            <div class="cluster-info-item">
+                <span class="cluster-info-label">Unassigned</span>
+                <span class="cluster-info-value" id="unassignedShards">-</span>
+            </div>
+            <div class="cluster-info-item">
+                <span class="cluster-info-label">Active %</span>
+                <span class="cluster-info-value" id="activeShardsPercent">-</span>
+            </div>
+        </div>
+    </div>
+    <div class="tabs">
+        <div class="tab active" data-tab="overview">Overview</div>
+        <div class="tab" data-tab="nodes">Nodes</div>
+        <div class="tab" data-tab="indices">Indices</div>
+        <div class="tab" data-tab="shards">Shards</div>
+        <div class="tab" data-tab="config">Connection</div>
+    </div>
+    <div class="main-content">
+        <div class="tab-content">
+            <div class="tab-pane active" id="overview">
+                <div class="grid grid-4" id="overviewStats">
+                    <div class="card">
+                        <div class="stat-label">Cluster Health</div>
+                        <div class="stat-value" id="overviewHealth">-</div>
+                        <div class="progress-bar"><div class="progress-fill green" id="overviewHealthBar" style="width: 100%"></div></div>
+                    </div>
+                    <div class="card">
+                        <div class="stat-label">Total Indices</div>
+                        <div class="stat-value" id="overviewIndices">-</div>
+                    </div>
+                    <div class="card">
+                        <div class="stat-label">Total Documents</div>
+                        <div class="stat-value" id="overviewDocs">-</div>
+                    </div>
+                    <div class="card">
+                        <div class="stat-label">Store Size</div>
+                        <div class="stat-value" id="overviewStoreSize">-</div>
+                    </div>
+                </div>
+                <div class="grid grid-2" style="margin-top: 16px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Shard Distribution</span>
+                        </div>
+                        <div id="shardDistributionChart"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Node Load</span>
+                        </div>
+                        <div id="nodeLoadChart"></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 16px;">
+                    <div class="card-header">
+                        <span class="card-title">Index Health Overview</span>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table id="indexHealthTable">
+                            <thead>
+                                <tr>
+                                    <th>Health</th>
+                                    <th>Status</th>
+                                    <th>Index</th>
+                                    <th>Primary</th>
+                                    <th>Replica</th>
+                                    <th>Docs</th>
+                                    <th>Store Size</th>
+                                    <th>Primary Size</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane" id="nodes">
+                <div id="nodesContainer"></div>
+            </div>
+            <div class="tab-pane" id="indices">
+                <div style="overflow-x: auto;">
+                    <table id="indicesTable">
+                        <thead>
+                            <tr>
+                                <th>Health</th>
+                                <th>Status</th>
+                                <th>Index</th>
+                                <th>UUID</th>
+                                <th>Primary</th>
+                                <th>Replica</th>
+                                <th>Docs Count</th>
+                                <th>Docs Deleted</th>
+                                <th>Store Size</th>
+                                <th>Primary Size</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane" id="shards">
+                <div class="shard-legend">
+                    <div class="shard-legend-item"><div class="shard-legend-color" style="background: var(--success);"></div> Primary</div>
+                    <div class="shard-legend-item"><div class="shard-legend-color" style="background: var(--accent);"></div> Replica</div>
+                    <div class="shard-legend-item"><div class="shard-legend-color" style="background: var(--error);"></div> Unassigned</div>
+                    <div class="shard-legend-item"><div class="shard-legend-color" style="background: var(--warning);"></div> Relocating</div>
+                    <div class="shard-legend-item"><div class="shard-legend-color" style="background: var(--prometheus-orange);"></div> Initializing</div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Shard Allocation by Node</span>
+                    </div>
+                    <div id="shardMatrix"></div>
+                </div>
+                <div class="card" style="margin-top: 16px;">
+                    <div class="card-header">
+                        <span class="card-title">All Shards</span>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table id="shardsTable">
+                            <thead>
+                                <tr>
+                                    <th>Index</th>
+                                    <th>Shard</th>
+                                    <th>Type</th>
+                                    <th>State</th>
+                                    <th>Docs</th>
+                                    <th>Store</th>
+                                    <th>IP</th>
+                                    <th>Node</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane" id="config">
+                <div class="config-list" id="configList"></div>
+                <button class="btn btn-primary" onclick="showConfigModal()">+ Add Connection</button>
+            </div>
+        </div>
+    </div>
+    <div class="config-modal" id="configModal">
+        <div class="config-form">
+            <h3 id="configModalTitle">Add OpenSearch Connection</h3>
+            <input type="hidden" id="configEditId">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="configName" placeholder="Production Cluster">
+            </div>
+            <div class="form-group">
+                <label>Host</label>
+                <input type="text" id="configHost" placeholder="opensearch.example.com">
+            </div>
+            <div class="form-group">
+                <label>Port</label>
+                <input type="number" id="configPort" value="9200">
+            </div>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="configUsername" placeholder="admin">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="configPassword" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="configUseSsl"> Use SSL/HTTPS</label>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="configVerifySsl" checked> Verify SSL Certificate</label>
+            </div>
+            <div id="configTestResult"></div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="testConfigConnection()">Test Connection</button>
+                <button class="btn btn-secondary" onclick="hideConfigModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveConfig()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const API = '/api/v1/opensearch-cluster';
+        let currentConfigId = null;
+        let refreshInterval = null;
+
+        // ==================== INIT ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            setupTabs();
+            loadConfigs();
+        });
+
+        // ==================== TABS ====================
+        function setupTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                });
+            });
+        }
+
+        // ==================== AUTH ====================
+        function getToken() {
+            const match = document.cookie.match(/(?:^|;\s*)session_token=([^;]*)/);
+            return match ? decodeURIComponent(match[1]) : null;
+        }
+
+        async function apiFetch(url, options = {}) {
+            const token = getToken();
+            const headers = { 'Content-Type': 'application/json', ...options.headers };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            const res = await fetch(url, { ...options, headers });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || data.message || 'Request failed');
+            return data;
+        }
+
+        // ==================== CONFIGS ====================
+        async function loadConfigs() {
+            try {
+                const res = await apiFetch(`${API}/configs`);
+                const configs = res.data || [];
+                renderConfigList(configs);
+                const active = configs.find(c => c.is_active);
+                if (active) {
+                    currentConfigId = active.id;
+                    refreshAll();
+                } else {
+                    showEmptyState();
+                }
+            } catch (err) {
+                console.error('Failed to load configs:', err);
+                showEmptyState();
+            }
+        }
+
+        function renderConfigList(configs) {
+            const container = document.getElementById('configList');
+            if (!configs.length) {
+                container.innerHTML = '<div class="empty-state"><h3>No Connections</h3><p>Add an OpenSearch cluster connection to get started.</p></div>';
+                return;
+            }
+            container.innerHTML = configs.map(c => `
+                <div class="config-item ${c.is_active ? 'active' : ''}">
+                    <div class="config-item-info">
+                        <span class="config-item-name">${escapeHtml(c.name)} ${c.is_active ? '✓ Active' : ''}</span>
+                        <span class="config-item-host">${escapeHtml(c.host)}:${c.port} (${escapeHtml(c.username)})</span>
+                    </div>
+                    <div class="config-item-actions">
+                        ${!c.is_active ? `<button class="btn btn-sm btn-primary" onclick="activateConfig('${c.id}')">Connect</button>` : ''}
+                        <button class="btn btn-sm btn-secondary" onclick="editConfig('${c.id}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteConfig('${c.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.activateConfig = async function(id) {
+            try {
+                await apiFetch(`${API}/configs/${id}/activate`, { method: 'POST' });
+                currentConfigId = id;
+                loadConfigs();
+                refreshAll();
+            } catch (err) {
+                alert('Failed to activate: ' + err.message);
+            }
+        };
+
+        window.editConfig = async function(id) {
+            try {
+                const res = await apiFetch(`${API}/configs`);
+                const config = (res.data || []).find(c => c.id === id);
+                if (!config) return;
+                document.getElementById('configEditId').value = id;
+                document.getElementById('configName').value = config.name;
+                document.getElementById('configHost').value = config.host;
+                document.getElementById('configPort').value = config.port;
+                document.getElementById('configUsername').value = config.username;
+                document.getElementById('configPassword').value = '';
+                document.getElementById('configUseSsl').checked = config.use_ssl;
+                document.getElementById('configVerifySsl').checked = config.verify_ssl;
+                document.getElementById('configModalTitle').textContent = 'Edit OpenSearch Connection';
+                document.getElementById('configModal').classList.add('show');
+            } catch (err) {
+                alert('Failed to load config: ' + err.message);
+            }
+        };
+
+        window.deleteConfig = async function(id) {
+            if (!confirm('Delete this connection?')) return;
+            try {
+                await apiFetch(`${API}/configs/${id}`, { method: 'DELETE' });
+                loadConfigs();
+            } catch (err) {
+                alert('Failed to delete: ' + err.message);
+            }
+        };
+
+        // ==================== MODAL ====================
+        window.showConfigModal = function() {
+            document.getElementById('configEditId').value = '';
+            document.getElementById('configName').value = '';
+            document.getElementById('configHost').value = '';
+            document.getElementById('configPort').value = '9200';
+            document.getElementById('configUsername').value = '';
+            document.getElementById('configPassword').value = '';
+            document.getElementById('configUseSsl').checked = false;
+            document.getElementById('configVerifySsl').checked = true;
+            document.getElementById('configModalTitle').textContent = 'Add OpenSearch Connection';
+            document.getElementById('configTestResult').innerHTML = '';
+            document.getElementById('configModal').classList.add('show');
+        };
+
+        window.hideConfigModal = function() {
+            document.getElementById('configModal').classList.remove('show');
+        };
+
+        window.testConfigConnection = async function() {
+            const resultDiv = document.getElementById('configTestResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Testing connection...</div>';
+            const payload = {
+                name: document.getElementById('configName').value || 'Test',
+                host: document.getElementById('configHost').value,
+                port: parseInt(document.getElementById('configPort').value) || 9200,
+                username: document.getElementById('configUsername').value,
+                password: document.getElementById('configPassword').value,
+                use_ssl: document.getElementById('configUseSsl').checked,
+                verify_ssl: document.getElementById('configVerifySsl').checked
+            };
+            try {
+                const res = await apiFetch(`${API}/test-connection`, { method: 'POST', body: JSON.stringify({ id: document.getElementById('configEditId').value || undefined, ...payload }) });
+                resultDiv.innerHTML = `<div class="success-msg">✓ ${escapeHtml(res.message)}</div>`;
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="error-msg">✗ ${escapeHtml(err.message)}</div>`;
+            }
+        };
+
+        window.saveConfig = async function() {
+            const editId = document.getElementById('configEditId').value;
+            const payload = {
+                name: document.getElementById('configName').value,
+                host: document.getElementById('configHost').value,
+                port: parseInt(document.getElementById('configPort').value) || 9200,
+                username: document.getElementById('configUsername').value,
+                password: document.getElementById('configPassword').value || undefined,
+                use_ssl: document.getElementById('configUseSsl').checked,
+                verify_ssl: document.getElementById('configVerifySsl').checked
+            };
+            if (!payload.name || !payload.host || !payload.username) {
+                alert('Name, Host, and Username are required.');
+                return;
+            }
+            try {
+                if (editId) {
+                    await apiFetch(`${API}/configs/${editId}`, { method: 'PUT', body: JSON.stringify(payload) });
+                } else {
+                    await apiFetch(`${API}/configs`, { method: 'POST', body: JSON.stringify(payload) });
+                }
+                hideConfigModal();
+                loadConfigs();
+            } catch (err) {
+                alert('Failed to save: ' + err.message);
+            }
+        };
+
+        // ==================== DATA LOADING ====================
+        window.refreshAll = async function() {
+            if (!currentConfigId) return;
+            try {
+                const [healthRes, nodesRes, indicesRes, shardsRes, statsRes] = await Promise.all([
+                    apiFetch(`${API}/health?configId=${currentConfigId}`),
+                    apiFetch(`${API}/nodes?configId=${currentConfigId}`),
+                    apiFetch(`${API}/indices?configId=${currentConfigId}`),
+                    apiFetch(`${API}/shards?configId=${currentConfigId}`),
+                    apiFetch(`${API}/stats?configId=${currentConfigId}`)
+                ]);
+                updateStatusBar(healthRes.data);
+                renderOverview(healthRes.data, indicesRes.data, statsRes.data);
+                renderNodes(nodesRes.data);
+                renderIndices(indicesRes.data);
+                renderShards(shardsRes.data, nodesRes.data);
+            } catch (err) {
+                console.error('Refresh failed:', err);
+                document.getElementById('clusterStatusDot').className = 'status-dot gray';
+                document.getElementById('clusterStatusText').textContent = 'Error: ' + err.message;
+            }
+        };
+
+        function showEmptyState() {
+            document.getElementById('clusterStatusDot').className = 'status-dot gray';
+            document.getElementById('clusterStatusText').textContent = 'No connection configured';
+            document.getElementById('clusterInfo').style.display = 'none';
+        }
+
+        // ==================== STATUS BAR ====================
+        function updateStatusBar(health) {
+            if (!health) return;
+            const dot = document.getElementById('clusterStatusDot');
+            const text = document.getElementById('clusterStatusText');
+            dot.className = `status-dot ${health.status}`;
+            text.textContent = health.status.toUpperCase();
+            document.getElementById('clusterInfo').style.display = 'flex';
+            document.getElementById('clusterName').textContent = health.cluster_name || '-';
+            document.getElementById('nodeCount').textContent = health.number_of_nodes || 0;
+            document.getElementById('dataNodeCount').textContent = health.number_of_data_nodes || 0;
+            document.getElementById('activeShards').textContent = health.active_shards || 0;
+            document.getElementById('unassignedShards').textContent = health.unassigned_shards || 0;
+            document.getElementById('activeShardsPercent').textContent = (health.active_shards_percent_as_number || 0).toFixed(1) + '%';
+        }
+
+        // ==================== OVERVIEW ====================
+        function renderOverview(health, indices, stats) {
+            const statusEl = document.getElementById('overviewHealth');
+            const barEl = document.getElementById('overviewHealthBar');
+            statusEl.textContent = (health?.status || 'unknown').toUpperCase();
+            statusEl.style.color = health?.status === 'green' ? 'var(--success)' : health?.status === 'yellow' ? 'var(--warning)' : 'var(--error)';
+            barEl.className = `progress-fill ${health?.status || 'green'}`;
+            barEl.style.width = (health?.active_shards_percent_as_number || 0) + '%';
+            document.getElementById('overviewIndices').textContent = stats?.indices?.count || indices?.length || 0;
+            document.getElementById('overviewDocs').textContent = formatNumber(stats?.indices?.docs?.count || indices?.reduce((sum, i) => sum + (parseInt(i.docs_count) || 0), 0) || 0);
+            document.getElementById('overviewStoreSize').textContent = formatBytes(stats?.indices?.store?.size_in_bytes || 0);
+            renderIndexHealthTable(indices);
+        }
+
+        function renderIndexHealthTable(indices) {
+            const tbody = document.querySelector('#indexHealthTable tbody');
+            if (!indices || !indices.length) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No indices found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = indices.slice(0, 50).map(idx => `
+                <tr>
+                    <td><span class="health-badge ${idx.health}">${idx.health}</span></td>
+                    <td>${idx.status}</td>
+                    <td style="font-weight:500;color:var(--text-white)">${escapeHtml(idx.index)}</td>
+                    <td>${idx.pri}</td>
+                    <td>${idx.rep}</td>
+                    <td>${formatNumber(idx.docs_count || 0)}</td>
+                    <td>${idx.store_size || '-'}</td>
+                    <td>${idx.pri_store_size || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ==================== NODES ====================
+        function renderNodes(nodes) {
+            const container = document.getElementById('nodesContainer');
+            if (!nodes || !nodes.length) {
+                container.innerHTML = '<div class="empty-state"><h3>No Nodes</h3><p>Unable to fetch node information.</p></div>';
+                return;
+            }
+            container.innerHTML = nodes.map(node => {
+                const heapColor = node.heap_percent > 85 ? 'red' : node.heap_percent > 70 ? 'yellow' : 'green';
+                const ramColor = node.ram_percent > 85 ? 'red' : node.ram_percent > 70 ? 'yellow' : 'green';
+                const cpuColor = node.cpu > 80 ? 'red' : node.cpu > 50 ? 'yellow' : 'green';
+                const diskColor = node.disk_used_percent > 85 ? 'red' : node.disk_used_percent > 70 ? 'yellow' : 'green';
+                return `
+                <div class="node-card">
+                    <div class="node-header">
+                        <span class="node-name">${escapeHtml(node.name)}</span>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span class="node-role">${escapeHtml(node.roles.join(', ') || node.role)}</span>
+                            <span style="font-size:11px;color:var(--text-muted)">${escapeHtml(node.ip)}</span>
+                            <span style="font-size:11px;color:var(--text-muted)">v${escapeHtml(node.node_version)}</span>
+                        </div>
+                    </div>
+                    <div class="node-metrics">
+                        <div class="metric">
+                            <span class="metric-label">CPU</span>
+                            <span class="metric-value" style="color:var(--${cpuColor})">${node.cpu}%</span>
+                            <div class="metric-bar"><div class="metric-fill" style="width:${node.cpu}%;background:var(--${cpuColor})"></div></div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Heap</span>
+                            <span class="metric-value" style="color:var(--${heapColor})">${node.heap_percent}%</span>
+                            <div class="metric-bar"><div class="metric-fill" style="width:${node.heap_percent}%;background:var(--${heapColor})"></div></div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">RAM</span>
+                            <span class="metric-value" style="color:var(--${ramColor})">${node.ram_percent}%</span>
+                            <div class="metric-bar"><div class="metric-fill" style="width:${node.ram_percent}%;background:var(--${ramColor})"></div></div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Disk</span>
+                            <span class="metric-value" style="color:var(--${diskColor})">${node.disk_used_percent}%</span>
+                            <div class="metric-bar"><div class="metric-fill" style="width:${node.disk_used_percent}%;background:var(--${diskColor})"></div></div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Load 1m</span>
+                            <span class="metric-value">${node.load_1m.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Load 5m</span>
+                            <span class="metric-value">${node.load_5m.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Load 15m</span>
+                            <span class="metric-value">${node.load_15m.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Uptime</span>
+                            <span class="metric-value">${formatUptime(node.uptime)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">JVM Heap</span>
+                            <span class="metric-value">${formatBytes(node.jvm_heap_used)} / ${formatBytes(node.jvm_heap_max)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">File Descriptors</span>
+                            <span class="metric-value">${node.open_file_descriptors} / ${node.max_file_descriptors}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Disk Total</span>
+                            <span class="metric-value">${formatBytes(node.disk_total)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Disk Free</span>
+                            <span class="metric-value">${formatBytes(node.disk_free)}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ==================== INDICES ====================
+        function renderIndices(indices) {
+            const tbody = document.querySelector('#indicesTable tbody');
+            if (!indices || !indices.length) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:20px;">No indices found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = indices.map(idx => `
+                <tr>
+                    <td><span class="health-badge ${idx.health}">${idx.health}</span></td>
+                    <td>${idx.status}</td>
+                    <td style="font-weight:500;color:var(--text-white)">${escapeHtml(idx.index)}</td>
+                    <td style="font-family:monospace;font-size:10px;color:var(--text-muted)">${escapeHtml(idx.uuid)}</td>
+                    <td>${idx.pri}</td>
+                    <td>${idx.rep}</td>
+                    <td>${formatNumber(idx.docs_count || 0)}</td>
+                    <td>${formatNumber(idx.docs_deleted || 0)}</td>
+                    <td>${idx.store_size || '-'}</td>
+                    <td>${idx.pri_store_size || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ==================== SHARDS ====================
+        function renderShards(shards, nodes) {
+            const tbody = document.querySelector('#shardsTable tbody');
+            const matrixDiv = document.getElementById('shardMatrix');
+            if (!shards || !shards.length) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No shards found</td></tr>';
+                matrixDiv.innerHTML = '';
+                return;
+            }
+            // Table
+            tbody.innerHTML = shards.map(s => {
+                const typeClass = s.prirep === 'p' ? 'primary' : 'replica';
+                const stateClass = s.state === 'UNASSIGNED' ? 'unassigned' : s.state === 'RELOCATING' ? 'relocating' : s.state === 'INITIALIZING' ? 'initializing' : '';
+                return `
+                <tr>
+                    <td style="font-weight:500;color:var(--text-white)">${escapeHtml(s.index)}</td>
+                    <td>${s.shard}</td>
+                    <td><span class="shard-box ${typeClass}" style="width:auto;height:auto;padding:2px 6px;">${s.prirep === 'p' ? 'Primary' : 'Replica'}</span></td>
+                    <td><span class="shard-box ${stateClass}" style="width:auto;height:auto;padding:2px 6px;">${s.state}</span></td>
+                    <td>${formatNumber(s.docs || 0)}</td>
+                    <td>${s.store || '-'}</td>
+                    <td>${s.ip || '-'}</td>
+                    <td>${escapeHtml(s.node || '-')}</td>
+                </tr>`;
+            }).join('');
+            // Matrix by node
+            const nodeShards = {};
+            shards.forEach(s => {
+                const nodeName = s.node || 'unknown';
+                if (!nodeShards[nodeName]) nodeShards[nodeName] = [];
+                nodeShards[nodeName].push(s);
+            });
+            matrixDiv.innerHTML = Object.entries(nodeShards).map(([name, nodeShardsList]) => {
+                const primaryCount = nodeShardsList.filter(s => s.prirep === 'p' && s.state === 'STARTED').length;
+                const replicaCount = nodeShardsList.filter(s => s.prirep === 'r' && s.state === 'STARTED').length;
+                const unassignedCount = nodeShardsList.filter(s => s.state === 'UNASSIGNED').length;
+                return `
+                <div class="node-shard-row">
+                    <span class="node-shard-label" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+                    <div class="shard-cell">
+                        ${nodeShardsList.map(s => {
+                            const cls = s.state === 'UNASSIGNED' ? 'unassigned' : s.state === 'RELOCATING' ? 'relocating' : s.state === 'INITIALIZING' ? 'initializing' : s.prirep === 'p' ? 'primary' : 'replica';
+                            return `<div class="shard-box ${cls}" title="${escapeHtml(s.index)} shard ${s.shard} (${s.prirep === 'p' ? 'P' : 'R'}) ${s.state}">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
+                        }).join('')}
+                    </div>
+                    <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">P:${primaryCount} R:${replicaCount}${unassignedCount ? ' U:' + unassignedCount : ''}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // ==================== HELPERS ====================
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let i = 0;
+            let val = bytes;
+            while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+            return val.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+        }
+
+        function formatNumber(n) {
+            if (n === null || n === undefined) return '0';
+            return Number(n).toLocaleString();
+        }
+
+        function formatUptime(ms) {
+            if (!ms) return '-';
+            const s = Math.floor(ms / 1000);
+            const d = Math.floor(s / 86400);
+            const h = Math.floor((s % 86400) / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            if (d > 0) return `${d}d ${h}h`;
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    })();
+    </script>
+</body>
+</html>

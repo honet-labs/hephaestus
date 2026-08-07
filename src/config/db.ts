@@ -567,6 +567,20 @@ export async function initDb() {
       sort_order INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 22. OpenSearchConfigs - OpenSearch cluster connection profiles
+    `CREATE TABLE IF NOT EXISTS opensearch_configs (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      host VARCHAR(255) NOT NULL,
+      port INTEGER NOT NULL DEFAULT 9200,
+      username VARCHAR(255) NOT NULL,
+      password TEXT NOT NULL DEFAULT '',
+      use_ssl BOOLEAN DEFAULT false,
+      verify_ssl BOOLEAN DEFAULT true,
+      is_active BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 
@@ -628,7 +642,22 @@ export async function initDb() {
       device_data JSONB NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
-    `CREATE INDEX IF NOT EXISTS idx_topology_pending_user ON topology_pending(user_id);`
+    `CREATE INDEX IF NOT EXISTS idx_topology_pending_user ON topology_pending(user_id);`,
+
+    // opensearch_configs: OpenSearch cluster connection profiles
+    `CREATE TABLE IF NOT EXISTS opensearch_configs (
+      id VARCHAR(50) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      host VARCHAR(255) NOT NULL,
+      port INTEGER NOT NULL DEFAULT 9200,
+      username VARCHAR(255) NOT NULL,
+      password TEXT NOT NULL DEFAULT '',
+      use_ssl BOOLEAN DEFAULT false,
+      verify_ssl BOOLEAN DEFAULT true,
+      is_active BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+    `CREATE INDEX IF NOT EXISTS idx_opensearch_configs_is_active ON opensearch_configs(is_active) WHERE is_active = true;`
   ];
   await Promise.all(migrationQueries.map(q => pool.query(q)));
 

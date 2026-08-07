@@ -21,6 +21,7 @@ import backupRoutes from "./routes/backup.routes";
 import remoteHostRoutes from "./routes/remote-host.routes";
 import vpsControlRoutes from "./routes/vps-control.routes";
 import topologyRoutes from "./routes/topology.routes";
+import opensearchClusterRoutes from "./routes/opensearch-cluster.routes";
 
 const app = express();
 
@@ -125,6 +126,10 @@ app.get("/remote-host", (req: Request, res: Response) => {
     res.sendFile("network-topology.html", { root: require("path").join(__dirname, "../views") });
   });
 
+  app.get("/opensearch-cluster", (req: Request, res: Response) => {
+    res.sendFile("opensearch-cluster.html", { root: require("path").join(__dirname, "../views") });
+  });
+
 import { authMiddleware } from "./middleware/auth.middleware";
 import setupRoutes from "./routes/setup.routes";
 
@@ -149,6 +154,7 @@ app.use("/api/v1/backup", backupRoutes);
 app.use("/api/v1/remote-host", remoteHostRoutes);
 app.use("/api/v1/vps", vpsControlRoutes);
 app.use("/api/v1/topology", topologyRoutes);
+app.use("/api/v1/opensearch-cluster", opensearchClusterRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
