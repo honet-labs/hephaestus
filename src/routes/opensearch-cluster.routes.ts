@@ -30,4 +30,7 @@ router.get("/shards/:indexName", requireRole("ADMIN"), (req, res) => opensearchC
 // Plugins
 router.get("/plugins", requireRole("ADMIN"), (req, res) => opensearchClusterController.getPlugins(req, res));
 
+// Logs
+router.get("/logs", requireRole("ADMIN"), (req, res) => opensearchClusterController.getLogs(req, res));
+
 export default router;

@@ -200,6 +200,7 @@
         <div class="tab" data-tab="indices">Indices</div>
         <div class="tab" data-tab="shards">Shards</div>
         <div class="tab" data-tab="config">Connection</div>
+        <div class="tab" data-tab="logs">Logs</div>
     </div>
     <div class="main-content">
         <div class="tab-content">
@@ -324,6 +325,21 @@
             <div class="tab-pane" id="config">
                 <div class="config-list" id="configList"></div>
                 <button class="btn btn-primary" onclick="showConfigModal()">+ Add Connection</button>
+            </div>
+            <div class="tab-pane" id="logs">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">OpenSearch Connection Logs</span>
+                        <div style="display:flex;gap:8px;">
+                            <select id="logFile" class="btn btn-secondary" onchange="loadLogs()">
+                                <option value="error.log">Error Log</option>
+                                <option value="app.log">App Log</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="loadLogs()">Refresh</button>
+                        </div>
+                    </div>
+                    <div style="font-family:monospace;font-size:11px;background:var(--app-card-dark);border-radius:4px;padding:12px;max-height:500px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" id="logsContainer">Loading...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -824,6 +840,39 @@
             div.textContent = str;
             return div.innerHTML;
         }
+
+        // ==================== LOGS ====================
+        window.loadLogs = async function() {
+            const container = document.getElementById('logsContainer');
+            const file = document.getElementById('logFile').value;
+            container.innerHTML = '<div class="loading"><div class="spinner"></div> Loading logs...</div>';
+            try {
+                const res = await apiFetch(`${API}/logs?file=${file}&lines=200`);
+                const logs = res.data?.logs || [];
+                if (logs.length === 0) {
+                    container.innerHTML = '<span style="color:var(--text-muted)">No logs found.</span>';
+                    return;
+                }
+                // Parse and colorize JSON logs
+                container.innerHTML = logs.map(line => {
+                    try {
+                        const entry = JSON.parse(line);
+                        const color = entry.level === 'ERROR' ? 'var(--error)' : entry.level === 'WARN' ? 'var(--warning)' : 'var(--text-muted)';
+                        return `<span style="color:${color}">[${entry.timestamp}] [${entry.level}] [${entry.module}] ${escapeHtml(entry.message)}</span>`;
+                    } catch {
+                        return `<span style="color:var(--text-muted)">${escapeHtml(line)}</span>`;
+                    }
+                }).join('\n');
+                container.scrollTop = container.scrollHeight;
+            } catch (err) {
+                container.innerHTML = `<span style="color:var(--error)">Failed to load logs: ${escapeHtml(err.message)}</span>`;
+            }
+        };
+
+        // Auto-load logs when tab is clicked
+        document.querySelector('[data-tab="logs"]')?.addEventListener('click', () => {
+            setTimeout(loadLogs, 100);
+        });
     })();
     </script>
 </body>

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { opensearchClusterService } from "../services/opensearch-cluster.service";
 import { logActivity } from "../config/db";
+import logger from "../config/logger";
 
 export class OpenSearchClusterController {
   // ==================== CONFIG MANAGEMENT ====================
@@ -196,8 +197,20 @@ export class OpenSearchClusterController {
       const stats = await opensearchClusterService.getIndicesStats(configId as string);
       return res.status(200).json({ success: true, data: stats });
     } catch (err: any) {
-      console.error("[OpenSearch] getIndicesStats error:", err.message);
+      logger.opensearchError(`getIndicesStats: ${err.message}`);
       return res.status(500).json({ success: false, error: "Failed to get indices stats: " + err.message });
+    }
+  }
+
+  public async getLogs(req: Request, res: Response) {
+    try {
+      const { file, lines } = req.query;
+      const filename = (file as string) || "error.log";
+      const lineCount = parseInt(lines as string) || 100;
+      const logs = await logger.getRecentLogs(filename, lineCount);
+      return res.status(200).json({ success: true, data: { logs, logDir: logger.getLogDir(), file: filename } });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: "Failed to read logs: " + err.message });
     }
   }
 }

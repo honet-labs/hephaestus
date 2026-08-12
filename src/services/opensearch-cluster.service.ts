@@ -1,5 +1,6 @@
 import axios from "axios";
 import pool, { query } from "../config/db";
+import logger from "../config/logger";
 
 // ==================== TYPES ====================
 
@@ -212,7 +213,7 @@ export class OpenSearchClusterService {
     if (config.username) {
       const credentials = Buffer.from(`${config.username}:${config.password || ""}`).toString("base64");
       axiosConfig.headers["Authorization"] = `Basic ${credentials}`;
-      console.log(`[OpenSearch] Using Basic Auth for user: ${config.username}`);
+      logger.opensearch(`Using Basic Auth for user: ${config.username}`);
     }
 
     // Always disable SSL verification for self-signed certs
@@ -222,7 +223,7 @@ export class OpenSearchClusterService {
         rejectUnauthorized: false,
         secureProtocol: "TLSv1_2_method"
       });
-      console.log(`[OpenSearch] SSL enabled, verify: false`);
+      logger.opensearch(`SSL enabled, verify: false`);
     }
 
     return axiosConfig;
@@ -256,17 +257,17 @@ export class OpenSearchClusterService {
       const baseUrl = this.getBaseUrl(config);
       const url = `${baseUrl}/_cluster/health`;
 
-      console.log(`[OpenSearch] ========== TEST CONNECTION ==========`);
-      console.log(`[OpenSearch] URL: ${url}`);
-      console.log(`[OpenSearch] Host: ${config.host}, Port: ${config.port}, SSL: ${config.use_ssl}`);
-      console.log(`[OpenSearch] Username: ${config.username || "(empty)"}`);
-      console.log(`[OpenSearch] Password: ${config.password ? "***" : "(empty)"}`);
+      logger.opensearch(`========== TEST CONNECTION ==========`);
+      logger.opensearch(`URL: ${url}`);
+      logger.opensearch(`Host: ${config.host}, Port: ${config.port}, SSL: ${config.use_ssl}`);
+      logger.opensearch(`Username: ${config.username || "(empty)"}`);
+      logger.opensearch(`Password: ${config.password ? "***" : "(empty)"}`);
 
       const axiosConfig = this.getAxiosConfig(config);
-      console.log(`[OpenSearch] Headers:`, JSON.stringify(axiosConfig.headers));
+      logger.opensearch(`Headers: ${JSON.stringify(axiosConfig.headers)}`);
 
       const response = await axios.get(url, axiosConfig);
-      console.log(`[OpenSearch] SUCCESS:`, response.data?.status);
+      logger.opensearch(`SUCCESS: ${response.data?.status}`);
       return { success: true, message: `Connection successful. Cluster: ${response.data?.cluster_name}, Status: ${response.data?.status}`, data: response.data };
     } catch (err: any) {
       const status = err.response?.status;
@@ -275,11 +276,11 @@ export class OpenSearchClusterService {
       const msg = osError || err.message || "Connection failed";
       const detail = status ? ` (HTTP ${status}: ${statusText})` : "";
 
-      console.error(`[OpenSearch] ========== FAILED ==========`);
-      console.error(`[OpenSearch] Error: ${msg}${detail}`);
-      console.error(`[OpenSearch] Response:`, JSON.stringify(err.response?.data));
-      console.error(`[OpenSearch] Request URL:`, err.config?.url);
-      console.error(`[OpenSearch] Request Headers:`, JSON.stringify(err.config?.headers));
+      logger.opensearchError(`========== FAILED ==========`);
+      logger.opensearchError(`Error: ${msg}${detail}`);
+      logger.opensearchError(`Response: ${JSON.stringify(err.response?.data)}`);
+      logger.opensearchError(`Request URL: ${err.config?.url}`);
+      logger.opensearchError(`Request Headers: ${JSON.stringify(err.config?.headers)}`);
 
       return { success: false, message: `Connection failed: ${msg}${detail}` };
     }
