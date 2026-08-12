@@ -509,14 +509,17 @@
         window.testConfigConnection = async function() {
             const resultDiv = document.getElementById('configTestResult');
             resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Testing connection...</div>';
+            const host = document.getElementById('configHost').value.trim();
+            const useSsl = document.getElementById('configUseSsl').checked || host.startsWith('https://');
+            const cleanHost = host.replace(/^https?:\/\//, '');
             const payload = {
                 name: document.getElementById('configName').value || 'Test',
-                host: document.getElementById('configHost').value,
+                host: cleanHost,
                 port: parseInt(document.getElementById('configPort').value) || 9200,
                 username: document.getElementById('configUsername').value,
                 password: document.getElementById('configPassword').value,
-                use_ssl: document.getElementById('configUseSsl').checked,
-                verify_ssl: false // Always disable SSL verification for self-signed certs
+                use_ssl: useSsl,
+                verify_ssl: false
             };
             try {
                 const res = await apiFetch(`${API}/test-connection`, { method: 'POST', body: JSON.stringify({ id: document.getElementById('configEditId').value || undefined, ...payload }) });
@@ -528,14 +531,17 @@
 
         window.saveConfig = async function() {
             const editId = document.getElementById('configEditId').value;
+            const host = document.getElementById('configHost').value.trim();
+            const useSsl = document.getElementById('configUseSsl').checked || host.startsWith('https://');
+            const cleanHost = host.replace(/^https?:\/\//, '');
             const payload = {
                 name: document.getElementById('configName').value,
-                host: document.getElementById('configHost').value,
+                host: cleanHost,
                 port: parseInt(document.getElementById('configPort').value) || 9200,
                 username: document.getElementById('configUsername').value,
                 password: document.getElementById('configPassword').value || undefined,
-                use_ssl: document.getElementById('configUseSsl').checked,
-                verify_ssl: document.getElementById('configVerifySsl').checked
+                use_ssl: useSsl,
+                verify_ssl: false
             };
             if (!payload.name || !payload.host || !payload.username) {
                 alert('Name, Host, and Username are required.');

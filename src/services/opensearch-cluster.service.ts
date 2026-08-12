@@ -208,18 +208,22 @@ export class OpenSearchClusterService {
       headers: { "Content-Type": "application/json" }
     };
 
-    // Only add auth if username is provided
+    // Add auth if username is provided
     if (config.username) {
       axiosConfig.auth = { username: config.username, password: config.password || "" };
+      console.log(`[OpenSearch] Using auth for user: ${config.username}`);
+    } else {
+      console.log(`[OpenSearch] No auth configured`);
     }
 
-    // Always disable SSL verification for self-signed certs (common in dev OpenSearch)
+    // Always disable SSL verification for self-signed certs
     if (config.use_ssl) {
       const https = require("https");
       axiosConfig.httpsAgent = new https.Agent({
         rejectUnauthorized: false,
         secureProtocol: "TLSv1_2_method"
       });
+      console.log(`[OpenSearch] SSL enabled, verify: false`);
     }
 
     return axiosConfig;
@@ -232,7 +236,6 @@ export class OpenSearchClusterService {
       if (configId) {
         config = await this.getConfigById(configId);
       } else if (configData) {
-        // Use provided config data directly (for testing new connection before save)
         config = {
           id: "test",
           name: configData.name || "Test",
@@ -242,7 +245,7 @@ export class OpenSearchClusterService {
           password: configData.password || "",
           is_active: false,
           use_ssl: configData.use_ssl,
-          verify_ssl: configData.verify_ssl
+          verify_ssl: false
         };
       } else {
         config = await this.getActiveConfig();
@@ -252,10 +255,13 @@ export class OpenSearchClusterService {
       if (!config.host) return { success: false, message: "Host is required." };
 
       const url = `${this.getBaseUrl(config)}/_cluster/health`;
+      console.log(`[OpenSearch] Testing connection to: ${url}`);
+      console.log(`[OpenSearch] Config: host=${config.host}, port=${config.port}, user=${config.username}, ssl=${config.use_ssl}`);
+
       const axiosConfig = this.getAxiosConfig(config);
-      console.log(`[OpenSearch] Testing connection to: ${url} (auth: ${config.username ? "yes" : "no"})`);
       const response = await axios.get(url, axiosConfig);
-      return { success: true, message: "Connection successful.", data: response.data };
+      console.log(`[OpenSearch] Connection successful:`, response.data?.status);
+      return { success: true, message: `Connection successful. Cluster: ${response.data?.cluster_name}, Status: ${response.data?.status}`, data: response.data };
     } catch (err: any) {
       const status = err.response?.status;
       const statusText = err.response?.statusText;
@@ -263,6 +269,7 @@ export class OpenSearchClusterService {
       const msg = osError || err.message || "Connection failed";
       const detail = status ? ` (HTTP ${status}: ${statusText})` : "";
       console.error(`[OpenSearch] Connection failed: ${msg}${detail}`);
+      console.error(`[OpenSearch] Full error:`, err.response?.data || err.message);
       return { success: false, message: `Connection failed: ${msg}${detail}` };
     }
   }
