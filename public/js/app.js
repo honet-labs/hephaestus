@@ -2144,7 +2144,7 @@ async function saveConnectionConfiguration(event) {
       const osHost = document.getElementById('opensearch-host')?.value?.trim();
       const osPort = parseInt(document.getElementById('opensearch-port')?.value || '9220', 10);
       const osUsername = document.getElementById('opensearch-username')?.value?.trim();
-      const osPassword = document.getElementById('opensearch-password')?.value || '';
+      const osPassword = document.getElementById('opensearch-password')?.value;
       const osUseSsl = document.getElementById('opensearch-use-ssl')?.checked || false;
 
       if (!osHost) {
@@ -2153,11 +2153,26 @@ async function saveConnectionConfiguration(event) {
         return;
       }
 
-      const res = await fetch('/api/v1/opensearch-cluster/configs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name, host: osHost, port: osPort, username: osUsername, password: osPassword, use_ssl: osUseSsl })
-      });
+      // Build payload - only include password if provided
+      const payload: any = { name, host: osHost, port: osPort, username: osUsername, use_ssl: osUseSsl };
+      if (osPassword) payload.password = osPassword;
+
+      let res;
+      if (id) {
+        // Update existing config
+        res = await fetch(`/api/v1/opensearch-cluster/configs/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // Create new config
+        res = await fetch('/api/v1/opensearch-cluster/configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
       const result = await res.json();
       if (res.ok && result.success) {
         showFeedback('success', 'Saved Successfully', result.message || 'OpenSearch connection saved.');
