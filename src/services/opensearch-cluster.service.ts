@@ -203,25 +203,67 @@ export class OpenSearchClusterService {
   }
 
   private getAxiosConfig(config: OpenSearchConnection): any {
-    return {
+    const axiosConfig: any = {
       timeout: 15000,
-      auth: this.getAuth(config),
-      httpsAgent: new (require("https").Agent)({ rejectUnauthorized: config.verify_ssl !== false }),
       headers: { "Content-Type": "application/json" }
     };
+
+    // Only add auth if username is provided
+    if (config.username) {
+      axiosConfig.auth = { username: config.username, password: config.password || "" };
+    }
+
+    // Always disable SSL verification for self-signed certs (common in dev OpenSearch)
+    if (config.use_ssl) {
+      const https = require("https");
+      axiosConfig.httpsAgent = new https.Agent({
+        rejectUnauthorized: false,
+        secureProtocol: "TLSv1_2_method"
+      });
+    }
+
+    return axiosConfig;
   }
 
-  async testConnection(configId?: string): Promise<{ success: boolean; message: string; data?: any }> {
+  async testConnection(configId?: string, configData?: Partial<OpenSearchConnection>): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      const config = configId ? await this.getConfigById(configId) : await this.getActiveConfig();
+      let config: OpenSearchConnection | null = null;
+
+      if (configId) {
+        config = await this.getConfigById(configId);
+      } else if (configData) {
+        // Use provided config data directly (for testing new connection before save)
+        config = {
+          id: "test",
+          name: configData.name || "Test",
+          host: configData.host || "",
+          port: configData.port || 9200,
+          username: configData.username || "",
+          password: configData.password || "",
+          is_active: false,
+          use_ssl: configData.use_ssl,
+          verify_ssl: configData.verify_ssl
+        };
+      } else {
+        config = await this.getActiveConfig();
+      }
+
       if (!config) return { success: false, message: "No OpenSearch configuration found." };
+      if (!config.host) return { success: false, message: "Host is required." };
 
       const url = `${this.getBaseUrl(config)}/_cluster/health`;
-      const response = await axios.get(url, this.getAxiosConfig(config));
+      const axiosConfig = this.getAxiosConfig(config);
+      console.log(`[OpenSearch] Testing connection to: ${url} (auth: ${config.username ? "yes" : "no"})`);
+      const response = await axios.get(url, axiosConfig);
       return { success: true, message: "Connection successful.", data: response.data };
     } catch (err: any) {
-      const msg = err.response?.data?.error?.reason || err.message || "Connection failed";
-      return { success: false, message: `Connection failed: ${msg}` };
+      const status = err.response?.status;
+      const statusText = err.response?.statusText;
+      const osError = err.response?.data?.error?.reason || err.response?.data?.error;
+      const msg = osError || err.message || "Connection failed";
+      const detail = status ? ` (HTTP ${status}: ${statusText})` : "";
+      console.error(`[OpenSearch] Connection failed: ${msg}${detail}`);
+      return { success: false, message: `Connection failed: ${msg}${detail}` };
     }
   }
 
@@ -230,8 +272,14 @@ export class OpenSearchClusterService {
     if (!config) throw new Error("No active OpenSearch configuration found.");
 
     const url = `${this.getBaseUrl(config)}/_cluster/health`;
-    const response = await axios.get<ClusterHealth>(url, this.getAxiosConfig(config));
-    return response.data;
+    try {
+      const response = await axios.get<ClusterHealth>(url, this.getAxiosConfig(config));
+      return response.data;
+    } catch (err: any) {
+      const status = err.response?.status;
+      const msg = err.response?.data?.error?.reason || err.message;
+      throw new Error(`Failed to get cluster health: ${msg}${status ? ` (HTTP ${status})` : ""}`);
+    }
   }
 
   async getClusterStats(configId?: string): Promise<any> {

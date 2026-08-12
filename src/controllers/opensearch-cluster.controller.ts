@@ -76,8 +76,9 @@ export class OpenSearchClusterController {
 
   public async testConnection(req: Request, res: Response) {
     try {
-      const { id } = req.body;
-      const result = await opensearchClusterService.testConnection(id);
+      const { id, name, host, port, username, password, use_ssl, verify_ssl } = req.body;
+      const configData = host ? { name, host, port: parseInt(port) || 9200, username, password, use_ssl, verify_ssl } : undefined;
+      const result = await opensearchClusterService.testConnection(id, configData);
       return res.status(result.success ? 200 : 400).json(result);
     } catch (err: any) {
       console.error("[OpenSearch] testConnection error:", err.message);

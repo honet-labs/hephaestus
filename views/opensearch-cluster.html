@@ -516,7 +516,7 @@
                 username: document.getElementById('configUsername').value,
                 password: document.getElementById('configPassword').value,
                 use_ssl: document.getElementById('configUseSsl').checked,
-                verify_ssl: document.getElementById('configVerifySsl').checked
+                verify_ssl: false // Always disable SSL verification for self-signed certs
             };
             try {
                 const res = await apiFetch(`${API}/test-connection`, { method: 'POST', body: JSON.stringify({ id: document.getElementById('configEditId').value || undefined, ...payload }) });
