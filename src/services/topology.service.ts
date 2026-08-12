@@ -642,8 +642,11 @@ export class TopologyService {
        FROM topology_devices`;
     const params: any[] = [];
     if (sheetId) {
-      sql += ` WHERE sheet_id = $1`;
+      // Include devices with NULL sheet_id (orphaned) and backfill them to this sheet
+      sql += ` WHERE (sheet_id = $1 OR sheet_id IS NULL)`;
       params.push(sheetId);
+      // Backfill orphaned devices to this sheet
+      await query(`UPDATE topology_devices SET sheet_id = $1 WHERE sheet_id IS NULL`, [sheetId]).catch(() => {});
     }
     sql += ` ORDER BY created_at ASC`;
     const res = await query(sql, params);
@@ -773,8 +776,10 @@ export class TopologyService {
        FROM topology_edges`;
     const params: any[] = [];
     if (sheetId) {
-      sql += ` WHERE sheet_id = $1`;
+      sql += ` WHERE (sheet_id = $1 OR sheet_id IS NULL)`;
       params.push(sheetId);
+      // Backfill orphaned edges to this sheet
+      await query(`UPDATE topology_edges SET sheet_id = $1 WHERE sheet_id IS NULL`, [sheetId]).catch(() => {});
     }
     sql += ` ORDER BY id ASC`;
     const res = await query(sql, params);

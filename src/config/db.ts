@@ -623,9 +623,30 @@ export async function initDb() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
-    // Add sheet_id FK to devices and edges
-    `ALTER TABLE topology_devices ADD COLUMN IF NOT EXISTS sheet_id INTEGER REFERENCES topology_sheets(id) ON DELETE CASCADE;`,
-    `ALTER TABLE topology_edges ADD COLUMN IF NOT EXISTS sheet_id INTEGER REFERENCES topology_sheets(id) ON DELETE CASCADE;`,
+    // Add sheet_id FK to devices and edges (SET NULL on delete to preserve devices)
+    `DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topology_devices' AND column_name = 'sheet_id') THEN
+        -- Column exists, update constraint if needed
+        BEGIN
+          ALTER TABLE topology_devices DROP CONSTRAINT IF EXISTS topology_devices_sheet_id_fkey;
+          ALTER TABLE topology_devices ADD CONSTRAINT topology_devices_sheet_id_fkey FOREIGN KEY (sheet_id) REFERENCES topology_sheets(id) ON DELETE SET NULL;
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+      ELSE
+        ALTER TABLE topology_devices ADD COLUMN sheet_id INTEGER REFERENCES topology_sheets(id) ON DELETE SET NULL;
+      END IF;
+    END $$;`,
+    `DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'topology_edges' AND column_name = 'sheet_id') THEN
+        BEGIN
+          ALTER TABLE topology_edges DROP CONSTRAINT IF EXISTS topology_edges_sheet_id_fkey;
+          ALTER TABLE topology_edges ADD CONSTRAINT topology_edges_sheet_id_fkey FOREIGN KEY (sheet_id) REFERENCES topology_sheets(id) ON DELETE SET NULL;
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+      ELSE
+        ALTER TABLE topology_edges ADD COLUMN sheet_id INTEGER REFERENCES topology_sheets(id) ON DELETE SET NULL;
+      END IF;
+    END $$;`,
     // Seed default "Tab 1" sheet if no sheets exist
     `INSERT INTO topology_sheets (name, sort_order) SELECT 'Tab 1', 0 WHERE NOT EXISTS (SELECT 1 FROM topology_sheets);`,
     // Backfill existing data to Tab 1
