@@ -135,10 +135,25 @@ export class TopologyDbService {
   // ==================== EDGE OPERATIONS ====================
 
   async addEdge(source: string, target: string, label?: string, edgeType?: string, sourceLabel?: string, targetLabel?: string, sheetId?: number): Promise<TopologyEdge> {
+    // Check if edge already exists
+    const existing = await query(
+      `SELECT id FROM topology_edges WHERE source_id = $1 AND target_id = $2 AND (sheet_id = $3 OR ($3 IS NULL AND sheet_id IS NULL))`,
+      [source, target, sheetId || null]
+    );
+
+    if (existing.rows.length > 0) {
+      // Update existing edge
+      await query(
+        `UPDATE topology_edges SET label = $1, edge_type = $2, source_label = $3, target_label = $4 WHERE id = $5`,
+        [label || null, edgeType || "ethernet", sourceLabel || null, targetLabel || null, existing.rows[0].id]
+      );
+      return { id: existing.rows[0].id, source, target, label, edgeType: edgeType || "ethernet", sourceLabel, targetLabel };
+    }
+
+    // Insert new edge
     const res = await query(
       `INSERT INTO topology_edges (source_id, target_id, label, edge_type, source_label, target_label, sheet_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (source_id, target_id, sheet_id) DO UPDATE SET label = EXCLUDED.label, edge_type = EXCLUDED.edge_type, source_label = EXCLUDED.source_label, target_label = EXCLUDED.target_label
        RETURNING id`,
       [source, target, label || null, edgeType || "ethernet", sourceLabel || null, targetLabel || null, sheetId || null]
     );
