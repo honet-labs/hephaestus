@@ -357,7 +357,7 @@
             </div>
             <div class="form-group">
                 <label>Port</label>
-                <input type="number" id="configPort" value="9200">
+                <input type="number" id="configPort" value="9220">
             </div>
             <div class="form-group">
                 <label>Username</label>
@@ -367,11 +367,11 @@
                 <label>Password</label>
                 <input type="password" id="configPassword" placeholder="••••••••">
             </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="configUseSsl"> Use SSL/HTTPS</label>
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="configVerifySsl" checked> Verify SSL Certificate</label>
+            <div class="form-group" style="background:rgba(245,158,11,0.1);padding:8px 12px;border-radius:4px;border:1px solid rgba(245,158,11,0.3);">
+                <label style="color:var(--warning);font-weight:600;">
+                    <input type="checkbox" id="configUseSsl" checked> Use SSL/HTTPS
+                </label>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Port 9200/9220 biasanya pakai HTTPS. Centang ini jika OpenSearch pakai SSL.</div>
             </div>
             <div id="configTestResult"></div>
             <div class="form-actions">
@@ -508,11 +508,11 @@
             document.getElementById('configEditId').value = '';
             document.getElementById('configName').value = '';
             document.getElementById('configHost').value = '';
-            document.getElementById('configPort').value = '9200';
+            document.getElementById('configPort').value = '9220';
             document.getElementById('configUsername').value = '';
             document.getElementById('configPassword').value = '';
-            document.getElementById('configUseSsl').checked = false;
-            document.getElementById('configVerifySsl').checked = true;
+            document.getElementById('configUseSsl').checked = true; // Default SSL on for port 9220
+            document.getElementById('configVerifySsl').checked = false;
             document.getElementById('configModalTitle').textContent = 'Add OpenSearch Connection';
             document.getElementById('configTestResult').innerHTML = '';
             document.getElementById('configModal').classList.add('show');
@@ -522,16 +522,27 @@
             document.getElementById('configModal').classList.remove('show');
         };
 
+        // Auto-detect SSL based on port
+        document.getElementById('configPort')?.addEventListener('change', function() {
+            const port = parseInt(this.value);
+            const sslCheckbox = document.getElementById('configUseSsl');
+            if (port === 9220 || port === 443) {
+                sslCheckbox.checked = true;
+            }
+        });
+
         window.testConfigConnection = async function() {
             const resultDiv = document.getElementById('configTestResult');
             resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Testing connection...</div>';
             const host = document.getElementById('configHost').value.trim();
-            const useSsl = document.getElementById('configUseSsl').checked || host.startsWith('https://');
+            const port = parseInt(document.getElementById('configPort').value) || 9200;
+            // Auto-enable SSL for HTTPS ports or if user typed https://
+            const useSsl = document.getElementById('configUseSsl').checked || host.startsWith('https://') || port === 9220 || port === 443;
             const cleanHost = host.replace(/^https?:\/\//, '');
             const payload = {
                 name: document.getElementById('configName').value || 'Test',
                 host: cleanHost,
-                port: parseInt(document.getElementById('configPort').value) || 9200,
+                port: port,
                 username: document.getElementById('configUsername').value,
                 password: document.getElementById('configPassword').value,
                 use_ssl: useSsl,
@@ -548,12 +559,13 @@
         window.saveConfig = async function() {
             const editId = document.getElementById('configEditId').value;
             const host = document.getElementById('configHost').value.trim();
-            const useSsl = document.getElementById('configUseSsl').checked || host.startsWith('https://');
+            const port = parseInt(document.getElementById('configPort').value) || 9200;
+            const useSsl = document.getElementById('configUseSsl').checked || host.startsWith('https://') || port === 9220 || port === 443;
             const cleanHost = host.replace(/^https?:\/\//, '');
             const payload = {
                 name: document.getElementById('configName').value,
                 host: cleanHost,
-                port: parseInt(document.getElementById('configPort').value) || 9200,
+                port: port,
                 username: document.getElementById('configUsername').value,
                 password: document.getElementById('configPassword').value || undefined,
                 use_ssl: useSsl,
