@@ -743,16 +743,14 @@
                       <input type="text" id="opensearch-username" placeholder="admin" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
                     </div>
                   </div>
-                  <div style="display: flex; gap: 12px; width: 100%;">
-                    <div class="form-group" style="flex: 1;">
-                      <label for="opensearch-password" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Password</label>
-                      <input type="password" id="opensearch-password" placeholder="••••••••" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
-                    </div>
-                    <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: flex-end; padding-bottom: 8px;">
-                      <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); cursor: pointer;">
-                        <input type="checkbox" id="opensearch-use-ssl" checked> Use SSL/HTTPS
-                      </label>
-                    </div>
+                  <div class="form-group">
+                    <label for="opensearch-password" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Password</label>
+                    <input type="password" id="opensearch-password" placeholder="••••••••" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+                  <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); cursor: pointer;">
+                      <input type="checkbox" id="opensearch-use-ssl" checked> Use SSL/HTTPS (port 9200/9220 biasanya pakai HTTPS)
+                    </label>
                   </div>
                 </div>
 
