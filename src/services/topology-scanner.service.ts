@@ -1,6 +1,7 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { TopologyNode, NetworkInterface } from "../types";
+import logger from "../config/logger";
 
 const execFileAsync = promisify(execFile);
 
@@ -35,11 +36,11 @@ export class TopologyScannerService {
 
     // Safety limit
     if (ips.length > TopologyScannerService.MAX_IP_COUNT) {
-      console.warn(`[Topology] IP range too large (${ips.length} IPs), limiting to ${TopologyScannerService.MAX_IP_COUNT}`);
+      logger.warn("Topology", `IP range too large (${ips.length} IPs), limiting to ${TopologyScannerService.MAX_IP_COUNT}`);
       ips.length = TopologyScannerService.MAX_IP_COUNT;
     }
 
-    console.log(`[Topology] Scanning ${ips.length} IPs in range ${ipRange}...`);
+    logger.topology(`Scanning ${ips.length} IPs in range ${ipRange}...`);
 
     const batchSize = 20;
     for (let i = 0; i < ips.length; i += batchSize) {
@@ -72,7 +73,7 @@ export class TopologyScannerService {
       }
     }
 
-    console.log(`[Topology] SNMP scan complete. Found ${nodes.length} alive hosts.`);
+    logger.topology(`SNMP scan complete. Found ${nodes.length} alive hosts.`);
     return nodes;
   }
 
@@ -85,7 +86,7 @@ export class TopologyScannerService {
       // Sanitize IP range to prevent command injection
       const sanitizedRange = ipRange.replace(/[^0-9a-fA-F.,\/\-:]/g, '');
       if (!sanitizedRange || sanitizedRange !== ipRange) {
-        console.error("[Topology] Nmap: invalid characters in IP range");
+        logger.error("Topology", "Nmap: invalid characters in IP range");
         return nodes;
       }
       const { stdout } = await execFileAsync("nmap", ["-sn", sanitizedRange], { timeout: 60000 });
@@ -117,9 +118,9 @@ export class TopologyScannerService {
           currentHostname = "";
         }
       }
-      console.log(`[Topology] Nmap discovered ${nodes.length} hosts in ${ipRange}`);
+      logger.topology(`Nmap discovered ${nodes.length} hosts in ${ipRange}`);
     } catch (err: any) {
-      console.error(`[Topology] Nmap error: ${err.message}`);
+      logger.error("Topology", `Nmap error: ${err.message}`);
     }
     return nodes;
   }

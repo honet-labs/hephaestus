@@ -1,5 +1,6 @@
 import { query } from "../config/db";
 import { TopologyNode, TopologyEdge, TopologySheet } from "../types";
+import logger from "../config/logger";
 
 // ==================== TOPOLOGY DATABASE SERVICE ====================
 
@@ -58,7 +59,7 @@ export class TopologyDbService {
         );
       }
     } catch (err: any) {
-      console.error("[Topology] saveDeviceToDb error:", err.message, "node:", node?.ip);
+      logger.error("Topology", "saveDeviceToDb error:", err.message, "node:", node?.ip);
       throw err;
     }
   }

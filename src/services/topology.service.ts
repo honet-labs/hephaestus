@@ -3,6 +3,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import pool, { query } from "../config/db";
 import { config } from "../config/env";
+import logger from "../config/logger";
 
 const execFileAsync = promisify(execFile);
 
@@ -95,7 +96,7 @@ export class TopologyService {
           `SELECT reload_url FROM prometheus_configs WHERE is_active = true LIMIT 1`
         );
         if (promRes.rows.length === 0) {
-          console.log("[Topology] No active Prometheus/Grafana config found, skipping Prometheus source.");
+          logger.topology("No active Prometheus/Grafana config found, skipping Prometheus source.");
           return nodes;
         }
         // Derive base URL from reload_url (e.g. http://prometheus:9090/-/reload → http://prometheus:9090)
@@ -123,7 +124,7 @@ export class TopologyService {
 
       const data = response.data;
       if (data.status !== "success" || !data.data?.activeTargets) {
-        console.log("[Topology] Prometheus targets response was not successful.");
+        logger.topology("Prometheus targets response was not successful.");
         return nodes;
       }
 
@@ -142,9 +143,9 @@ export class TopologyService {
         });
       }
 
-      console.log(`[Topology] Fetched ${nodes.length} targets from Prometheus.`);
+      logger.topology(`Fetched ${nodes.length} targets from Prometheus.`);
     } catch (err: any) {
-      console.error(`[Topology] Prometheus fetch error: ${err.message}`);
+      logger.error("Topology", `Prometheus fetch error: ${err.message}`);
     }
 
     return nodes;
@@ -183,7 +184,7 @@ export class TopologyService {
         `SELECT * FROM uptime_kuma_configs WHERE is_active = true LIMIT 1`
       );
       if (configRes.rows.length === 0) {
-        console.log("[Topology] No active Uptime Kuma config, skipping.");
+        logger.topology("No active Uptime Kuma config, skipping.");
         return nodes;
       }
 
@@ -198,7 +199,7 @@ export class TopologyService {
       });
 
       if (!monitorsRes.data?.ok) {
-        console.log("[Topology] Uptime Kuma monitor list request was not successful.");
+        logger.topology("Uptime Kuma monitor list request was not successful.");
         return nodes;
       }
 
@@ -236,9 +237,9 @@ export class TopologyService {
         });
       }
 
-      console.log(`[Topology] Fetched ${nodes.length} monitors from Uptime Kuma.`);
+      logger.topology(`Fetched ${nodes.length} monitors from Uptime Kuma.`);
     } catch (err: any) {
-      console.error(`[Topology] Uptime Kuma fetch error: ${err.message}`);
+      logger.error("Topology", `Uptime Kuma fetch error: ${err.message}`);
     }
 
     return nodes;
@@ -290,7 +291,7 @@ export class TopologyService {
     const nodes: TopologyNode[] = [];
     const ips = this.expandIpRange(ipRange);
 
-    console.log(`[Topology] Scanning ${ips.length} IPs in range ${ipRange}...`);
+    logger.topology(`Scanning ${ips.length} IPs in range ${ipRange}...`);
 
     const batchSize = 20;
     for (let i = 0; i < ips.length; i += batchSize) {
@@ -323,7 +324,7 @@ export class TopologyService {
       }
     }
 
-    console.log(`[Topology] SNMP scan complete. Found ${nodes.length} alive hosts.`);
+    logger.topology(`SNMP scan complete. Found ${nodes.length} alive hosts.`);
     return nodes;
   }
 
@@ -735,7 +736,7 @@ export class TopologyService {
         );
       }
     } catch (err: any) {
-      console.error("[Topology] saveDeviceToDb error:", err.message, "node:", node?.ip);
+      logger.error("Topology", "saveDeviceToDb error:", err.message, "node:", node?.ip);
       throw err;
     }
   }
@@ -832,7 +833,7 @@ export class TopologyService {
       // Sanitize IP range to prevent command injection
       const sanitizedRange = ipRange.replace(/[^0-9a-fA-F.,\/\-:]/g, '');
       if (!sanitizedRange || sanitizedRange !== ipRange) {
-        console.error("[Topology] Nmap: invalid characters in IP range");
+        logger.error("Topology", `Nmap: invalid characters in IP range`);
         return nodes;
       }
       const { stdout } = await execFileAsync("nmap", ["-sn", sanitizedRange], { timeout: 60000 });
@@ -864,9 +865,9 @@ export class TopologyService {
           currentHostname = "";
         }
       }
-      console.log(`[Topology] Nmap discovered ${nodes.length} hosts in ${ipRange}`);
+      logger.topology(`Nmap discovered ${nodes.length} hosts in ${ipRange}`);
     } catch (err: any) {
-      console.error(`[Topology] Nmap error: ${err.message}`);
+      logger.error("Topology", `Nmap error: ${err.message}`);
     }
     return nodes;
   }

@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import config, { updateActiveGrafanaCache, updateActivePrometheusCache } from "./env";
+import logger from "./logger";
 
 export let isDbConnected = false;
 export let dbConnectionError: string | null = null;
@@ -22,7 +23,7 @@ function getEncryptionKey(): Buffer {
 
   const envKey = process.env.ENCRYPTION_KEY;
   if (envKey) {
-    console.log(`[Crypto] Using ENCRYPTION_KEY env var (scrypt derivation)`);
+    logger.db(`Using ENCRYPTION_KEY env var (scrypt derivation)`);
     _cachedKey = crypto.scryptSync(envKey, "hephaestus-db-salt", KEY_LEN);
     return _cachedKey;
   }
@@ -30,20 +31,20 @@ function getEncryptionKey(): Buffer {
   try {
     if (fs.existsSync(KEY_FILE)) {
       const raw = fs.readFileSync(KEY_FILE, "utf-8").trim();
-      console.log(`[Crypto] Loaded key from ${KEY_FILE}`);
+      logger.db(`Loaded key from ${KEY_FILE}`);
       _cachedKey = Buffer.from(raw, "hex");
       return _cachedKey;
     }
-  } catch (e) { console.error(`[Crypto] Failed to read key file:`, e); }
+  } catch (e) { logger.dbError(`Failed to read key file:`, e); }
   // Generate new key and persist
-  console.log(`[Crypto] Generating NEW encryption key at ${KEY_FILE}`);
+  logger.db(`Generating NEW encryption key at ${KEY_FILE}`);
   _cachedKey = crypto.randomBytes(KEY_LEN);
   try {
     fs.mkdirSync(path.dirname(KEY_FILE), { recursive: true });
     fs.writeFileSync(KEY_FILE, _cachedKey.toString("hex"), { mode: 0o600 });
-    console.log(`[Crypto] Key saved to ${KEY_FILE}`);
+    logger.db(`Key saved to ${KEY_FILE}`);
   } catch (e: any) {
-    console.error(`[Crypto] Failed to write key file: ${e.message} — key cached in memory only`);
+    logger.dbError(`Failed to write key file: ${e.message} — key cached in memory only`);
   }
   return _cachedKey;
 }
@@ -63,22 +64,22 @@ export function decryptText(encryptedStr: string): string {
   // If not in expected format, return as-is (plaintext fallback)
   const parts = encryptedStr.split(":");
   if (parts.length !== 3) {
-    console.log(`[Crypto] decryptText: not encrypted format, returning as-is`);
+    logger.db(`decryptText: not encrypted format, returning as-is`);
     return encryptedStr;
   }
   try {
     const key = getEncryptionKey();
     const iv = Buffer.from(parts[0], "hex");
     const authTag = Buffer.from(parts[1], "hex");
-    console.log(`[Crypto] decryptText: attempting decryption`);
+    logger.db(`decryptText: attempting decryption`);
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(parts[2], "hex", "utf8");
     decrypted += decipher.final("utf8");
-    console.log(`[Crypto] decryptText: SUCCESS`);
+    logger.db(`decryptText: SUCCESS`);
     return decrypted;
   } catch (e: any) {
-    console.error(`[Crypto] decryptText FAILED: ${e.message}`);
+    logger.dbError(`decryptText FAILED: ${e.message}`);
     throw new Error(`Decryption failed: ${e.message}`);
   }
 }
@@ -101,7 +102,7 @@ export function loadDbConfig() {
         ssl: saved.ssl ? { rejectUnauthorized: config.sslRejectUnauthorized } : undefined
       };
     } catch (err) {
-      console.error("[DB] Failed to parse db_config.json, falling back to process.env", err);
+      logger.dbError("Failed to parse db_config.json, falling back to process.env", err);
     }
   }
 
@@ -128,9 +129,9 @@ export function saveDbConfigToFile(newConfig: any) {
       ssl: !!newConfig.ssl,
       encrypted: true
     }, null, 2), "utf-8");
-    console.log(`[DB] Saved database configuration to persistent storage: ${dbConfigPath}`);
+    logger.db(`Saved database configuration to persistent storage: ${dbConfigPath}`);
   } catch (err: any) {
-    console.error("[DB] Failed to save database configuration to file:", err.message);
+    logger.dbError("Failed to save database configuration to file:", err.message);
   }
 }
 
@@ -203,7 +204,7 @@ export async function ensureDatabaseExists(dbConfig: any) {
   } catch (err: any) {
     await tempPool.end().catch(() => {});
     if (err.code === "3D000" || (err.message && err.message.includes("does not exist"))) {
-      console.log(`[DB] Database "${targetDb}" does not exist. Attempting to create it automatically...`);
+      logger.db(`Database "${targetDb}" does not exist. Attempting to create it automatically...`);
       const adminClient = new Client({
         host: dbConfig.host,
         port: dbConfig.port,
@@ -217,9 +218,9 @@ export async function ensureDatabaseExists(dbConfig: any) {
         await adminClient.connect();
         const safeDbName = targetDb.replace(/[^a-zA-Z0-9_]/g, "");
         await adminClient.query(`CREATE DATABASE ${safeDbName}`);
-        console.log(`[DB] Database "${safeDbName}" created successfully!`);
+        logger.db(`Database "${safeDbName}" created successfully!`);
       } catch (createErr: any) {
-        console.error(`[DB] Failed to create database "${targetDb}":`, createErr.message);
+        logger.dbError(`Failed to create database "${targetDb}":`, createErr.message);
         throw createErr;
       } finally {
         await adminClient.end().catch(() => {});
@@ -233,7 +234,7 @@ export async function ensureDatabaseExists(dbConfig: any) {
 export function setupPool(dbConfig: any) {
   activeDbConfig = dbConfig;
   if (activePool) {
-    activePool.end().catch(err => console.error("[DB] Error ending old pool:", err));
+    activePool.end().catch(err => logger.dbError("Error ending old pool:", err));
   }
   activePool = new Pool({
     ...dbConfig,
@@ -271,11 +272,11 @@ export async function query(text: string, params?: any[]) {
     const res = await activePool.query(text, params);
     const duration = Date.now() - start;
     if (duration > 500) {
-      console.warn(`[DB] Slow query detected (${duration}ms)`);
+      logger.warn("Database", `Slow query detected (${duration}ms)`);
     }
     return res;
   } catch (err) {
-    console.error("[DB] Query error:", err);
+    logger.dbError("Query error:", err);
     throw err;
   }
 }
@@ -283,7 +284,7 @@ export async function query(text: string, params?: any[]) {
 export async function logActivity(module: string, action: string, details: string, status: string = "SUCCESS", userId: number | null = null) {
   try {
     if (!isDbConnected || !activePool) {
-      console.log(`[Activity Log (DB Offline)] [${module}] ${action}: ${details} (${status})`);
+      logger.db(`[Activity Log (DB Offline)] [${module}] ${action}: ${details} (${status})`);
       return;
     }
     await activePool.query(
@@ -291,12 +292,12 @@ export async function logActivity(module: string, action: string, details: strin
       [module, action, details, status, userId]
     );
   } catch (err) {
-    console.error("Failed to write activity log:", err);
+    logger.dbError("Failed to write activity log:", err);
   }
 }
 
 export async function initDb() {
-  console.log("⚙️  [DB] Initializing PostgreSQL connection pool and tables...");
+  logger.db("Initializing PostgreSQL connection pool and tables...");
   isDbConnected = false;
   dbConnectionError = null;
 
@@ -309,7 +310,7 @@ export async function initDb() {
     isDbConnected = true;
   } catch (err: any) {
     dbConnectionError = "Database connection failed";
-    console.warn("⚠️  [DB] PostgreSQL connection failed. Server will run in Setup Mode.");
+    logger.warn("Database", "PostgreSQL connection failed. Server will run in Setup Mode.");
     return;
   }
   
@@ -706,7 +707,7 @@ export async function initDb() {
   ];
   await Promise.all(indexQueries.map(q => pool.query(q)));
 
-  console.log("✅ [DB] PostgreSQL tables and indexes checked/created successfully.");
+  logger.db("PostgreSQL tables and indexes checked/created successfully.");
 
   // Seed default system roles if not exists
   try {
@@ -717,10 +718,10 @@ export async function initDb() {
          ('ADMIN', 'Full system administrator with unrestricted access', true),
          ('operator', 'Standard operator with read and execute permissions', true)`
       );
-      console.log("🌱 [DB] Seeded default system roles: ADMIN, operator");
+      logger.db("Seeded default system roles: ADMIN, operator");
     }
   } catch (err) {
-    console.error("❌ [DB] Failed to seed default roles:", err);
+    logger.dbError("Failed to seed default roles:", err);
   }
 
   // Seed setup_completed = false if not exists
@@ -730,7 +731,7 @@ export async function initDb() {
        ON CONFLICT (key) DO NOTHING`
     );
   } catch (err) {
-    console.error("❌ [DB] Failed to seed setup_completed:", err);
+    logger.dbError("Failed to seed setup_completed:", err);
   }
 
   // Automatic Data Migration from local JSON files
@@ -775,9 +776,9 @@ export async function populateMemoryCaches() {
     if (prometheusRes.rows.length > 0) {
       updateActivePrometheusCache(prometheusRes.rows[0]);
     }
-    console.log("⚡ [DB] Memory caches for active configurations synchronized successfully.");
+    logger.db("Memory caches for active configurations synchronized successfully.");
   } catch (err) {
-    console.error("❌ [DB] Failed to populate memory caches from database:", err);
+    logger.dbError("Failed to populate memory caches from database:", err);
   }
 }
 
@@ -787,7 +788,7 @@ export async function populateMemoryCaches() {
  * but the application database of record is now PostgreSQL.
  */
 async function migrateLocalDataToPg() {
-  console.log("🚚 [DB] Checking for legacy local JSON data to migrate...");
+  logger.db("Checking for legacy local JSON data to migrate...");
 
   const client = await pool.connect();
   try {
@@ -806,11 +807,11 @@ async function migrateLocalDataToPg() {
                VALUES ($1, $2, $3, $4, $5, $6)`,
               [item.id, item.name, item.host, item.token, item.datasourceUid || "bf5jy3ppyomwwd", !!item.isActive]
             );
-            console.log(`[DB Migration] Migrated Grafana config: ${item.name}`);
+            logger.db(`[DB Migration] Migrated Grafana config: ${item.name}`);
           }
         }
       } catch (err) {
-        console.error("[DB Migration] Error migrating Grafana configs:", err);
+        logger.dbError("[DB Migration] Error migrating Grafana configs:", err);
       }
     }
 
@@ -833,11 +834,11 @@ async function migrateLocalDataToPg() {
                 !!item.isActive
               ]
             );
-            console.log(`[DB Migration] Migrated Prometheus config: ${item.name}`);
+            logger.db(`[DB Migration] Migrated Prometheus config: ${item.name}`);
           }
         }
       } catch (err) {
-        console.error("[DB Migration] Error migrating Prometheus configs:", err);
+        logger.dbError("[DB Migration] Error migrating Prometheus configs:", err);
       }
     }
 
@@ -858,11 +859,11 @@ async function migrateLocalDataToPg() {
                VALUES ($1, $2, $3, $4, $5, $6)`,
               [item.id, name, item.description || "", interval, mode, JSON.stringify(panels)]
             );
-            console.log(`[DB Migration] Migrated Monitoring View: ${name}`);
+            logger.db(`[DB Migration] Migrated Monitoring View: ${name}`);
           }
         }
       } catch (err) {
-        console.error("[DB Migration] Error migrating Monitoring Views:", err);
+        logger.dbError("[DB Migration] Error migrating Monitoring Views:", err);
       }
     }
 
@@ -883,7 +884,7 @@ async function migrateLocalDataToPg() {
               "INSERT INTO imported_mibs (name, node_count, imported_at) VALUES ($1, $2, $3)",
               [mib.name, mib.nodeCount, mib.importedAt ? new Date(mib.importedAt) : new Date()]
             );
-            console.log(`[DB Migration] Migrated MIB module record: ${mib.name}`);
+            logger.db(`[DB Migration] Migrated MIB module record: ${mib.name}`);
           }
         }
 
@@ -914,17 +915,17 @@ async function migrateLocalDataToPg() {
         }
 
         if (oidsMigrated > 0) {
-          console.log(`[DB Migration] Migrated ${oidsMigrated} OID registry definitions to PostgreSQL.`);
+          logger.db(`[DB Migration] Migrated ${oidsMigrated} OID registry definitions to PostgreSQL.`);
         }
       } catch (err) {
-        console.error("[DB Migration] Error migrating MIBs/OIDs:", err);
+        logger.dbError("[DB Migration] Error migrating MIBs/OIDs:", err);
       }
     }
 
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("[DB Migration] Transaction failed, rolled back changes:", err);
+    logger.dbError("[DB Migration] Transaction failed, rolled back changes:", err);
   } finally {
     client.release();
   }

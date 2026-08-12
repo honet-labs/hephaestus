@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { topologyService } from "../services/topology.service";
 import { logActivity } from "../config/db";
+import logger from "../config/logger";
 
 export class TopologyController {
   /**
@@ -25,7 +26,7 @@ export class TopologyController {
         }
       });
     } catch (err: any) {
-      console.error("[Topology] getGraph error:", err.message);
+      logger.error("Topology", "getGraph error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to load topology graph." });
     }
   }
@@ -47,7 +48,7 @@ export class TopologyController {
       await logActivity("Network Topology", "Scan", `Scanned: ${nodes.length} candidates found`, "SUCCESS");
       return res.status(200).json({ success: true, data: { nodes, edges: [], meta: { totalNodes: nodes.length, totalEdges: 0 } } });
     } catch (err: any) {
-      console.error("[Topology] scanCandidates error:", err.message);
+      logger.error("Topology", "scanCandidates error:", err.message);
       return res.status(500).json({ success: false, error: "Scan failed: " + err.message });
     }
   }
@@ -63,12 +64,12 @@ export class TopologyController {
         return res.status(400).json({ success: false, error: "ip is required." });
       }
       const sheetId = node.sheetId ? parseInt(node.sheetId) : undefined;
-      console.log("[Topology] saveDevice:", node.name, node.ip, "sources:", node.sources, "sheet:", sheetId);
+      logger.topology(`saveDevice: ${node.name} ${node.ip} sources: ${node.sources} sheet: ${sheetId}`);
       await topologyService.saveDeviceToDb(node, sheetId);
       await logActivity("Network Topology", "Save Device", `Saved device "${node.name}" (${node.ip}) to database`, "SUCCESS");
       return res.status(200).json({ success: true, data: node });
     } catch (err: any) {
-      console.error("[Topology] saveDevice error:", err.message);
+      logger.error("Topology", "saveDevice error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to save device: " + err.message });
     }
   }
@@ -90,7 +91,7 @@ export class TopologyController {
       await logActivity("Network Topology", "Save All", `Saved ${nodes.length} devices to database`, "SUCCESS");
       return res.status(200).json({ success: true, data: { saved: nodes.length } });
     } catch (err: any) {
-      console.error("[Topology] saveAllDevices error:", err.message);
+      logger.error("Topology", "saveAllDevices error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to save devices: " + err.message });
     }
   }
@@ -113,7 +114,7 @@ export class TopologyController {
       await logActivity("Network Topology", "Add Device", `Added manual device "${name}" (${ip})`, "SUCCESS");
       return res.status(200).json({ success: true, data: node });
     } catch (err: any) {
-      console.error("[Topology] addDevice error:", err.message);
+      logger.error("Topology", "addDevice error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to add device." });
     }
   }
@@ -127,7 +128,7 @@ export class TopologyController {
       await logActivity("Network Topology", "Delete Device", `Deleted device "${req.params.id}"`, "SUCCESS");
       return res.status(200).json({ success: true, message: "Device deleted." });
     } catch (err: any) {
-      console.error("[Topology] deleteDevice error:", err.message);
+      logger.error("Topology", "deleteDevice error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to delete device." });
     }
   }
@@ -145,7 +146,7 @@ export class TopologyController {
       await topologyService.updateDevicePosition(id, x, y);
       return res.status(200).json({ success: true });
     } catch (err: any) {
-      console.error("[Topology] updatePosition error:", err.message);
+      logger.error("Topology", "updatePosition error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to update position." });
     }
   }
@@ -176,7 +177,7 @@ export class TopologyController {
       await logActivity("Network Topology", "Add Edge", `Added connection "${source}" -> "${target}"`, "SUCCESS");
       return res.status(200).json({ success: true, data: edge });
     } catch (err: any) {
-      console.error("[Topology] addEdge error:", err.message);
+      logger.error("Topology", "addEdge error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to add edge: " + err.message });
     }
   }
@@ -190,7 +191,7 @@ export class TopologyController {
       await logActivity("Network Topology", "Delete Edge", `Deleted edge #${req.params.id}`, "SUCCESS");
       return res.status(200).json({ success: true, message: "Edge deleted." });
     } catch (err: any) {
-      console.error("[Topology] deleteEdge error:", err.message);
+      logger.error("Topology", "deleteEdge error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to delete edge." });
     }
   }
@@ -201,7 +202,7 @@ export class TopologyController {
       await topologyService.updateEdge(parseInt(req.params.id), label, sourceLabel, targetLabel);
       return res.status(200).json({ success: true, message: "Edge updated." });
     } catch (err: any) {
-      console.error("[Topology] updateEdge error:", err.message);
+      logger.error("Topology", "updateEdge error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to update edge." });
     }
   }
@@ -223,7 +224,7 @@ export class TopologyController {
       );
       return res.status(200).json({ success: true, data: nodes });
     } catch (err: any) {
-      console.error("[Topology] scanSnmp error:", err.message);
+      logger.error("Topology", "scanSnmp error:", err.message);
       return res.status(500).json({ success: false, error: "SNMP scan failed: " + err.message });
     }
   }
@@ -296,7 +297,7 @@ export class TopologyController {
       const nodes = await topologyService.getPendingNodes(userId);
       return res.status(200).json({ success: true, data: nodes });
     } catch (err: any) {
-      console.error("[Topology] getPendingNodes error:", err.message);
+      logger.error("Topology", "getPendingNodes error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to load pending nodes." });
     }
   }
@@ -312,7 +313,7 @@ export class TopologyController {
       await topologyService.savePendingNodes(userId, nodes);
       return res.status(200).json({ success: true, data: { saved: nodes.length } });
     } catch (err: any) {
-      console.error("[Topology] savePendingNodes error:", err.message);
+      logger.error("Topology", "savePendingNodes error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to save pending nodes." });
     }
   }
@@ -331,7 +332,7 @@ export class TopologyController {
       }
       return res.status(200).json({ success: true });
     } catch (err: any) {
-      console.error("[Topology] clearPendingNodes error:", err.message);
+      logger.error("Topology", "clearPendingNodes error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to clear pending nodes." });
     }
   }
@@ -343,7 +344,7 @@ export class TopologyController {
       const sheets = await topologyService.getSheets();
       return res.status(200).json({ success: true, data: sheets });
     } catch (err: any) {
-      console.error("[Topology] getSheets error:", err.message);
+      logger.error("Topology", "getSheets error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to load sheets." });
     }
   }
@@ -357,7 +358,7 @@ export class TopologyController {
       const sheet = await topologyService.createSheet(name.trim());
       return res.status(201).json({ success: true, data: sheet });
     } catch (err: any) {
-      console.error("[Topology] createSheet error:", err.message);
+      logger.error("Topology", "createSheet error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to create sheet." });
     }
   }
@@ -373,7 +374,7 @@ export class TopologyController {
       if (!sheet) return res.status(404).json({ success: false, error: "Sheet not found." });
       return res.status(200).json({ success: true, data: sheet });
     } catch (err: any) {
-      console.error("[Topology] updateSheet error:", err.message);
+      logger.error("Topology", "updateSheet error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to update sheet." });
     }
   }
@@ -385,7 +386,7 @@ export class TopologyController {
       if (!deleted) return res.status(404).json({ success: false, error: "Sheet not found." });
       return res.status(200).json({ success: true });
     } catch (err: any) {
-      console.error("[Topology] deleteSheet error:", err.message);
+      logger.error("Topology", "deleteSheet error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to delete sheet." });
     }
   }
@@ -400,7 +401,7 @@ export class TopologyController {
       await topologyService.reorderSheet(parseInt(id), sort_order);
       return res.status(200).json({ success: true });
     } catch (err: any) {
-      console.error("[Topology] reorderSheet error:", err.message);
+      logger.error("Topology", "reorderSheet error:", err.message);
       return res.status(500).json({ success: false, error: "Failed to reorder sheet." });
     }
   }

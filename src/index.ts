@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import path from "path";
 import config from "./config/env";
+import logger from "./config/logger";
 import { initDb, isDbConnected } from "./config/db";
 import { globalLimiter } from "./middleware/rate-limit.middleware";
 import settingsRoutes from "./routes/settings.routes";
@@ -91,7 +92,7 @@ app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
 // Simple logger middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Origin: ${req.get("origin") || "N/A"}`);
+  logger.info("Server", `${req.method} ${req.path} - Origin: ${req.get("origin") || "N/A"}`);
   next();
 });
 
@@ -167,7 +168,7 @@ app.use((req: Request, res: Response) => {
 
 // 6. Global Error Handling Middleware
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
-  console.error("Unhandled global server error:", err);
+  logger.error("Server", "Unhandled global server error:", err);
   
   res.status(500).json({
     success: false,
@@ -185,48 +186,48 @@ initDb()
       try {
         const { SnmpService } = require("./services/snmp.service");
         const snmpService = new SnmpService();
-        console.log("⚙️  [SNMP] Synchronizing MIB files from persistent storage...");
+        logger.info("SNMP", "Synchronizing MIB files from persistent storage...");
         await snmpService.syncMibsFromDisk();
       } catch (err: any) {
-        console.error("⚠️  [SNMP] Error during MIB auto-sync:", err.message);
+        logger.error("SNMP", "Error during MIB auto-sync:", err.message);
       }
 
       try {
         const { uptimeKumaService } = require("./services/uptime-kuma.service");
-        console.log("⚙️  [Uptime Kuma] Loading configs...");
+        logger.info("Uptime Kuma", "Loading configs...");
         await uptimeKumaService.loadConfigs();
         const configs = await uptimeKumaService.getConfigs();
         const active = configs.find((c: any) => c.is_active);
         if (active) {
           await uptimeKumaService.setActiveConfig(active.id);
-          console.log(`⚙️  [Uptime Kuma] Active config: ${active.name}`);
+          logger.info("Uptime Kuma", `Active config: ${active.name}`);
         } else {
-          console.log("⚙️  [Uptime Kuma] No active config found.");
+          logger.info("Uptime Kuma", "No active config found.");
         }
       } catch (err: any) {
-        console.error("⚠️  [Uptime Kuma] Error loading configs:", err.message);
+        logger.error("Uptime Kuma", "Error loading configs:", err.message);
       }
 
       try {
         const { backupService } = require("./services/backup.service");
         await backupService.initScheduler();
       } catch (err: any) {
-        console.error("⚠️  [Backup] Error initializing scheduler:", err.message);
+        logger.error("Backup", "Error initializing scheduler:", err.message);
       }
     } else {
-      console.warn("⚠️  [SNMP] Database is not connected. Skipping MIB auto-sync.");
+      logger.warn("SNMP", "Database is not connected. Skipping MIB auto-sync.");
     }
   })
   .catch((err) => {
-    console.error("⚠️ [DB] Warning: Database schema initialization threw an error:", err);
+    logger.dbError("Warning: Database schema initialization threw an error:", err);
   })
   .finally(() => {
     server = app.listen(config.port, () => {
       const activeGrafana = config.getGrafanaConfig();
-      console.log(`🚀 Hephaestus backend service version 2.0.0 started successfully.`);
-      console.log(`📡 Listening on http://localhost:${config.port}`);
-      console.log(`🔒 Allowed CORS origins: ${config.allowedOrigins.join(", ")}`);
-      console.log(`📊 Target Grafana: ${activeGrafana.host}`);
+      logger.info("Server", `Hephaestus backend service version 2.0.0 started successfully.`);
+      logger.info("Server", `Listening on http://localhost:${config.port}`);
+      logger.info("Server", `Allowed CORS origins: ${config.allowedOrigins.join(", ")}`);
+      logger.info("Server", `Target Grafana: ${activeGrafana.host}`);
 
       // Periodic session cleanup (every 6 hours)
       setInterval(async () => {
@@ -234,9 +235,9 @@ initDb()
           const dbModule = require("./config/db");
           const pool = dbModule.default || dbModule.pool;
           const { rows } = await pool.query("DELETE FROM user_sessions WHERE expires_at < NOW() RETURNING id");
-          if (rows.length > 0) console.log(`🧹 [Session] Cleaned up ${rows.length} expired sessions.`);
+          if (rows.length > 0) logger.info("Session", `Cleaned up ${rows.length} expired sessions.`);
         } catch (err: any) {
-          console.error("⚠️  [Session] Error cleaning expired sessions:", err.message);
+          logger.error("Session", "Error cleaning expired sessions:", err.message);
         }
       }, 6 * 60 * 60 * 1000);
 
@@ -343,7 +344,7 @@ initDb()
         ws.on("close", () => { clearTimeout(authTimeout); });
       });
 
-      console.log(`🔌 WebSocket server for Remote Host terminal started on /ws/remote-host`);
+      logger.info("Server", "WebSocket server for Remote Host terminal started on /ws/remote-host");
     });
   });
 
