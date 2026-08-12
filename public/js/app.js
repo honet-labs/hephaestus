@@ -1399,11 +1399,15 @@ async function pingServer(id) {
 
 function toggleConnectionFields() {
   const type = document.getElementById('connection-type')?.value;
+  console.log('[Connection] toggleConnectionFields called, type:', type);
+  
   const grafanaFields = document.getElementById('grafana-fields');
   const prometheusFields = document.getElementById('prometheus-fields');
   const dataprepperFields = document.getElementById('dataprepper-fields');
   const ukFields = document.getElementById('uptime-kuma-fields');
   const osFields = document.getElementById('opensearch-fields');
+  
+  console.log('[Connection] osFields element:', osFields ? 'found' : 'NOT FOUND');
   
   // Hide all first
   if (grafanaFields) grafanaFields.style.display = 'none';
@@ -1417,7 +1421,10 @@ function toggleConnectionFields() {
   else if (type === 'prometheus' && prometheusFields) prometheusFields.style.display = 'flex';
   else if (type === 'dataprepper' && dataprepperFields) dataprepperFields.style.display = 'flex';
   else if (type === 'uptime-kuma' && ukFields) ukFields.style.display = 'flex';
-  else if (type === 'opensearch' && osFields) osFields.style.display = 'flex';
+  else if (type === 'opensearch' && osFields) {
+    console.log('[Connection] Showing OpenSearch fields');
+    osFields.style.display = 'flex';
+  }
 }
 
 function togglePrometheusModeFields() {

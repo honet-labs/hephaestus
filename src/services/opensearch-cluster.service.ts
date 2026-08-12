@@ -216,14 +216,16 @@ export class OpenSearchClusterService {
       logger.opensearch(`Using Basic Auth for user: ${config.username}`);
     }
 
-    // Add SSL handling - respect verify_ssl config
+    // Add SSL handling - default to false for self-signed certs
     if (config.use_ssl) {
       const https = require("https");
+      // Only verify SSL if explicitly set to true (most OpenSearch use self-signed certs)
+      const shouldVerify = config.verify_ssl === true;
       axiosConfig.httpsAgent = new https.Agent({
-        rejectUnauthorized: config.verify_ssl !== false,
+        rejectUnauthorized: shouldVerify,
         secureProtocol: "TLSv1_2_method"
       });
-      logger.opensearch(`SSL enabled, verify: ${config.verify_ssl !== false}`);
+      logger.opensearch(`SSL enabled, verify: ${shouldVerify}`);
     }
 
     return axiosConfig;
