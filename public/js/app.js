@@ -1403,28 +1403,21 @@ function toggleConnectionFields() {
   const prometheusFields = document.getElementById('prometheus-fields');
   const dataprepperFields = document.getElementById('dataprepper-fields');
   const ukFields = document.getElementById('uptime-kuma-fields');
-  
-  if (grafanaFields) {
-    if (type === 'grafana') { grafanaFields.classList.remove('hidden'); grafanaFields.style.display = 'flex'; }
-    else { grafanaFields.classList.add('hidden'); grafanaFields.style.display = 'none'; }
-  }
-  if (prometheusFields) {
-    if (type === 'prometheus') { prometheusFields.classList.remove('hidden'); prometheusFields.style.display = 'flex'; }
-    else { prometheusFields.classList.add('hidden'); prometheusFields.style.display = 'none'; }
-  }
-  if (dataprepperFields) {
-    if (type === 'dataprepper') { dataprepperFields.classList.remove('hidden'); dataprepperFields.style.display = 'flex'; }
-    else { dataprepperFields.classList.add('hidden'); dataprepperFields.style.display = 'none'; }
-  }
-  if (ukFields) {
-    if (type === 'uptime-kuma') { ukFields.classList.remove('hidden'); ukFields.style.display = 'flex'; }
-    else { ukFields.classList.add('hidden'); ukFields.style.display = 'none'; }
-  }
   const osFields = document.getElementById('opensearch-fields');
-  if (osFields) {
-    if (type === 'opensearch') { osFields.classList.remove('hidden'); osFields.style.display = 'flex'; }
-    else { osFields.classList.add('hidden'); osFields.style.display = 'none'; }
-  }
+  
+  // Hide all first
+  if (grafanaFields) { grafanaFields.classList.add('hidden'); grafanaFields.style.display = 'none'; }
+  if (prometheusFields) { prometheusFields.classList.add('hidden'); prometheusFields.style.display = 'none'; }
+  if (dataprepperFields) { dataprepperFields.classList.add('hidden'); dataprepperFields.style.display = 'none'; }
+  if (ukFields) { ukFields.classList.add('hidden'); ukFields.style.display = 'none'; }
+  if (osFields) { osFields.classList.add('hidden'); osFields.style.display = 'none'; }
+  
+  // Show selected type
+  if (type === 'grafana' && grafanaFields) { grafanaFields.classList.remove('hidden'); grafanaFields.style.display = 'flex'; }
+  else if (type === 'prometheus' && prometheusFields) { prometheusFields.classList.remove('hidden'); prometheusFields.style.display = 'flex'; }
+  else if (type === 'dataprepper' && dataprepperFields) { dataprepperFields.classList.remove('hidden'); dataprepperFields.style.display = 'flex'; }
+  else if (type === 'uptime-kuma' && ukFields) { ukFields.classList.remove('hidden'); ukFields.style.display = 'flex'; }
+  else if (type === 'opensearch' && osFields) { osFields.classList.remove('hidden'); osFields.style.display = 'flex'; }
 }
 
 function togglePrometheusModeFields() {
