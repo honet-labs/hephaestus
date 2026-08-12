@@ -829,9 +829,14 @@ export class TopologyService {
   async discoverWithNmap(ipRange: string): Promise<TopologyNode[]> {
     const nodes: TopologyNode[] = [];
     try {
-      const { execSync } = require("child_process");
-      const output = execSync(`nmap -sn ${ipRange}`, { timeout: 60000, encoding: "utf-8" });
-      const lines = output.split("\n");
+      // Sanitize IP range to prevent command injection
+      const sanitizedRange = ipRange.replace(/[^0-9a-fA-F.,\/\-:]/g, '');
+      if (!sanitizedRange || sanitizedRange !== ipRange) {
+        console.error("[Topology] Nmap: invalid characters in IP range");
+        return nodes;
+      }
+      const { stdout } = await execFileAsync("nmap", ["-sn", sanitizedRange], { timeout: 60000 });
+      const lines = stdout.split("\n");
       let currentIp = "";
       let currentHostname = "";
       for (const line of lines) {

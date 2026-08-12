@@ -233,16 +233,22 @@ export class TopologyController {
    */
   public async pingDevice(req: Request, res: Response) {
     try {
-      const { execSync } = require("child_process");
       const deviceId = req.params.id;
       const result = await (await import("../config/db")).query("SELECT ip_address FROM topology_devices WHERE id = $1", [deviceId]);
       if (result.rows.length === 0) {
         return res.status(404).json({ success: false, error: "Device not found." });
       }
       const ip = result.rows[0].ip_address;
-      // Use -c (count) not -n — BusyBox/Alpine compatibility
-      const output = execSync(`ping -c 4 -W 3 ${ip}`, { timeout: 15000, encoding: "utf-8" });
-      return res.status(200).json({ success: true, output });
+      // Validate IP address to prevent command injection
+      const ipRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+      if (!ipRegex.test(ip)) {
+        return res.status(400).json({ success: false, error: "Invalid IP address format." });
+      }
+      const { execFile } = require("child_process");
+      const { promisify } = require("util");
+      const execFileAsync = promisify(execFile);
+      const { stdout } = await execFileAsync("ping", ["-c", "4", "-W", "3", ip], { timeout: 15000 });
+      return res.status(200).json({ success: true, output: stdout });
     } catch (err: any) {
       return res.status(200).json({ success: true, output: err.stdout || err.message });
     }
@@ -253,7 +259,6 @@ export class TopologyController {
    */
   public async snmpWalkDevice(req: Request, res: Response) {
     try {
-      const { execSync } = require("child_process");
       const deviceId = req.params.id;
       const result = await (await import("../config/db")).query(
         "SELECT ip_address, labels FROM topology_devices WHERE id = $1", [deviceId]
@@ -265,9 +270,18 @@ export class TopologyController {
       const labels = result.rows[0].labels || {};
       const community = labels.snmp_community || "public";
       const version = labels.snmp_version || "2c";
+      // Validate IP and community to prevent command injection
+      const ipRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+      if (!ipRegex.test(ip)) {
+        return res.status(400).json({ success: false, error: "Invalid IP address." });
+      }
+      const safeCommunity = community.replace(/[^a-zA-Z0-9_\-]/g, '');
       const verFlag = version === "1" ? "-v1" : "-v2c";
-      const output = execSync(`snmpwalk ${verFlag} -c ${community} ${ip} .1`, { timeout: 15000, encoding: "utf-8" });
-      return res.status(200).json({ success: true, output });
+      const { execFile } = require("child_process");
+      const { promisify } = require("util");
+      const execFileAsync = promisify(execFile);
+      const { stdout } = await execFileAsync("snmpwalk", [verFlag, "-c", safeCommunity, ip, ".1"], { timeout: 15000 });
+      return res.status(200).json({ success: true, output: stdout });
     } catch (err: any) {
       return res.status(200).json({ success: true, output: err.stdout || err.message });
     }
