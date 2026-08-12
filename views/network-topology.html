@@ -920,30 +920,43 @@
     // Load pending nodes from DB on startup
     async function loadPendingFromDB() {
         try {
+            console.log('[Topology] Loading pending nodes from DB...');
             const data = await apiFetch('/api/v1/topology/pending');
+            console.log('[Topology] Pending nodes response:', data);
             if (data.success && data.data && data.data.length > 0) {
                 pendingNodes = data.data;
                 pendingNodes.forEach(n => n._saved = true);
+                console.log('[Topology] Loaded', pendingNodes.length, 'pending nodes from DB');
                 renderPendingList('Scan Results');
                 document.getElementById('results-sidebar').classList.add('visible');
                 sidebarVisible = true;
                 document.getElementById('sidebar-toggle').classList.add('shifted');
                 document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
+            } else {
+                console.log('[Topology] No pending nodes found in DB');
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('[Topology] Failed to load pending nodes:', e);
+        }
     }
 
     function savePendingToDB() {
         try {
             const unsaved = pendingNodes.filter(n => !n._saved);
             if (unsaved.length === 0) return;
+            console.log('[Topology] Saving', unsaved.length, 'pending nodes to DB');
             apiFetch('/api/v1/topology/pending', {
                 method: 'POST',
                 body: JSON.stringify({ nodes: unsaved })
-            }).then(() => {
+            }).then((res) => {
+                console.log('[Topology] Saved pending nodes:', res);
                 unsaved.forEach(n => n._saved = true);
-            }).catch(() => {});
-        } catch (e) {}
+            }).catch((e) => {
+                console.error('[Topology] Failed to save pending nodes:', e);
+            });
+        } catch (e) {
+            console.error('[Topology] savePendingToDB error:', e);
+        }
     }
 
     function deletePendingFromDB(ids) {
@@ -1795,6 +1808,13 @@
             pendingNodes.push(...deduped);
             savePendingToDB();
             renderPendingList('Scan Results');
+            // Auto-show sidebar if hidden
+            if (!sidebarVisible && pendingNodes.length > 0) {
+                document.getElementById('results-sidebar').classList.add('visible');
+                sidebarVisible = true;
+                document.getElementById('sidebar-toggle').classList.add('shifted');
+                document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
+            }
             updateStatus(`Scan found ${deduped.length} new device(s) (${newNodes.length - deduped.length} duplicates skipped)`);
             showToast('success', `Scan complete: ${deduped.length} new device(s) found`);
         } catch (e) {
@@ -1829,8 +1849,17 @@
             if (!data.success) throw new Error(data.error);
             closeModal('modal-add-device');
             const node = data.data;
+            node._saved = false;
             pendingNodes.push(node);
+            savePendingToDB();
             renderPendingList('Added Devices');
+            // Auto-show sidebar if hidden
+            if (!sidebarVisible) {
+                document.getElementById('results-sidebar').classList.add('visible');
+                sidebarVisible = true;
+                document.getElementById('sidebar-toggle').classList.add('shifted');
+                document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
+            }
             showToast('success', `"${name}" added to pending list`);
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     }
