@@ -217,8 +217,8 @@ export async function ensureDatabaseExists(dbConfig: any) {
   }
 }
 
-export let isDbConnected = false;
-export let dbConnectionError: string | null = null;
+export let isDbConnected = false; // eslint-disable-line prefer-const
+export let dbConnectionError: string | null = null; // eslint-disable-line prefer-const
 let activePool: Pool;
 let activeDbConfig: any; // eslint-disable-line @typescript-eslint/no-unused-vars
 
