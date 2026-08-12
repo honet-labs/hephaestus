@@ -573,7 +573,7 @@
                 </div>
 
                 <!-- Grafana-specific fields -->
-                <div id="grafana-fields" style="display: flex; flex-direction: column; gap: 16px;">
+                <div id="grafana-fields" style="display: none; flex-direction: column; gap: 16px;">
                   <div class="form-group">
                     <label for="grafana-host" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">API Endpoint URL</label>
                     <input type="text" id="grafana-host" placeholder="e.g. http://172.18.29.120:3000" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
@@ -591,7 +591,7 @@
                 </div>
 
                 <!-- Prometheus-specific fields -->
-                <div id="prometheus-fields" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
+                <div id="prometheus-fields" style="display: none; flex-direction: column; gap: 16px;">
                   <div class="form-group">
                     <label for="prometheus-mode" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">File Access Mode</label>
                     <select id="prometheus-mode" class="form-control" onchange="togglePrometheusModeFields()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
@@ -649,7 +649,7 @@
                 </div>
 
                 <!-- Data Prepper-specific fields -->
-                <div id="dataprepper-fields" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
+                <div id="dataprepper-fields" style="display: none; flex-direction: column; gap: 16px;">
                   <div class="form-group">
                     <label for="dataprepper-mode" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">File Access Mode</label>
                     <select id="dataprepper-mode" class="form-control" onchange="toggleDataprepperModeFields()" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%;">
@@ -707,7 +707,7 @@
                 </div>
 
                 <!-- Uptime Kuma-specific fields -->
-                <div id="uptime-kuma-fields" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
+                <div id="uptime-kuma-fields" style="display: none; flex-direction: column; gap: 16px;">
                   <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: var(--text-muted); line-height: 1.5;">
                     Connects to <strong style="color: var(--text-white);">Uptime Kuma REST API Wrapper</strong>. Deploy the wrapper first: <code style="background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 3px; font-size: 10px;">git clone https://github.com/keithah/uptime-kuma-rest-api</code>
                   </div>
@@ -728,7 +728,7 @@
                 </div>
 
                 <!-- OpenSearch-specific fields -->
-                <div id="opensearch-fields" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
+                <div id="opensearch-fields" style="display: none; flex-direction: column; gap: 16px;">
                   <div class="form-group">
                     <label for="opensearch-host" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Host</label>
                     <input type="text" id="opensearch-host" placeholder="e.g. 10.10.5.89" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">

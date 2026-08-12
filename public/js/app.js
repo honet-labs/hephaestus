@@ -1406,18 +1406,18 @@ function toggleConnectionFields() {
   const osFields = document.getElementById('opensearch-fields');
   
   // Hide all first
-  if (grafanaFields) { grafanaFields.classList.add('hidden'); grafanaFields.style.display = 'none'; }
-  if (prometheusFields) { prometheusFields.classList.add('hidden'); prometheusFields.style.display = 'none'; }
-  if (dataprepperFields) { dataprepperFields.classList.add('hidden'); dataprepperFields.style.display = 'none'; }
-  if (ukFields) { ukFields.classList.add('hidden'); ukFields.style.display = 'none'; }
-  if (osFields) { osFields.classList.add('hidden'); osFields.style.display = 'none'; }
+  if (grafanaFields) grafanaFields.style.display = 'none';
+  if (prometheusFields) prometheusFields.style.display = 'none';
+  if (dataprepperFields) dataprepperFields.style.display = 'none';
+  if (ukFields) ukFields.style.display = 'none';
+  if (osFields) osFields.style.display = 'none';
   
   // Show selected type
-  if (type === 'grafana' && grafanaFields) { grafanaFields.classList.remove('hidden'); grafanaFields.style.display = 'flex'; }
-  else if (type === 'prometheus' && prometheusFields) { prometheusFields.classList.remove('hidden'); prometheusFields.style.display = 'flex'; }
-  else if (type === 'dataprepper' && dataprepperFields) { dataprepperFields.classList.remove('hidden'); dataprepperFields.style.display = 'flex'; }
-  else if (type === 'uptime-kuma' && ukFields) { ukFields.classList.remove('hidden'); ukFields.style.display = 'flex'; }
-  else if (type === 'opensearch' && osFields) { osFields.classList.remove('hidden'); osFields.style.display = 'flex'; }
+  if (type === 'grafana' && grafanaFields) grafanaFields.style.display = 'flex';
+  else if (type === 'prometheus' && prometheusFields) prometheusFields.style.display = 'flex';
+  else if (type === 'dataprepper' && dataprepperFields) dataprepperFields.style.display = 'flex';
+  else if (type === 'uptime-kuma' && ukFields) ukFields.style.display = 'flex';
+  else if (type === 'opensearch' && osFields) osFields.style.display = 'flex';
 }
 
 function togglePrometheusModeFields() {
