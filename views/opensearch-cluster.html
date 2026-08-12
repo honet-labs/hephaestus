@@ -408,8 +408,7 @@
 
         // ==================== AUTH ====================
         function getToken() {
-            const match = document.cookie.match(/(?:^|;\s*)session_token=([^;]*)/);
-            return match ? decodeURIComponent(match[1]) : null;
+            return localStorage.getItem('hephaestus_session_token');
         }
 
         async function apiFetch(url, options = {}) {
@@ -485,7 +484,6 @@
                 document.getElementById('configUsername').value = config.username;
                 document.getElementById('configPassword').value = '';
                 document.getElementById('configUseSsl').checked = config.use_ssl;
-                document.getElementById('configVerifySsl').checked = config.verify_ssl;
                 document.getElementById('configModalTitle').textContent = 'Edit OpenSearch Connection';
                 document.getElementById('configModal').classList.add('show');
             } catch (err) {
@@ -512,7 +510,6 @@
             document.getElementById('configUsername').value = '';
             document.getElementById('configPassword').value = '';
             document.getElementById('configUseSsl').checked = true; // Default SSL on for port 9220
-            document.getElementById('configVerifySsl').checked = false;
             document.getElementById('configModalTitle').textContent = 'Add OpenSearch Connection';
             document.getElementById('configTestResult').innerHTML = '';
             document.getElementById('configModal').classList.add('show');
@@ -615,6 +612,13 @@
             document.getElementById('clusterStatusDot').className = 'status-dot gray';
             document.getElementById('clusterStatusText').textContent = 'No connection configured';
             document.getElementById('clusterInfo').style.display = 'none';
+            // Show notification on all tabs
+            ['overview', 'nodes', 'indices', 'shards'].forEach(tabId => {
+                const pane = document.getElementById(tabId);
+                if (pane) {
+                    pane.innerHTML = `<div class="empty-state"><h3>No OpenSearch Connection</h3><p>Please add an OpenSearch connection first via <a href="/" style="color:var(--accent);">Portal → Connections</a> or use the Connection tab below.</p><button class="btn btn-primary" onclick="document.querySelector('[data-tab=config]').click()">Go to Connection Tab</button></div>`;
+                }
+            });
         }
 
         // ==================== STATUS BAR ====================

@@ -403,6 +403,7 @@ let grafanaConfigs = [];
 let prometheusConfigs = [];
 let dataprepperConfigs = [];
 let uptimeKumaConfigs = [];
+let opensearchConfigs = [];
 
 // DOM elements
 const activeModuleName = document.getElementById('active-module-name');
@@ -1075,8 +1076,16 @@ async function loadSettingsRegistry() {
       }
     } catch (_) {}
 
+    try {
+      const resOS = await fetch('/api/v1/opensearch-cluster/configs');
+      const rOS = await resOS.json();
+      if (rOS.success && Array.isArray(rOS.data)) {
+        opensearchConfigs = rOS.data;
+      }
+    } catch (_) {}
+
     // 3. Render list in registry-cards-container
-    const totalCount = grafanaConfigs.length + prometheusConfigs.length + dataprepperConfigs.length + uptimeKumaConfigs.length;
+    const totalCount = grafanaConfigs.length + prometheusConfigs.length + dataprepperConfigs.length + uptimeKumaConfigs.length + opensearchConfigs.length;
     const headerTitle = document.getElementById('registry-header-title');
     if (headerTitle) {
       headerTitle.textContent = `Active Registry (${totalCount})`;
@@ -1258,6 +1267,47 @@ async function loadSettingsRegistry() {
       `;
     });
 
+    // Render OpenSearch connections
+    opensearchConfigs.forEach(c => {
+      html += `
+        <div class="registry-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--app-card-dark); border: 1px solid var(--app-border); padding: 14px 16px; border-radius: 6px; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+            <div style="width: 36px; height: 36px; background: rgba(88, 166, 255, 0.1); border: 1px solid rgba(88, 166, 255, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #58a6ff; flex-shrink: 0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-weight: 600; color: var(--text-white); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${escapeHtml(c.name)}</span>
+                <span class="status-badge" style="background: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">OPENSEARCH</span>
+                ${c.is_active ? '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 9px; padding: 1px 4px; font-weight: bold; line-height: 1;">ACTIVE</span>' : ''}
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0;">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <span class="font-mono" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(c.host)}:${c.port}</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <span id="conn-status-${escapeHtml(c.id)}" class="status-badge status-default" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; display: inline-flex; align-items: center; padding: 2px 6px; height: 26px; box-sizing: border-box; line-height: 1;">
+              CHECKING...
+            </span>
+            <button type="button" class="btn btn-secondary" onclick="pingOpenSearchServer('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Ping Test</button>
+            ${!c.is_active ? `<button type="button" class="btn btn-secondary" onclick="activateOpenSearchConfig('${escapeAttr(c.id)}')" style="padding: 4px 8px; font-size: 10px; height: 26px; line-height: 1; text-transform: none; font-weight: 500;">Activate</button>` : ''}
+            <button type="button" class="btn btn-secondary" onclick="editOpenSearchConfigById('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="Edit Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="deleteOpenSearchConfig('${escapeAttr(c.id)}')" style="width: 26px; height: 26px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #ff7b72; border-color: rgba(255, 123, 114, 0.15);" title="Delete Config">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
     registryCardsContainer.innerHTML = html;
 
     // Trigger asynchronous connection checks
@@ -1275,6 +1325,10 @@ async function loadSettingsRegistry() {
 
     uptimeKumaConfigs.forEach(c => {
       checkUptimeKumaCardConnection(c.id);
+    });
+
+    opensearchConfigs.forEach(c => {
+      checkOpenSearchCardConnection(c.id);
     });
 
   } catch (error) {
@@ -1366,6 +1420,11 @@ function toggleConnectionFields() {
     if (type === 'uptime-kuma') { ukFields.classList.remove('hidden'); ukFields.style.display = 'flex'; }
     else { ukFields.classList.add('hidden'); ukFields.style.display = 'none'; }
   }
+  const osFields = document.getElementById('opensearch-fields');
+  if (osFields) {
+    if (type === 'opensearch') { osFields.classList.remove('hidden'); osFields.style.display = 'flex'; }
+    else { osFields.classList.add('hidden'); osFields.style.display = 'none'; }
+  }
 }
 
 function togglePrometheusModeFields() {
@@ -1438,6 +1497,17 @@ function clearConnectionForm() {
   if (inputDataprepperSshAuth) inputDataprepperSshAuth.value = 'password';
   if (inputDataprepperSshPassword) inputDataprepperSshPassword.value = '';
   if (inputDataprepperSshKey) inputDataprepperSshKey.value = '';
+
+  const osHost = document.getElementById('opensearch-host');
+  const osPort = document.getElementById('opensearch-port');
+  const osUsername = document.getElementById('opensearch-username');
+  const osPassword = document.getElementById('opensearch-password');
+  const osUseSsl = document.getElementById('opensearch-use-ssl');
+  if (osHost) osHost.value = '';
+  if (osPort) osPort.value = '9220';
+  if (osUsername) osUsername.value = '';
+  if (osPassword) osPassword.value = '';
+  if (osUseSsl) osUseSsl.checked = true;
 
   toggleConnectionFields();
   togglePrometheusModeFields();
@@ -1869,6 +1939,96 @@ async function deleteUptimeKumaConfig(id) {
   }
 }
 
+// ==================== OPENSEARCH CONFIG FUNCTIONS ====================
+async function checkOpenSearchCardConnection(id) {
+  const badge = document.getElementById(`conn-status-${id}`);
+  if (!badge) return;
+  try {
+    const res = await fetch(`/api/v1/opensearch-cluster/test-connection`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      badge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+      badge.style.color = '#10b981';
+      badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      badge.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>CONNECTED`;
+    } else {
+      badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      badge.style.color = '#ef4444';
+      badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      badge.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>OFFLINE`;
+    }
+  } catch {
+    badge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+    badge.style.color = '#ef4444';
+    badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+    badge.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>OFFLINE`;
+  }
+}
+
+async function pingOpenSearchServer(id) {
+  const badge = document.getElementById(`conn-status-${id}`);
+  if (badge) { badge.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'; badge.style.color = '#f59e0b'; badge.style.borderColor = 'rgba(245, 158, 11, 0.3)'; badge.innerHTML = 'CHECKING...'; }
+  addLog('Configuration', 'Pinging OpenSearch server...', 'INFO');
+  await checkOpenSearchCardConnection(id);
+}
+
+async function activateOpenSearchConfig(id) {
+  try {
+    const res = await fetch(`/api/v1/opensearch-cluster/configs/${id}/activate`, { method: 'POST' });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Configuration', 'OpenSearch config activated.', 'SUCCESS');
+      await loadSettingsRegistry();
+    } else {
+      addLog('Configuration', `Activate failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (e) {
+    addLog('Configuration', 'Network error during activation.', 'ERROR');
+  }
+}
+
+async function editOpenSearchConfigById(id) {
+  try {
+    const res = await fetch(`/api/v1/opensearch-cluster/configs`);
+    const result = await res.json();
+    const config = (result.data || []).find(c => c.id === id);
+    if (!config) return;
+    document.getElementById('connection-type').value = 'opensearch';
+    toggleConnectionFields();
+    document.getElementById('connection-id').value = id;
+    document.getElementById('connection-name').value = config.name;
+    document.getElementById('opensearch-host').value = config.host;
+    document.getElementById('opensearch-port').value = config.port;
+    document.getElementById('opensearch-username').value = config.username;
+    document.getElementById('opensearch-password').value = '';
+    document.getElementById('opensearch-use-ssl').checked = config.use_ssl;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (e) {
+    addLog('Configuration', 'Failed to load OpenSearch config for editing.', 'ERROR');
+  }
+}
+
+async function deleteOpenSearchConfig(id) {
+  if (!confirm('Are you sure you want to delete this OpenSearch configuration?')) return;
+  addLog('Configuration', 'Deleting OpenSearch configuration...', 'INFO');
+  try {
+    const res = await fetch(`/api/v1/opensearch-cluster/configs/${id}`, { method: 'DELETE' });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      addLog('Configuration', 'OpenSearch configuration deleted successfully.', 'SUCCESS');
+      await loadSettingsRegistry();
+    } else {
+      addLog('Configuration', `Deletion failed: ${result.message || 'Unknown error'}`, 'ERROR');
+    }
+  } catch (e) {
+    addLog('Configuration', 'Network error during configuration deletion.', 'ERROR');
+  }
+}
+
 async function saveConnectionConfiguration(event) {
   if (event) event.preventDefault();
 
@@ -1979,6 +2139,34 @@ async function saveConnectionConfiguration(event) {
       } else {
         showFeedback('danger', 'Save Failed', result.message || result.error || 'Failed to save.');
         addLog('Configuration', `Data Prepper save failed: ${result.message}`, 'ERROR');
+      }
+    } else if (type === 'opensearch') {
+      const osHost = document.getElementById('opensearch-host')?.value?.trim();
+      const osPort = parseInt(document.getElementById('opensearch-port')?.value || '9220', 10);
+      const osUsername = document.getElementById('opensearch-username')?.value?.trim();
+      const osPassword = document.getElementById('opensearch-password')?.value || '';
+      const osUseSsl = document.getElementById('opensearch-use-ssl')?.checked || false;
+
+      if (!osHost) {
+        showFeedback('danger', 'Form Error', 'OpenSearch host is required.');
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/v1/opensearch-cluster/configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, host: osHost, port: osPort, username: osUsername, password: osPassword, use_ssl: osUseSsl })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Saved Successfully', result.message || 'OpenSearch connection saved.');
+        addLog('Configuration', `OpenSearch connection saved: ${name}`, 'SUCCESS');
+        clearConnectionForm();
+        await loadSettingsRegistry();
+      } else {
+        showFeedback('danger', 'Save Failed', result.message || result.error || 'Failed to save.');
+        addLog('Configuration', `OpenSearch save failed: ${result.message}`, 'ERROR');
       }
     } else {
       const mode = inputPrometheusMode.value;
@@ -2139,6 +2327,40 @@ async function testConnectionConfig() {
       } else {
         showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
         addLog('DataPrepper', `Connection test failed: ${result.message}`, 'ERROR');
+      }
+    } catch (error) {
+      showFeedback('danger', 'API Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  } else if (type === 'opensearch') {
+    const osHost = document.getElementById('opensearch-host')?.value?.trim();
+    const osPort = parseInt(document.getElementById('opensearch-port')?.value || '9220', 10);
+    const osUsername = document.getElementById('opensearch-username')?.value?.trim();
+    const osPassword = document.getElementById('opensearch-password')?.value || '';
+    const osUseSsl = document.getElementById('opensearch-use-ssl')?.checked || false;
+
+    if (!osHost) {
+      showFeedback('danger', 'Form Error', 'OpenSearch host is required.');
+      return;
+    }
+
+    setLoading(true, 'test');
+    addLog('OpenSearch', `Testing connection to ${osHost}:${osPort}...`, 'INFO');
+
+    try {
+      const res = await fetch('/api/v1/opensearch-cluster/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host: osHost, port: osPort, username: osUsername, password: osPassword, use_ssl: osUseSsl })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        showFeedback('success', 'Test Successful', result.message || 'Connected to OpenSearch.');
+        addLog('OpenSearch', 'Connection test succeeded.', 'SUCCESS');
+      } else {
+        showFeedback('danger', 'Test Failed', result.message || 'Failed to connect.');
+        addLog('OpenSearch', `Connection test failed: ${result.message}`, 'ERROR');
       }
     } catch (error) {
       showFeedback('danger', 'API Error', error.message);

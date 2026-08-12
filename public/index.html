@@ -563,6 +563,7 @@
                     <option value="prometheus">Prometheus Server (SSH / Local File)</option>
                     <option value="dataprepper">Data Prepper (SSH / Local Directory)</option>
                     <option value="uptime-kuma">Uptime Kuma (REST API)</option>
+                    <option value="opensearch">OpenSearch Cluster (REST API)</option>
                   </select>
                 </div>
 
@@ -722,6 +723,35 @@
                     <div class="form-group" style="flex: 1;">
                       <label for="uptime-kuma-password" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Uptime Kuma Password</label>
                       <input type="password" id="uptime-kuma-password" placeholder="••••••••" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- OpenSearch-specific fields -->
+                <div id="opensearch-fields" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
+                  <div class="form-group">
+                    <label for="opensearch-host" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Host</label>
+                    <input type="text" id="opensearch-host" placeholder="e.g. 10.10.5.89" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                  </div>
+                  <div style="display: flex; gap: 12px; width: 100%;">
+                    <div class="form-group" style="flex: 1;">
+                      <label for="opensearch-port" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Port</label>
+                      <input type="number" id="opensearch-port" value="9220" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                      <label for="opensearch-username" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Username</label>
+                      <input type="text" id="opensearch-username" placeholder="admin" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 12px; width: 100%;">
+                    <div class="form-group" style="flex: 1;">
+                      <label for="opensearch-password" style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px;">Password</label>
+                      <input type="password" id="opensearch-password" placeholder="••••••••" style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group" style="flex: 0 0 auto; display: flex; align-items: flex-end; padding-bottom: 8px;">
+                      <label style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); cursor: pointer;">
+                        <input type="checkbox" id="opensearch-use-ssl" checked> Use SSL/HTTPS
+                      </label>
                     </div>
                   </div>
                 </div>
