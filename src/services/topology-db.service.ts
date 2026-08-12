@@ -1,5 +1,5 @@
 import { query } from "../config/db";
-import { TopologyNode, TopologyEdge, TopologySheet } from "../types";
+import { TopologyNode, TopologyEdge } from "../types";
 import logger from "../config/logger";
 
 // ==================== TOPOLOGY DATABASE SERVICE ====================

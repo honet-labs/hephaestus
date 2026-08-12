@@ -15,7 +15,7 @@ function validateDatasourceUid(uid: string): void {
 
 function validateUrlNotInternal(urlStr: string): void {
   try {
-    const url = new URL(urlStr);
+    new URL(urlStr); // eslint-disable-line no-new
   } catch (e: any) {
     throw new Error("Invalid URL format.");
   }

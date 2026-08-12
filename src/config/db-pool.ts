@@ -220,7 +220,7 @@ export async function ensureDatabaseExists(dbConfig: any) {
 export let isDbConnected = false;
 export let dbConnectionError: string | null = null;
 let activePool: Pool;
-let activeDbConfig: any;
+let activeDbConfig: any; // eslint-disable-line @typescript-eslint/no-unused-vars
 
 export function setupPool(dbConfig: any) {
   activeDbConfig = dbConfig;

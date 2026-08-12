@@ -1,5 +1,5 @@
 import axios from "axios";
-import pool, { query } from "../config/db";
+import { query } from "../config/db";
 import logger from "../config/logger";
 
 // ==================== TYPES ====================

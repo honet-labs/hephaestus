@@ -84,7 +84,7 @@ export class TopologyScannerService {
     const nodes: TopologyNode[] = [];
     try {
       // Sanitize IP range to prevent command injection
-      const sanitizedRange = ipRange.replace(/[^0-9a-fA-F.,\/\-:]/g, '');
+      const sanitizedRange = ipRange.replace(/[^0-9a-fA-F.,/-:]/g, '');
       if (!sanitizedRange || sanitizedRange !== ipRange) {
         logger.error("Topology", "Nmap: invalid characters in IP range");
         return nodes;
@@ -149,7 +149,7 @@ export class TopologyScannerService {
     const speedMap = this.parseWalkResult(speedResult);
     const macMap = this.parseWalkResult(macResult);
     const statusMap = this.parseWalkResult(statusResult);
-    const ipAddrMap = this.parseWalkResult(ipAddrResult);
+    const _ipAddrMap = this.parseWalkResult(ipAddrResult); // eslint-disable-line @typescript-eslint/no-unused-vars
     const ipIfIndexMap = this.parseWalkResult(ipIfIndexResult);
 
     const ifaceIpMap = new Map<string, string>();

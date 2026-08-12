@@ -2,7 +2,6 @@ import axios from "axios";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import pool, { query } from "../config/db";
-import { config } from "../config/env";
 import logger from "../config/logger";
 
 const execFileAsync = promisify(execFile);
@@ -56,15 +55,6 @@ interface PrometheusTarget {
   labels: Record<string, string>;
   health: string; // "up" or "down"
   scrapeUrl: string;
-}
-
-interface UptimeKumaMonitor {
-  id: number;
-  name: string;
-  hostname: string;
-  port: number;
-  status: number; // 0=down, 1=up, 2=pending, 3=degraded
-  type: string;
 }
 
 // ==================== SERVICE ====================
@@ -353,7 +343,7 @@ export class TopologyService {
     const speedMap = this.parseWalkResult(speedResult);
     const macMap = this.parseWalkResult(macResult);
     const statusMap = this.parseWalkResult(statusResult);
-    const ipAddrMap = this.parseWalkResult(ipAddrResult);
+    const _ipAddrMap = this.parseWalkResult(ipAddrResult); // eslint-disable-line @typescript-eslint/no-unused-vars
     const ipIfIndexMap = this.parseWalkResult(ipIfIndexResult);
 
     // Build ipAddrMap keyed by interface index using ipAdEntIfIndex
@@ -831,7 +821,7 @@ export class TopologyService {
     const nodes: TopologyNode[] = [];
     try {
       // Sanitize IP range to prevent command injection
-      const sanitizedRange = ipRange.replace(/[^0-9a-fA-F.,\/\-:]/g, '');
+      const sanitizedRange = ipRange.replace(/[^0-9a-fA-F.,/-:]/g, '');
       if (!sanitizedRange || sanitizedRange !== ipRange) {
         logger.error("Topology", `Nmap: invalid characters in IP range`);
         return nodes;

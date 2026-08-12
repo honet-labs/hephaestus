@@ -276,7 +276,7 @@ export class TopologyController {
       if (!ipRegex.test(ip)) {
         return res.status(400).json({ success: false, error: "Invalid IP address." });
       }
-      const safeCommunity = community.replace(/[^a-zA-Z0-9_\-]/g, '');
+      const safeCommunity = community.replace(/[^a-zA-Z0-9_-]/g, '');
       const verFlag = version === "1" ? "-v1" : "-v2c";
       const { execFile } = require("child_process");
       const { promisify } = require("util");
