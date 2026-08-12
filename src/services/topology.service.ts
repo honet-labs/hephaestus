@@ -726,7 +726,7 @@ export class TopologyService {
         );
       }
     } catch (err: any) {
-      logger.error("Topology", "saveDeviceToDb error:", err.message, "node:", node?.ip);
+      logger.error("Topology", `saveDeviceToDb error: ${err.message} node: ${node?.ip}`);
       throw err;
     }
   }

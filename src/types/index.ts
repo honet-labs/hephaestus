@@ -109,10 +109,26 @@ export interface TopologyDevice {
   createdAt?: Date;
 }
 
+export interface TopologyNode {
+  id: string;
+  name: string;
+  ip: string;
+  deviceType: string;
+  status: string;
+  sources: string[];
+  labels: Record<string, any>;
+  interfaces?: NetworkInterface[];
+  x?: number;
+  y?: number;
+  _added?: boolean;
+  _saved?: boolean;
+  _pendingId?: number;
+}
+
 export interface TopologyEdge {
   id: number;
-  sourceId: string;
-  targetId: string;
+  source: string;
+  target: string;
   label?: string;
   edgeType: string;
   sourceLabel?: string;
