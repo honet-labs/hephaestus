@@ -44,7 +44,8 @@ COPY public/ ./public
 COPY views/ ./views
 
 # Create persistent data directory for fallback db.json storage (if used)
-RUN mkdir -p /app/data/uploads && chown -R appuser:appgroup /app
+# Create log directory for file-based logging
+RUN mkdir -p /app/data/uploads /var/log/hephaestus && chown -R appuser:appgroup /app /var/log/hephaestus
 
 USER appuser
 
