@@ -238,13 +238,7 @@
                         <div class="stat-value" id="overviewStoreSize">-</div>
                     </div>
                 </div>
-                <div class="grid grid-2" style="margin-top: 16px;">
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-title">Shard Distribution</span>
-                        </div>
-                        <div id="shardDistributionChart"></div>
-                    </div>
+                <div class="grid grid-1" style="margin-top: 16px;">
                     <div class="card">
                         <div class="card-header">
                             <span class="card-title">Node Load</span>
@@ -618,7 +612,7 @@
                     apiFetch(`${API}/stats?configId=${currentConfigId}`)
                 ]);
                 updateStatusBar(healthRes.data);
-                renderOverview(healthRes.data, indicesRes.data, statsRes.data, shardsRes.data);
+                renderOverview(healthRes.data, indicesRes.data, statsRes.data);
                 renderNodes(nodesRes.data);
                 renderIndices(indicesRes.data);
                 renderShards(shardsRes.data, nodesRes.data);
@@ -667,7 +661,7 @@
         }
 
         // ==================== OVERVIEW ====================
-        function renderOverview(health, indices, stats, shardsData) {
+        function renderOverview(health, indices, stats) {
             const statusEl = document.getElementById('overviewHealth');
             const barEl = document.getElementById('overviewHealthBar');
             if (statusEl) {
@@ -683,43 +677,7 @@
             if (el('overviewDocs')) el('overviewDocs').textContent = formatNumber(stats?.indices?.docs?.count || indices?.reduce((sum, i) => sum + (parseInt(i.docs_count) || 0), 0) || 0);
             if (el('overviewStoreSize')) el('overviewStoreSize').textContent = formatBytes(stats?.indices?.store?.size_in_bytes || 0);
             renderIndexHealthTable(indices);
-            renderShardDistribution(shardsData);
             renderNodeLoadFromStats(stats);
-        }
-
-        function renderShardDistribution(shardsData) {
-            const container = document.getElementById('shardDistributionChart');
-            if (!container) return;
-            // Filter out system shards (indices starting with .)
-            const userShards = (shardsData || []).filter(s => s.index && !s.index.startsWith('.'));
-            if (!userShards || userShards.length === 0) {
-                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No user index shards found</div>';
-                return;
-            }
-            const uniqueIndices = [...new Set(userShards.map(s => s.index))];
-            const totalShards = userShards.length;
-            const replicaShards = userShards.filter(s => s.prirep === 'r').length;
-            const unassignedShards = userShards.filter(s => s.state === 'UNASSIGNED').length;
-            const html = `
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
-                    <div class="metric">
-                        <span class="metric-label">Total Index</span>
-                        <span class="metric-value">${uniqueIndices.length}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Total Replica</span>
-                        <span class="metric-value">${replicaShards}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Total Shard</span>
-                        <span class="metric-value">${totalShards}</span>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-label">Total Unassigned Shard</span>
-                        <span class="metric-value" style="color:${unassignedShards > 0 ? 'var(--error)' : 'var(--success)'}">${unassignedShards}</span>
-                    </div>
-                </div>`;
-            container.innerHTML = html;
         }
 
         function renderNodeLoadFromStats(stats) {
