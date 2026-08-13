@@ -97,7 +97,7 @@
         .health-badge.yellow { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
         .health-badge.red { background: rgba(239, 68, 68, 0.2); color: var(--error); }
         .shard-cell { display: flex; gap: 2px; flex-wrap: wrap; }
-        .shard-box { width: 16px; height: 16px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 700; color: var(--text-white); cursor: help; }
+        .shard-box { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text-white); cursor: help; }
         .shard-box.primary { background: var(--success); }
         .shard-box.replica { background: var(--accent); }
         .shard-box.unassigned { background: var(--error); }
@@ -137,14 +137,14 @@
         .config-item-name { font-size: 13px; font-weight: 500; color: var(--text-white); }
         .config-item-host { font-size: 11px; color: var(--text-muted); }
         .config-item-actions { display: flex; gap: 6px; }
-        .shard-legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-        .shard-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
-        .shard-legend-color { width: 12px; height: 12px; border-radius: 2px; }
-        .node-shard-matrix { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-        .node-shard-row { display: flex; gap: 12px; align-items: center; padding: 10px 12px; background: var(--app-card-dark); border-radius: 6px; border: 1px solid var(--app-border); }
-        .node-shard-label { font-size: 12px; color: var(--text-white); font-weight: 600; min-width: 200px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
-        .node-shard-counts { display: flex; gap: 6px; font-size: 10px; min-width: 140px; flex-shrink: 0; }
-        .node-shard-counts span { padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+        .shard-legend { display: flex; gap: 20px; margin-bottom: 16px; flex-wrap: wrap; }
+        .shard-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+        .shard-legend-color { width: 16px; height: 16px; border-radius: 3px; }
+        .node-shard-matrix { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+        .node-shard-row { display: flex; gap: 16px; align-items: center; padding: 14px 16px; background: var(--app-card-dark); border-radius: 8px; border: 1px solid var(--app-border); }
+        .node-shard-label { font-size: 14px; color: var(--text-white); font-weight: 600; min-width: 220px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+        .node-shard-counts { display: flex; gap: 8px; font-size: 12px; min-width: 160px; flex-shrink: 0; }
+        .node-shard-counts span { padding: 4px 10px; border-radius: 4px; font-weight: 600; }
         .node-shard-counts .count-p { background: rgba(16, 185, 129, 0.2); color: var(--success); }
         .node-shard-counts .count-r { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
         .node-shard-counts .count-u { background: rgba(239, 68, 68, 0.2); color: var(--error); }
@@ -898,7 +898,7 @@
                         <span class="count-r">R:${replicaCount}</span>
                         ${unassignedCount > 0 ? `<span class="count-u">U:${unassignedCount}</span>` : ''}
                     </div>
-                    <div class="shard-cell" style="flex-wrap:wrap;">
+                    <div class="shard-cell" style="flex-wrap:wrap;gap:4px;">
                         ${nodeShardsList.map(s => {
                             const cls = s.state === 'UNASSIGNED' ? 'unassigned' : s.state === 'RELOCATING' ? 'relocating' : s.state === 'INITIALIZING' ? 'initializing' : s.prirep === 'p' ? 'primary' : 'replica';
                             return `<div class="shard-box ${cls}" title="${escapeHtml(s.index)} shard ${s.shard} (${s.prirep === 'p' ? 'Primary' : 'Replica'}) ${s.state}">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
