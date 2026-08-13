@@ -2154,7 +2154,7 @@ async function saveConnectionConfiguration(event) {
       }
 
       // Build payload - only include password if provided
-      const payload: any = { name, host: osHost, port: osPort, username: osUsername, use_ssl: osUseSsl };
+      const payload = { name, host: osHost, port: osPort, username: osUsername, use_ssl: osUseSsl };
       if (osPassword) payload.password = osPassword;
 
       let res;
