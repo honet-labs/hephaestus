@@ -690,11 +690,15 @@
         function renderShardDistribution(stats) {
             const container = document.getElementById('shardDistributionChart');
             if (!container) return;
-            if (!stats?.nodes?.count) {
-                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No data</div>';
+            if (!stats?.nodes?.count || !stats?.indices?.count || stats.indices.count === 0) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No indices - no shards</div>';
                 return;
             }
             const shards = stats?.indices?.shards || {};
+            if (!shards.total || shards.total === 0) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No shards allocated</div>';
+                return;
+            }
             const html = `
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
                     <div class="metric">
