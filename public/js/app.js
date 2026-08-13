@@ -2153,8 +2153,8 @@ async function saveConnectionConfiguration(event) {
         return;
       }
 
-      // Build payload - only include password if provided
-      const payload = { name, host: osHost, port: osPort, username: osUsername, use_ssl: osUseSsl };
+      // Build payload - always include verify_ssl: false for self-signed certs
+      const payload = { name, host: osHost, port: osPort, username: osUsername, use_ssl: osUseSsl, verify_ssl: false };
       if (osPassword) payload.password = osPassword;
 
       let res;
@@ -2367,7 +2367,7 @@ async function testConnectionConfig() {
       const res = await fetch('/api/v1/opensearch-cluster/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ host: osHost, port: osPort, username: osUsername, password: osPassword, use_ssl: osUseSsl })
+        body: JSON.stringify({ host: osHost, port: osPort, username: osUsername, password: osPassword, use_ssl: osUseSsl, verify_ssl: false })
       });
       const result = await res.json();
       if (res.ok && result.success) {
