@@ -693,19 +693,18 @@
             // Filter out system shards (indices starting with .)
             const userShards = (shardsData || []).filter(s => s.index && !s.index.startsWith('.'));
             if (!userShards || userShards.length === 0) {
-                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No user index shards</div>';
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No user index shards found</div>';
                 return;
             }
-            const totalShards = userShards.length;
+            // Count unique indices
+            const uniqueIndices = [...new Set(userShards.map(s => s.index))];
             const primaryShards = userShards.filter(s => s.prirep === 'p').length;
             const replicaShards = userShards.filter(s => s.prirep === 'r').length;
-            const startedShards = userShards.filter(s => s.state === 'STARTED').length;
-            const unassignedShards = userShards.filter(s => s.state === 'UNASSIGNED').length;
             const html = `
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
                     <div class="metric">
-                        <span class="metric-label">Total Shards</span>
-                        <span class="metric-value">${totalShards}</span>
+                        <span class="metric-label">User Indices</span>
+                        <span class="metric-value">${uniqueIndices.length}</span>
                     </div>
                     <div class="metric">
                         <span class="metric-label">Primary Shards</span>
@@ -716,8 +715,8 @@
                         <span class="metric-value">${replicaShards}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Started / Unassigned</span>
-                        <span class="metric-value">${startedShards} / ${unassignedShards}</span>
+                        <span class="metric-label">Total Shards</span>
+                        <span class="metric-value">${userShards.length}</span>
                     </div>
                 </div>`;
             container.innerHTML = html;
