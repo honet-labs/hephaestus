@@ -97,7 +97,7 @@
         .health-badge.yellow { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
         .health-badge.red { background: rgba(239, 68, 68, 0.2); color: var(--error); }
         .shard-cell { display: flex; gap: 2px; flex-wrap: wrap; }
-        .shard-box { width: 20px; height: 20px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: var(--text-white); cursor: help; }
+        .shard-box { width: 16px; height: 16px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 700; color: var(--text-white); cursor: help; }
         .shard-box.primary { background: var(--success); }
         .shard-box.replica { background: var(--accent); }
         .shard-box.unassigned { background: var(--error); }
@@ -140,9 +140,14 @@
         .shard-legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
         .shard-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
         .shard-legend-color { width: 12px; height: 12px; border-radius: 2px; }
-        .node-shard-matrix { display: grid; gap: 2px; margin-top: 8px; }
-        .node-shard-row { display: flex; gap: 2px; align-items: center; }
-        .node-shard-label { font-size: 11px; color: var(--text-muted); width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .node-shard-matrix { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .node-shard-row { display: flex; gap: 12px; align-items: center; padding: 10px 12px; background: var(--app-card-dark); border-radius: 6px; border: 1px solid var(--app-border); }
+        .node-shard-label { font-size: 12px; color: var(--text-white); font-weight: 600; min-width: 200px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+        .node-shard-counts { display: flex; gap: 6px; font-size: 10px; min-width: 140px; flex-shrink: 0; }
+        .node-shard-counts span { padding: 2px 8px; border-radius: 3px; font-weight: 600; }
+        .node-shard-counts .count-p { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .node-shard-counts .count-r { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
+        .node-shard-counts .count-u { background: rgba(239, 68, 68, 0.2); color: var(--error); }
         @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } .node-metrics { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
@@ -888,13 +893,17 @@
                 return `
                 <div class="node-shard-row">
                     <span class="node-shard-label" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
-                    <div class="shard-cell">
+                    <div class="node-shard-counts">
+                        <span class="count-p">P:${primaryCount}</span>
+                        <span class="count-r">R:${replicaCount}</span>
+                        ${unassignedCount > 0 ? `<span class="count-u">U:${unassignedCount}</span>` : ''}
+                    </div>
+                    <div class="shard-cell" style="flex-wrap:wrap;">
                         ${nodeShardsList.map(s => {
                             const cls = s.state === 'UNASSIGNED' ? 'unassigned' : s.state === 'RELOCATING' ? 'relocating' : s.state === 'INITIALIZING' ? 'initializing' : s.prirep === 'p' ? 'primary' : 'replica';
-                            return `<div class="shard-box ${cls}" title="${escapeHtml(s.index)} shard ${s.shard} (${s.prirep === 'p' ? 'P' : 'R'}) ${s.state}">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
+                            return `<div class="shard-box ${cls}" title="${escapeHtml(s.index)} shard ${s.shard} (${s.prirep === 'p' ? 'Primary' : 'Replica'}) ${s.state}">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
                         }).join('')}
                     </div>
-                    <span style="font-size:10px;color:var(--text-muted);margin-left:8px;">P:${primaryCount} R:${replicaCount}${unassignedCount ? ' U:' + unassignedCount : ''}</span>
                 </div>`;
             }).join('');
         }
