@@ -922,8 +922,8 @@
         let activeTooltip = null;
         let selectedShard = null;
 
-        function showShardTip(el) {
-            hideShardTip();
+        window.showShardTip = function(el) {
+            window.hideShardTip();
             // Highlight selected
             if (selectedShard) selectedShard.classList.remove('selected');
             el.classList.add('selected');
@@ -950,7 +950,7 @@
             positionTooltip(event || window.event, tooltip);
         }
 
-        function hideShardTip() {
+        window.hideShardTip = function() {
             if (activeTooltip) { activeTooltip.remove(); activeTooltip = null; }
             if (selectedShard) { selectedShard.classList.remove('selected'); selectedShard = null; }
         }
