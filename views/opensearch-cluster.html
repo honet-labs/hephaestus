@@ -140,14 +140,17 @@
         .shard-legend { display: flex; gap: 20px; margin-bottom: 16px; flex-wrap: wrap; }
         .shard-legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
         .shard-legend-color { width: 16px; height: 16px; border-radius: 3px; }
-        .node-shard-matrix { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
-        .node-shard-row { display: flex; gap: 16px; align-items: center; padding: 14px 16px; background: var(--app-card-dark); border-radius: 8px; border: 1px solid var(--app-border); }
-        .node-shard-label { font-size: 14px; color: var(--text-white); font-weight: 600; min-width: 220px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
-        .node-shard-counts { display: flex; gap: 8px; font-size: 12px; min-width: 160px; flex-shrink: 0; }
-        .node-shard-counts span { padding: 4px 10px; border-radius: 4px; font-weight: 600; }
-        .node-shard-counts .count-p { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-        .node-shard-counts .count-r { background: rgba(88, 166, 255, 0.2); color: var(--accent); }
-        .node-shard-counts .count-u { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+        .node-shard-matrix { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
+        .node-shard-row { display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--app-card-dark); border-radius: 8px; border: 1px solid var(--app-border); }
+        .node-shard-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .node-shard-label { font-size: 14px; color: var(--text-white); font-weight: 600; }
+        .node-shard-counts { display: flex; flex-direction: column; gap: 4px; text-align: right; }
+        .node-shard-counts span { font-size: 12px; font-weight: 600; }
+        .node-shard-counts .count-p { color: var(--success); }
+        .node-shard-counts .count-r { color: var(--accent); }
+        .node-shard-counts .count-u { color: var(--error); }
+        .shard-cell { display: flex; flex-wrap: wrap; gap: 4px; }
+        .shard-tooltip { position: absolute; background: #1a1a2e; border: 1px solid var(--accent); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: var(--text-white); z-index: 1000; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } .node-metrics { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
@@ -777,34 +780,22 @@
                         <div class="metric">
                             <span class="metric-label">CPU</span>
                             <span class="metric-value" style="color:var(--${cpuColor})">${node.cpu}%</span>
-                            <div class="metric-bar"><div class="metric-fill" style="width:${node.cpu}%;background:var(--${cpuColor})"></div></div>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Heap</span>
                             <span class="metric-value" style="color:var(--${heapColor})">${node.heap_percent}%</span>
-                            <div class="metric-bar"><div class="metric-fill" style="width:${node.heap_percent}%;background:var(--${heapColor})"></div></div>
                         </div>
                         <div class="metric">
                             <span class="metric-label">RAM</span>
                             <span class="metric-value" style="color:var(--${ramColor})">${node.ram_percent}%</span>
-                            <div class="metric-bar"><div class="metric-fill" style="width:${node.ram_percent}%;background:var(--${ramColor})"></div></div>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Disk</span>
                             <span class="metric-value" style="color:var(--${diskColor})">${node.disk_used_percent}%</span>
-                            <div class="metric-bar"><div class="metric-fill" style="width:${node.disk_used_percent}%;background:var(--${diskColor})"></div></div>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">Load 1m</span>
-                            <span class="metric-value">${node.load_1m.toFixed(2)}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Load 5m</span>
-                            <span class="metric-value">${node.load_5m.toFixed(2)}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Load 15m</span>
-                            <span class="metric-value">${node.load_15m.toFixed(2)}</span>
+                            <span class="metric-label">Load (1m/5m/15m)</span>
+                            <span class="metric-value">${node.load_1m.toFixed(2)} / ${node.load_5m.toFixed(2)} / ${node.load_15m.toFixed(2)}</span>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Uptime</span>
@@ -815,16 +806,8 @@
                             <span class="metric-value">${formatBytes(node.jvm_heap_used)} / ${formatBytes(node.jvm_heap_max)}</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">File Descriptors</span>
-                            <span class="metric-value">${node.open_file_descriptors} / ${node.max_file_descriptors}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Disk Total</span>
-                            <span class="metric-value">${formatBytes(node.disk_total)}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Disk Free</span>
-                            <span class="metric-value">${formatBytes(node.disk_free)}</span>
+                            <span class="metric-label">Disk Usage</span>
+                            <span class="metric-value">${formatBytes(node.disk_total - node.disk_free)} / ${formatBytes(node.disk_total)}</span>
                         </div>
                     </div>
                 </div>`;
@@ -892,16 +875,22 @@
                 const unassignedCount = nodeShardsList.filter(s => s.state === 'UNASSIGNED').length;
                 return `
                 <div class="node-shard-row">
-                    <span class="node-shard-label" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
-                    <div class="node-shard-counts">
-                        <span class="count-p">P:${primaryCount}</span>
-                        <span class="count-r">R:${replicaCount}</span>
-                        ${unassignedCount > 0 ? `<span class="count-u">U:${unassignedCount}</span>` : ''}
+                    <div class="node-shard-header">
+                        <span class="node-shard-label">${escapeHtml(name)}</span>
+                        <div class="node-shard-counts">
+                            <span class="count-p">Primary: ${primaryCount}</span>
+                            <span class="count-r">Replica: ${replicaCount}</span>
+                            ${unassignedCount > 0 ? `<span class="count-u">Unassigned: ${unassignedCount}</span>` : ''}
+                        </div>
                     </div>
-                    <div class="shard-cell" style="flex-wrap:wrap;gap:4px;">
+                    <div class="shard-cell">
                         ${nodeShardsList.map(s => {
                             const cls = s.state === 'UNASSIGNED' ? 'unassigned' : s.state === 'RELOCATING' ? 'relocating' : s.state === 'INITIALIZING' ? 'initializing' : s.prirep === 'p' ? 'primary' : 'replica';
-                            return `<div class="shard-box ${cls}" title="${escapeHtml(s.index)} shard ${s.shard} (${s.prirep === 'p' ? 'Primary' : 'Replica'}) ${s.state}">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
+                            const typeLabel = s.prirep === 'p' ? 'Primary' : 'Replica';
+                            return `<div class="shard-box ${cls}" 
+                                onmouseenter="showShardTooltip(event, '${escapeHtml(s.index)}', ${s.shard}, '${typeLabel}', '${s.state}', '${s.store || '-'}', '${s.ip || '-'}')" 
+                                onmouseleave="hideShardTooltip()"
+                                onclick="showShardTooltip(event, '${escapeHtml(s.index)}', ${s.shard}, '${typeLabel}', '${s.state}', '${s.store || '-'}', '${s.ip || '-'}')">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
                         }).join('')}
                     </div>
                 </div>`;
@@ -909,6 +898,51 @@
         }
 
         // ==================== HELPERS ====================
+        let activeTooltip = null;
+
+        function showShardTooltip(event, index, shard, type, state, store, ip) {
+            hideShardTooltip();
+            const tooltip = document.createElement('div');
+            tooltip.className = 'shard-tooltip';
+            tooltip.innerHTML = '<strong>' + escapeHtml(index) + '</strong><br>' +
+                'Shard: ' + shard + '<br>' +
+                'Type: ' + type + '<br>' +
+                'State: ' + state + '<br>' +
+                'Store: ' + escapeHtml(store) + '<br>' +
+                'IP: ' + escapeHtml(ip);
+            document.body.appendChild(tooltip);
+            activeTooltip = tooltip;
+            positionTooltip(event, tooltip);
+        }
+
+        function hideShardTooltip() {
+            if (activeTooltip) {
+                activeTooltip.remove();
+                activeTooltip = null;
+            }
+        }
+
+        function positionTooltip(event, tooltip) {
+            const x = event.clientX + 12;
+            const y = event.clientY + 12;
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+            // Adjust if off-screen
+            const rect = tooltip.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+                tooltip.style.left = (event.clientX - rect.width - 12) + 'px';
+            }
+            if (rect.bottom > window.innerHeight) {
+                tooltip.style.top = (event.clientY - rect.height - 12) + 'px';
+            }
+        }
+
+        document.addEventListener('mousemove', function(e) {
+            if (activeTooltip) {
+                positionTooltip(e, activeTooltip);
+            }
+        });
+
         function formatBytes(bytes) {
             if (!bytes || bytes === 0) return '0 B';
             const units = ['B', 'KB', 'MB', 'GB', 'TB'];
