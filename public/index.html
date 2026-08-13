@@ -90,6 +90,52 @@
   </style>
 </head>
 <body>
+  <!-- ICMP Service Modal -->
+  <div id="icmp-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9998; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-secondary,#161b22); border:1px solid var(--app-border,#30363d); border-radius:12px; padding:24px; width:420px; max-width:90vw; box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="font-size:16px; color:var(--text-white,#fdfdfd); display:flex; align-items:center; gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          ICMP Ping Service
+        </h3>
+        <button onclick="document.getElementById('icmp-modal').style.display='none'" style="background:none; border:none; color:var(--text-muted,#8b949e); cursor:pointer; font-size:18px;">&times;</button>
+      </div>
+      <div id="icmp-modal-content">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+          <div style="background:var(--app-card-dark,#0d1117); padding:12px; border-radius:6px; border:1px solid var(--app-border,#30363d);">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Status</div>
+            <div id="icmp-modal-status" style="font-size:14px; font-weight:600; color:var(--text-white);">--</div>
+          </div>
+          <div style="background:var(--app-card-dark,#0d1117); padding:12px; border-radius:6px; border:1px solid var(--app-border,#30363d);">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Interval</div>
+            <div id="icmp-modal-interval" style="font-size:14px; font-weight:600; color:var(--text-white);">--</div>
+          </div>
+          <div style="background:var(--app-card-dark,#0d1117); padding:12px; border-radius:6px; border:1px solid var(--app-border,#30363d);">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Last Run</div>
+            <div id="icmp-modal-last-run" style="font-size:14px; font-weight:600; color:var(--text-white);">--</div>
+          </div>
+          <div style="background:var(--app-card-dark,#0d1117); padding:12px; border-radius:6px; border:1px solid var(--app-border,#30363d);">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Duration</div>
+            <div id="icmp-modal-duration" style="font-size:14px; font-weight:600; color:var(--text-white);">--</div>
+          </div>
+          <div style="background:var(--app-card-dark,#0d1117); padding:12px; border-radius:6px; border:1px solid var(--app-border,#30363d);">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Total Devices</div>
+            <div id="icmp-modal-total" style="font-size:14px; font-weight:600; color:var(--text-white);">--</div>
+          </div>
+          <div style="background:var(--app-card-dark,#0d1117); padding:12px; border-radius:6px; border:1px solid var(--app-border,#30363d);">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Online / Offline</div>
+            <div id="icmp-modal-online" style="font-size:14px; font-weight:600; color:var(--text-white);">--</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-primary" onclick="startIcmpService()" style="flex:1;">Start</button>
+          <button class="btn btn-secondary" onclick="stopIcmpService()" style="flex:1;">Stop</button>
+          <button class="btn btn-secondary" onclick="runIcmpOnce()" style="flex:1;">Run Once</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Setup Wizard (shown on first install) -->
   <div id="setup-container" class="login-container" style="display: none; position: fixed; inset: 0; background: var(--bg-primary); z-index: 9999; align-items: center; justify-content: center;">
     <div class="login-card" style="width: 380px; max-width: 90vw; background: var(--bg-secondary); border: 1px solid var(--app-border); border-radius: 12px; padding: 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
@@ -462,8 +508,8 @@
 
         <!-- PAGE 1: OVERVIEW -->
         <div id="page-overview">
-          <!-- 4 Stats Cards -->
-          <div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <!-- 5 Stats Cards -->
+          <div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr);">
             <div class="stat-card">
               <div class="stat-card-left">
                 <span class="stat-card-title">Total Connections</span>
@@ -472,6 +518,16 @@
               </div>
               <span class="stat-card-icon" style="color: #58a6ff; display: flex; align-items: center; justify-content: center;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              </span>
+            </div>
+            <div class="stat-card" id="icmp-stat-card" style="cursor:pointer;" onclick="showIcmpModal()">
+              <div class="stat-card-left">
+                <span class="stat-card-title">ICMP Monitor</span>
+                <span id="ov-icmp-status" class="stat-card-value" style="color: #6b7280;">--</span>
+                <span id="ov-icmp-detail" class="stat-card-sub">Loading...</span>
+              </div>
+              <span class="stat-card-icon" id="ov-icmp-icon" style="color: #6b7280; display: flex; align-items: center; justify-content: center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
               </span>
             </div>
             <div class="stat-card">

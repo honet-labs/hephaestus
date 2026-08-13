@@ -23,6 +23,7 @@ import remoteHostRoutes from "./routes/remote-host.routes";
 import vpsControlRoutes from "./routes/vps-control.routes";
 import topologyRoutes from "./routes/topology.routes";
 import opensearchClusterRoutes from "./routes/opensearch-cluster.routes";
+import icmpPingRoutes from "./routes/icmp-ping.routes";
 
 const app = express();
 
@@ -160,6 +161,7 @@ app.use("/api/v1/remote-host", remoteHostRoutes);
 app.use("/api/v1/vps", vpsControlRoutes);
 app.use("/api/v1/topology", topologyRoutes);
 app.use("/api/v1/opensearch-cluster", opensearchClusterRoutes);
+app.use("/api/v1/icmp", icmpPingRoutes);
 
 // 5. 404 Route handler
 app.use((req: Request, res: Response) => {
@@ -217,6 +219,15 @@ initDb()
         await backupService.initScheduler();
       } catch (err: any) {
         logger.error("Backup", "Error initializing scheduler:", err.message);
+      }
+
+      // Start ICMP Ping Service
+      try {
+        const { icmpPingService } = require("./services/icmp-ping.service");
+        icmpPingService.start(60000); // 1 minute interval
+        logger.info("ICMP", "Ping service started with 60s interval");
+      } catch (err: any) {
+        logger.error("ICMP", "Error starting ping service:", err.message);
       }
     } else {
       logger.warn("SNMP", "Database is not connected. Skipping MIB auto-sync.");

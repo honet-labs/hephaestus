@@ -582,6 +582,15 @@ export async function initDb() {
       verify_ssl BOOLEAN DEFAULT true,
       is_active BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`,
+
+    // 23. DevicePingResults - ICMP ping results for topology devices
+    `CREATE TABLE IF NOT EXISTS device_ping_results (
+      device_id VARCHAR(50) PRIMARY KEY REFERENCES topology_devices(id) ON DELETE CASCADE,
+      ip VARCHAR(45) NOT NULL,
+      reachable BOOLEAN DEFAULT false,
+      latency_ms DOUBLE PRECISION,
+      checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
   ];
 

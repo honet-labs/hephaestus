@@ -781,6 +781,88 @@ async function loadOverviewData() {
   }
 }
 
+// ==================== ICMP PING SERVICE ====================
+async function loadIcmpStatus() {
+  try {
+    const res = await fetch('/api/v1/icmp/status');
+    if (!res.ok) return;
+    const result = await res.json();
+    if (!result.success) return;
+    const d = result.data;
+
+    const statusEl = document.getElementById('ov-icmp-status');
+    const detailEl = document.getElementById('ov-icmp-detail');
+    const iconEl = document.getElementById('ov-icmp-icon');
+
+    if (statusEl) {
+      const statusMap = { running: 'Running', stopped: 'Stopped', error: 'Error' };
+      statusEl.textContent = statusMap[d.status] || d.status;
+      statusEl.style.color = d.status === 'running' ? '#56d364' : d.status === 'error' ? '#f59e0b' : '#6b7280';
+    }
+    if (detailEl) {
+      detailEl.textContent = `${d.onlineDevices || 0} online, ${d.offlineDevices || 0} offline of ${d.totalDevices || 0}`;
+    }
+    if (iconEl) {
+      iconEl.style.color = d.status === 'running' ? '#56d364' : d.status === 'error' ? '#f59e0b' : '#6b7280';
+    }
+  } catch (err) {
+    console.error('[ICMP] Failed to load status:', err);
+  }
+}
+
+function showIcmpModal() {
+  document.getElementById('icmp-modal').style.display = 'flex';
+  refreshIcmpModal();
+}
+
+async function refreshIcmpModal() {
+  try {
+    const res = await fetch('/api/v1/icmp/status');
+    const result = await res.json();
+    if (!result.success) return;
+    const d = result.data;
+
+    const statusEl = document.getElementById('icmp-modal-status');
+    if (statusEl) {
+      const statusMap = { running: 'Running', stopped: 'Stopped', error: 'Error' };
+      statusEl.textContent = statusMap[d.status] || d.status;
+      statusEl.style.color = d.status === 'running' ? '#56d364' : d.status === 'error' ? '#f59e0b' : '#6b7280';
+    }
+
+    document.getElementById('icmp-modal-interval').textContent = d.interval ? d.interval + 's' : '--';
+    document.getElementById('icmp-modal-last-run').textContent = d.lastRun ? new Date(d.lastRun).toLocaleString() : 'Never';
+    document.getElementById('icmp-modal-duration').textContent = d.lastDuration ? d.lastDuration + 'ms' : '--';
+    document.getElementById('icmp-modal-total').textContent = d.totalDevices || 0;
+    document.getElementById('icmp-modal-online').textContent = `${d.onlineDevices || 0} / ${d.offlineDevices || 0}`;
+  } catch (err) {
+    console.error('[ICMP] Failed to refresh modal:', err);
+  }
+}
+
+async function startIcmpService() {
+  try {
+    await fetch('/api/v1/icmp/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ interval: 60 }) });
+    refreshIcmpModal();
+    loadIcmpStatus();
+  } catch (err) { console.error('[ICMP] Start failed:', err); }
+}
+
+async function stopIcmpService() {
+  try {
+    await fetch('/api/v1/icmp/stop', { method: 'POST' });
+    refreshIcmpModal();
+    loadIcmpStatus();
+  } catch (err) { console.error('[ICMP] Stop failed:', err); }
+}
+
+async function runIcmpOnce() {
+  try {
+    await fetch('/api/v1/icmp/run', { method: 'POST' });
+    refreshIcmpModal();
+    loadIcmpStatus();
+  } catch (err) { console.error('[ICMP] Run once failed:', err); }
+}
+
 function showPage(pageId) {
   pages.forEach(p => {
     const pageEl = document.getElementById(`page-${p}`);
@@ -904,6 +986,7 @@ function showPage(pageId) {
     pageTitle.textContent = 'System Overview';
     pageDesc.textContent = 'Ringkasan status integrasi dan konfigurasi portal.';
     loadOverviewData();
+    loadIcmpStatus();
   } else if (pageId === 'settings') {
     pageTitle.textContent = 'Add Connections';
     pageDesc.textContent = 'Manage API and service endpoint connections.';
