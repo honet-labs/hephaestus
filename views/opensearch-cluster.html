@@ -683,16 +683,22 @@
             if (el('overviewDocs')) el('overviewDocs').textContent = formatNumber(stats?.indices?.docs?.count || indices?.reduce((sum, i) => sum + (parseInt(i.docs_count) || 0), 0) || 0);
             if (el('overviewStoreSize')) el('overviewStoreSize').textContent = formatBytes(stats?.indices?.store?.size_in_bytes || 0);
             renderIndexHealthTable(indices);
-            renderShardDistribution(stats);
+            renderShardDistribution(stats, indices);
             renderNodeLoadFromStats(stats);
         }
 
-        function renderShardDistribution(stats) {
+        function renderShardDistribution(stats, indices) {
             const container = document.getElementById('shardDistributionChart');
             if (!container) return;
+            // Check if there are actually indices - if not, no shards exist
+            const hasIndices = indices && indices.length > 0;
+            if (!stats?.nodes?.count || !hasIndices) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No indices - no shards</div>';
+                return;
+            }
             const shards = stats?.indices?.shards || {};
             const totalShards = shards.total || 0;
-            if (!stats?.nodes?.count || totalShards === 0) {
+            if (totalShards === 0) {
                 container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No shards allocated</div>';
                 return;
             }
