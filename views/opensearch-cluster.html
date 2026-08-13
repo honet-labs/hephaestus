@@ -690,12 +690,9 @@
         function renderShardDistribution(stats) {
             const container = document.getElementById('shardDistributionChart');
             if (!container) return;
-            if (!stats?.nodes?.count || !stats?.indices?.count || stats.indices.count === 0) {
-                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No indices - no shards</div>';
-                return;
-            }
             const shards = stats?.indices?.shards || {};
-            if (!shards.total || shards.total === 0) {
+            const totalShards = shards.total || 0;
+            if (!stats?.nodes?.count || totalShards === 0) {
                 container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No shards allocated</div>';
                 return;
             }
@@ -703,7 +700,7 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
                     <div class="metric">
                         <span class="metric-label">Total Shards</span>
-                        <span class="metric-value">${shards.total || 0}</span>
+                        <span class="metric-value">${totalShards}</span>
                     </div>
                     <div class="metric">
                         <span class="metric-label">Primary Shards</span>
@@ -711,7 +708,7 @@
                     </div>
                     <div class="metric">
                         <span class="metric-label">Replica Shards</span>
-                        <span class="metric-value">${(shards.total || 0) - (shards.primaries || 0)}</span>
+                        <span class="metric-value">${totalShards - (shards.primaries || 0)}</span>
                     </div>
                     <div class="metric">
                         <span class="metric-label">Replication Factor</span>
