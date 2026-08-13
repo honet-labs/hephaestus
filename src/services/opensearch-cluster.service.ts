@@ -370,8 +370,20 @@ export class OpenSearchClusterService {
     if (!config) throw new Error("No active OpenSearch configuration found.");
 
     const url = `${this.getBaseUrl(config)}/_cat/indices?format=json&h=health,status,index,uuid,pri,rep,docs.count,docs.deleted,store.size,pri.store.size&s=index`;
-    const response = await axios.get<OpenSearchIndex[]>(url, this.getAxiosConfig(config));
-    return response.data;
+    const response = await axios.get(url, this.getAxiosConfig(config));
+    // Map dotted field names to underscored names
+    return (response.data || []).map((idx: any) => ({
+      health: idx.health,
+      status: idx.status,
+      index: idx.index,
+      uuid: idx.uuid,
+      pri: parseInt(idx.pri) || 0,
+      rep: parseInt(idx.rep) || 0,
+      docs_count: parseInt(idx["docs.count"]) || 0,
+      docs_deleted: parseInt(idx["docs.deleted"]) || 0,
+      store_size: idx["store.size"] || "-",
+      pri_store_size: idx["pri.store.size"] || "-"
+    }));
   }
 
   async getIndexHealth(indexName: string, configId?: string): Promise<any> {

@@ -97,7 +97,7 @@
         .health-badge.yellow { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
         .health-badge.red { background: rgba(239, 68, 68, 0.2); color: var(--error); }
         .shard-cell { display: flex; gap: 2px; flex-wrap: wrap; }
-        .shard-box { width: 14px; height: 14px; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 600; color: var(--text-white); }
+        .shard-box { width: 20px; height: 20px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: var(--text-white); cursor: help; }
         .shard-box.primary { background: var(--success); }
         .shard-box.replica { background: var(--accent); }
         .shard-box.unassigned { background: var(--error); }
@@ -601,6 +601,16 @@
                 renderNodes(nodesRes.data);
                 renderIndices(indicesRes.data);
                 renderShards(shardsRes.data, nodesRes.data);
+
+                // Setup auto-refresh if not already running
+                if (!refreshInterval) {
+                    refreshInterval = setInterval(() => {
+                        if (currentConfigId) {
+                            console.log('[OpenSearch] Auto-refreshing data...');
+                            window.refreshAll();
+                        }
+                    }, 30000); // Refresh every 30 seconds
+                }
             } catch (err) {
                 console.error('Refresh failed:', err);
                 document.getElementById('clusterStatusDot').className = 'status-dot gray';
@@ -652,6 +662,68 @@
             if (el('overviewDocs')) el('overviewDocs').textContent = formatNumber(stats?.indices?.docs?.count || indices?.reduce((sum, i) => sum + (parseInt(i.docs_count) || 0), 0) || 0);
             if (el('overviewStoreSize')) el('overviewStoreSize').textContent = formatBytes(stats?.indices?.store?.size_in_bytes || 0);
             renderIndexHealthTable(indices);
+            renderShardDistribution(stats);
+            renderNodeLoadFromStats(stats);
+        }
+
+        function renderShardDistribution(stats) {
+            const container = document.getElementById('shardDistributionChart');
+            if (!container) return;
+            if (!stats?.nodes?.count) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No data</div>';
+                return;
+            }
+            const shards = stats?.indices?.shards || {};
+            const html = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
+                    <div class="metric">
+                        <span class="metric-label">Total Shards</span>
+                        <span class="metric-value">${shards.total || 0}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Primary Shards</span>
+                        <span class="metric-value">${shards.primaries || 0}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Replica Shards</span>
+                        <span class="metric-value">${(shards.total || 0) - (shards.primaries || 0)}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Replication Factor</span>
+                        <span class="metric-value">${shards.replication || 0}</span>
+                    </div>
+                </div>`;
+            container.innerHTML = html;
+        }
+
+        function renderNodeLoadFromStats(stats) {
+            const container = document.getElementById('nodeLoadChart');
+            if (!container) return;
+            if (!stats?.nodes?.count) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No data</div>';
+                return;
+            }
+            const nodeTypes = stats?.nodes?.count || {};
+            const html = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
+                    <div class="metric">
+                        <span class="metric-label">Total Nodes</span>
+                        <span class="metric-value">${nodeTypes.total || 0}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Data Nodes</span>
+                        <span class="metric-value">${nodeTypes.data || 0}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Cluster Manager</span>
+                        <span class="metric-value">${nodeTypes.cluster_manager || nodeTypes.master || 0}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Ingest Nodes</span>
+                        <span class="metric-value">${nodeTypes.ingest || 0}</span>
+                    </div>
+                </div>`;
+            container.innerHTML = html;
         }
 
         function renderIndexHealthTable(indices) {
