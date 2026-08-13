@@ -1149,6 +1149,10 @@
             label: labelParts.join('\n') || n.ip,
             title: tooltipParts.join('\n'),
             shape: 'image',
+            shapeProperties: { useBorderWithImage: true, borderRadius: 0 },
+            borderWidth: 3,
+            borderWidthSelected: 4,
+            color: { border: 'rgba(88, 166, 255, 0.6)', highlight: { border: '#58a6ff' }, hover: { border: '#58a6ff' } },
             font: { color: '#ffffff', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#242424' },
             x: n.x, y: n.y,
             _raw: n
