@@ -138,7 +138,7 @@
                         <div class="hint">Name for the index template.</div>
                     </div>
 
-                    <button class="btn btn-primary" onclick="calculate()" style="width:100%;">Calculate Shards</button>
+                    <button class="btn btn-primary" onclick="window.calculate()" style="width:100%;">Calculate Shards</button>
                 </div>
             </div>
 
@@ -170,168 +170,133 @@
     </div>
 
     <script>
-    function calculate() {
-        const nodes = Math.max(1, parseInt(document.getElementById('input-nodes').value) || 2);
-        const dataSize = Math.max(1, parseFloat(document.getElementById('input-data-size').value) || 25);
-        const targetShardSize = parseInt(document.getElementById('input-shard-size').value) || 30;
-        const indexPattern = document.getElementById('input-index-pattern').value.trim() || 'metrics-host-*';
-        const templateName = document.getElementById('input-template-name').value.trim() || 'template_metrics_host';
+    window.calculate = function() {
+        try {
+            const nodes = Math.max(1, parseInt(document.getElementById('input-nodes').value) || 2);
+            const dataSize = Math.max(1, parseFloat(document.getElementById('input-data-size').value) || 25);
+            const targetShardSize = parseInt(document.getElementById('input-shard-size').value) || 30;
+            const indexPattern = document.getElementById('input-index-pattern').value.trim() || 'metrics-host-*';
+            const templateName = document.getElementById('input-template-name').value.trim() || 'template_metrics_host';
 
-        // Calculation
-        const primaryShards = Math.max(1, Math.ceil(dataSize / targetShardSize));
-        const replicas = nodes === 1 ? 0 : 1;
-        const totalShards = primaryShards * (1 + replicas);
-        const shardsPerNode = Math.ceil(totalShards / nodes);
-        const avgShardSize = dataSize / primaryShards;
-        const isHealthy = nodes >= 2 && replicas === 1;
+            // Calculation
+            const primaryShards = Math.max(1, Math.ceil(dataSize / targetShardSize));
+            const replicas = nodes === 1 ? 0 : 1;
+            const totalShards = primaryShards * (1 + replicas);
+            const shardsPerNode = Math.ceil(totalShards / nodes);
+            const avgShardSize = dataSize / primaryShards;
+            const isHealthy = nodes >= 2 && replicas === 1;
 
-        // Render metrics
-        const metricsGrid = document.getElementById('metrics-grid');
-        metricsGrid.innerHTML = `
-            <div class="metric-card">
-                <div class="metric-value">${primaryShards}</div>
-                <div class="metric-label">Primary Shards</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${replicas}</div>
-                <div class="metric-label">Replicas</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${totalShards}</div>
-                <div class="metric-label">Total Shards</div>
-            </div>
-            <div class="metric-card ${isHealthy ? 'green' : 'yellow'}">
-                <div class="metric-value">${isHealthy ? 'GREEN' : 'YELLOW'}</div>
-                <div class="metric-label">Cluster Status</div>
-            </div>
-        `;
+            // Render metrics
+            const metricsGrid = document.getElementById('metrics-grid');
+            metricsGrid.innerHTML = '<div class="metric-card"><div class="metric-value">' + primaryShards + '</div><div class="metric-label">Primary Shards</div></div>' +
+                '<div class="metric-card"><div class="metric-value">' + replicas + '</div><div class="metric-label">Replicas</div></div>' +
+                '<div class="metric-card"><div class="metric-value">' + totalShards + '</div><div class="metric-label">Total Shards</div></div>' +
+                '<div class="metric-card ' + (isHealthy ? 'green' : 'yellow') + '"><div class="metric-value">' + (isHealthy ? 'GREEN' : 'YELLOW') + '</div><div class="metric-label">Cluster Status</div></div>';
 
-        // Render warnings
-        const warningsContainer = document.getElementById('warnings-container');
-        let warnings = '';
+            // Render warnings
+            const warningsContainer = document.getElementById('warnings-container');
+            let warnings = '';
 
-        if (nodes === 1) {
-            warnings += `
-                <div class="warning-box warning">
-                    <span class="warning-icon">&#9888;</span>
-                    <div>
-                        <strong>Single node cluster:</strong> Replicas set to 0 to avoid Yellow cluster status.
-                        For production, use 3+ nodes for high availability.
-                    </div>
-                </div>`;
+            if (nodes === 1) {
+                warnings += '<div class="warning-box warning"><span class="warning-icon">&#9888;</span><div><strong>Single node cluster:</strong> Replicas set to 0 to avoid Yellow cluster status. For production, use 3+ nodes for high availability.</div></div>';
+            }
+
+            if (avgShardSize < 5) {
+                warnings += '<div class="warning-box warning"><span class="warning-icon">&#9888;</span><div><strong>Over-sharding detected:</strong> Average shard size is ' + avgShardSize.toFixed(1) + ' GB (recommended: 10-50 GB). Consider increasing target shard size or combining indices.</div></div>';
+            } else if (avgShardSize > 50) {
+                warnings += '<div class="warning-box info"><span class="warning-icon">&#8505;</span><div><strong>Large shards:</strong> Average shard size is ' + avgShardSize.toFixed(1) + ' GB. Consider reducing target shard size for better performance.</div></div>';
+            }
+
+            if (nodes >= 2 && replicas === 1) {
+                warnings += '<div class="warning-box info"><span class="warning-icon">&#10003;</span><div><strong>Optimal configuration:</strong> Cluster has ' + nodes + ' nodes with 1 replica for fault tolerance. ' + shardsPerNode + ' shards per node.</div></div>';
+            }
+
+            warningsContainer.innerHTML = warnings;
+
+            // Render code
+            var codeOutput = document.getElementById('code-output');
+            var code = 'PUT _index_template/<span class="string">' + escapeHtml(templateName) + '</span>\n';
+            code += '{\n';
+            code += '  <span class="key">"index_patterns"</span>: [<span class="string">"' + escapeHtml(indexPattern) + '"</span>],\n';
+            code += '  <span class="key">"template"</span>: {\n';
+            code += '    <span class="key">"settings"</span>: {\n';
+            code += '      <span class="key">"index.number_of_shards"</span>: <span class="number">' + primaryShards + '</span>,\n';
+            code += '      <span class="key">"index.number_of_replicas"</span>: <span class="number">' + replicas + '</span>\n';
+            code += '    }\n';
+            code += '  }\n';
+            code += '}';
+
+            codeOutput.innerHTML = code;
+
+            // Show results
+            document.getElementById('results-container').classList.remove('hidden');
+            console.log('[Shard Calculator] Calculation complete:', { primaryShards, replicas, totalShards, shardsPerNode });
+        } catch (err) {
+            console.error('[Shard Calculator] Error:', err);
         }
-
-        if (avgShardSize < 5) {
-            warnings += `
-                <div class="warning-box warning">
-                    <span class="warning-icon">&#9888;</span>
-                    <div>
-                        <strong>Over-sharding detected:</strong> Average shard size is ${avgShardSize.toFixed(1)} GB (recommended: 10-50 GB).
-                        Consider increasing target shard size or combining indices.
-                    </div>
-                </div>`;
-        } else if (avgShardSize > 50) {
-            warnings += `
-                <div class="warning-box info">
-                    <span class="warning-icon">&#8505;</span>
-                    <div>
-                        <strong>Large shards:</strong> Average shard size is ${avgShardSize.toFixed(1)} GB.
-                        Consider reducing target shard size for better performance.
-                    </div>
-                </div>`;
-        }
-
-        if (nodes >= 2 && replicas === 1) {
-            warnings += `
-                <div class="warning-box info">
-                    <span class="warning-icon">&#10003;</span>
-                    <div>
-                        <strong>Optimal configuration:</strong> Cluster has ${nodes} nodes with 1 replica for fault tolerance.
-                        ${shardsPerNode} shards per node.
-                    </div>
-                </div>`;
-        }
-
-        warningsContainer.innerHTML = warnings;
-
-        // Render code
-        const codeOutput = document.getElementById('code-output');
-        const code = `PUT _index_template/<span class="string">${escapeHtml(templateName)}</span>
-{
-  <span class="key">"index_patterns"</span>: [<span class="string">"${escapeHtml(indexPattern)}"</span>],
-  <span class="key">"template"</span>: {
-    <span class="key">"settings"</span>: {
-      <span class="key">"index.number_of_shards"</span>: <span class="number">${primaryShards}</span>,
-      <span class="key">"index.number_of_replicas"</span>: <span class="number">${replicas}</span>
-    }
-  }
-}`;
-
-        codeOutput.innerHTML = code;
-
-        // Show results
-        document.getElementById('results-container').classList.remove('hidden');
-    }
+    };
 
     function escapeHtml(str) {
-        const div = document.createElement('div');
+        var div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
     }
 
-    function copyCode() {
-        const nodes = Math.max(1, parseInt(document.getElementById('input-nodes').value) || 2);
-        const dataSize = Math.max(1, parseFloat(document.getElementById('input-data-size').value) || 25);
-        const targetShardSize = parseInt(document.getElementById('input-shard-size').value) || 30;
-        const indexPattern = document.getElementById('input-index-pattern').value.trim() || 'metrics-host-*';
-        const templateName = document.getElementById('input-template-name').value.trim() || 'template_metrics_host';
-        const primaryShards = Math.max(1, Math.ceil(dataSize / targetShardSize));
-        const replicas = nodes === 1 ? 0 : 1;
+    window.copyCode = function() {
+        var nodes = Math.max(1, parseInt(document.getElementById('input-nodes').value) || 2);
+        var dataSize = Math.max(1, parseFloat(document.getElementById('input-data-size').value) || 25);
+        var targetShardSize = parseInt(document.getElementById('input-shard-size').value) || 30;
+        var indexPattern = document.getElementById('input-index-pattern').value.trim() || 'metrics-host-*';
+        var templateName = document.getElementById('input-template-name').value.trim() || 'template_metrics_host';
+        var primaryShards = Math.max(1, Math.ceil(dataSize / targetShardSize));
+        var replicas = nodes === 1 ? 0 : 1;
 
-        const code = `PUT _index_template/${templateName}
-{
-  "index_patterns": ["${indexPattern}"],
-  "template": {
-    "settings": {
-      "index.number_of_shards": ${primaryShards},
-      "index.number_of_replicas": ${replicas}
-    }
-  }
-}`;
+        var code = 'PUT _index_template/' + templateName + '\n';
+        code += '{\n';
+        code += '  "index_patterns": ["' + indexPattern + '"],\n';
+        code += '  "template": {\n';
+        code += '    "settings": {\n';
+        code += '      "index.number_of_shards": ' + primaryShards + ',\n';
+        code += '      "index.number_of_replicas": ' + replicas + '\n';
+        code += '    }\n';
+        code += '  }\n';
+        code += '}';
 
-        navigator.clipboard.writeText(code).then(() => {
-            const btn = document.querySelector('.copy-btn');
+        navigator.clipboard.writeText(code).then(function() {
+            var btn = document.querySelector('.copy-btn');
             btn.textContent = 'Copied!';
             btn.classList.add('copied');
-            setTimeout(() => {
+            setTimeout(function() {
                 btn.textContent = 'Copy Code';
                 btn.classList.remove('copied');
             }, 2000);
-        }).catch(() => {
-            // Fallback for older browsers
-            const textarea = document.createElement('textarea');
+        }).catch(function() {
+            var textarea = document.createElement('textarea');
             textarea.value = code;
             document.body.appendChild(textarea);
             textarea.select();
             document.execCommand('copy');
             document.body.removeChild(textarea);
-            const btn = document.querySelector('.copy-btn');
+            var btn = document.querySelector('.copy-btn');
             btn.textContent = 'Copied!';
             btn.classList.add('copied');
-            setTimeout(() => {
+            setTimeout(function() {
                 btn.textContent = 'Copy Code';
                 btn.classList.remove('copied');
             }, 2000);
         });
-    }
+    };
 
     // Auto-calculate on page load
-    document.addEventListener('DOMContentLoaded', calculate);
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('[Shard Calculator] Page loaded, calculating...');
+        window.calculate();
+    });
 
     // Recalculate on input change
-    document.querySelectorAll('input, select').forEach(el => {
-        el.addEventListener('input', calculate);
-        el.addEventListener('change', calculate);
+    document.querySelectorAll('input, select').forEach(function(el) {
+        el.addEventListener('input', window.calculate);
+        el.addEventListener('change', window.calculate);
     });
     </script>
 </body>
