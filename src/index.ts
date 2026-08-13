@@ -131,6 +131,10 @@ app.get("/remote-host", (req: Request, res: Response) => {
     res.sendFile("opensearch-cluster.html", { root: require("path").join(__dirname, "../views") });
   });
 
+  app.get("/opensearch-shard-calculator", (req: Request, res: Response) => {
+    res.sendFile("opensearch-shard-calculator.html", { root: require("path").join(__dirname, "../views") });
+  });
+
 import { authMiddleware } from "./middleware/auth.middleware";
 import setupRoutes from "./routes/setup.routes";
 

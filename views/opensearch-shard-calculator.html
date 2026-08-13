@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenSearch Shard Calculator - Hephaestus</title>
+    <style>
+        :root {
+            --background: #242424;
+            --foreground: #cbd5e1;
+            --app-card: #2e2e2e;
+            --app-card-dark: #1f1f1f;
+            --app-border: #3c3c3c;
+            --text-white: #ffffff;
+            --text-muted: #a0a0a0;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --accent: #58a6ff;
+            --radius: 6px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #1e1e1e; border-bottom: 1px solid var(--app-border); flex-shrink: 0; }
+        .header h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; color: var(--text-white); }
+        .header h1 svg { width: 20px; height: 20px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 12px; padding: 4px 10px; border: 1px solid var(--app-border); border-radius: var(--radius); transition: all 0.2s; }
+        .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
+        .container { flex: 1; overflow-y: auto; padding: 24px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .card { background: var(--app-card); border: 1px solid var(--app-border); border-radius: var(--radius); padding: 20px; }
+        .card-title { font-size: 14px; font-weight: 600; color: var(--text-white); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .card-title svg { width: 16px; height: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 4px; color: var(--text-white); font-size: 13px; outline: none; transition: border-color 0.2s; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+        .form-group select { cursor: pointer; }
+        .form-group .hint { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+        .btn { padding: 10px 20px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #4a90e2; }
+        .btn-secondary { background: var(--app-card-dark); color: var(--text-muted); border: 1px solid var(--app-border); }
+        .btn-secondary:hover { color: var(--text-white); border-color: var(--text-muted); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #0d9668; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+        .metric-card { background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: var(--radius); padding: 16px; text-align: center; }
+        .metric-value { font-size: 28px; font-weight: 700; color: var(--text-white); margin-bottom: 4px; }
+        .metric-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-card.green .metric-value { color: var(--success); }
+        .metric-card.yellow .metric-value { color: var(--warning); }
+        .metric-card.red .metric-value { color: var(--error); }
+        .warning-box { padding: 12px 16px; border-radius: 4px; margin-bottom: 12px; font-size: 12px; display: flex; align-items: flex-start; gap: 10px; }
+        .warning-box.warning { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: var(--warning); }
+        .warning-box.info { background: rgba(88, 166, 255, 0.1); border: 1px solid rgba(88, 166, 255, 0.3); color: var(--accent); }
+        .warning-icon { font-size: 16px; flex-shrink: 0; }
+        .code-block { position: relative; background: #0d1117; border: 1px solid var(--app-border); border-radius: 6px; overflow: hidden; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--app-border); }
+        .code-lang { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .code-content { padding: 16px; font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace; font-size: 12px; line-height: 1.6; color: #e6edf3; overflow-x: auto; white-space: pre; }
+        .code-content .key { color: #79c0ff; }
+        .code-content .string { color: #a5d6ff; }
+        .code-content .number { color: #f2cc60; }
+        .copy-btn { padding: 4px 10px; font-size: 10px; border-radius: 3px; background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+        .copy-btn:hover { color: var(--text-white); border-color: var(--accent); }
+        .copy-btn.copied { color: var(--success); border-color: var(--success); }
+        .hidden { display: none; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+            OpenSearch Shard Calculator
+        </h1>
+        <div class="header-right">
+            <a href="/" class="back-link">&larr; Back to Portal</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="grid-2">
+            <!-- Left: Input Form -->
+            <div>
+                <div class="card">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                        Cluster Configuration
+                    </div>
+
+                    <div class="form-group">
+                        <label>Number of Cluster Nodes</label>
+                        <input type="number" id="input-nodes" value="2" min="1" max="100">
+                        <div class="hint">Minimum 1. Recommended 3+ for production.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estimated Daily Index Size (GB)</label>
+                        <input type="number" id="input-data-size" value="25" min="1" max="10000">
+                        <div class="hint">Average data volume ingested per day.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Target Shard Size</label>
+                        <select id="input-shard-size">
+                            <option value="10">10 GB (Small indices)</option>
+                            <option value="30" selected>30 GB (Recommended)</option>
+                            <option value="50">50 GB (Large indices)</option>
+                        </select>
+                        <div class="hint">Optimal: 10-50 GB per shard for best performance.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Index Pattern Name</label>
+                        <input type="text" id="input-index-pattern" value="metrics-host-*" placeholder="e.g. logs-app-*">
+                        <div class="hint">Pattern used to match indices (supports wildcards).</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Index Template Name</label>
+                        <input type="text" id="input-template-name" value="template_metrics_host" placeholder="e.g. template_logs_app">
+                        <div class="hint">Name for the index template.</div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="calculate()" style="width:100%;">Calculate Shards</button>
+                </div>
+            </div>
+
+            <!-- Right: Results -->
+            <div id="results-container" class="hidden">
+                <div class="card fade-in">
+                    <div class="card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                        Calculation Results
+                    </div>
+
+                    <!-- Metric Cards -->
+                    <div class="metrics-grid" id="metrics-grid"></div>
+
+                    <!-- Warnings -->
+                    <div id="warnings-container"></div>
+
+                    <!-- Generated Code -->
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">OpenSearch DSL - PUT Index Template</span>
+                            <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+                        </div>
+                        <div class="code-content" id="code-output"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function calculate() {
+        const nodes = Math.max(1, parseInt(document.getElementById('input-nodes').value) || 2);
+        const dataSize = Math.max(1, parseFloat(document.getElementById('input-data-size').value) || 25);
+        const targetShardSize = parseInt(document.getElementById('input-shard-size').value) || 30;
+        const indexPattern = document.getElementById('input-index-pattern').value.trim() || 'metrics-host-*';
+        const templateName = document.getElementById('input-template-name').value.trim() || 'template_metrics_host';
+
+        // Calculation
+        const primaryShards = Math.max(1, Math.ceil(dataSize / targetShardSize));
+        const replicas = nodes === 1 ? 0 : 1;
+        const totalShards = primaryShards * (1 + replicas);
+        const shardsPerNode = Math.ceil(totalShards / nodes);
+        const avgShardSize = dataSize / primaryShards;
+        const isHealthy = nodes >= 2 && replicas === 1;
+
+        // Render metrics
+        const metricsGrid = document.getElementById('metrics-grid');
+        metricsGrid.innerHTML = `
+            <div class="metric-card">
+                <div class="metric-value">${primaryShards}</div>
+                <div class="metric-label">Primary Shards</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">${replicas}</div>
+                <div class="metric-label">Replicas</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">${totalShards}</div>
+                <div class="metric-label">Total Shards</div>
+            </div>
+            <div class="metric-card ${isHealthy ? 'green' : 'yellow'}">
+                <div class="metric-value">${isHealthy ? 'GREEN' : 'YELLOW'}</div>
+                <div class="metric-label">Cluster Status</div>
+            </div>
+        `;
+
+        // Render warnings
+        const warningsContainer = document.getElementById('warnings-container');
+        let warnings = '';
+
+        if (nodes === 1) {
+            warnings += `
+                <div class="warning-box warning">
+                    <span class="warning-icon">&#9888;</span>
+                    <div>
+                        <strong>Single node cluster:</strong> Replicas set to 0 to avoid Yellow cluster status.
+                        For production, use 3+ nodes for high availability.
+                    </div>
+                </div>`;
+        }
+
+        if (avgShardSize < 5) {
+            warnings += `
+                <div class="warning-box warning">
+                    <span class="warning-icon">&#9888;</span>
+                    <div>
+                        <strong>Over-sharding detected:</strong> Average shard size is ${avgShardSize.toFixed(1)} GB (recommended: 10-50 GB).
+                        Consider increasing target shard size or combining indices.
+                    </div>
+                </div>`;
+        } else if (avgShardSize > 50) {
+            warnings += `
+                <div class="warning-box info">
+                    <span class="warning-icon">&#8505;</span>
+                    <div>
+                        <strong>Large shards:</strong> Average shard size is ${avgShardSize.toFixed(1)} GB.
+                        Consider reducing target shard size for better performance.
+                    </div>
+                </div>`;
+        }
+
+        if (nodes >= 2 && replicas === 1) {
+            warnings += `
+                <div class="warning-box info">
+                    <span class="warning-icon">&#10003;</span>
+                    <div>
+                        <strong>Optimal configuration:</strong> Cluster has ${nodes} nodes with 1 replica for fault tolerance.
+                        ${shardsPerNode} shards per node.
+                    </div>
+                </div>`;
+        }
+
+        warningsContainer.innerHTML = warnings;
+
+        // Render code
+        const codeOutput = document.getElementById('code-output');
+        const code = `PUT _index_template/<span class="string">${escapeHtml(templateName)}</span>
+{
+  <span class="key">"index_patterns"</span>: [<span class="string">"${escapeHtml(indexPattern)}"</span>],
+  <span class="key">"template"</span>: {
+    <span class="key">"settings"</span>: {
+      <span class="key">"index.number_of_shards"</span>: <span class="number">${primaryShards}</span>,
+      <span class="key">"index.number_of_replicas"</span>: <span class="number">${replicas}</span>
+    }
+  }
+}`;
+
+        codeOutput.innerHTML = code;
+
+        // Show results
+        document.getElementById('results-container').classList.remove('hidden');
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function copyCode() {
+        const nodes = Math.max(1, parseInt(document.getElementById('input-nodes').value) || 2);
+        const dataSize = Math.max(1, parseFloat(document.getElementById('input-data-size').value) || 25);
+        const targetShardSize = parseInt(document.getElementById('input-shard-size').value) || 30;
+        const indexPattern = document.getElementById('input-index-pattern').value.trim() || 'metrics-host-*';
+        const templateName = document.getElementById('input-template-name').value.trim() || 'template_metrics_host';
+        const primaryShards = Math.max(1, Math.ceil(dataSize / targetShardSize));
+        const replicas = nodes === 1 ? 0 : 1;
+
+        const code = `PUT _index_template/${templateName}
+{
+  "index_patterns": ["${indexPattern}"],
+  "template": {
+    "settings": {
+      "index.number_of_shards": ${primaryShards},
+      "index.number_of_replicas": ${replicas}
+    }
+  }
+}`;
+
+        navigator.clipboard.writeText(code).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'Copy Code';
+                btn.classList.remove('copied');
+            }, 2000);
+        }).catch(() => {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            const btn = document.querySelector('.copy-btn');
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'Copy Code';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    }
+
+    // Auto-calculate on page load
+    document.addEventListener('DOMContentLoaded', calculate);
+
+    // Recalculate on input change
+    document.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', calculate);
+        el.addEventListener('change', calculate);
+    });
+    </script>
+</body>
+</html>

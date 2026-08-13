@@ -631,6 +631,23 @@ function toggleSnmpSubmenu() {
   }
 }
 
+function toggleToolsSubmenu() {
+  const submenu = document.getElementById('tools-submenu');
+  const arrow = document.getElementById('menu-tools-arrow');
+  if (submenu) {
+    const isHidden = submenu.classList.contains('hidden') || submenu.style.display === 'none';
+    if (isHidden) {
+      submenu.classList.remove('hidden');
+      submenu.style.display = 'flex';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+    } else {
+      submenu.classList.add('hidden');
+      submenu.style.display = 'none';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
 function toggleMonitoringSubmenu() {
   const submenu = document.getElementById('monitoring-submenu');
   const arrow = document.getElementById('menu-monitoring-arrow');
