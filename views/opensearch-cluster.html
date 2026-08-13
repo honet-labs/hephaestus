@@ -784,7 +784,6 @@
                     <div class="node-header">
                         <span class="node-name">${escapeHtml(node.name)}</span>
                         <div style="display:flex;gap:8px;align-items:center;">
-                            <span class="node-role">${escapeHtml(node.roles.join(', ') || node.role)}</span>
                             <span style="font-size:11px;color:var(--text-muted)">${escapeHtml(node.ip)}</span>
                             <span style="font-size:11px;color:var(--text-muted)">v${escapeHtml(node.node_version)}</span>
                         </div>
@@ -820,7 +819,7 @@
                         </div>
                         <div class="metric">
                             <span class="metric-label">Disk Usage</span>
-                            <span class="metric-value">${formatBytes(node.disk_total - node.disk_free)} / ${formatBytes(node.disk_total)}</span>
+                            <span class="metric-value">${formatBytes(Math.round(node.disk_total * node.disk_used_percent / 100))} / ${formatBytes(node.disk_total)}</span>
                         </div>
                     </div>
                 </div>`;
