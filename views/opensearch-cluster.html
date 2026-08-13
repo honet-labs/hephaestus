@@ -392,6 +392,13 @@
 
     <script>
     (function() {
+        // Auth check - redirect to login if no token
+        const token = localStorage.getItem('hephaestus_session_token');
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+
         const API = '/api/v1/opensearch-cluster';
         let currentConfigId = null;
         let refreshInterval = null;

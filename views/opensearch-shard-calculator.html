@@ -170,6 +170,15 @@
     </div>
 
     <script>
+    // Auth check - redirect to login if no token
+    (function() {
+        const token = localStorage.getItem('hephaestus_session_token');
+        if (!token) {
+            window.location.href = '/';
+            return;
+        }
+    })();
+
     window.calculate = function() {
         try {
             const nodes = Math.max(1, parseInt(document.getElementById('input-nodes').value) || 2);

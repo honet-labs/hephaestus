@@ -912,10 +912,15 @@
     let activeSheetId = null;
     let physicsEnabled = false;
     let autoRefreshTimer = null;
+    // Auth check - redirect to login if no token
+    const token = localStorage.getItem('hephaestus_session_token') || '';
+    if (!token) {
+        window.location.href = '/';
+    }
+
     let searchQuery = '';
     let sidebarVisible = false;
     let selectedIndices = new Set();
-    const token = localStorage.getItem('hephaestus_session_token') || '';
 
     // Load pending nodes from DB on startup
     async function loadPendingFromDB() {
@@ -1124,10 +1129,25 @@
         const labelParts = [];
         if (labelShowName) labelParts.push(n.name);
         if (labelShowIp) labelParts.push(n.ip);
+        // Build tooltip text
+        const tooltipParts = [
+          `Name: ${n.name}`,
+          `IP: ${n.ip}`,
+          `Type: ${n.deviceType || 'unknown'}`,
+          `Status: ${(n.status || 'unknown').toUpperCase()}`,
+          `Sources: ${(n.sources || []).join(', ')}`
+        ];
+        if (n.interfaces && n.interfaces.length > 0) {
+          tooltipParts.push(`Interfaces: ${n.interfaces.length}`);
+          n.interfaces.slice(0, 5).forEach(iface => {
+            tooltipParts.push(`  ${iface.name}${iface.ip ? ' (' + iface.ip + ')' : ''} [${iface.status}]`);
+          });
+        }
         return {
             id: n.id,
             image: getDeviceIconUrl(n.deviceType || 'unknown', n.status || 'unknown'),
             label: labelParts.join('\n') || n.ip,
+            title: tooltipParts.join('\n'),
             shape: 'image',
             shapeProperties: { useBorderWithImage: true },
             borderWidth: 0,
