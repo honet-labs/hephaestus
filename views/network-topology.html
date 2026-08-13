@@ -1345,8 +1345,8 @@
 
         network.on('oncontext', function(params) {
             params.event.preventDefault();
-            const nodeId = network.getNodesAt(params.pointer.DOM)[0];
-            const edgeIds = !nodeId ? network.getEdgesAt(params.pointer.DOM) : [];
+            const nodeId = network.getNodeAt(params.pointer.DOM);
+            const edgeId = !nodeId ? network.getEdgeAt(params.pointer.DOM) : null;
             if (nodeId) {
                 contextNodeId = nodeId;
                 contextEdgeId = null;
@@ -1355,10 +1355,10 @@
                 showContextMenu(params.event.clientX, params.event.clientY, 'node');
                 const node = nodesData.find(n => n.id === nodeId);
                 if (node && node._raw) showDetail(node._raw);
-            } else if (edgeIds.length > 0) {
+            } else if (edgeId) {
                 contextNodeId = null;
-                contextEdgeIds = edgeIds;
-                contextEdgeId = edgeIds[0];
+                contextEdgeIds = [edgeId];
+                contextEdgeId = edgeId;
                 showContextMenu(params.event.clientX, params.event.clientY, 'edge');
             } else {
                 hideContextMenu();
