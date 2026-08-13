@@ -690,16 +690,17 @@
         function renderShardDistribution(shardsData) {
             const container = document.getElementById('shardDistributionChart');
             if (!container) return;
-            // Use actual shard data from _cat/shards API
-            if (!shardsData || shardsData.length === 0) {
-                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No shards allocated</div>';
+            // Filter out system shards (indices starting with .)
+            const userShards = (shardsData || []).filter(s => s.index && !s.index.startsWith('.'));
+            if (!userShards || userShards.length === 0) {
+                container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No user index shards</div>';
                 return;
             }
-            const totalShards = shardsData.length;
-            const primaryShards = shardsData.filter(s => s.prirep === 'p').length;
-            const replicaShards = shardsData.filter(s => s.prirep === 'r').length;
-            const startedShards = shardsData.filter(s => s.state === 'STARTED').length;
-            const unassignedShards = shardsData.filter(s => s.state === 'UNASSIGNED').length;
+            const totalShards = userShards.length;
+            const primaryShards = userShards.filter(s => s.prirep === 'p').length;
+            const replicaShards = userShards.filter(s => s.prirep === 'r').length;
+            const startedShards = userShards.filter(s => s.state === 'STARTED').length;
+            const unassignedShards = userShards.filter(s => s.state === 'UNASSIGNED').length;
             const html = `
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
                     <div class="metric">
