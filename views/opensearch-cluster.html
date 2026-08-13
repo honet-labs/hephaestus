@@ -97,7 +97,9 @@
         .health-badge.yellow { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
         .health-badge.red { background: rgba(239, 68, 68, 0.2); color: var(--error); }
         .shard-cell { display: flex; gap: 2px; flex-wrap: wrap; }
-        .shard-box { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text-white); cursor: help; }
+        .shard-box { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text-white); cursor: help; transition: all 0.15s; }
+        .shard-box:hover { transform: scale(1.15); filter: brightness(1.2); }
+        .shard-box.selected { background: #4a4a5a !important; transform: scale(1.1); }
         .shard-box.primary { background: var(--success); }
         .shard-box.replica { background: var(--accent); }
         .shard-box.unassigned { background: var(--error); }
@@ -150,7 +152,11 @@
         .node-shard-counts .count-r { color: var(--accent); }
         .node-shard-counts .count-u { color: var(--error); }
         .shard-cell { display: flex; flex-wrap: wrap; gap: 4px; }
-        .shard-tooltip { position: absolute; background: #1a1a2e; border: 1px solid var(--accent); border-radius: 6px; padding: 10px 14px; font-size: 11px; color: var(--text-white); z-index: 1000; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .shard-tooltip { position: absolute; background: #1e1e2e; border: 1px solid var(--accent); border-radius: 8px; padding: 14px 18px; font-size: 12px; color: var(--text-white); z-index: 1000; pointer-events: none; white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,0.6); line-height: 1.8; }
+        .shard-tooltip strong { color: var(--accent); font-size: 13px; }
+        .shard-tooltip .tt-row { display: flex; gap: 8px; }
+        .shard-tooltip .tt-label { color: var(--text-muted); min-width: 100px; }
+        .shard-tooltip .tt-value { color: var(--text-white); font-weight: 500; }
         @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } .node-metrics { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
@@ -894,10 +900,23 @@
                         ${nodeShardsList.map(s => {
                             const cls = s.state === 'UNASSIGNED' ? 'unassigned' : s.state === 'RELOCATING' ? 'relocating' : s.state === 'INITIALIZING' ? 'initializing' : s.prirep === 'p' ? 'primary' : 'replica';
                             const typeLabel = s.prirep === 'p' ? 'Primary' : 'Replica';
+                            // Find replica partner (same index, different prirep)
+                            const replicaOf = s.prirep === 'r' ? nodeShardsList.find(r => r.index === s.index && r.prirep === 'p' && r.shard === s.shard)?.shard : null;
+                            const shardData = JSON.stringify({
+                                index: s.index,
+                                shard: s.shard,
+                                type: typeLabel,
+                                state: s.state,
+                                store: s.store || '-',
+                                ip: s.ip || '-',
+                                node: s.node || '-',
+                                docs: s.docs || 0,
+                                replicaOf: replicaOf
+                            }).replace(/"/g, '&quot;');
                             return `<div class="shard-box ${cls}" 
-                                onmouseenter="showShardTooltip(event, '${escapeHtml(s.index)}', ${s.shard}, '${typeLabel}', '${s.state}', '${s.store || '-'}', '${s.ip || '-'}')" 
+                                onmouseenter='showShardTooltip(event, ${shardData})' 
                                 onmouseleave="hideShardTooltip()"
-                                onclick="showShardTooltip(event, '${escapeHtml(s.index)}', ${s.shard}, '${typeLabel}', '${s.state}', '${s.store || '-'}', '${s.ip || '-'}')">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
+                                onclick='showShardTooltip(event, ${shardData})'>${s.prirep === 'p' ? 'P' : 'R'}</div>`;
                         }).join('')}
                     </div>
                 </div>`;
@@ -906,17 +925,27 @@
 
         // ==================== HELPERS ====================
         let activeTooltip = null;
+        let selectedShard = null;
 
-        function showShardTooltip(event, index, shard, type, state, store, ip) {
+        function showShardTooltip(event, data) {
             hideShardTooltip();
+            // Highlight selected shard
+            if (selectedShard) selectedShard.classList.remove('selected');
+            event.target.classList.add('selected');
+            selectedShard = event.target;
+
             const tooltip = document.createElement('div');
             tooltip.className = 'shard-tooltip';
-            tooltip.innerHTML = '<strong>' + escapeHtml(index) + '</strong><br>' +
-                'Shard: ' + shard + '<br>' +
-                'Type: ' + type + '<br>' +
-                'State: ' + state + '<br>' +
-                'Store: ' + escapeHtml(store) + '<br>' +
-                'IP: ' + escapeHtml(ip);
+            tooltip.innerHTML = '<strong>' + escapeHtml(data.index) + '</strong>' +
+                '<div class="tt-row"><span class="tt-label">Index:</span><span class="tt-value">' + escapeHtml(data.index) + '</span></div>' +
+                '<div class="tt-row"><span class="tt-label">Size:</span><span class="tt-value">' + escapeHtml(data.store || '-') + '</span></div>' +
+                '<div class="tt-row"><span class="tt-label">Node:</span><span class="tt-value">' + escapeHtml(data.node || '-') + '</span></div>' +
+                '<div class="tt-row"><span class="tt-label">IP:</span><span class="tt-value">' + escapeHtml(data.ip || '-') + '</span></div>' +
+                '<div class="tt-row"><span class="tt-label">Docs:</span><span class="tt-value">' + formatNumber(data.docs || 0) + '</span></div>' +
+                '<div class="tt-row"><span class="tt-label">Shard:</span><span class="tt-value">' + data.shard + '</span></div>' +
+                '<div class="tt-row"><span class="tt-label">Type:</span><span class="tt-value">' + escapeHtml(data.type) + '</span></div>' +
+                '<div class="tt-row"><span class="tt-label">State:</span><span class="tt-value">' + escapeHtml(data.state) + '</span></div>' +
+                (data.replicaOf ? '<div class="tt-row"><span class="tt-label">Replica of:</span><span class="tt-value">Shard ' + data.replicaOf + '</span></div>' : '');
             document.body.appendChild(tooltip);
             activeTooltip = tooltip;
             positionTooltip(event, tooltip);
