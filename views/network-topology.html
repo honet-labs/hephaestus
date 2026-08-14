@@ -1327,16 +1327,8 @@
             portMapping[nodeId] = portIds;
         });
         
-        // Build edges connecting to ports
+        // Build edges connecting to device nodes (not ports)
         edgesData = edges.map(e => {
-            const sourcePorts = portMapping[e.source] || [];
-            const targetPorts = portMapping[e.target] || [];
-            if (sourcePorts.length === 0 || targetPorts.length === 0) {
-                return buildEdgeData(e); // Fallback
-            }
-            // Find nearest ports (simple: use right port of source, left port of target)
-            const sourcePort = sourcePorts[3] || sourcePorts[0]; // right or top
-            const targetPort = targetPorts[2] || targetPorts[0]; // left or top
             const ec = EDGE_TYPE_COLORS[e.label] || '#4a5568';
             const srcLbl = e.sourceLabel || '';
             const tgtLbl = e.targetLabel || '';
@@ -1345,8 +1337,8 @@
             const displayLabel = parts.length > 1 ? parts.join(' | ') : (parts[0] || undefined);
             return {
                 id: e.id || `edge-${e.source}-${e.target}`,
-                from: sourcePort,
-                to: targetPort,
+                from: e.source,
+                to: e.target,
                 label: displayLabel,
                 title: [srcLbl ? 'A: ' + srcLbl : '', typeLbl ? 'Type: ' + typeLbl : '', tgtLbl ? 'B: ' + tgtLbl : ''].filter(Boolean).join('\n'),
                 font: { color: '#ffffff', size: 10, face: 'monospace', align: 'middle', strokeWidth: 3, strokeColor: '#1a1a2e' },
@@ -1354,9 +1346,7 @@
                 width: 2,
                 smooth: { type: 'continuous', roundness: 0.5 },
                 shadow: { enabled: true, color: 'rgba(0,0,0,0.3)', size: 5, x: 2, y: 2 },
-                _raw: e,
-                _sourceDevice: e.source,
-                _targetDevice: e.target
+                _raw: e
             };
         });
 
@@ -1436,30 +1426,7 @@
         // Port connection with canvas drawing
         let portConnectMode = false;
         let portConnectSource = null;
-        let tempLine = null;
-        let canvasEl = container.querySelector('canvas');
-
-        // Draw temporary line on canvas
-        function drawTempLine(fromX, fromY, toX, toY) {
-            if (!network) return;
-            const ctx = canvasEl.getContext('2d');
-            if (!ctx) return;
-            
-            // Get canvas transform
-            const viewPosition = network.getViewPosition();
-            const scale = network.getScale();
-            const canvasWidth = canvasEl.width;
-            const canvasHeight = canvasEl.height;
-            
-            // Convert network coords to canvas coords
-            const fromCanvasX = (fromX - viewPosition.x) * scale + canvasWidth / 2;
-            const fromCanvasY = (fromY - viewPosition.y) * scale + canvasHeight / 2;
-            const toCanvasX = (toX - viewPosition.x) * scale + canvasWidth / 2;
-            const toCanvasY = (toY - viewPosition.y) * scale + canvasHeight / 2;
-            
-            // Clear and redraw will happen automatically via vis-network
-            // We'll use a different approach - add a temporary node and edge
-        }
+        let portConnectSourcePortId = null;
 
         network.on('click', function(params) {
             const clickedNodeId = params.nodes.length > 0 ? params.nodes[0] : null;
@@ -1472,14 +1439,18 @@
                         // Start port connection mode
                         portConnectMode = true;
                         portConnectSource = portNode;
+                        portConnectSourcePortId = clickedNodeId;
                         showToast('info', 'Click another port dot to connect');
                     } else {
-                        // Complete port connection
+                        // Complete port connection - use the specific clicked ports
                         const sourceDeviceId = portConnectSource._parentNodeId;
                         const targetDeviceId = portNode._parentNodeId;
+                        const sourcePortId = portConnectSourcePortId;
+                        const targetPortId = clickedNodeId;
                         
                         portConnectMode = false;
                         portConnectSource = null;
+                        portConnectSourcePortId = null;
                         
                         if (sourceDeviceId && targetDeviceId && sourceDeviceId !== targetDeviceId) {
                             openAddEdgeModalWith(sourceDeviceId, targetDeviceId);
@@ -1493,6 +1464,7 @@
             if (portConnectMode) {
                 portConnectMode = false;
                 portConnectSource = null;
+                portConnectSourcePortId = null;
                 showToast('info', 'Connection cancelled');
                 return;
             }
