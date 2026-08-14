@@ -176,34 +176,6 @@
             <a href="/" class="back-link">← Back to Portal</a>
         </div>
     </div>
-    <div class="status-bar" id="statusBar">
-        <div class="status-indicator">
-            <div class="status-dot gray" id="clusterStatusDot"></div>
-            <span id="clusterStatusText">Disconnected</span>
-        </div>
-        <div class="cluster-info" id="clusterInfo" style="display: none;">
-            <div class="cluster-info-item">
-                <span class="cluster-info-label">Nodes</span>
-                <span class="cluster-info-value" id="nodeCount">-</span>
-            </div>
-            <div class="cluster-info-item">
-                <span class="cluster-info-label">Data Nodes</span>
-                <span class="cluster-info-value" id="dataNodeCount">-</span>
-            </div>
-            <div class="cluster-info-item">
-                <span class="cluster-info-label">Active Shards</span>
-                <span class="cluster-info-value" id="activeShards">-</span>
-            </div>
-            <div class="cluster-info-item">
-                <span class="cluster-info-label">Unassigned</span>
-                <span class="cluster-info-value" id="unassignedShards">-</span>
-            </div>
-            <div class="cluster-info-item">
-                <span class="cluster-info-label">Active %</span>
-                <span class="cluster-info-value" id="activeShardsPercent">-</span>
-            </div>
-        </div>
-    </div>
     <div class="tabs">
         <div class="tab active" data-tab="overview">Overview</div>
         <div class="tab" data-tab="nodes">Nodes</div>
@@ -448,12 +420,9 @@
                 if (active) {
                     currentConfigId = active.id;
                     refreshAll();
-                } else {
-                    showEmptyState();
                 }
             } catch (err) {
                 console.error('Failed to load configs:', err);
-                showEmptyState();
             }
         }
 
@@ -613,7 +582,6 @@
                     apiFetch(`${API}/shards?configId=${currentConfigId}`),
                     apiFetch(`${API}/stats?configId=${currentConfigId}`)
                 ]);
-                updateStatusBar(healthRes.data);
                 renderOverview(healthRes.data, indicesRes.data, statsRes.data, shardsRes.data);
                 renderNodes(nodesRes.data);
                 renderIndices(indicesRes.data);
@@ -634,32 +602,6 @@
                 document.getElementById('clusterStatusText').textContent = 'Error: ' + err.message;
             }
         };
-
-        function showEmptyState() {
-            const dot = document.getElementById('clusterStatusDot');
-            const text = document.getElementById('clusterStatusText');
-            const info = document.getElementById('clusterInfo');
-            if (dot) dot.className = 'status-dot gray';
-            if (text) text.textContent = 'No connection configured';
-            if (info) info.style.display = 'none';
-        }
-
-        // ==================== STATUS BAR ====================
-        function updateStatusBar(health) {
-            if (!health) return;
-            const dot = document.getElementById('clusterStatusDot');
-            const text = document.getElementById('clusterStatusText');
-            if (dot) dot.className = `status-dot ${health.status}`;
-            if (text) text.textContent = health.status.toUpperCase();
-            const info = document.getElementById('clusterInfo');
-            if (info) info.style.display = 'flex';
-            const el = (id) => document.getElementById(id);
-            if (el('nodeCount')) el('nodeCount').textContent = health.number_of_nodes || 0;
-            if (el('dataNodeCount')) el('dataNodeCount').textContent = health.number_of_data_nodes || 0;
-            if (el('activeShards')) el('activeShards').textContent = health.active_shards || 0;
-            if (el('unassignedShards')) el('unassignedShards').textContent = health.unassigned_shards || 0;
-            if (el('activeShardsPercent')) el('activeShardsPercent').textContent = (health.active_shards_percent_as_number || 0).toFixed(1) + '%';
-        }
 
         // ==================== OVERVIEW ====================
         function renderOverview(health, indices, stats, shardsData) {
