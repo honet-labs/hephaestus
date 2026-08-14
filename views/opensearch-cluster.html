@@ -183,10 +183,6 @@
         </div>
         <div class="cluster-info" id="clusterInfo" style="display: none;">
             <div class="cluster-info-item">
-                <span class="cluster-info-label">Cluster</span>
-                <span class="cluster-info-value" id="clusterName">-</span>
-            </div>
-            <div class="cluster-info-item">
                 <span class="cluster-info-label">Nodes</span>
                 <span class="cluster-info-value" id="nodeCount">-</span>
             </div>
@@ -652,7 +648,6 @@
             const info = document.getElementById('clusterInfo');
             if (info) info.style.display = 'flex';
             const el = (id) => document.getElementById(id);
-            if (el('clusterName')) el('clusterName').textContent = health.cluster_name || '-';
             if (el('nodeCount')) el('nodeCount').textContent = health.number_of_nodes || 0;
             if (el('dataNodeCount')) el('dataNodeCount').textContent = health.number_of_data_nodes || 0;
             if (el('activeShards')) el('activeShards').textContent = health.active_shards || 0;
