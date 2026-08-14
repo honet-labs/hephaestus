@@ -1409,10 +1409,71 @@
             }
         });
 
+        // Port connection mode
+        let portConnectMode = false;
+        let portConnectSource = null;
+        let tempEdgeId = null;
+
         network.on('click', function(params) {
+            const clickedNodeId = params.nodes.length > 0 ? params.nodes[0] : null;
+            
+            // Check if clicked on a port dot
+            if (clickedNodeId && clickedNodeId.includes('-port-')) {
+                const portNode = portsData.find(p => p.id === clickedNodeId);
+                if (portNode) {
+                    if (!portConnectMode) {
+                        // Start port connection mode
+                        portConnectMode = true;
+                        portConnectSource = portNode;
+                        // Add temporary edge for visual feedback
+                        tempEdgeId = 'temp-edge-' + Date.now();
+                        visEdges.add({
+                            id: tempEdgeId,
+                            from: portNode.id,
+                            to: portNode.id,
+                            color: { color: '#58a6ff', opacity: 0.6 },
+                            width: 2,
+                            dashes: [5, 5],
+                            smooth: { type: 'continuous' }
+                        });
+                        showToast('info', 'Click another port dot to connect');
+                    } else {
+                        // Complete port connection
+                        const sourceDeviceId = portConnectSource._parentNodeId;
+                        const targetDeviceId = portNode._parentNodeId;
+                        
+                        // Remove temporary edge
+                        if (tempEdgeId) {
+                            try { visEdges.remove(tempEdgeId); } catch(e) {}
+                            tempEdgeId = null;
+                        }
+                        
+                        portConnectMode = false;
+                        portConnectSource = null;
+                        
+                        if (sourceDeviceId && targetDeviceId && sourceDeviceId !== targetDeviceId) {
+                            openAddEdgeModalWith(sourceDeviceId, targetDeviceId);
+                        }
+                    }
+                    return;
+                }
+            }
+            
+            // Cancel port connect mode if clicking elsewhere
+            if (portConnectMode) {
+                portConnectMode = false;
+                portConnectSource = null;
+                if (tempEdgeId) {
+                    try { visEdges.remove(tempEdgeId); } catch(e) {}
+                    tempEdgeId = null;
+                }
+                return;
+            }
+
+            // Existing click logic
             if (connectMode) {
-                if (params.nodes.length > 0) {
-                    const targetId = params.nodes[0];
+                if (clickedNodeId) {
+                    const targetId = clickedNodeId;
                     if (targetId === connectSourceId) return;
                     exitConnectMode();
                     openAddEdgeModalWith(connectSourceId, targetId);
@@ -1421,16 +1482,27 @@
                 }
                 return;
             }
-            if (params.nodes.length > 0) {
-                const nodeId = params.nodes[0];
-                selectedNodeId = nodeId;
-                const node = nodesData.find(n => n.id === nodeId);
+            if (clickedNodeId) {
+                selectedNodeId = clickedNodeId;
+                const node = nodesData.find(n => n.id === clickedNodeId);
                 if (node && node._raw) showDetail(node._raw);
             } else if (params.edges.length > 0) {
                 const edge = edgesData.find(e => e.id === params.edges[0]);
                 if (edge) showEdgeDetail(edge);
             } else {
                 closeDetail();
+            }
+        });
+
+        // Update temp edge position on hover
+        network.on('hoverNode', function(params) {
+            if (portConnectMode && portConnectSource && tempEdgeId) {
+                const hoveredId = params.node;
+                if (hoveredId && hoveredId.includes('-port-') && hoveredId !== portConnectSource.id) {
+                    try {
+                        visEdges.update({ id: tempEdgeId, to: hoveredId });
+                    } catch(e) {}
+                }
             }
         });
 
