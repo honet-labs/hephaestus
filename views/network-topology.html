@@ -1066,18 +1066,7 @@
                 break;
         }
 
-        // Draw small status dot in bottom-right corner
-        const sc = STATUS_COLORS[status] || '#6b7280';
-        const dotRadius = 6 * s;
-        const dotX = size - dotRadius - 2;
-        const dotY = size - dotRadius - 2;
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
-        ctx.fillStyle = sc;
-        ctx.fill();
-        ctx.strokeStyle = '#242424';
-        ctx.lineWidth = 2 * s;
-        ctx.stroke();
+        // Status is now shown by border color (green/red/gray)
 
         return canvas.toDataURL();
     }
