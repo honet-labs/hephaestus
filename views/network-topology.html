@@ -1326,7 +1326,7 @@
             
             portMapping[nodeId] = portIds;
         });
-        // Build edges connecting to device nodes
+        // Build edges connecting to device nodes initially
         edgesData = edges.map(e => {
             const ec = EDGE_TYPE_COLORS[e.label] || '#4a5568';
             const srcLbl = e.sourceLabel || '';
@@ -1345,7 +1345,9 @@
                 width: 2,
                 smooth: { type: 'continuous', roundness: 0.5 },
                 shadow: { enabled: true, color: 'rgba(0,0,0,0.3)', size: 5, x: 2, y: 2 },
-                _raw: e
+                _raw: e,
+                _sourceDevice: e.source,
+                _targetDevice: e.target
             };
         });
 
@@ -1364,9 +1366,93 @@
             edges: { smooth: { type: 'continuous' } }
         });
 
+        // After stabilization, redirect edges to nearest ports
+        function redirectEdgesToNearestPorts() {
+            edges.forEach(e => {
+                const sourcePorts = portMapping[e.source] || [];
+                const targetPorts = portMapping[e.target] || [];
+                if (sourcePorts.length === 0 || targetPorts.length === 0) return;
+
+                const sourcePos = network.getPosition(e.source);
+                const targetPos = network.getPosition(e.target);
+                if (!sourcePos || !targetPos) return;
+
+                // Find nearest port on source device to target device
+                let nearestSourcePort = sourcePorts[0];
+                let minSourceDist = Infinity;
+                sourcePorts.forEach(portId => {
+                    const portPos = network.getPosition(portId);
+                    if (portPos) {
+                        const dist = Math.sqrt(Math.pow(portPos.x - targetPos.x, 2) + Math.pow(portPos.y - targetPos.y, 2));
+                        if (dist < minSourceDist) {
+                            minSourceDist = dist;
+                            nearestSourcePort = portId;
+                        }
+                    }
+                });
+
+                // Find nearest port on target device to source device
+                let nearestTargetPort = targetPorts[0];
+                let minTargetDist = Infinity;
+                targetPorts.forEach(portId => {
+                    const portPos = network.getPosition(portId);
+                    if (portPos) {
+                        const dist = Math.sqrt(Math.pow(portPos.x - sourcePos.x, 2) + Math.pow(portPos.y - sourcePos.y, 2));
+                        if (dist < minTargetDist) {
+                            minTargetDist = dist;
+                            nearestTargetPort = portId;
+                        }
+                    }
+                });
+
+                // Update edge to connect to nearest ports
+                const edgeId = e.id || `edge-${e.source}-${e.target}`;
+                try {
+                    visEdges.update({ id: edgeId, from: nearestSourcePort, to: nearestTargetPort });
+                } catch (err) {}
+            });
+        }
+
+        // Helper: find nearest port between two devices
+        window.findNearestPorts = function(sourceId, targetId) {
+            const sourcePorts = portMapping[sourceId] || [];
+            const targetPorts = portMapping[targetId] || [];
+            if (sourcePorts.length === 0 || targetPorts.length === 0) return null;
+
+            const sourcePos = network.getPosition(sourceId);
+            const targetPos = network.getPosition(targetId);
+            if (!sourcePos || !targetPos) return null;
+
+            let nearestSourcePort = sourcePorts[0];
+            let minSourceDist = Infinity;
+            sourcePorts.forEach(portId => {
+                const portPos = network.getPosition(portId);
+                if (portPos) {
+                    const dist = Math.sqrt(Math.pow(portPos.x - targetPos.x, 2) + Math.pow(portPos.y - targetPos.y, 2));
+                    if (dist < minSourceDist) { minSourceDist = dist; nearestSourcePort = portId; }
+                }
+            });
+
+            let nearestTargetPort = targetPorts[0];
+            let minTargetDist = Infinity;
+            targetPorts.forEach(portId => {
+                const portPos = network.getPosition(portId);
+                if (portPos) {
+                    const dist = Math.sqrt(Math.pow(portPos.x - sourcePos.x, 2) + Math.pow(portPos.y - sourcePos.y, 2));
+                    if (dist < minTargetDist) { minTargetDist = dist; nearestTargetPort = portId; }
+                }
+            });
+
+            return { from: nearestSourcePort, to: nearestTargetPort };
+        };
+
         network.once('stabilizationIterationsDone', function() {
+            redirectEdgesToNearestPorts();
             if (!physicsEnabled) network.setOptions({ physics: { enabled: false } });
         });
+
+        // Also redirect after a delay (in case stabilization fires too early)
+        setTimeout(() => { redirectEdgesToNearestPorts(); }, 2000);
 
         // Prevent dragging on port dots - they should only be clickable
         network.on('dragStart', function(params) {
