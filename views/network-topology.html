@@ -1379,6 +1379,29 @@
             if (!physicsEnabled) network.setOptions({ physics: { enabled: false } });
         });
 
+        // Prevent dragging on port dots - they should only be clickable
+        network.on('dragStart', function(params) {
+            const draggedNodes = params.nodes;
+            let hasPort = false;
+            let hasDevice = false;
+            
+            draggedNodes.forEach(nodeId => {
+                if (nodeId.includes('-port-')) {
+                    hasPort = true;
+                } else {
+                    hasDevice = true;
+                }
+            });
+            
+            // If dragging a port (without a device), cancel the drag
+            if (hasPort && !hasDevice) {
+                // Release all nodes to cancel drag
+                network.unselectAll();
+                // Don't allow dragging ports
+                return;
+            }
+        });
+
         // Drag handler - move ports with device node
         network.on('dragEnd', async function(params) {
             for (const nodeId of params.nodes) {
