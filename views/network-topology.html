@@ -1150,13 +1150,13 @@
             title: tooltipParts.join('\n'),
             shape: 'image',
             shapeProperties: { useBorderWithImage: true },
-            borderWidth: 2,
-            borderWidthSelected: 3,
+            borderWidth: 1,
+            borderWidthSelected: 2,
             color: { 
-                border: n.status === 'online' ? 'rgba(16, 185, 129, 0.4)' : n.status === 'offline' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(107, 114, 128, 0.3)',
+                border: 'transparent',
                 background: 'transparent',
-                highlight: { border: 'rgba(88, 166, 255, 0.6)', background: 'transparent' },
-                hover: { border: 'rgba(88, 166, 255, 0.4)', background: 'transparent' }
+                highlight: { border: 'rgba(88, 166, 255, 0.5)', background: 'transparent' },
+                hover: { border: 'rgba(88, 166, 255, 0.3)', background: 'transparent' }
             },
             font: { color: '#ffffff', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#242424' },
             x: n.x, y: n.y,
@@ -1194,7 +1194,7 @@
             from: e.source, to: e.target,
             label: displayLabel,
             title: [srcLbl ? 'A: ' + srcLbl : '', typeLbl ? 'Type: ' + typeLbl : '', tgtLbl ? 'B: ' + tgtLbl : ''].filter(Boolean).join('\n'),
-            font: { color: '#9ca3af', size: 10, face: 'monospace', align: 'middle', strokeWidth: 3, strokeColor: '#1a1a2e' },
+            font: { color: '#ffffff', size: 10, face: 'monospace', align: 'middle', strokeWidth: 3, strokeColor: '#1a1a2e' },
             color: { 
                 color: ec, 
                 highlight: '#58a6ff', 
