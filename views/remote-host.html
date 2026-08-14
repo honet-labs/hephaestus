@@ -228,6 +228,13 @@
         }
         .tab-transfer:hover { color: var(--prometheus-orange); background: #333333; }
         .tab-transfer svg { width: 14px; height: 14px; }
+        .tab-reconnect-all {
+            padding: 5px 10px; font-size: 11px; cursor: pointer; display: none;
+            align-items: center; gap: 5px; color: #ef4444; border-right: 1px solid var(--app-border);
+            transition: all 0.15s; white-space: nowrap; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .tab-reconnect-all:hover { color: #fff; background: rgba(239, 68, 68, 0.2); }
+        .tab-reconnect-all svg { width: 14px; height: 14px; }
 
         /* File Transfer - Termius-like layout */
         .ft-overlay {
@@ -761,6 +768,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
             Reset Name
         </div>
+        <div class="context-menu-item" data-action="tab-reconnect">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            Reconnect Tab
+        </div>
         <div class="context-menu-item" data-action="tab-group" id="tab-group-menu-item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
             Move to Group
@@ -1270,6 +1281,7 @@
             overlay.id = 'overlay-' + tab.id;
             overlay.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>' +
                 '<div class="reconnect-msg">Connection lost</div>' +
+                '<div class="reconnect-error-detail" id="reconnect-error-' + tab.id + '" style="font-size:11px;color:var(--error);max-width:300px;text-align:center;word-break:break-word;"></div>' +
                 '<button class="reconnect-btn" data-reconnect="' + tab.id + '">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>' +
                 'Reconnect</button>';
@@ -1390,7 +1402,11 @@
                         statusEl.className = 'terminal-status error';
                         tab.ws = null;
                         if (tab._pingInterval) { clearInterval(tab._pingInterval); tab._pingInterval = null; }
-                        if (overlayEl) overlayEl.classList.add('active');
+                        if (overlayEl) {
+                            overlayEl.classList.add('active');
+                            var errorDetail = document.getElementById('reconnect-error-' + tab.id);
+                            if (errorDetail) errorDetail.textContent = msg.message;
+                        }
                         renderTabs();
                         renderHome();
                     }
@@ -1403,7 +1419,11 @@
                     statusEl.textContent = 'Connection closed';
                     statusEl.className = 'terminal-status error';
                     tab.ws = null;
-                    if (overlayEl) overlayEl.classList.add('active');
+                    if (overlayEl) {
+                        overlayEl.classList.add('active');
+                        var errorDetail = document.getElementById('reconnect-error-' + tab.id);
+                        if (errorDetail) errorDetail.textContent = 'Connection was closed unexpectedly';
+                    }
                     renderTabs();
                     renderHome();
                     // Auto-reconnect with exponential backoff
@@ -1414,6 +1434,11 @@
                 tab.status = 'error';
                 statusEl.textContent = 'Connection error';
                 statusEl.className = 'terminal-status error';
+                if (overlayEl) {
+                    overlayEl.classList.add('active');
+                    var errorDetail = document.getElementById('reconnect-error-' + tab.id);
+                    if (errorDetail) errorDetail.textContent = 'WebSocket connection failed';
+                }
             };
         }
 
@@ -1467,6 +1492,18 @@
             if (tab.overlayEl) tab.overlayEl.classList.remove('active');
             renderTabs();
             connectSSH(tab, srv);
+        }
+
+        function reconnectAllDisconnected() {
+            var count = 0;
+            for (var i = 0; i < tabs.length; i++) {
+                var tab = tabs[i];
+                if ((tab.status === 'error' || tab.status === 'disconnected') && tab.serverId) {
+                    reconnectTab(tab.id);
+                    count++;
+                }
+            }
+            if (count > 0) showToast('Reconnecting ' + count + ' tab(s)...', 'info', 3000);
         }
 
         function switchTab(tabId) {
@@ -1534,6 +1571,7 @@
             var html = '<div class="tab-home' + (homeActive ? ' active-view' : '') + '" id="tab-home-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Servers</div>';
             html += '<div class="tab-add" id="tab-add-btn" title="New connection">+</div>';
             html += '<div class="tab-transfer" id="tab-transfer-btn" title="File Transfer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Transfer</div>';
+            html += '<div class="tab-reconnect-all" id="tab-reconnect-all-btn" title="Reconnect All Disconnected Tabs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg> Reconnect All</div>';
 
             var groups = {};
             var groupOrder = [];
@@ -1557,6 +1595,12 @@
                 }
             }
             bar.innerHTML = html;
+            var hasDisconnected = false;
+            for (var i = 0; i < tabs.length; i++) {
+                if (tabs[i].status === 'error' || tabs[i].status === 'disconnected') { hasDisconnected = true; break; }
+            }
+            var reconnectAllBtn = document.getElementById('tab-reconnect-all-btn');
+            if (reconnectAllBtn) reconnectAllBtn.style.display = hasDisconnected ? 'flex' : 'none';
         }
 
         function showAddModal() {
@@ -2088,6 +2132,7 @@
         var tabDropdownSelectedServer = null;
         document.getElementById('tab-bar').addEventListener('click', function(e) {
             if (e.target.closest('#tab-transfer-btn')) { openFileTransferModal(); return; }
+            if (e.target.closest('#tab-reconnect-all-btn')) { reconnectAllDisconnected(); return; }
             var closeBtn = e.target.closest('.tab-close');
             if (closeBtn) { closeTab(closeBtn.dataset.close, e); return; }
             var homeBtn = e.target.closest('.tab-home');
@@ -2295,6 +2340,8 @@
                 if (tab) connectToServer(tab.serverId, tab.displayName || '');
             } else if (action === 'tab-reset-name') {
                 if (tab) { tab.displayName = ''; setTabDisplayName(tab.serverId, ''); saveTabs(); renderTabs(); }
+            } else if (action === 'tab-reconnect') {
+                if (tab) reconnectTab(ctxTabId);
             } else if (action === 'tab-close') {
                 if (tab) closeTab(ctxTabId);
             }
