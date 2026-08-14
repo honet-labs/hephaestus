@@ -1138,6 +1138,15 @@
             label: labelParts.join('\n') || n.ip,
             title: tooltipParts.join('\n'),
             shape: 'image',
+            shapeProperties: { useBorderWithImage: true },
+            borderWidth: 3,
+            borderWidthSelected: 4,
+            color: { 
+                border: n.status === 'online' ? '#10b981' : n.status === 'offline' ? '#ef4444' : '#6b7280',
+                background: 'transparent',
+                highlight: { border: '#58a6ff', background: 'transparent' },
+                hover: { border: '#58a6ff', background: 'transparent' }
+            },
             font: { color: '#ffffff', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#242424' },
             x: n.x, y: n.y,
             _raw: n
@@ -1276,8 +1285,8 @@
         // Create port nodes (small dots) for each device
         const portMapping = {};
         const portsData = [];
-        const PORT_OFFSET = 28; // Distance from center to port
-        const PORT_SIZE = 5;
+        const PORT_OFFSET = 22; // Distance from center to port
+        const PORT_SIZE = 3;
         
         nodesData.forEach(node => {
             const nodeId = node.id;
