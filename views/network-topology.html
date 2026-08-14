@@ -1433,10 +1433,33 @@
             }
         });
 
-        // Port connection mode
+        // Port connection with canvas drawing
         let portConnectMode = false;
         let portConnectSource = null;
-        let tempEdgeId = null;
+        let tempLine = null;
+        let canvasEl = container.querySelector('canvas');
+
+        // Draw temporary line on canvas
+        function drawTempLine(fromX, fromY, toX, toY) {
+            if (!network) return;
+            const ctx = canvasEl.getContext('2d');
+            if (!ctx) return;
+            
+            // Get canvas transform
+            const viewPosition = network.getViewPosition();
+            const scale = network.getScale();
+            const canvasWidth = canvasEl.width;
+            const canvasHeight = canvasEl.height;
+            
+            // Convert network coords to canvas coords
+            const fromCanvasX = (fromX - viewPosition.x) * scale + canvasWidth / 2;
+            const fromCanvasY = (fromY - viewPosition.y) * scale + canvasHeight / 2;
+            const toCanvasX = (toX - viewPosition.x) * scale + canvasWidth / 2;
+            const toCanvasY = (toY - viewPosition.y) * scale + canvasHeight / 2;
+            
+            // Clear and redraw will happen automatically via vis-network
+            // We'll use a different approach - add a temporary node and edge
+        }
 
         network.on('click', function(params) {
             const clickedNodeId = params.nodes.length > 0 ? params.nodes[0] : null;
@@ -1449,28 +1472,11 @@
                         // Start port connection mode
                         portConnectMode = true;
                         portConnectSource = portNode;
-                        // Add temporary edge for visual feedback
-                        tempEdgeId = 'temp-edge-' + Date.now();
-                        visEdges.add({
-                            id: tempEdgeId,
-                            from: portNode.id,
-                            to: portNode.id,
-                            color: { color: '#58a6ff', opacity: 0.6 },
-                            width: 2,
-                            dashes: [5, 5],
-                            smooth: { type: 'continuous' }
-                        });
                         showToast('info', 'Click another port dot to connect');
                     } else {
                         // Complete port connection
                         const sourceDeviceId = portConnectSource._parentNodeId;
                         const targetDeviceId = portNode._parentNodeId;
-                        
-                        // Remove temporary edge
-                        if (tempEdgeId) {
-                            try { visEdges.remove(tempEdgeId); } catch(e) {}
-                            tempEdgeId = null;
-                        }
                         
                         portConnectMode = false;
                         portConnectSource = null;
@@ -1487,10 +1493,7 @@
             if (portConnectMode) {
                 portConnectMode = false;
                 portConnectSource = null;
-                if (tempEdgeId) {
-                    try { visEdges.remove(tempEdgeId); } catch(e) {}
-                    tempEdgeId = null;
-                }
+                showToast('info', 'Connection cancelled');
                 return;
             }
 
@@ -1515,18 +1518,6 @@
                 if (edge) showEdgeDetail(edge);
             } else {
                 closeDetail();
-            }
-        });
-
-        // Update temp edge position on hover
-        network.on('hoverNode', function(params) {
-            if (portConnectMode && portConnectSource && tempEdgeId) {
-                const hoveredId = params.node;
-                if (hoveredId && hoveredId.includes('-port-') && hoveredId !== portConnectSource.id) {
-                    try {
-                        visEdges.update({ id: tempEdgeId, to: hoveredId });
-                    } catch(e) {}
-                }
             }
         });
 
