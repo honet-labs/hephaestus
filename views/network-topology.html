@@ -1138,9 +1138,9 @@
             label: labelParts.join('\n') || n.ip,
             title: tooltipParts.join('\n'),
             shape: 'image',
-            shapeProperties: { useBorderWithImage: true },
-            borderWidth: 3,
-            borderWidthSelected: 4,
+            shapeProperties: { useBorderWithImage: true, borderRadius: 0 },
+            borderWidth: 4,
+            borderWidthSelected: 5,
             color: { 
                 border: n.status === 'online' ? '#10b981' : n.status === 'offline' ? '#ef4444' : '#6b7280',
                 background: 'transparent',
