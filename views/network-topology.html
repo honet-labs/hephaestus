@@ -1326,8 +1326,7 @@
             
             portMapping[nodeId] = portIds;
         });
-        
-        // Build edges connecting to device nodes (not ports)
+        // Build edges connecting to device nodes
         edgesData = edges.map(e => {
             const ec = EDGE_TYPE_COLORS[e.label] || '#4a5568';
             const srcLbl = e.sourceLabel || '';
