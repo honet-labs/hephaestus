@@ -1272,9 +1272,87 @@
         if (!container) return;
 
         nodesData = nodes.map(buildNodeData);
-        edgesData = edges.map(buildEdgeData);
+        
+        // Create port nodes (small dots) for each device
+        const portMapping = {};
+        const portsData = [];
+        const PORT_OFFSET = 28; // Distance from center to port
+        const PORT_SIZE = 5;
+        
+        nodesData.forEach(node => {
+            const nodeId = node.id;
+            const portIds = [];
+            
+            // Create 4 ports: top, bottom, left, right
+            const portPositions = [
+                { x: 0, y: -PORT_OFFSET, dir: 'top' },
+                { x: 0, y: PORT_OFFSET, dir: 'bottom' },
+                { x: -PORT_OFFSET, y: 0, dir: 'left' },
+                { x: PORT_OFFSET, y: 0, dir: 'right' }
+            ];
+            
+            portPositions.forEach(pos => {
+                const portId = `${nodeId}-port-${pos.dir}`;
+                portsData.push({
+                    id: portId,
+                    x: (node.x || 0) + pos.x,
+                    y: (node.y || 0) + pos.y,
+                    shape: 'dot',
+                    size: PORT_SIZE,
+                    color: { 
+                        background: '#58a6ff',
+                        border: '#58a6ff',
+                        highlight: { background: '#79c0ff', border: '#79c0ff' },
+                        hover: { background: '#79c0ff', border: '#79c0ff' }
+                    },
+                    borderWidth: 0,
+                    font: { size: 0 },
+                    physics: false,
+                    _parentNodeId: nodeId,
+                    _isPort: true
+                });
+                portIds.push(portId);
+            });
+            
+            portMapping[nodeId] = portIds;
+        });
+        
+        // Build edges connecting to ports
+        edgesData = edges.map(e => {
+            const sourcePorts = portMapping[e.source] || [];
+            const targetPorts = portMapping[e.target] || [];
+            if (sourcePorts.length === 0 || targetPorts.length === 0) {
+                return buildEdgeData(e); // Fallback
+            }
+            // Find nearest ports (simple: use right port of source, left port of target)
+            const sourcePort = sourcePorts[3] || sourcePorts[0]; // right or top
+            const targetPort = targetPorts[2] || targetPorts[0]; // left or top
+            const ec = EDGE_TYPE_COLORS[e.label] || '#4a5568';
+            const srcLbl = e.sourceLabel || '';
+            const tgtLbl = e.targetLabel || '';
+            const typeLbl = e.label || '';
+            const parts = [srcLbl, typeLbl, tgtLbl].filter(Boolean);
+            const displayLabel = parts.length > 1 ? parts.join(' | ') : (parts[0] || undefined);
+            return {
+                id: e.id || `edge-${e.source}-${e.target}`,
+                from: sourcePort,
+                to: targetPort,
+                label: displayLabel,
+                title: [srcLbl ? 'A: ' + srcLbl : '', typeLbl ? 'Type: ' + typeLbl : '', tgtLbl ? 'B: ' + tgtLbl : ''].filter(Boolean).join('\n'),
+                font: { color: '#ffffff', size: 10, face: 'monospace', align: 'middle', strokeWidth: 3, strokeColor: '#1a1a2e' },
+                color: { color: ec, highlight: '#58a6ff', hover: '#58a6ff', opacity: 1.0 },
+                width: 2,
+                smooth: { type: 'continuous', roundness: 0.5 },
+                shadow: { enabled: true, color: 'rgba(0,0,0,0.3)', size: 5, x: 2, y: 2 },
+                _raw: e,
+                _sourceDevice: e.source,
+                _targetDevice: e.target
+            };
+        });
 
-        const visNodes = new vis.DataSet(nodesData);
+        // Merge device nodes and port nodes
+        const allNodes = [...nodesData, ...portsData];
+        const visNodes = new vis.DataSet(allNodes);
         const visEdges = new vis.DataSet(edgesData);
 
         network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, {
@@ -1291,15 +1369,34 @@
             if (!physicsEnabled) network.setOptions({ physics: { enabled: false } });
         });
 
+        // Drag handler - move ports with device node
         network.on('dragEnd', async function(params) {
             for (const nodeId of params.nodes) {
                 const pos = network.getPosition(nodeId);
-                try {
-                    await apiFetch('/api/v1/topology/device/position', {
-                        method: 'PUT',
-                        body: JSON.stringify({ id: nodeId, x: pos.x, y: pos.y })
+                // Check if this is a device node (not a port)
+                const nodeData = nodesData.find(n => n.id === nodeId);
+                if (nodeData) {
+                    // Update port positions
+                    const portIds = portMapping[nodeId] || [];
+                    portIds.forEach((portId, idx) => {
+                        const offsets = [
+                            { x: 0, y: -PORT_OFFSET },
+                            { x: 0, y: PORT_OFFSET },
+                            { x: -PORT_OFFSET, y: 0 },
+                            { x: PORT_OFFSET, y: 0 }
+                        ];
+                        if (idx < offsets.length) {
+                            visNodes.update({ id: portId, x: pos.x + offsets[idx].x, y: pos.y + offsets[idx].y });
+                        }
                     });
-                } catch (e) {}
+                    // Save device position to DB
+                    try {
+                        await apiFetch('/api/v1/topology/device/position', {
+                            method: 'PUT',
+                            body: JSON.stringify({ id: nodeId, x: pos.x, y: pos.y })
+                        });
+                    } catch (e) {}
+                }
             }
         });
 
