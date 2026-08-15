@@ -2531,23 +2531,27 @@ async function testConnectionConfig() {
     addLog('Prometheus', `Testing Prometheus connection...`, 'INFO');
 
     try {
+      const prometheusHost = reloadUrl ? reloadUrl.replace(/\/-\/reload\/?$/, '') : '';
       const res = await fetch('/api/v1/prometheus/configs/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, path, reloadUrl, sshHost, sshPort, sshUser, sshAuth, sshPassword, sshKey })
+        body: JSON.stringify({ mode, path, reloadUrl, prometheusHost, sshHost, sshPort, sshUser, sshAuth, sshPassword, sshKey })
       });
       const result = await res.json();
       if (res.ok && result.success) {
         const promStatus = result.prometheusReachable !== undefined
           ? (result.prometheusReachable ? ' | Prometheus: Reachable' : ' | Prometheus: Not Reachable')
           : '';
-        showFeedback('success', 'Test Successful', (result.message || 'Connection test succeeded.') + promStatus);
-        addLog('Prometheus', 'Connection test succeeded.' + promStatus, 'SUCCESS');
+        const reqIdTag = result.requestId ? ` | Request: ${result.requestId}` : '';
+        showFeedback('success', 'Test Successful', (result.message || 'Connection test succeeded.') + promStatus + reqIdTag);
+        addLog('Prometheus', 'Connection test succeeded.' + promStatus + reqIdTag, 'SUCCESS');
       } else {
-        showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
-        addLog('Prometheus', `Connection test failed: ${result.message}`, 'ERROR');
+        const reqIdTag = result?.requestId ? ` | Request: ${result.requestId}` : '';
+        showFeedback('danger', 'Test Failed', (result.message || result.error || 'Failed to connect.') + reqIdTag);
+        addLog('Prometheus', `Connection test failed: ${result.message}${reqIdTag}`, 'ERROR');
       }
     } catch (error) {
+      addLog('Prometheus', `Connection test request failed: ${error.message}`, 'ERROR');
       showFeedback('danger', 'API Error', error.message);
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import type { Request } from "express";
 
 const LOG_DIR = process.env.LOG_DIR || "/var/log/hephaestus";
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB per file
@@ -111,6 +112,43 @@ export const logger = {
 
   remoteHost(message: string, data?: any) {
     this.info("RemoteHost", message, data);
+  },
+
+  prometheus(message: string, data?: any) {
+    writeLog("prometheus.log", "INFO", "Prometheus", message, data);
+    this.info("Prometheus", message, data);
+  },
+
+  prometheusError(message: string, data?: any) {
+    writeLog("prometheus.log", "ERROR", "Prometheus", message, data);
+    this.error("Prometheus", message, data);
+  },
+
+  grafana(message: string, data?: any) {
+    writeLog("grafana.log", "INFO", "Grafana", message, data);
+    this.info("Grafana", message, data);
+  },
+
+  grafanaError(message: string, data?: any) {
+    writeLog("grafana.log", "ERROR", "Grafana", message, data);
+    this.error("Grafana", message, data);
+  },
+
+  apiRequest(req: Request, requestId: string) {
+    this.info("API", `${req.method} ${req.originalUrl}`, {
+      requestId,
+      ip: req.ip,
+      userId: (req as any)?.user?.id
+    });
+  },
+
+  apiError(req: Request, requestId: string, error: unknown) {
+    this.error("API", `${req.method} ${req.originalUrl} failed`, {
+      requestId,
+      ip: req.ip,
+      userId: (req as any)?.user?.id,
+      error: error instanceof Error ? { message: error.message, stack: error.stack } : error
+    });
   },
 
   db(message: string, data?: any) {

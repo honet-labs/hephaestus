@@ -4,6 +4,7 @@ import path from "path";
 import axios from "axios";
 import { prometheusService } from "../services/prometheus.service";
 import { logActivity } from "../config/db";
+import logger from "../config/logger";
 
 export class PrometheusController {
   /**
@@ -306,6 +307,14 @@ export class PrometheusController {
   public async testConnection(req: Request, res: Response) {
     try {
       const profile = req.body;
+      logger.prometheus("Prometheus connection test requested", {
+        requestId: (req as any)?.requestId,
+        userId: (req as any)?.user?.id,
+        mode: profile?.mode,
+        path: profile?.path,
+        hasReloadUrl: !!profile?.reloadUrl,
+        hasPrometheusHost: !!profile?.prometheusHost
+      });
       if (!profile.mode || !profile.path) {
         return res.status(400).json({
           success: false,
@@ -324,29 +333,49 @@ export class PrometheusController {
         });
       }
 
-      // Test HTTP connection to Prometheus if reloadUrl is provided
+      // Test HTTP connection to Prometheus if reachable target can be derived
+      const prometheusBaseCandidate = (profile.prometheusHost || profile.reloadUrl || "").replace(/\/-\/reload\/?$/, "").replace(/\/+$/, "");
       let prometheusReachable = false;
       let prometheusMessage = "";
-      if (profile.reloadUrl) {
+      if (prometheusBaseCandidate) {
         try {
-          const baseUrl = profile.reloadUrl.replace(/\/-\/reload\/?$/, "");
-          const testUrl = `${baseUrl}/api/v1/status/config`;
+          const testUrl = `${prometheusBaseCandidate}/api/v1/status/config`;
+          const requestStart = Date.now();
           const response = await axios.get(testUrl, { timeout: 5000 });
+          const durationMs = Date.now() - requestStart;
           prometheusReachable = response.status === 200;
           prometheusMessage = prometheusReachable
-            ? `Prometheus is reachable at ${baseUrl}`
+            ? `Prometheus is reachable at ${prometheusBaseCandidate}`
             : `Prometheus returned status ${response.status}`;
+          logger.prometheus("HTTP connectivity probe succeeded", {
+            requestId: (req as any)?.requestId,
+            testUrl,
+            status: response.status,
+            durationMs
+          });
         } catch (httpErr: any) {
           prometheusReachable = false;
           prometheusMessage = `Prometheus is not reachable: ${httpErr.message}`;
+          logger.prometheusError("HTTP connectivity probe failed", {
+            requestId: (req as any)?.requestId,
+            target: prometheusBaseCandidate,
+            code: httpErr?.code,
+            status: httpErr?.response?.status,
+            message: httpErr?.message
+          });
         }
+      } else {
+        prometheusMessage = "Prometheus host/reload URL not provided; skipped HTTP probe";
+        logger.prometheus("Prometheus HTTP probe skipped", {
+          requestId: (req as any)?.requestId
+        });
       }
 
       if (profile.mode === "local") {
         const check = this.checkLocalWriteable(profile.path);
         const success = check.writeable;
         let message = check.message;
-        if (profile.reloadUrl) {
+        if (prometheusBaseCandidate) {
           message += ` | ${prometheusMessage}`;
         }
         return res.status(200).json({
@@ -357,7 +386,7 @@ export class PrometheusController {
       } else {
         const result = await prometheusService.testSSHConnection(profile);
         let message = result.message;
-        if (profile.reloadUrl) {
+        if (prometheusBaseCandidate) {
           message += ` | ${prometheusMessage}`;
         }
         if (result.success) {
@@ -375,11 +404,17 @@ export class PrometheusController {
         }
       }
     } catch (err: any) {
+      logger.prometheusError("Prometheus connection test failed", {
+        requestId: (req as any)?.requestId,
+        message: err?.message,
+        stack: err?.stack
+      });
       console.error("[PrometheusController] Error testing connection:", err);
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: "Failed to test connection."
+        message: "Failed to test connection.",
+        requestId: (req as any)?.requestId
       });
     }
   }
@@ -400,55 +435,80 @@ export class PrometheusController {
         });
       }
 
-      // Test HTTP connection to Prometheus if reloadUrl is provided
+      // Test HTTP connection to Prometheus if reachable target can be derived
+      const prometheusBaseCandidate = ((target as any).prometheusHost || target.reloadUrl || "").replace(/\/-\/reload\/?$/, "").replace(/\/+$/, "");
       let prometheusReachable = false;
       let prometheusMessage = "";
-      if (target.reloadUrl) {
+      if (prometheusBaseCandidate) {
         try {
-          const baseUrl = target.reloadUrl.replace(/\/-\/reload\/?$/, "");
-          const testUrl = `${baseUrl}/api/v1/status/config`;
+          const testUrl = `${prometheusBaseCandidate}/api/v1/status/config`;
+          const requestStart = Date.now();
           const response = await axios.get(testUrl, { timeout: 5000 });
+          const durationMs = Date.now() - requestStart;
           prometheusReachable = response.status === 200;
           prometheusMessage = prometheusReachable
-            ? `Prometheus is reachable at ${baseUrl}`
+            ? `Prometheus is reachable at ${prometheusBaseCandidate}`
             : `Prometheus returned status ${response.status}`;
+          logger.prometheus("Saved profile HTTP probe succeeded", {
+            requestId: (req as any)?.requestId,
+            profileId: id,
+            testUrl,
+            status: response.status,
+            durationMs
+          });
         } catch (httpErr: any) {
           prometheusReachable = false;
           prometheusMessage = `Prometheus is not reachable: ${httpErr.message}`;
+          logger.prometheusError("Saved profile HTTP probe failed", {
+            requestId: (req as any)?.requestId,
+            profileId: id,
+            target: prometheusBaseCandidate,
+            code: httpErr?.code,
+            status: httpErr?.response?.status,
+            message: httpErr?.message
+          });
         }
       }
 
       if (target.mode === "local") {
         const check = this.checkLocalWriteable(target.path);
         let message = check.message;
-        if (target.reloadUrl) {
+        if (prometheusBaseCandidate) {
           message += ` | ${prometheusMessage}`;
         }
         return res.status(200).json({
           success: true,
           isConnected: check.writeable,
           message,
-          prometheusReachable
+          prometheusReachable,
+          requestId: (req as any)?.requestId
         });
       } else {
         const result = await prometheusService.testSSHConnection(target);
         let message = result.message;
-        if (target.reloadUrl) {
+        if (prometheusBaseCandidate) {
           message += ` | ${prometheusMessage}`;
         }
         return res.status(200).json({
           success: true,
           isConnected: result.success,
           message,
-          prometheusReachable
+          prometheusReachable,
+          requestId: (req as any)?.requestId
         });
       }
     } catch (err: any) {
+      logger.prometheusError("Saved profile connection test failed", {
+        requestId: (req as any)?.requestId,
+        message: err?.message,
+        stack: err?.stack
+      });
       console.error("[PrometheusController] Error testing connection by ID:", err);
       return res.status(500).json({
         success: false,
         error: "Internal Server Error",
-        message: "Failed to test connection."
+        message: "Failed to test connection.",
+        requestId: (req as any)?.requestId
       });
     }
   }

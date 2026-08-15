@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import crypto from "crypto";
 import helmet from "helmet";
 import path from "path";
 import config from "./config/env";
@@ -91,9 +92,11 @@ app.use("/api/v1", (_req: Request, res: Response, next: NextFunction) => {
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 
-// Simple logger middleware
+// Structured request logger middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
-  logger.info("Server", `${req.method} ${req.path} - Origin: ${req.get("origin") || "N/A"}`);
+  const requestId = crypto.randomUUID();
+  (req as any).requestId = requestId;
+  logger.apiRequest(req, requestId);
   next();
 });
 
@@ -174,8 +177,9 @@ app.use((req: Request, res: Response) => {
 
 // 6. Global Error Handling Middleware
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  logger.apiError(req, (req as any)?.requestId, err);
   logger.error("Server", "Unhandled global server error:", err);
-  
+
   res.status(500).json({
     success: false,
     error: "Internal Server Error",

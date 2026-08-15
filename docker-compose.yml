@@ -45,6 +45,7 @@ services:
       - hephaestus-db
     volumes:
       - hephaestus-backend-data:/app/data
+      - /var/log/hephaestus:/var/log/hephaestus
     deploy:
       resources:
         limits:
