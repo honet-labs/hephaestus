@@ -697,11 +697,11 @@ function toggleReportingSubmenu() {
     const isHidden = submenu.classList.contains('hidden') || submenu.style.display === 'none';
     if (isHidden) {
       submenu.classList.remove('hidden');
-      submenu.style.display = 'flex';
+      submenu.style.setProperty('display', 'flex', 'important');
       if (arrow) arrow.style.transform = 'rotate(180deg)';
     } else {
       submenu.classList.add('hidden');
-      submenu.style.display = 'none';
+      submenu.style.removeProperty('display');
       if (arrow) arrow.style.transform = 'rotate(0deg)';
     }
   }
