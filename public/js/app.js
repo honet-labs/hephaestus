@@ -690,6 +690,23 @@ function toggleRemoteConfigSubmenu() {
   }
 }
 
+function toggleReportingSubmenu() {
+  const submenu = document.getElementById('reporting-submenu');
+  const arrow = document.getElementById('menu-reporting-arrow');
+  if (submenu) {
+    const isHidden = submenu.classList.contains('hidden') || submenu.style.display === 'none';
+    if (isHidden) {
+      submenu.classList.remove('hidden');
+      submenu.style.display = 'flex';
+      if (arrow) arrow.style.transform = 'rotate(180deg)';
+    } else {
+      submenu.classList.add('hidden');
+      submenu.style.display = 'none';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+  }
+}
+
 async function loadOverviewData() {
   try {
     const res = await fetch('/api/v1/settings/overview');
