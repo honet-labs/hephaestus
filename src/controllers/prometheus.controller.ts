@@ -323,18 +323,55 @@ export class PrometheusController {
         });
       }
 
+      // Test HTTP connection to Prometheus if reloadUrl is provided
+      let prometheusReachable = false;
+      let prometheusMessage = "";
+      if (profile.reloadUrl) {
+        try {
+          const baseUrl = profile.reloadUrl.replace(/\/-\/reload\/?$/, "");
+          const testUrl = `${baseUrl}/api/v1/status/config`;
+          const axios = (await import("axios")).default;
+          const response = await axios.get(testUrl, { timeout: 5000 });
+          prometheusReachable = response.status === 200;
+          prometheusMessage = prometheusReachable
+            ? `Prometheus is reachable at ${baseUrl}`
+            : `Prometheus returned status ${response.status}`;
+        } catch (httpErr: any) {
+          prometheusReachable = false;
+          prometheusMessage = `Prometheus is not reachable: ${httpErr.message}`;
+        }
+      }
+
       if (profile.mode === "local") {
         const check = this.checkLocalWriteable(profile.path);
+        const success = check.writeable;
+        let message = check.message;
+        if (profile.reloadUrl) {
+          message += ` | ${prometheusMessage}`;
+        }
         return res.status(200).json({
-          success: check.writeable,
-          message: check.message
+          success,
+          message,
+          prometheusReachable
         });
       } else {
         const result = await prometheusService.testSSHConnection(profile);
+        let message = result.message;
+        if (profile.reloadUrl) {
+          message += ` | ${prometheusMessage}`;
+        }
         if (result.success) {
-          return res.status(200).json(result);
+          return res.status(200).json({
+            success: true,
+            message,
+            prometheusReachable
+          });
         } else {
-          return res.status(422).json(result);
+          return res.status(422).json({
+            success: false,
+            message,
+            prometheusReachable
+          });
         }
       }
     } catch (err: any) {
@@ -363,19 +400,48 @@ export class PrometheusController {
         });
       }
 
+      // Test HTTP connection to Prometheus if reloadUrl is provided
+      let prometheusReachable = false;
+      let prometheusMessage = "";
+      if (target.reloadUrl) {
+        try {
+          const baseUrl = target.reloadUrl.replace(/\/-\/reload\/?$/, "");
+          const testUrl = `${baseUrl}/api/v1/status/config`;
+          const axios = (await import("axios")).default;
+          const response = await axios.get(testUrl, { timeout: 5000 });
+          prometheusReachable = response.status === 200;
+          prometheusMessage = prometheusReachable
+            ? `Prometheus is reachable at ${baseUrl}`
+            : `Prometheus returned status ${response.status}`;
+        } catch (httpErr: any) {
+          prometheusReachable = false;
+          prometheusMessage = `Prometheus is not reachable: ${httpErr.message}`;
+        }
+      }
+
       if (target.mode === "local") {
         const check = this.checkLocalWriteable(target.path);
+        let message = check.message;
+        if (target.reloadUrl) {
+          message += ` | ${prometheusMessage}`;
+        }
         return res.status(200).json({
           success: true,
           isConnected: check.writeable,
-          message: check.message
+          message,
+          prometheusReachable
         });
       } else {
         const result = await prometheusService.testSSHConnection(target);
+        let message = result.message;
+        if (target.reloadUrl) {
+          message += ` | ${prometheusMessage}`;
+        }
         return res.status(200).json({
           success: true,
           isConnected: result.success,
-          message: result.message
+          message,
+          prometheusReachable
         });
       }
     } catch (err: any) {

@@ -1818,12 +1818,15 @@ async function pingPrometheusServer(id) {
       method: 'POST'
     });
     const result = await res.json();
+    const promStatus = result.prometheusReachable !== undefined
+      ? (result.prometheusReachable ? '\nPrometheus: Reachable' : '\nPrometheus: Not Reachable')
+      : '';
     if (res.ok && result.success && result.isConnected) {
-      alert('Koneksi Prometheus Sukses!');
-      addLog('Prometheus', 'Manual connection check succeeded.', 'SUCCESS');
+      alert('Koneksi Prometheus Sukses!' + promStatus);
+      addLog('Prometheus', 'Manual connection check succeeded.' + promStatus, 'SUCCESS');
     } else {
-      alert('Koneksi Prometheus Gagal: ' + (result.message || 'Server offline.'));
-      addLog('Prometheus', `Manual connection check failed: ${result.message || 'Offline'}`, 'ERROR');
+      alert('Koneksi Prometheus Gagal: ' + (result.message || 'Server offline.') + promStatus);
+      addLog('Prometheus', `Manual connection check failed: ${result.message || 'Offline'}${promStatus}`, 'ERROR');
     }
   } catch (err) {
     alert('API Error: ' + err.message);
@@ -2535,8 +2538,11 @@ async function testConnectionConfig() {
       });
       const result = await res.json();
       if (res.ok && result.success) {
-        showFeedback('success', 'Test Successful', result.message || 'Connection test succeeded.');
-        addLog('Prometheus', 'Connection test succeeded.', 'SUCCESS');
+        const promStatus = result.prometheusReachable !== undefined
+          ? (result.prometheusReachable ? ' | Prometheus: Reachable' : ' | Prometheus: Not Reachable')
+          : '';
+        showFeedback('success', 'Test Successful', (result.message || 'Connection test succeeded.') + promStatus);
+        addLog('Prometheus', 'Connection test succeeded.' + promStatus, 'SUCCESS');
       } else {
         showFeedback('danger', 'Test Failed', result.message || result.error || 'Failed to connect.');
         addLog('Prometheus', `Connection test failed: ${result.message}`, 'ERROR');
