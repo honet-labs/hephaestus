@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
 import { prometheusService } from "../services/prometheus.service";
 import { logActivity } from "../config/db";
 
@@ -330,7 +331,6 @@ export class PrometheusController {
         try {
           const baseUrl = profile.reloadUrl.replace(/\/-\/reload\/?$/, "");
           const testUrl = `${baseUrl}/api/v1/status/config`;
-          const axios = (await import("axios")).default;
           const response = await axios.get(testUrl, { timeout: 5000 });
           prometheusReachable = response.status === 200;
           prometheusMessage = prometheusReachable
@@ -407,7 +407,6 @@ export class PrometheusController {
         try {
           const baseUrl = target.reloadUrl.replace(/\/-\/reload\/?$/, "");
           const testUrl = `${baseUrl}/api/v1/status/config`;
-          const axios = (await import("axios")).default;
           const response = await axios.get(testUrl, { timeout: 5000 });
           prometheusReachable = response.status === 200;
           prometheusMessage = prometheusReachable
