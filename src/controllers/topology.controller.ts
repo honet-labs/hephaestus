@@ -120,6 +120,32 @@ export class TopologyController {
   }
 
   /**
+   * PUT /api/v1/topology/device/:id — Update a device
+   * Body: { name?, ip?, deviceType? }
+   */
+  public async updateDevice(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { name, ip, deviceType } = req.body;
+      if (!name && !ip && !deviceType) {
+        return res.status(400).json({ success: false, error: "At least one field (name, ip, deviceType) is required." });
+      }
+      if (ip) {
+        const ipRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+        if (!ipRegex.test(ip)) {
+          return res.status(400).json({ success: false, error: "Invalid IP address format." });
+        }
+      }
+      await topologyService.updateDevice(id, { name, ip, deviceType });
+      await logActivity("Network Topology", "Update Device", `Updated device "${id}"`, "SUCCESS");
+      return res.status(200).json({ success: true, message: "Device updated." });
+    } catch (err: any) {
+      logger.error("Topology", "updateDevice error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to update device." });
+    }
+  }
+
+  /**
    * DELETE /api/v1/topology/device/:id — Delete a device
    */
   public async deleteDevice(req: Request, res: Response) {

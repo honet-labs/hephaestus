@@ -132,6 +132,33 @@ export class TopologyDbService {
     );
   }
 
+  async updateDevice(deviceId: string, updates: { name?: string; ip?: string; deviceType?: string }): Promise<void> {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (updates.name !== undefined) {
+      fields.push(`name = $${paramIndex++}`);
+      values.push(updates.name);
+    }
+    if (updates.ip !== undefined) {
+      fields.push(`ip_address = $${paramIndex++}`);
+      values.push(updates.ip);
+    }
+    if (updates.deviceType !== undefined) {
+      fields.push(`device_type = $${paramIndex++}`);
+      values.push(updates.deviceType);
+    }
+
+    if (fields.length === 0) return;
+
+    values.push(deviceId);
+    await query(
+      `UPDATE topology_devices SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
+      values
+    );
+  }
+
   // ==================== EDGE OPERATIONS ====================
 
   async addEdge(source: string, target: string, label?: string, edgeType?: string, sourceLabel?: string, targetLabel?: string, sheetId?: number): Promise<TopologyEdge> {
