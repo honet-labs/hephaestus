@@ -101,17 +101,15 @@ export const logger = {
 
   warn(module: string, message: string, data?: any) {
     writeLog("app.log", "WARN", module, message, data);
-    writeLog("error.log", "WARN", module, message, data);
     consoleLog("WARN", module, message, data);
   },
 
   error(module: string, message: string, data?: any) {
     writeLog("app.log", "ERROR", module, message, data);
-    writeLog("error.log", "ERROR", module, message, data);
     consoleLog("ERROR", module, message, data);
   },
 
-  // Special loggers for specific modules
+  // Module-specific loggers (all write to app.log)
   opensearch(message: string, data?: any) {
     this.info("OpenSearch", message, data);
   },
@@ -129,22 +127,18 @@ export const logger = {
   },
 
   prometheus(message: string, data?: any) {
-    writeLog("prometheus.log", "INFO", "Prometheus", message, data);
     this.info("Prometheus", message, data);
   },
 
   prometheusError(message: string, data?: any) {
-    writeLog("prometheus.log", "ERROR", "Prometheus", message, data);
     this.error("Prometheus", message, data);
   },
 
   grafana(message: string, data?: any) {
-    writeLog("grafana.log", "INFO", "Grafana", message, data);
     this.info("Grafana", message, data);
   },
 
   grafanaError(message: string, data?: any) {
-    writeLog("grafana.log", "ERROR", "Grafana", message, data);
     this.error("Grafana", message, data);
   },
 
