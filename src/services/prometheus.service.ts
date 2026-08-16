@@ -66,41 +66,84 @@ export class PrometheusService {
 
     return new Promise((resolve, reject) => {
       const conn = new Client();
+      let finished = false;
+      const timeout = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+        this.sshConnections.delete(key);
+        try { conn.end(); } catch (_e) {}
+        reject(new Error(`SSH connection to ${activeConfig.sshHost}:${activeConfig.sshPort || 22} timed out (6s).`));
+      }, 6000);
+
       conn.on("ready", () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeout);
         this.sshConnections.set(key, { client: conn, lastUsed: Date.now(), alive: true });
         resolve(conn);
       })
-          .on("error", (err) => {
-            this.sshConnections.delete(key);
-            reject(err);
-          })
-          .on("close", () => {
-            this.sshConnections.delete(key);
-          })
-          .connect({
-            host: activeConfig.sshHost,
-            port: activeConfig.sshPort || 22,
-            username: activeConfig.sshUser,
-            password: activeConfig.sshAuth === "password" ? activeConfig.sshPassword : undefined,
-            privateKey: activeConfig.sshAuth === "key" ? activeConfig.sshKey : undefined,
-            readyTimeout: 10000
-          });
+      .on("error", (err) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeout);
+        this.sshConnections.delete(key);
+        reject(err);
+      })
+      .on("close", () => {
+        this.sshConnections.delete(key);
+      })
+      .connect({
+        host: activeConfig.sshHost,
+        port: activeConfig.sshPort || 22,
+        username: activeConfig.sshUser,
+        password: activeConfig.sshAuth === "password" ? activeConfig.sshPassword : undefined,
+        privateKey: activeConfig.sshAuth === "key" ? activeConfig.sshKey : undefined,
+        readyTimeout: 5000,
+        keepaliveInterval: 10000,
+        algorithms: {
+          kex: [
+            "ecdh-sha2-nistp256",
+            "ecdh-sha2-nistp384",
+            "ecdh-sha2-nistp521",
+            "diffie-hellman-group-exchange-sha256",
+            "diffie-hellman-group14-sha256",
+            "diffie-hellman-group14-sha1",
+          ],
+          hostKey: [
+            "ssh-rsa",
+            "ssh-ed25519",
+            "ecdsa-sha2-nistp256",
+            "ecdsa-sha2-nistp384",
+            "ecdsa-sha2-nistp521",
+          ],
+        }
+      });
     });
   }
 
   /**
-   * Helper to read file content over SFTP
+   * Helper to read file content over SFTP with fallback to cat command
    */
-  private readRemoteFile(conn: Client, remotePath: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      conn.sftp((err, sftp) => {
-        if (err) return reject(err);
-        sftp.readFile(remotePath, "utf8", (err, data) => {
-          if (err) return reject(err);
-          resolve(data.toString());
+  private async readRemoteFile(conn: Client, remotePath: string): Promise<string> {
+    try {
+      return await new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("SFTP read timed out (5s)")), 5000);
+        conn.sftp((err, sftp) => {
+          if (err) {
+            clearTimeout(timeout);
+            return reject(err);
+          }
+          sftp.readFile(remotePath, "utf8", (err, data) => {
+            clearTimeout(timeout);
+            if (err) return reject(err);
+            resolve(data.toString());
+          });
         });
       });
-    });
+    } catch (_sftpErr) {
+      // Fallback: cat via SSH exec in case SFTP subsystem is disabled
+      return await this.executeRemoteCommand(conn, `cat ${shellEscape(remotePath)}`);
+    }
   }
 
   /**

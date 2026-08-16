@@ -2532,11 +2532,15 @@ async function testConnectionConfig() {
 
     try {
       const prometheusHost = reloadUrl ? reloadUrl.replace(/\/-\/reload\/?$/, '') : '';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
       const res = await fetch('/api/v1/prometheus/configs/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, path, reloadUrl, prometheusHost, sshHost, sshPort, sshUser, sshAuth, sshPassword, sshKey })
+        body: JSON.stringify({ mode, path, reloadUrl, prometheusHost, sshHost, sshPort, sshUser, sshAuth, sshPassword, sshKey }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const result = await res.json();
       if (res.ok && result.success) {
         const promStatus = result.prometheusReachable !== undefined
@@ -2551,8 +2555,9 @@ async function testConnectionConfig() {
         addLog('Prometheus', `Connection test failed: ${result.message}${reqIdTag}`, 'ERROR');
       }
     } catch (error) {
-      addLog('Prometheus', `Connection test request failed: ${error.message}`, 'ERROR');
-      showFeedback('danger', 'API Error', error.message);
+      const msg = error.name === 'AbortError' ? 'Request timed out after 12 seconds. Check if the server is reachable.' : error.message;
+      addLog('Prometheus', `Connection test request failed: ${msg}`, 'ERROR');
+      showFeedback('danger', 'API Error', msg);
     } finally {
       setLoading(false);
     }
