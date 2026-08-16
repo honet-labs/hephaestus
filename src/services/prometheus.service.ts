@@ -8,6 +8,7 @@ import yaml from "js-yaml";
 import { Client } from "ssh2";
 import config, { PrometheusConfigItem, updateActivePrometheusCache } from "../config/env";
 import pool, { query } from "../config/db";
+import logger from "../config/logger";
 
 const SSH_IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -72,7 +73,7 @@ export class PrometheusService {
         finished = true;
         this.sshConnections.delete(key);
         try { conn.end(); } catch (_e) { /* ignore close error */ }
-        reject(new Error(`SSH connection to ${activeConfig.sshHost}:${activeConfig.sshPort || 22} timed out (6s).`));
+        reject(new Error(`SSH connection to ${activeConfig.sshHost}:${activeConfig.sshPort || 22} timed out (6s). Check: (1) Port 22 open? (2) SSH service running? (3) Firewall allows access from container?`));
       }, 6000);
 
       conn.on("ready", () => {
@@ -82,11 +83,21 @@ export class PrometheusService {
         this.sshConnections.set(key, { client: conn, lastUsed: Date.now(), alive: true });
         resolve(conn);
       })
+      .on("keyboard-interactive", (_name, _instructions, _instructionsLang, prompts, finish) => {
+        // Handle keyboard-interactive auth by sending the password
+        if (activeConfig.sshAuth === "password" && activeConfig.sshPassword) {
+          logger.prometheus("SSH keyboard-interactive auth requested, sending password", { host: activeConfig.sshHost });
+          finish([activeConfig.sshPassword]);
+        } else {
+          finish([]);
+        }
+      })
       .on("error", (err) => {
         if (finished) return;
         finished = true;
         clearTimeout(timeout);
         this.sshConnections.delete(key);
+        logger.prometheusError("SSH connection error", { host: activeConfig.sshHost, port: activeConfig.sshPort, message: err.message, code: (err as any).code });
         reject(err);
       })
       .on("close", () => {
@@ -98,6 +109,7 @@ export class PrometheusService {
         username: activeConfig.sshUser,
         password: activeConfig.sshAuth === "password" ? activeConfig.sshPassword : undefined,
         privateKey: activeConfig.sshAuth === "key" ? activeConfig.sshKey : undefined,
+        tryKeyboard: true,
         readyTimeout: 5000,
         keepaliveInterval: 10000,
         algorithms: {
