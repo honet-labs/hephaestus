@@ -323,13 +323,17 @@ export class PrometheusController {
       let statusCode = 200;
 
       if (profile.mode === "local") {
-        const check = fileResult.status === "fulfilled" ? fileResult.value : { writeable: false, message: `Check failed: ${fileResult.reason?.message}` };
-        success = check.writeable;
-        message = check.message;
+        const localCheck = fileResult.status === "fulfilled"
+          ? fileResult.value as { writeable: boolean; message: string }
+          : { writeable: false, message: `Check failed: ${fileResult.reason?.message}` };
+        success = localCheck.writeable;
+        message = localCheck.message;
       } else {
-        const sshResult = fileResult.status === "fulfilled" ? fileResult.value : { success: false, message: `SSH test failed: ${fileResult.reason?.message}` };
-        success = sshResult.success;
-        message = sshResult.message;
+        const sshCheck = fileResult.status === "fulfilled"
+          ? fileResult.value as { success: boolean; message: string }
+          : { success: false, message: `SSH test failed: ${fileResult.reason?.message}` };
+        success = sshCheck.success;
+        message = sshCheck.message;
         if (!success) statusCode = 422;
       }
 
@@ -425,13 +429,17 @@ export class PrometheusController {
       let message: string;
 
       if (target.mode === "local") {
-        const check = fileResult.status === "fulfilled" ? fileResult.value : { writeable: false, message: `Check failed: ${fileResult.reason?.message}` };
-        isConnected = check.writeable;
-        message = check.message;
+        const localCheck = fileResult.status === "fulfilled"
+          ? fileResult.value as { writeable: boolean; message: string }
+          : { writeable: false, message: `Check failed: ${fileResult.reason?.message}` };
+        isConnected = localCheck.writeable;
+        message = localCheck.message;
       } else {
-        const sshResult = fileResult.status === "fulfilled" ? fileResult.value : { success: false, message: `SSH test failed: ${fileResult.reason?.message}` };
-        isConnected = sshResult.success;
-        message = sshResult.message;
+        const sshCheck = fileResult.status === "fulfilled"
+          ? fileResult.value as { success: boolean; message: string }
+          : { success: false, message: `SSH test failed: ${fileResult.reason?.message}` };
+        isConnected = sshCheck.success;
+        message = sshCheck.message;
       }
 
       if (prometheusBaseCandidate) {

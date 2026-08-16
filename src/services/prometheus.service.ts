@@ -109,7 +109,7 @@ export class PrometheusService {
             "diffie-hellman-group14-sha256",
             "diffie-hellman-group14-sha1",
           ],
-          hostKey: [
+          serverHostKey: [
             "ssh-rsa",
             "ssh-ed25519",
             "ecdsa-sha2-nistp256",
