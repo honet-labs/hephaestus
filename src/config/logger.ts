@@ -2,26 +2,40 @@ import fs from "fs";
 import path from "path";
 import type { Request } from "express";
 
-const LOG_DIR = process.env.LOG_DIR || "/var/log/hephaestus";
+const PREFERRED_LOG_DIR = process.env.LOG_DIR || "/var/log/hephaestus";
+const FALLBACK_LOG_DIR = "/app/data/logs";
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB per file
 const MAX_LOG_FILES = 5; // Keep 5 rotated files
 
-// Ensure log directory exists
-function ensureLogDir() {
-  try {
-    if (!fs.existsSync(LOG_DIR)) {
-      fs.mkdirSync(LOG_DIR, { recursive: true });
-      console.log(`[Logger] Created log directory: ${LOG_DIR}`);
-    }
-  } catch (err: any) {
-    // If /var/log not writable, fallback to data directory
-    console.warn(`[Logger] Cannot create ${LOG_DIR}: ${err.message}, using fallback`);
+let LOG_DIR = PREFERRED_LOG_DIR;
+let logDirInitialized = false;
+
+// Resolve a writable log directory (try preferred, then fallback)
+function resolveLogDir(): string {
+  if (logDirInitialized) return LOG_DIR;
+  logDirInitialized = true;
+  for (const candidate of [PREFERRED_LOG_DIR, FALLBACK_LOG_DIR]) {
+    try {
+      if (!fs.existsSync(candidate)) {
+        fs.mkdirSync(candidate, { recursive: true });
+      }
+      // Verify write access
+      fs.accessSync(candidate, fs.constants.W_OK);
+      LOG_DIR = candidate;
+      if (candidate !== PREFERRED_LOG_DIR) {
+        console.log(`[Logger] ${PREFERRED_LOG_DIR} not writable, using fallback: ${candidate}`);
+      }
+      return LOG_DIR;
+    } catch { /* try next candidate */ }
   }
+  console.warn(`[Logger] No writable log directory found (tried ${PREFERRED_LOG_DIR}, ${FALLBACK_LOG_DIR}). File logging disabled.`);
+  return LOG_DIR;
 }
 
 // Rotate log file if too large
 function rotateLog(filename: string) {
-  const filePath = path.join(LOG_DIR, filename);
+  const logDir = resolveLogDir();
+  const filePath = path.join(logDir, filename);
   try {
     if (!fs.existsSync(filePath)) return;
     const stats = fs.statSync(filePath);
@@ -45,7 +59,7 @@ function rotateLog(filename: string) {
 // Write log entry
 function writeLog(filename: string, level: string, module: string, message: string, data?: any) {
   try {
-    ensureLogDir();
+    const logDir = resolveLogDir();
     rotateLog(filename);
 
     const timestamp = new Date().toISOString();
@@ -58,7 +72,7 @@ function writeLog(filename: string, level: string, module: string, message: stri
     };
 
     const line = JSON.stringify(logEntry) + "\n";
-    const filePath = path.join(LOG_DIR, filename);
+    const filePath = path.join(logDir, filename);
     fs.appendFileSync(filePath, line, "utf-8");
   } catch {
     // Silently fail if can't write logs
@@ -161,12 +175,13 @@ export const logger = {
 
   // Get log directory path
   getLogDir(): string {
-    return LOG_DIR;
+    return resolveLogDir();
   },
 
   // Read recent logs
   async getRecentLogs(filename: string, lines: number = 100): Promise<string[]> {
-    const filePath = path.join(LOG_DIR, filename);
+    const logDir = resolveLogDir();
+    const filePath = path.join(logDir, filename);
     try {
       if (!fs.existsSync(filePath)) return [];
       const content = fs.readFileSync(filePath, "utf-8");
