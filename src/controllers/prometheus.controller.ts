@@ -380,7 +380,7 @@ export class PrometheusController {
     }
   }
 
-  private async testSshWithTimeout(profile: any, requestId?: string): Promise<{ success: boolean; message: string }> {
+  private async testSshWithTimeout(profile: any, _requestId?: string): Promise<{ success: boolean; message: string }> {
     const timeoutMs = 8000;
     return new Promise((resolve) => {
       const timer = setTimeout(() => {

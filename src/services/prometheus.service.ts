@@ -71,7 +71,7 @@ export class PrometheusService {
         if (finished) return;
         finished = true;
         this.sshConnections.delete(key);
-        try { conn.end(); } catch (_e) {}
+        try { conn.end(); } catch (_e) { /* ignore close error */ }
         reject(new Error(`SSH connection to ${activeConfig.sshHost}:${activeConfig.sshPort || 22} timed out (6s).`));
       }, 6000);
 
