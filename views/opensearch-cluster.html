@@ -100,6 +100,8 @@
         .shard-box { width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text-white); cursor: help; transition: all 0.15s; }
         .shard-box:hover { transform: scale(1.15); filter: brightness(1.2); }
         .shard-box.selected { background: #4a4a5a !important; transform: scale(1.1); }
+        .shard-box.highlight-index { box-shadow: 0 0 0 2px #fff, 0 0 8px rgba(255,255,255,0.4); transform: scale(1.15); z-index: 2; position: relative; }
+        .shard-box.dimmed { opacity: 0.3; }
         .shard-box.primary { background: var(--success); }
         .shard-box.replica { background: var(--accent); }
         .shard-box.unassigned { background: var(--error); }
@@ -972,7 +974,7 @@
                                 state: s.state, store: s.store || '-', ip: s.ip || '-',
                                 node: s.node || '-', docs: s.docs || 0, replicaOf: replicaOf
                             };
-                            return `<div class="shard-box ${cls}" data-sid="${sid}" onmouseenter="showShardTip(this)" onmouseleave="hideShardTip()" onclick="showShardTip(this)">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
+                            return `<div class="shard-box ${cls}" data-sid="${sid}" data-index="${escapeHtml(s.index)}" onmouseenter="showShardTip(this)" onmouseleave="hideShardTip()" onclick="showShardTip(this)">${s.prirep === 'p' ? 'P' : 'R'}</div>`;
                         }).join('')}
                     </div>
                 </div>`;
@@ -994,6 +996,19 @@
             const d = window._shardDataMap ? window._shardDataMap[sid] : null;
             if (!d) return;
 
+            // Highlight all shards belonging to the same index
+            const indexName = el.getAttribute('data-index');
+            if (indexName) {
+                const allBoxes = document.querySelectorAll('.shard-box[data-index]');
+                allBoxes.forEach(box => {
+                    if (box.getAttribute('data-index') === indexName) {
+                        box.classList.add('highlight-index');
+                    } else {
+                        box.classList.add('dimmed');
+                    }
+                });
+            }
+
             const tooltip = document.createElement('div');
             tooltip.className = 'shard-tooltip';
             tooltip.innerHTML = '<strong>' + escapeHtml(d.index) + '</strong>' +
@@ -1014,6 +1029,9 @@
         window.hideShardTip = function() {
             if (activeTooltip) { activeTooltip.remove(); activeTooltip = null; }
             if (selectedShard) { selectedShard.classList.remove('selected'); selectedShard = null; }
+            // Clear all index highlights and dimming
+            document.querySelectorAll('.shard-box.highlight-index').forEach(b => b.classList.remove('highlight-index'));
+            document.querySelectorAll('.shard-box.dimmed').forEach(b => b.classList.remove('dimmed'));
         }
 
         function positionTooltip(event, tooltip) {
