@@ -157,6 +157,22 @@
         .shard-tooltip .tt-row { display: flex; gap: 8px; }
         .shard-tooltip .tt-label { color: var(--text-muted); min-width: 100px; }
         .shard-tooltip .tt-value { color: var(--text-white); font-weight: 500; }
+        .pagination { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; gap: 8px; }
+        .pagination-info { font-size: 11px; color: var(--text-muted); }
+        .pagination-controls { display: flex; gap: 4px; align-items: center; }
+        .pagination-controls button { padding: 4px 10px; font-size: 11px; background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.15s; }
+        .pagination-controls button:hover:not(:disabled) { color: var(--text-white); border-color: var(--text-muted); }
+        .pagination-controls button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .pagination-controls button.active { background: var(--accent); color: var(--text-white); border-color: var(--accent); }
+        .health-summary { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+        .health-summary-item { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+        .health-summary-item.green { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+        .health-summary-item.yellow { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .health-summary-item.red { background: rgba(239, 68, 68, 0.15); color: var(--error); }
+        .health-summary-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .health-summary-dot.green { background: var(--success); }
+        .health-summary-dot.yellow { background: var(--warning); }
+        .health-summary-dot.red { background: var(--error); }
         @media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } .node-metrics { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
@@ -223,6 +239,7 @@
                 <div class="card" style="margin-top: 16px;">
                     <div class="card-header">
                         <span class="card-title">Index Health Overview</span>
+                        <div class="health-summary" id="indexHealthSummary"></div>
                     </div>
                     <div style="overflow-x: auto;">
                         <table id="indexHealthTable">
@@ -241,6 +258,7 @@
                             <tbody></tbody>
                         </table>
                     </div>
+                    <div class="pagination" id="indexHealthPagination"></div>
                 </div>
             </div>
             <div class="tab-pane" id="nodes">
@@ -266,6 +284,7 @@
                         <tbody></tbody>
                     </table>
                 </div>
+                <div class="pagination" id="indicesPagination"></div>
             </div>
             <div class="tab-pane" id="shards">
                 <div class="shard-legend">
@@ -302,6 +321,7 @@
                             <tbody></tbody>
                         </table>
                     </div>
+                    <div class="pagination" id="shardsPagination"></div>
                 </div>
             </div>
             <div class="tab-pane" id="config">
@@ -575,6 +595,10 @@
         window.refreshAll = async function() {
             if (!currentConfigId) return;
             try {
+                // Reset pagination on refresh
+                window._indexHealthPage = 1;
+                window._indicesPage = 1;
+                window._shardsPage = 1;
                 const [healthRes, nodesRes, indicesRes, shardsRes, statsRes] = await Promise.all([
                     apiFetch(`${API}/health?configId=${currentConfigId}`),
                     apiFetch(`${API}/nodes?configId=${currentConfigId}`),
@@ -616,12 +640,33 @@
                 barEl.style.width = (health?.active_shards_percent_as_number || 0) + '%';
             }
             const el = (id) => document.getElementById(id);
-            if (el('overviewIndices')) el('overviewIndices').textContent = stats?.indices?.count || indices?.length || 0;
+            // Use indices data for index count (more reliable than stats)
+            const userIndices = (indices || []).filter(idx => idx.index && !idx.index.startsWith('.'));
+            if (el('overviewIndices')) el('overviewIndices').textContent = userIndices.length || stats?.indices?.count || 0;
             if (el('overviewDocs')) el('overviewDocs').textContent = formatNumber(stats?.indices?.docs?.count || indices?.reduce((sum, i) => sum + (parseInt(i.docs_count) || 0), 0) || 0);
             if (el('overviewStoreSize')) el('overviewStoreSize').textContent = formatBytes(stats?.indices?.store?.size_in_bytes || 0);
-            renderIndexHealthTable(indices);
+            renderIndexHealthSummary(userIndices);
+            renderIndexHealthTable(userIndices);
             renderShardDistribution(shardsData);
             renderNodeLoadFromStats(stats);
+        }
+
+        // ==================== HEALTH SUMMARY ====================
+        function renderIndexHealthSummary(indices) {
+            const container = document.getElementById('indexHealthSummary');
+            if (!container) return;
+            if (!indices || !indices.length) {
+                container.innerHTML = '';
+                return;
+            }
+            const green = indices.filter(i => i.health === 'green').length;
+            const yellow = indices.filter(i => i.health === 'yellow').length;
+            const red = indices.filter(i => i.health === 'red').length;
+            container.innerHTML = `
+                <div class="health-summary-item green"><div class="health-summary-dot green"></div> Green: ${green}</div>
+                <div class="health-summary-item yellow"><div class="health-summary-dot yellow"></div> Yellow: ${yellow}</div>
+                <div class="health-summary-item red"><div class="health-summary-dot red"></div> Red: ${red}</div>
+            `;
         }
 
         function renderShardDistribution(shardsData) {
@@ -632,27 +677,29 @@
                 container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:11px;">No user index shards found</div>';
                 return;
             }
-            const uniqueIndices = [...new Set(userShards.map(s => s.index))];
-            const totalShards = userShards.length;
-            const replicaShards = userShards.filter(s => s.prirep === 'r').length;
-            const unassignedShards = userShards.filter(s => s.state === 'UNASSIGNED').length;
+            // Count primary shards only (not replica entries)
+            const primaryShards = userShards.filter(s => s.prirep === 'p');
+            const replicaShards = userShards.filter(s => s.prirep === 'r');
+            const unassignedPrimary = primaryShards.filter(s => s.state === 'UNASSIGNED').length;
+            const unassignedReplica = replicaShards.filter(s => s.state === 'UNASSIGNED').length;
+            const totalUnassigned = unassignedPrimary + unassignedReplica;
             const html = `
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0;">
                     <div class="metric">
-                        <span class="metric-label">Total Index</span>
-                        <span class="metric-value">${uniqueIndices.length}</span>
+                        <span class="metric-label">Primary Shards</span>
+                        <span class="metric-value">${primaryShards.length}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Total Replica</span>
-                        <span class="metric-value">${replicaShards}</span>
+                        <span class="metric-label">Replica Shards</span>
+                        <span class="metric-value">${replicaShards.length}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Total Shard</span>
-                        <span class="metric-value">${totalShards}</span>
+                        <span class="metric-label">Total Shards</span>
+                        <span class="metric-value">${userShards.length}</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Total Unassigned Shard</span>
-                        <span class="metric-value" style="color:${unassignedShards > 0 ? 'var(--error)' : 'var(--success)'}">${unassignedShards}</span>
+                        <span class="metric-label">Unassigned</span>
+                        <span class="metric-value" style="color:${totalUnassigned > 0 ? 'var(--error)' : 'var(--success)'}">${totalUnassigned}</span>
                     </div>
                 </div>`;
             container.innerHTML = html;
@@ -690,11 +737,19 @@
 
         function renderIndexHealthTable(indices) {
             const tbody = document.querySelector('#indexHealthTable tbody');
+            const paginationEl = document.getElementById('indexHealthPagination');
             if (!indices || !indices.length) {
                 tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No indices found</td></tr>';
+                if (paginationEl) paginationEl.innerHTML = '';
                 return;
             }
-            tbody.innerHTML = indices.slice(0, 50).map(idx => `
+            const PAGE_SIZE = 25;
+            const state = window._indexHealthPage || 1;
+            const totalPages = Math.ceil(indices.length / PAGE_SIZE);
+            const page = Math.min(state, totalPages);
+            const start = (page - 1) * PAGE_SIZE;
+            const pageData = indices.slice(start, start + PAGE_SIZE);
+            tbody.innerHTML = pageData.map(idx => `
                 <tr>
                     <td><span class="health-badge ${idx.health}">${idx.health}</span></td>
                     <td>${idx.status}</td>
@@ -706,6 +761,22 @@
                     <td>${idx.pri_store_size || '-'}</td>
                 </tr>
             `).join('');
+            if (paginationEl && totalPages > 1) {
+                let btns = '';
+                btns += `<button ${page <= 1 ? 'disabled' : ''} onclick="window._indexHealthPage=${page-1};renderIndexHealthTable(window._indexHealthData);">&laquo;</button>`;
+                for (let i = 1; i <= totalPages; i++) {
+                    if (totalPages > 7 && i > 2 && i < totalPages - 1 && Math.abs(i - page) > 1) {
+                        if (i === 3 || i === totalPages - 2) btns += '<span style="color:var(--text-muted);padding:0 4px;">...</span>';
+                        continue;
+                    }
+                    btns += `<button class="${i === page ? 'active' : ''}" onclick="window._indexHealthPage=${i};renderIndexHealthTable(window._indexHealthData);">${i}</button>`;
+                }
+                btns += `<button ${page >= totalPages ? 'disabled' : ''} onclick="window._indexHealthPage=${page+1};renderIndexHealthTable(window._indexHealthData);">&raquo;</button>`;
+                paginationEl.innerHTML = `<div class="pagination-info">Showing ${start+1}-${Math.min(start+PAGE_SIZE, indices.length)} of ${indices.length}</div><div class="pagination-controls">${btns}</div>`;
+            } else if (paginationEl) {
+                paginationEl.innerHTML = `<div class="pagination-info">${indices.length} index(es)</div>`;
+            }
+            window._indexHealthData = indices;
         }
 
         // ==================== NODES ====================
@@ -770,11 +841,19 @@
         // ==================== INDICES ====================
         function renderIndices(indices) {
             const tbody = document.querySelector('#indicesTable tbody');
+            const paginationEl = document.getElementById('indicesPagination');
             if (!indices || !indices.length) {
                 tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:20px;">No indices found</td></tr>';
+                if (paginationEl) paginationEl.innerHTML = '';
                 return;
             }
-            tbody.innerHTML = indices.map(idx => `
+            const PAGE_SIZE = 25;
+            const state = window._indicesPage || 1;
+            const totalPages = Math.ceil(indices.length / PAGE_SIZE);
+            const page = Math.min(state, totalPages);
+            const start = (page - 1) * PAGE_SIZE;
+            const pageData = indices.slice(start, start + PAGE_SIZE);
+            tbody.innerHTML = pageData.map(idx => `
                 <tr>
                     <td><span class="health-badge ${idx.health}">${idx.health}</span></td>
                     <td>${idx.status}</td>
@@ -788,19 +867,43 @@
                     <td>${idx.pri_store_size || '-'}</td>
                 </tr>
             `).join('');
+            if (paginationEl && totalPages > 1) {
+                let btns = '';
+                btns += `<button ${page <= 1 ? 'disabled' : ''} onclick="window._indicesPage=${page-1};renderIndices(window._indicesData);">&laquo;</button>`;
+                for (let i = 1; i <= totalPages; i++) {
+                    if (totalPages > 7 && i > 2 && i < totalPages - 1 && Math.abs(i - page) > 1) {
+                        if (i === 3 || i === totalPages - 2) btns += '<span style="color:var(--text-muted);padding:0 4px;">...</span>';
+                        continue;
+                    }
+                    btns += `<button class="${i === page ? 'active' : ''}" onclick="window._indicesPage=${i};renderIndices(window._indicesData);">${i}</button>`;
+                }
+                btns += `<button ${page >= totalPages ? 'disabled' : ''} onclick="window._indicesPage=${page+1};renderIndices(window._indicesData);">&raquo;</button>`;
+                paginationEl.innerHTML = `<div class="pagination-info">Showing ${start+1}-${Math.min(start+PAGE_SIZE, indices.length)} of ${indices.length}</div><div class="pagination-controls">${btns}</div>`;
+            } else if (paginationEl) {
+                paginationEl.innerHTML = `<div class="pagination-info">${indices.length} index(es)</div>`;
+            }
+            window._indicesData = indices;
         }
 
         // ==================== SHARDS ====================
         function renderShards(shards, nodes) {
             const tbody = document.querySelector('#shardsTable tbody');
             const matrixDiv = document.getElementById('shardMatrix');
+            const paginationEl = document.getElementById('shardsPagination');
             if (!shards || !shards.length) {
                 tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No shards found</td></tr>';
                 matrixDiv.innerHTML = '';
+                if (paginationEl) paginationEl.innerHTML = '';
                 return;
             }
-            // Table
-            tbody.innerHTML = shards.map(s => {
+            // Table with pagination
+            const PAGE_SIZE = 50;
+            const state = window._shardsPage || 1;
+            const totalPages = Math.ceil(shards.length / PAGE_SIZE);
+            const page = Math.min(state, totalPages);
+            const start = (page - 1) * PAGE_SIZE;
+            const pageData = shards.slice(start, start + PAGE_SIZE);
+            tbody.innerHTML = pageData.map(s => {
                 const typeClass = s.prirep === 'p' ? 'primary' : 'replica';
                 const stateClass = s.state === 'UNASSIGNED' ? 'unassigned' : s.state === 'RELOCATING' ? 'relocating' : s.state === 'INITIALIZING' ? 'initializing' : '';
                 return `
@@ -815,6 +918,24 @@
                     <td>${escapeHtml(s.node || '-')}</td>
                 </tr>`;
             }).join('');
+            // Pagination for shards table
+            if (paginationEl && totalPages > 1) {
+                let btns = '';
+                btns += `<button ${page <= 1 ? 'disabled' : ''} onclick="window._shardsPage=${page-1};renderShards(window._shardsData, window._shardsNodes);">&laquo;</button>`;
+                for (let i = 1; i <= totalPages; i++) {
+                    if (totalPages > 7 && i > 2 && i < totalPages - 1 && Math.abs(i - page) > 1) {
+                        if (i === 3 || i === totalPages - 2) btns += '<span style="color:var(--text-muted);padding:0 4px;">...</span>';
+                        continue;
+                    }
+                    btns += `<button class="${i === page ? 'active' : ''}" onclick="window._shardsPage=${i};renderShards(window._shardsData, window._shardsNodes);">${i}</button>`;
+                }
+                btns += `<button ${page >= totalPages ? 'disabled' : ''} onclick="window._shardsPage=${page+1};renderShards(window._shardsData, window._shardsNodes);">&raquo;</button>`;
+                paginationEl.innerHTML = `<div class="pagination-info">Showing ${start+1}-${Math.min(start+PAGE_SIZE, shards.length)} of ${shards.length}</div><div class="pagination-controls">${btns}</div>`;
+            } else if (paginationEl) {
+                paginationEl.innerHTML = `<div class="pagination-info">${shards.length} shard(s)</div>`;
+            }
+            window._shardsData = shards;
+            window._shardsNodes = nodes;
             // Matrix by node
             const nodeShards = {};
             shards.forEach(s => {
