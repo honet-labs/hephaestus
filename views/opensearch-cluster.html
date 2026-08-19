@@ -124,8 +124,14 @@
         .btn-danger { background: var(--error); color: var(--text-white); }
         .btn-danger:hover { background: #dc2626; }
         .btn-sm { padding: 4px 10px; font-size: 11px; }
-        .btn-icon { background: none; border: 1px solid var(--app-border); color: var(--text-muted); cursor: pointer; padding: 4px 8px; border-radius: 3px; transition: all 0.15s; }
+        .btn-icon { background: none; border: 1px solid var(--app-border); color: var(--text-muted); cursor: pointer; padding: 6px; border-radius: 3px; transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; }
         .btn-icon:hover { color: var(--text-white); border-color: var(--text-muted); }
+        .btn-icon svg { width: 16px; height: 16px; }
+        .refresh-countdown { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); padding: 4px 10px; background: var(--app-card-dark); border: 1px solid var(--app-border); border-radius: 3px; white-space: nowrap; }
+        .refresh-countdown svg { width: 14px; height: 14px; }
+        .refresh-countdown .countdown-value { font-family: monospace; font-weight: 600; color: var(--text-white); min-width: 20px; text-align: center; }
+        .refresh-countdown.active { border-color: var(--accent); }
+        .refresh-countdown.active .countdown-value { color: var(--accent); }
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; }
         .empty-state h3 { color: var(--text-white); margin-bottom: 8px; }
         .empty-state p { color: var(--text-muted); margin-bottom: 16px; }
@@ -189,8 +195,17 @@
             OpenSearch Cluster Monitor
         </h1>
         <div class="header-right">
-            <button class="btn-icon" onclick="showConfigModal()" title="Settings">⚙️</button>
-            <button class="btn-icon" onclick="refreshAll()" title="Refresh">🔄</button>
+            <div class="refresh-countdown" id="refreshCountdown" title="Auto-refresh countdown">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="countdown-value" id="countdownValue">30</span>
+                <span>s</span>
+            </div>
+            <button class="btn-icon" onclick="refreshAll()" title="Refresh Now">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </button>
+            <button class="btn-icon" onclick="showConfigModal()" title="Settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
             <a href="/" class="back-link">← Back to Portal</a>
         </div>
     </div>
@@ -397,7 +412,6 @@
 
         const API = '/api/v1/opensearch-cluster';
         let currentConfigId = null;
-        let refreshInterval = null;
 
         // ==================== INIT ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -594,6 +608,32 @@
         };
 
         // ==================== DATA LOADING ====================
+        let refreshInterval = null;
+        let countdownInterval = null;
+        let countdownValue = 30;
+        const REFRESH_SECONDS = 30;
+
+        function startCountdown() {
+            countdownValue = REFRESH_SECONDS;
+            updateCountdownDisplay();
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                countdownValue--;
+                if (countdownValue <= 0) countdownValue = 0;
+                updateCountdownDisplay();
+            }, 1000);
+        }
+
+        function updateCountdownDisplay() {
+            const el = document.getElementById('countdownValue');
+            const container = document.getElementById('refreshCountdown');
+            if (el) el.textContent = countdownValue;
+            if (container) {
+                if (countdownValue <= 5) container.classList.add('active');
+                else container.classList.remove('active');
+            }
+        }
+
         window.refreshAll = async function() {
             if (!currentConfigId) return;
             try {
@@ -613,6 +653,9 @@
                 renderIndices(indicesRes.data);
                 renderShards(shardsRes.data, nodesRes.data);
 
+                // Reset countdown after successful refresh
+                startCountdown();
+
                 // Setup auto-refresh if not already running
                 if (!refreshInterval) {
                     refreshInterval = setInterval(() => {
@@ -620,7 +663,7 @@
                             console.log('[OpenSearch] Auto-refreshing data...');
                             window.refreshAll();
                         }
-                    }, 30000); // Refresh every 30 seconds
+                    }, REFRESH_SECONDS * 1000);
                 }
             } catch (err) {
                 console.error('Refresh failed:', err);
