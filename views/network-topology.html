@@ -1424,15 +1424,27 @@
             }
         });
 
-        // Drag handler — automatically save position when node is moved
+        // Drag handlers — automatically save position when node is moved
+        let currentlyDraggedNodeId = null;
+        network.on('dragStart', function(params) {
+            if (params.nodes && params.nodes.length > 0) {
+                currentlyDraggedNodeId = params.nodes[0];
+            } else if (params.pointer && params.pointer.DOM) {
+                currentlyDraggedNodeId = network.getNodeAt(params.pointer.DOM) || null;
+            }
+        });
+
         network.on('dragEnd', async function(params) {
             let nodesToSave = [];
             if (params.nodes && params.nodes.length > 0) {
                 nodesToSave = params.nodes;
+            } else if (currentlyDraggedNodeId) {
+                nodesToSave = [currentlyDraggedNodeId];
             } else if (params.pointer && params.pointer.DOM) {
                 const hoveredId = network.getNodeAt(params.pointer.DOM);
                 if (hoveredId) nodesToSave = [hoveredId];
             }
+            currentlyDraggedNodeId = null;
 
             for (const nodeId of nodesToSave) {
                 const pos = network.getPosition(nodeId);
