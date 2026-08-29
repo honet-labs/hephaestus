@@ -57,13 +57,12 @@ app.use(helmet({
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-      frameSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "blob:", "http:", "https:", "*"],
+      connectSrc: ["'self'", "*", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "http:", "https:", "ws:", "wss:"],
+      frameSrc: ["'self'", "*", "http:", "https:", "data:", "blob:"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
-      formAction: ["'self'"],
-      ...(isHttps ? { upgradeInsecureRequests: [] } : {})
+      formAction: ["'self'"]
     }
   },
   strictTransportSecurity: isHttps ? { maxAge: 15552000, includeSubDomains: true } : false,

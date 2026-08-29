@@ -2297,6 +2297,15 @@
             <span>Add Share URL</span>
           </button>
         </div>
+
+        <div style="background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.25); border-radius: 6px; padding: 12px; font-size: 11.5px; line-height: 1.5; color: var(--foreground); margin-top: 4px;">
+          <strong style="color: var(--text-white); display: block; margin-bottom: 4px;">💡 Petunjuk Embed Grafana (Agar Tidak Terblokir):</strong>
+          <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px;">
+            <li>Pastikan di file <code>grafana.ini</code> server Grafana Anda sudah diaktifkan:<br><code style="color: var(--success); font-family: monospace;">[security]<br>allow_embedding = true</code> (atau di docker: <code style="color: var(--success); font-family: monospace;">GF_SECURITY_ALLOW_EMBEDDING=true</code>).</li>
+            <li>Jika Hephaestus diakses via HTTPS (domain), link Grafana yang di-embed juga disarankan menggunakan HTTPS.</li>
+            <li>Format link: buka panel di Grafana &rarr; klik <strong>Share</strong> &rarr; tab <strong>Embed</strong> &rarr; salin link di <code>src="..."</code>.</li>
+          </ul>
+        </div>
       </div>
       <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
         <button class="btn btn-secondary" onclick="closeMonitoringViewModal()" style="padding: 8px 16px; font-size: 12px; height: auto;">Cancel</button>
@@ -2319,6 +2328,9 @@
         <div class="form-group">
           <label style="text-transform: uppercase; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Grafana Panel / Dashboard URL</label>
           <input type="text" id="quick-add-url-input" placeholder="http://localhost:3000/d-solo/..." style="background: var(--app-card-dark); border: 1px solid var(--app-border); color: var(--text-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box;">
+        </div>
+        <div style="background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.25); border-radius: 4px; padding: 8px 10px; font-size: 11px; color: var(--foreground); line-height: 1.4;">
+          <strong>Catatan:</strong> Pastikan <code>allow_embedding = true</code> sudah aktif pada <code>grafana.ini</code> server Grafana Anda.
         </div>
       </div>
       <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px;">
