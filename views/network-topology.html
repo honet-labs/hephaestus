@@ -316,7 +316,7 @@
             transition: background 0.12s ease; cursor: default;
         }
         .result-item:hover { background: rgba(88,166,255,0.06); }
-        .result-item.already-added { opacity: 0.4; }
+        .result-item.already-added { opacity: 0.45; }
         .result-icon { width: 32px; height: 32px; flex-shrink: 0; }
         .result-info { flex: 1; min-width: 0; overflow: hidden; }
         .result-name {
@@ -768,24 +768,27 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Device Name / Role</label>
-                    <input type="text" id="dev-name" placeholder="e.g. HOP, TARGET, or Router-01">
+                    <label>Device Name / Hostname</label>
+                    <input type="text" id="dev-name" placeholder="e.g. Server-01, Core-Switch, Router-01">
                 </div>
                 <div class="form-group">
                     <label>IP Address</label>
-                    <input type="text" id="dev-ip" placeholder="e.g. 10.10.5.1">
+                    <input type="text" id="dev-ip" placeholder="e.g. 192.168.1.1">
                 </div>
                 <div class="form-group">
-                    <label>Device Type</label>
+                    <label>Device Type & Icon</label>
                     <select id="dev-type">
+                        <option value="server">Server (Rack Server)</option>
+                        <option value="switch">Switch (Network Switch)</option>
+                        <option value="router">Router (Directional Router)</option>
+                        <option value="wireless">Wireless AP / WiFi</option>
+                        <option value="firewall">Firewall (Shield)</option>
                         <option value="gateway">Gateway / Internet (Globe)</option>
-                        <option value="router">Hop / Router (3-Dots)</option>
-                        <option value="server">Target / Server (Bullseye)</option>
-                        <option value="switch">Switch</option>
-                        <option value="firewall">Firewall</option>
+                        <option value="container">Container (Docker Box)</option>
+                        <option value="web">Web Service (Globe)</option>
                         <option value="network">Network Device</option>
-                        <option value="web">Web Service</option>
-                        <option value="container">Container</option>
+                        <option value="hop">Hop (3-Dots Capsule)</option>
+                        <option value="target">Target (Bullseye)</option>
                         <option value="unknown">Unknown</option>
                     </select>
                 </div>
@@ -808,24 +811,27 @@
             <div class="modal-body">
                 <input type="hidden" id="edit-dev-id">
                 <div class="form-group">
-                    <label>Device Name / Role</label>
-                    <input type="text" id="edit-dev-name" placeholder="e.g. HOP or TARGET">
+                    <label>Device Name / Hostname</label>
+                    <input type="text" id="edit-dev-name" placeholder="e.g. Server-01">
                 </div>
                 <div class="form-group">
                     <label>IP Address</label>
-                    <input type="text" id="edit-dev-ip" placeholder="e.g. 10.10.5.1">
+                    <input type="text" id="edit-dev-ip" placeholder="e.g. 192.168.1.1">
                 </div>
                 <div class="form-group">
-                    <label>Device Type</label>
+                    <label>Device Type & Icon</label>
                     <select id="edit-dev-type">
+                        <option value="server">Server (Rack Server)</option>
+                        <option value="switch">Switch (Network Switch)</option>
+                        <option value="router">Router (Directional Router)</option>
+                        <option value="wireless">Wireless AP / WiFi</option>
+                        <option value="firewall">Firewall (Shield)</option>
                         <option value="gateway">Gateway / Internet (Globe)</option>
-                        <option value="router">Hop / Router (3-Dots)</option>
-                        <option value="server">Target / Server (Bullseye)</option>
-                        <option value="switch">Switch</option>
-                        <option value="firewall">Firewall</option>
+                        <option value="container">Container (Docker Box)</option>
+                        <option value="web">Web Service (Globe)</option>
                         <option value="network">Network Device</option>
-                        <option value="web">Web Service</option>
-                        <option value="container">Container</option>
+                        <option value="hop">Hop (3-Dots Capsule)</option>
+                        <option value="target">Target (Bullseye)</option>
                         <option value="unknown">Unknown</option>
                     </select>
                 </div>
@@ -931,7 +937,53 @@
     let sidebarVisible = false;
     let selectedIndices = new Set();
 
-    /* ==================== VECTOR ICON GENERATOR (IMAGE 2 MATCH) ==================== */
+    /* ==================== PENDING / DISCOVERED NODES DB SYNC ==================== */
+    async function loadPendingFromDB() {
+        try {
+            const data = await apiFetch('/api/v1/topology/pending');
+            if (data.success && data.data && data.data.length > 0) {
+                pendingNodes = data.data;
+                pendingNodes.forEach(n => n._saved = true);
+                renderPendingList('Discovered Devices');
+                document.getElementById('results-sidebar').classList.add('visible');
+                sidebarVisible = true;
+                document.getElementById('sidebar-toggle').classList.add('shifted');
+                document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
+            }
+        } catch (e) {
+            console.error('[Topology] Failed to load pending nodes:', e);
+        }
+    }
+
+    function savePendingToDB() {
+        try {
+            const unsaved = pendingNodes.filter(n => !n._saved);
+            if (unsaved.length === 0) return;
+            apiFetch('/api/v1/topology/pending', {
+                method: 'POST',
+                body: JSON.stringify({ nodes: unsaved })
+            }).then((res) => {
+                unsaved.forEach(n => n._saved = true);
+            }).catch((e) => {
+                console.error('[Topology] Failed to save pending nodes:', e);
+            });
+        } catch (e) {
+            console.error('[Topology] savePendingToDB error:', e);
+        }
+    }
+
+    function deletePendingFromDB(ids) {
+        if (!ids || ids.length === 0) return;
+        try {
+            apiFetch('/api/v1/topology/pending', {
+                method: 'DELETE',
+                body: JSON.stringify({ ids })
+            }).catch(() => {});
+        } catch (e) {}
+    }
+
+    /* ==================== AUTHENTIC HARDWARE VECTOR ICONS ==================== */
+    // Generates high-DPI vector icons tailored for each device type inside modern clean circles
     function generateDeviceIcon(type, status, size, isFirstHop) {
         size = size || 80;
         const canvas = document.createElement('canvas');
@@ -957,37 +1009,34 @@
 
         const t = (type || '').toLowerCase();
         const isGateway = isFirstHop || t === 'gateway' || t === 'internet' || t === 'web';
-        const isRouterOrHop = t === 'router' || t === 'switch' || t === 'hop' || t === 'network';
-        const isTarget = !isGateway && !isRouterOrHop;
 
-        // 1. Outer circle rendering
+        // 1. Circle Background & Glow
         if (isGateway) {
-            // Blue/cyan outer ring (like left node in Image 2)
+            // Blue/cyan outer ring
             ctx.beginPath();
             ctx.arc(cx, cy, 34 * s, 0, Math.PI * 2);
             ctx.strokeStyle = cyanRing;
             ctx.lineWidth = 4 * s;
             ctx.stroke();
 
-            // Green filled circle inside
+            // Solid inner circle
             ctx.beginPath();
             ctx.arc(cx, cy, 29 * s, 0, Math.PI * 2);
             ctx.fillStyle = fillColor;
             ctx.fill();
         } else {
-            // Standard clean green circle
             ctx.beginPath();
             ctx.arc(cx, cy, 32 * s, 0, Math.PI * 2);
             ctx.fillStyle = fillColor;
             ctx.fill();
 
-            // Subtle highlight ring
+            // Subtle white highlight edge
             ctx.lineWidth = 1.5 * s;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.stroke();
         }
 
-        // 2. White vector icon inside
+        // 2. Specific Icon for Device Type
         ctx.strokeStyle = '#ffffff';
         ctx.fillStyle = '#ffffff';
         ctx.lineWidth = 2.2 * s;
@@ -997,79 +1046,135 @@
         if (isGateway) {
             // Globe icon with latitude and longitude
             const r = 14 * s;
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.5, r, 0, 0, Math.PI * 2); ctx.stroke();
+        } else if (t.includes('server')) {
+            // Server Rack (3 stacked chassis units with LEDs and drive bays)
+            const bladeW = 28 * s;
+            const bladeH = 7 * s;
+            [-1, 0, 1].forEach(offset => {
+                const by = cy + offset * 9.5 * s - bladeH / 2;
+                const bx = cx - bladeW / 2;
+                ctx.strokeRect(bx, by, bladeW, bladeH);
+                // Status LED dots
+                ctx.beginPath();
+                ctx.arc(bx + 4 * s, by + bladeH / 2, 1.2 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(bx + 8 * s, by + bladeH / 2, 1.2 * s, 0, Math.PI * 2);
+                ctx.fill();
+                // Drive slot line
+                ctx.beginPath();
+                ctx.moveTo(bx + 13 * s, by + bladeH / 2);
+                ctx.lineTo(bx + bladeW - 4 * s, by + bladeH / 2);
+                ctx.stroke();
+            });
+        } else if (t.includes('switch')) {
+            // Network Switch: Box with double row of RJ45 ports
+            const swW = 30 * s;
+            const swH = 18 * s;
+            ctx.strokeRect(cx - swW / 2, cy - swH / 2, swW, swH);
+            const portSize = 3 * s;
+            for (let i = 0; i < 4; i++) {
+                const px = cx - 10.5 * s + i * 7 * s;
+                ctx.fillRect(px - portSize / 2, cy - 5.5 * s, portSize, portSize);
+                ctx.fillRect(px - portSize / 2, cy + 2.5 * s, portSize, portSize);
+            }
+        } else if (t.includes('router')) {
+            // Router: Circular disc with 4 directional flow arrows
+            const rRad = 12 * s;
+            ctx.beginPath(); ctx.arc(cx, cy, rRad, 0, Math.PI * 2); ctx.stroke();
+            // Arrow right
+            ctx.beginPath(); ctx.moveTo(cx - 7 * s, cy - 3.5 * s); ctx.lineTo(cx + 7 * s, cy - 3.5 * s); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx + 3.5 * s, cy - 7 * s); ctx.lineTo(cx + 7 * s, cy - 3.5 * s); ctx.lineTo(cx + 3.5 * s, cy); ctx.stroke();
+            // Arrow left
+            ctx.beginPath(); ctx.moveTo(cx + 7 * s, cy + 3.5 * s); ctx.lineTo(cx - 7 * s, cy + 3.5 * s); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - 3.5 * s, cy); ctx.lineTo(cx - 7 * s, cy + 3.5 * s); ctx.lineTo(cx - 3.5 * s, cy + 7 * s); ctx.stroke();
+        } else if (t.includes('wireless') || t.includes('wifi') || t.includes('ap')) {
+            // Wireless Access Point: Base point with broadcasting RF wave arcs
             ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.arc(cx, cy + 9 * s, 2.5 * s, 0, Math.PI * 2);
+            ctx.fill();
+            // Wave 1
+            ctx.beginPath();
+            ctx.arc(cx, cy + 9 * s, 8 * s, -Math.PI * 0.75, -Math.PI * 0.25);
             ctx.stroke();
-
-            // Equator
+            // Wave 2
             ctx.beginPath();
-            ctx.moveTo(cx - r, cy);
-            ctx.lineTo(cx + r, cy);
+            ctx.arc(cx, cy + 9 * s, 14 * s, -Math.PI * 0.75, -Math.PI * 0.25);
             ctx.stroke();
-
-            // Meridian
+            // Wave 3
             ctx.beginPath();
-            ctx.moveTo(cx, cy - r);
-            ctx.lineTo(cx, cy + r);
+            ctx.arc(cx, cy + 9 * s, 20 * s, -Math.PI * 0.75, -Math.PI * 0.25);
             ctx.stroke();
-
-            // Ellipse
+        } else if (t.includes('firewall')) {
+            // Security Shield
             ctx.beginPath();
-            ctx.ellipse(cx, cy, r * 0.5, r, 0, 0, Math.PI * 2);
-            ctx.stroke();
-        } else if (isRouterOrHop) {
-            // HOP icon: 3-dot capsule (middle nodes in Image 2)
-            const w = 26 * s;
-            const h = 14 * s;
-            const radius = 5 * s;
-            const x = cx - w / 2;
-            const y = cy - h / 2;
-
-            ctx.beginPath();
-            ctx.moveTo(x + radius, y);
-            ctx.lineTo(x + w - radius, y);
-            ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-            ctx.lineTo(x + w, y + h - radius);
-            ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-            ctx.lineTo(x + radius, y + h);
-            ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-            ctx.lineTo(x, y + radius);
-            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.moveTo(cx, cy - 14 * s);
+            ctx.lineTo(cx + 12 * s, cy - 8 * s);
+            ctx.lineTo(cx + 12 * s, cy + 2 * s);
+            ctx.quadraticCurveTo(cx + 12 * s, cy + 14 * s, cx, cy + 17 * s);
+            ctx.quadraticCurveTo(cx - 12 * s, cy + 14 * s, cx - 12 * s, cy + 2 * s);
+            ctx.lineTo(cx - 12 * s, cy - 8 * s);
             ctx.closePath();
             ctx.stroke();
-
-            // 3 dots
-            const dotRadius = 2 * s;
-            const dotSpacing = 7 * s;
+            // Cross in shield
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 7 * s); ctx.lineTo(cx, cy + 11 * s);
+            ctx.moveTo(cx - 6 * s, cy + 1 * s); ctx.lineTo(cx + 6 * s, cy + 1 * s);
+            ctx.stroke();
+        } else if (t.includes('container') || t.includes('docker')) {
+            // Container cube box
+            const cW = 24 * s, cH = 20 * s;
+            ctx.strokeRect(cx - cW / 2, cy - cH / 2, cW, cH);
+            ctx.beginPath();
+            ctx.moveTo(cx - cW / 2, cy); ctx.lineTo(cx + cW / 2, cy);
+            ctx.moveTo(cx - 4 * s, cy - cH / 2); ctx.lineTo(cx - 4 * s, cy + cH / 2);
+            ctx.moveTo(cx + 4 * s, cy - cH / 2); ctx.lineTo(cx + 4 * s, cy + cH / 2);
+            ctx.stroke();
+        } else if (t.includes('hop')) {
+            // Hop 3-dot capsule
+            const hW = 26 * s, hH = 14 * s, hRad = 5 * s;
+            const hx = cx - hW / 2, hy = cy - hH / 2;
+            ctx.beginPath();
+            ctx.moveTo(hx + hRad, hy);
+            ctx.lineTo(hx + hW - hRad, hy);
+            ctx.quadraticCurveTo(hx + hW, hy, hx + hW, hy + hRad);
+            ctx.lineTo(hx + hW, hy + hH - hRad);
+            ctx.quadraticCurveTo(hx + hW, hy + hH, hx + hW - hRad, hy + hH);
+            ctx.lineTo(hx + hRad, hy + hH);
+            ctx.quadraticCurveTo(hx, hy + hH, hx, hy + hH - hRad);
+            ctx.lineTo(hx, hy + hRad);
+            ctx.quadraticCurveTo(hx, hy, hx + hRad, hy);
+            ctx.closePath();
+            ctx.stroke();
             [-1, 0, 1].forEach(offset => {
                 ctx.beginPath();
-                ctx.arc(cx + offset * dotSpacing, cy, dotRadius, 0, Math.PI * 2);
+                ctx.arc(cx + offset * 7 * s, cy, 2 * s, 0, Math.PI * 2);
                 ctx.fill();
             });
+        } else if (t.includes('target')) {
+            // Target Bullseye
+            const rOuter = 13 * s, rInner = 6.5 * s, rCenter = 2.4 * s;
+            ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, rInner, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, rCenter, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(cx, cy - rOuter - 2 * s); ctx.lineTo(cx, cy - rOuter + 4 * s); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, cy + rOuter + 2 * s); ctx.lineTo(cx, cy + rOuter - 4 * s); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - rOuter - 2 * s, cy); ctx.lineTo(cx - rOuter + 4 * s, cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx + rOuter + 2 * s, cy); ctx.lineTo(cx + rOuter - 4 * s, cy); ctx.stroke();
         } else {
-            // TARGET icon: Bullseye crosshair (target nodes in Image 2)
-            const rOuter = 13 * s;
-            const rInner = 6.5 * s;
-            const rCenter = 2.4 * s;
-
+            // Network node cluster
+            ctx.beginPath(); ctx.arc(cx, cy - 6 * s, 3.5 * s, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx - 9 * s, cy + 7 * s, 3.5 * s, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx + 9 * s, cy + 7 * s, 3.5 * s, 0, Math.PI * 2); ctx.stroke();
             ctx.beginPath();
-            ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+            ctx.moveTo(cx, cy - 2.5 * s); ctx.lineTo(cx - 6.5 * s, cy + 4.5 * s);
+            ctx.moveTo(cx, cy - 2.5 * s); ctx.lineTo(cx + 6.5 * s, cy + 4.5 * s);
+            ctx.moveTo(cx - 5.5 * s, cy + 7 * s); ctx.lineTo(cx + 5.5 * s, cy + 7 * s);
             ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(cx, cy, rCenter, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Crosshair tick marks
-            const tickLen = 4 * s;
-            ctx.beginPath(); ctx.moveTo(cx, cy - rOuter - 2 * s); ctx.lineTo(cx, cy - rOuter + tickLen); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx, cy + rOuter + 2 * s); ctx.lineTo(cx, cy + rOuter - tickLen); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx - rOuter - 2 * s, cy); ctx.lineTo(cx - rOuter + tickLen, cy); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx + rOuter + 2 * s, cy); ctx.lineTo(cx + rOuter - tickLen, cy); ctx.stroke();
         }
 
         return canvas.toDataURL();
@@ -1122,21 +1227,13 @@
     let labelShowName = true;
 
     function buildNodeData(n, index, allNodes, allEdges) {
-        let roleTitle = (n.name || '').trim();
-        const t = (n.deviceType || '').toLowerCase();
-
+        const displayName = (n.name || 'Device').trim();
         const isIncoming = allEdges && allEdges.some(e => (e.to === n.id || e.target === n.id));
         const isOutgoing = allEdges && allEdges.some(e => (e.from === n.id || e.source === n.id));
-        const isFirstHop = !isIncoming && isOutgoing;
-
-        if (!roleTitle || roleTitle.toLowerCase() === 'unknown') {
-            if (isFirstHop) roleTitle = 'HOP';
-            else if (t === 'router' || t === 'switch' || t === 'hop') roleTitle = 'HOP';
-            else roleTitle = 'TARGET';
-        }
+        const isFirstHop = !isIncoming && isOutgoing && (n.deviceType === 'gateway' || n.deviceType === 'web' || n.deviceType === 'internet');
 
         const labelParts = [];
-        if (labelShowName) labelParts.push(roleTitle.toUpperCase());
+        if (labelShowName) labelParts.push(displayName);
         if (labelShowIp && n.ip) labelParts.push(n.ip);
 
         const iconUrl = getDeviceIconUrl(n.deviceType || 'unknown', n.status || 'online', 80, isFirstHop);
@@ -1144,8 +1241,8 @@
         return {
             id: n.id,
             image: iconUrl,
-            label: labelParts.join('\n') || (n.ip || 'NODE'),
-            title: `${roleTitle}\nIP: ${n.ip || '-'}\nType: ${n.deviceType || 'unknown'}\nStatus: ${(n.status || 'online').toUpperCase()}`,
+            label: labelParts.join('\n') || displayName,
+            title: `${displayName}\nIP: ${n.ip || '-'}\nType: ${(n.deviceType || 'unknown').toUpperCase()}\nStatus: ${(n.status || 'online').toUpperCase()}`,
             shape: 'image',
             size: 28,
             borderWidth: 0,
@@ -1255,6 +1352,7 @@
         activeSheetId = sheetId;
         renderSheetTabs();
         await loadGraph();
+        if (pendingNodes.length > 0) renderPendingList('Discovered Devices');
     }
 
     async function renameSheet(sheetId) {
@@ -1319,55 +1417,6 @@
             edges: {
                 smooth: { type: 'continuous', roundness: 0.35 }
             }
-        });
-
-        // Pill badge background drawing on edges
-        network.on('afterDrawing', function(ctx) {
-            edgesData.forEach(edge => {
-                if (!edge.label) return;
-                const posFrom = network.getPosition(edge.from);
-                const posTo = network.getPosition(edge.to);
-                if (!posFrom || !posTo) return;
-
-                const midX = (posFrom.x + posTo.x) / 2;
-                const midY = (posFrom.y + posTo.y) / 2;
-
-                ctx.save();
-                ctx.font = "bold 11px monospace";
-                const textWidth = ctx.measureText(edge.label).width;
-                const badgeWidth = textWidth + 18;
-                const badgeHeight = 22;
-                const radius = 11;
-                const rx = midX - badgeWidth / 2;
-                const ry = midY - badgeHeight / 2;
-
-                // Pill Body
-                ctx.beginPath();
-                ctx.moveTo(rx + radius, ry);
-                ctx.lineTo(rx + badgeWidth - radius, ry);
-                ctx.quadraticCurveTo(rx + badgeWidth, ry, rx + badgeWidth, ry + radius);
-                ctx.lineTo(rx + badgeWidth, ry + badgeHeight - radius);
-                ctx.quadraticCurveTo(rx + badgeWidth, ry + badgeHeight, rx + badgeWidth - radius, ry + badgeHeight);
-                ctx.lineTo(rx + radius, ry + badgeHeight);
-                ctx.quadraticCurveTo(rx, ry + badgeHeight, rx, ry + badgeHeight - radius);
-                ctx.lineTo(rx, ry + radius);
-                ctx.quadraticCurveTo(rx, ry, rx + radius, ry);
-                ctx.closePath();
-
-                ctx.fillStyle = '#1e1e1e';
-                ctx.fill();
-
-                ctx.lineWidth = 1;
-                ctx.strokeStyle = '#3c3c3c';
-                ctx.stroke();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(edge.label, midX, midY + 0.5);
-
-                ctx.restore();
-            });
         });
 
         // Drag handler
@@ -1479,7 +1528,7 @@
     function buildTooltipHtml(n) {
         let html = `<div class="tt-name">${esc(n.name)}</div>`;
         html += `<div class="tt-row"><span class="tt-label">IP</span><span class="tt-val">${esc(n.ip || '-')}</span></div>`;
-        html += `<div class="tt-row"><span class="tt-label">Type</span><span class="tt-val">${esc(n.deviceType || 'unknown')}</span></div>`;
+        html += `<div class="tt-row"><span class="tt-label">Type</span><span class="tt-val">${esc((n.deviceType || 'unknown').toUpperCase())}</span></div>`;
         html += `<div class="tt-row"><span class="tt-label">Status</span><span class="tt-val" style="color:${n.status === 'offline' ? '#ef4444' : '#10b981'};">${(n.status||'online').toUpperCase()}</span></div>`;
         return html;
     }
@@ -1491,7 +1540,7 @@
         document.getElementById('status-text').textContent = text;
     }
 
-    /* ==================== FLOW LAYOUT (PIPELINE / IMAGE 2 MATCH) ==================== */
+    /* ==================== FLOW LAYOUT (PIPELINE) ==================== */
     function layoutLeftToRight() {
         if (!network || nodesData.length === 0) return;
 
@@ -1877,6 +1926,7 @@
             const existingIps = new Set([...pendingNodes.map(n => n.ip), ...nodesData.map(n => n._raw?.ip).filter(Boolean)]);
             const deduped = newNodes.filter(n => !existingIps.has(n.ip));
             pendingNodes.push(...deduped);
+            savePendingToDB();
 
             renderPendingList('Scan Results');
             if (!sidebarVisible && pendingNodes.length > 0) toggleSidebar();
@@ -1910,7 +1960,10 @@
             });
             if (!data.success) throw new Error(data.error);
             closeModal('modal-add-device');
-            pendingNodes.push(data.data);
+            const newNode = data.data;
+            newNode._saved = false;
+            pendingNodes.push(newNode);
+            savePendingToDB();
             renderPendingList('Added Devices');
             if (!sidebarVisible) toggleSidebar();
             showToast('success', `"${name}" added to pending list`);
@@ -1926,6 +1979,7 @@
             await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId), { method: 'DELETE' });
             closeDetail();
             await loadGraph();
+            if (pendingNodes.length > 0) renderPendingList('Discovered Devices');
             showToast('success', `"${name}" deleted`);
         } catch (e) { showToast('error', 'Delete failed: ' + e.message); }
     }
@@ -2102,13 +2156,21 @@
         document.getElementById('results-title').textContent = title || 'Discovered Devices';
         countEl.textContent = pendingNodes.length;
 
+        // Clean stale selections
+        const validIndices = new Set();
+        pendingNodes.forEach((_, i) => validIndices.add(i));
+        selectedIndices = new Set([...selectedIndices].filter(i => validIndices.has(i)));
+
         const selCount = selectedIndices.size;
         selCountEl.textContent = selCount + ' selected';
         selCountEl.style.display = selCount > 0 ? 'inline-flex' : 'none';
         addBtn.disabled = selCount === 0;
 
+        const allSelected = pendingNodes.length > 0 && selCount === pendingNodes.length;
+        document.getElementById('btn-select-all').textContent = allSelected ? 'Deselect All' : 'Select All';
+
         if (pendingNodes.length === 0) {
-            list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:12px;">No devices discovered</div>';
+            list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:12px;">No devices to add</div>';
             return;
         }
 
@@ -2122,7 +2184,7 @@
                 <img class="result-icon" src="${getDeviceIconUrl(n.deviceType, n.status, 48)}" alt="">
                 <div class="result-info">
                     <div class="result-name">${esc(n.name)}</div>
-                    <div class="result-meta"><span>${esc(n.ip || '-')}</span> <span>${esc(n.deviceType || 'unknown')}</span></div>
+                    <div class="result-meta"><span>${esc(n.ip || '-')}</span> <span>${esc((n.deviceType || 'unknown').toUpperCase())}</span></div>
                 </div>
                 <div class="result-actions-btn">
                     ${alreadyOnCanvas ? '<span style="font-size:10px;color:var(--text-dim);font-weight:600;">Added</span>' : `<button class="btn-add" onclick="addToCanvas(${i})">Add</button>`}
@@ -2134,52 +2196,67 @@
 
     function toggleSelect(idx, checked) {
         if (checked) selectedIndices.add(idx); else selectedIndices.delete(idx);
-        renderPendingList();
+        renderPendingList(document.getElementById('results-title').textContent);
     }
 
     function toggleSelectAll() {
-        if (selectedIndices.size === pendingNodes.length) {
+        const allSelected = pendingNodes.length > 0 && selectedIndices.size === pendingNodes.length;
+        if (allSelected) {
             selectedIndices.clear();
         } else {
-            pendingNodes.forEach((_, i) => selectedIndices.add(i));
+            pendingNodes.forEach((_, i) => {
+                const alreadyOnCanvas = nodesData.some(n => n._raw?.ip === pendingNodes[i].ip || n.id === pendingNodes[i].id);
+                if (!alreadyOnCanvas) selectedIndices.add(i);
+            });
         }
-        renderPendingList();
+        renderPendingList(document.getElementById('results-title').textContent);
     }
 
     async function addToCanvas(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
         const node = pendingNodes[idx];
+        if (node._added) { showToast('info', `"${node.name}" already on canvas`); return; }
+        const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
+        if (exists) { node._added = true; renderPendingList(document.getElementById('results-title').textContent); return; }
         try {
-            await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify({ ...node, sheetId: activeSheetId }) });
+            const res = await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify({ ...node, sheetId: activeSheetId }) });
+            if (!res.success) throw new Error(res.error || 'Save failed');
             await loadGraph();
-            renderPendingList();
+            node._added = true;
+            renderPendingList(document.getElementById('results-title').textContent);
             showToast('success', `"${node.name}" added to canvas`);
         } catch (e) { showToast('error', 'Save failed: ' + e.message); }
     }
 
     function dismissPending(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
+        const removedId = pendingNodes[idx]._pendingId;
         pendingNodes.splice(idx, 1);
         selectedIndices.delete(idx);
-        renderPendingList();
+        if (removedId) deletePendingFromDB([removedId]);
+        savePendingToDB();
+        renderPendingList(document.getElementById('results-title').textContent);
     }
 
     async function addSelectedToCanvas() {
         if (selectedIndices.size === 0) return;
         const toAdd = [...selectedIndices].map(i => pendingNodes[i]).filter(n => !n._added);
+        if (toAdd.length === 0) { showToast('info', 'All selected devices already on canvas'); return; }
         try {
-            await apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: toAdd, sheetId: activeSheetId }) });
+            const res = await apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: toAdd, sheetId: activeSheetId }) });
+            if (!res.success) throw new Error(res.error);
             selectedIndices.clear();
             await loadGraph();
-            renderPendingList();
+            renderPendingList(document.getElementById('results-title').textContent);
             showToast('success', `${toAdd.length} device(s) added to canvas`);
         } catch (e) { showToast('error', 'Save failed: ' + e.message); }
     }
 
     function clearPending() {
+        apiFetch('/api/v1/topology/pending', { method: 'DELETE' }).catch(() => {});
         pendingNodes = [];
         selectedIndices.clear();
-        renderPendingList();
+        renderPendingList(document.getElementById('results-title').textContent);
     }
 
     /* ==================== SHORTCUTS ==================== */
@@ -2209,6 +2286,13 @@
     document.addEventListener('DOMContentLoaded', async function() {
         await loadSheets();
         await loadGraph();
+        await loadPendingFromDB();
+        for (const n of pendingNodes) {
+            if (nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id)) {
+                n._added = true;
+            }
+        }
+        if (pendingNodes.length > 0) renderPendingList('Discovered Devices');
     });
 
     /* ==================== SHEET TAB EVENTS ==================== */
