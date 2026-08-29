@@ -5,186 +5,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Topology - Hephaestus</title>
     <link rel="icon" type="image/jpeg" href="/img/favicon.jpg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            color-scheme: light dark;
-            --bg-body: #f8fafc;
-            --bg-canvas: #ffffff;
-            --bg-card: #ffffff;
-            --bg-card-alt: #f1f5f9;
-            --border: #e2e8f0;
-            --border-strong: #cbd5e1;
-            --text-main: #0f172a;
-            --text-muted: #475569;
-            --text-dim: #94a3b8;
-            --primary: #10b981;
-            --primary-hover: #059669;
-            --primary-light: #ecfdf5;
-            --accent-blue: #0ea5e9;
-            --accent-blue-light: #e0f2fe;
+            color-scheme: dark;
+            --background: #242424;
+            --foreground: #cbd5e1;
+            --app-sidebar: rgb(64, 70, 75);
+            --app-topbar: #1e1e1e;
+            --app-card: #2e2e2e;
+            --app-card-dark: #1f1f1f;
+            --app-border: #3c3c3c;
+            --prometheus-orange: #a48181;
+            --prometheus-orange-hover: #bfa3a3;
+            --prometheus-orange-active: #8e6c6c;
+            --prometheus-orange-muted: rgba(164, 129, 129, 0.15);
+            --text-white: #ffffff;
+            --text-muted: #a0a0a0;
+            --text-dim: #6b7280;
             --success: #10b981;
+            --success-border: rgba(16, 185, 129, 0.3);
             --error: #ef4444;
+            --error-border: rgba(239, 68, 68, 0.3);
             --warning: #f59e0b;
-            --purple: #8b5cf6;
-            --radius-lg: 12px;
-            --radius: 8px;
-            --radius-sm: 6px;
+            --warning-border: rgba(245, 158, 11, 0.3);
+            --btn-primary-bg: #1971c2;
+            --btn-primary-color: #ffffff;
+            --btn-primary-hover: #1864ab;
+            --accent: #58a6ff;
+            --radius: 6px;
+            --radius-sm: 4px;
             --radius-pill: 9999px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-            --dot-grid: #e2e8f0;
-        }
-
-        [data-theme="dark"] {
-            --bg-body: #090d16;
-            --bg-canvas: #0b0f19;
-            --bg-card: #131b2e;
-            --bg-card-alt: #1a233a;
-            --border: #1e293b;
-            --border-strong: #334155;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --text-dim: #64748b;
-            --primary: #10b981;
-            --primary-hover: #34d399;
-            --primary-light: rgba(16, 185, 129, 0.15);
-            --accent-blue: #38bdf8;
-            --accent-blue-light: rgba(56, 189, 248, 0.15);
-            --dot-grid: #1e293b;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+            --bg-dot: #333333;
         }
 
         * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-size: 13px; background: var(--bg-body); color: var(--text-main);
-            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
-            user-select: none;
-            transition: background-color 0.2s ease, color 0.2s ease;
+        body, button, input, select, textarea, span, p, a, label {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica Neue, Arial, sans-serif;
+            font-size: 13px;
         }
-        h1,h2,h3,h4 { font-weight: 700; color: var(--text-main); }
+        body {
+            background-color: var(--background);
+            color: var(--foreground);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        h1,h2,h3,h4 { font-weight: 600; color: var(--text-white); }
 
         /* ========== HEADER ========== */
         .header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0 20px; height: 50px; background: var(--bg-card);
-            border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 50;
-            box-shadow: var(--shadow-sm);
+            padding: 0 16px; height: 44px; background: var(--app-topbar);
+            border-bottom: 1px solid var(--app-border); flex-shrink: 0; z-index: 50;
         }
-        .header-left { display: flex; align-items: center; gap: 14px; }
-        .header h1 {
-            font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px;
-            letter-spacing: -0.2px;
-        }
-        .header h1 .logo-icon {
-            width: 24px; height: 24px; border-radius: 6px; background: var(--primary);
-            display: flex; align-items: center; justify-content: center; color: #fff;
-        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header h1 { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--text-white); }
+        .header h1 svg { width: 16px; height: 16px; color: var(--prometheus-orange); }
         .header-right { display: flex; align-items: center; gap: 10px; }
         .back-link {
-            color: var(--text-muted); text-decoration: none; font-size: 12px; font-weight: 600;
-            padding: 5px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-            background: var(--bg-card); transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 4px;
+            color: var(--text-muted); text-decoration: none; font-size: 11px;
+            padding: 4px 10px; border: 1px solid var(--app-border); border-radius: var(--radius-sm);
+            background: var(--app-card); transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 4px;
         }
-        .back-link:hover { color: var(--text-main); border-color: var(--border-strong); background: var(--bg-card-alt); }
+        .back-link:hover { color: var(--text-white); border-color: var(--text-muted); background: var(--app-card-dark); }
         .badge {
-            font-size: 11px; font-weight: 500; color: var(--text-muted); padding: 4px 10px;
-            background: var(--bg-card-alt); border: 1px solid var(--border); border-radius: var(--radius-pill);
-            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 11px; color: var(--text-muted); padding: 3px 8px;
+            background: var(--background); border: 1px solid var(--app-border); border-radius: var(--radius-sm);
+            display: inline-flex; align-items: center; gap: 4px;
         }
-        .badge strong { color: var(--text-main); font-weight: 700; }
+        .badge strong { color: var(--text-white); font-weight: 600; }
 
         /* ========== BUTTONS ========== */
         button.btn {
-            border-radius: var(--radius-sm); padding: 6px 14px; font-weight: 600;
-            cursor: pointer; transition: all 0.15s ease; font-size: 11px;
-            display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent;
+            border-radius: var(--radius-sm); padding: 5px 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s ease; text-transform: uppercase;
+            font-size: 10px; letter-spacing: 0.5px; display: inline-flex;
+            align-items: center; gap: 5px; border: 1px solid transparent;
             font-family: inherit; white-space: nowrap; line-height: 1.4;
         }
-        button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        button.btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-primary {
-            background: var(--primary); color: #ffffff; border-color: var(--primary);
-            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+            background: var(--btn-primary-bg); color: var(--btn-primary-color); border-color: var(--btn-primary-bg);
         }
         .btn-primary:hover:not(:disabled) {
-            background: var(--primary-hover); border-color: var(--primary-hover);
-            transform: translateY(-1px); box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+            background: var(--btn-primary-hover); border-color: var(--btn-primary-hover);
         }
         .btn-ghost {
-            background: var(--bg-card); border-color: var(--border); color: var(--text-muted);
+            background: var(--app-card); border-color: var(--app-border); color: var(--text-muted);
         }
         .btn-ghost:hover:not(:disabled) {
-            color: var(--text-main); border-color: var(--border-strong); background: var(--bg-card-alt);
+            color: var(--text-white); border-color: var(--text-muted); background: var(--app-card-dark);
         }
         .btn-danger {
-            background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.25); color: var(--error);
+            background: rgba(239, 68, 68, 0.15); border-color: var(--error-border); color: var(--error);
         }
-        .btn-danger:hover:not(:disabled) { background: var(--error); color: #fff; border-color: var(--error); }
+        .btn-danger:hover:not(:disabled) { background: var(--error); color: #ffffff; }
         .btn-success {
-            background: var(--primary-light); border-color: rgba(16, 185, 129, 0.3); color: var(--primary);
+            background: rgba(16, 185, 129, 0.15); border-color: var(--success-border); color: var(--success);
         }
-        .btn-success:hover:not(:disabled) { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .btn-success:hover:not(:disabled) { background: var(--success); color: #ffffff; }
         .btn-icon {
-            padding: 6px 8px; background: var(--bg-card); border: 1px solid var(--border);
+            padding: 5px 8px; background: var(--app-card); border: 1px solid var(--app-border);
             color: var(--text-muted); border-radius: var(--radius-sm); cursor: pointer;
             transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center;
         }
-        .btn-icon:hover { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
-        .btn-icon.active { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
+        .btn-icon:hover { color: var(--prometheus-orange); border-color: var(--prometheus-orange); }
+        .btn-icon.active { color: var(--prometheus-orange); border-color: var(--prometheus-orange); background: var(--app-card-dark); }
 
         /* ========== TOOLBAR ========== */
         .toolbar {
-            display: flex; align-items: center; padding: 7px 16px; gap: 8px;
-            background: var(--bg-card); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 6px 14px; gap: 7px;
+            background: var(--app-card); border-bottom: 1px solid var(--app-border);
             flex-shrink: 0; z-index: 40;
         }
-        .toolbar .sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+        .toolbar .sep { width: 1px; height: 20px; background: var(--app-border); margin: 0 4px; }
         .search-box {
             position: relative; display: flex; align-items: center;
         }
         .search-box input {
-            background: var(--bg-card-alt); border: 1px solid var(--border); color: var(--text-main);
-            padding: 6px 10px 6px 30px; border-radius: var(--radius-pill); font-size: 11.5px;
-            width: 190px; transition: all 0.2s ease; font-family: inherit;
+            background: var(--background); border: 1px solid var(--app-border); color: var(--text-white);
+            padding: 5px 8px 5px 28px; border-radius: var(--radius-sm); font-size: 11px;
+            width: 180px; transition: all 0.2s ease; font-family: inherit;
         }
-        .search-box input:focus { border-color: var(--primary); outline: none; width: 250px; background: var(--bg-card); box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
-        .search-box svg { position: absolute; left: 10px; width: 13px; height: 13px; color: var(--text-dim); pointer-events: none; }
+        .search-box input:focus { border-color: var(--prometheus-orange); outline: none; width: 240px; }
+        .search-box svg { position: absolute; left: 8px; width: 12px; height: 12px; color: var(--text-dim); pointer-events: none; }
 
         /* ========== SCAN BAR ========== */
         .scan-bar {
-            display: none; padding: 12px 20px; gap: 14px;
-            background: var(--bg-card-alt); border-bottom: 1px solid var(--border);
+            display: none; padding: 10px 16px; gap: 12px;
+            background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);
             flex-shrink: 0; flex-wrap: wrap; align-items: flex-end;
-            animation: slideDown 0.2s ease-out;
         }
-        @keyframes slideDown { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
         .scan-bar.visible { display: flex; }
         .scan-bar label {
-            font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;
+            font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 600;
             letter-spacing: 0.5px; display: block; margin-bottom: 4px;
         }
         .scan-bar input, .scan-bar select {
-            background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main);
-            padding: 7px 12px; border-radius: var(--radius-sm); font-size: 12px; font-family: inherit;
-            transition: border-color 0.15s ease;
+            background: var(--background); border: 1px solid var(--app-border); color: var(--text-white);
+            padding: 6px 10px; border-radius: var(--radius-sm); font-size: 11px; font-family: inherit;
         }
-        .scan-bar input:focus, .scan-bar select:focus { border-color: var(--primary); outline: none; }
+        .scan-bar input:focus, .scan-bar select:focus { border-color: var(--prometheus-orange); outline: none; }
         .scan-group { display: flex; flex-direction: column; }
         .scan-group.hidden { display: none; }
-        .scan-divider { width: 1px; height: 38px; background: var(--border); align-self: flex-end; margin: 0 4px; }
+        .scan-divider { width: 1px; height: 36px; background: var(--app-border); align-self: flex-end; margin: 0 4px; }
         .scan-progress {
-            display: none; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--primary);
+            display: none; align-items: center; gap: 8px; font-size: 11px; color: var(--prometheus-orange);
         }
         .scan-progress.visible { display: flex; }
         .scan-spinner {
-            width: 16px; height: 16px; border: 2px solid var(--border);
-            border-top-color: var(--primary); border-radius: 50%;
+            width: 14px; height: 14px; border: 2px solid var(--app-border);
+            border-top-color: var(--prometheus-orange); border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -192,275 +167,275 @@
         /* ========== GRAPH CANVAS ========== */
         .graph-container {
             flex: 1; position: relative; overflow: hidden;
-            background-color: var(--bg-canvas);
+            background-color: var(--background);
         }
         #topology-graph {
             width: 100%; height: 100%;
-            background-color: var(--bg-canvas);
-            background-image: radial-gradient(circle, var(--dot-grid) 1.2px, transparent 1.2px);
-            background-size: 28px 28px;
+            background-color: var(--background);
+            background-image: radial-gradient(circle, var(--bg-dot) 1.2px, transparent 1.2px);
+            background-size: 26px 26px;
         }
 
         /* ========== ZOOM & CONTROLS ========== */
         .zoom-controls {
-            position: absolute; bottom: 20px; right: 20px;
-            display: flex; flex-direction: column; gap: 4px; z-index: 20;
-            box-shadow: var(--shadow); border-radius: var(--radius-sm); overflow: hidden;
+            position: absolute; bottom: 14px; right: 14px;
+            display: flex; flex-direction: column; gap: 2px; z-index: 20;
         }
         .zoom-controls button {
-            width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-            background: var(--bg-card); border: 1px solid var(--border);
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            background: rgba(46,46,46,0.95); border: 1px solid var(--app-border);
             color: var(--text-muted); cursor: pointer; transition: all 0.15s ease;
-            font-size: 14px; font-weight: 700;
+            font-size: 14px; font-weight: 600;
         }
-        .zoom-controls button:hover { color: var(--primary); background: var(--bg-card-alt); border-color: var(--border-strong); }
+        .zoom-controls button:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+        .zoom-controls button:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+        .zoom-controls button:hover { color: var(--prometheus-orange); border-color: var(--prometheus-orange); }
 
         /* ========== LEGEND ========== */
         .legend {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius-pill); padding: 6px 18px; z-index: 20;
-            box-shadow: var(--shadow); display: flex; gap: 14px; flex-wrap: wrap;
-            align-items: center; font-size: 11px;
+            position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+            background: rgba(31,31,31,0.95); border: 1px solid var(--app-border);
+            border-radius: var(--radius-pill); padding: 5px 16px; z-index: 20;
+            backdrop-filter: blur(8px); display: flex; gap: 12px; flex-wrap: wrap;
+            align-items: center; font-size: 10.5px;
         }
-        .legend span { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
-        .legend .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .legend span { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--text-muted); }
+        .legend .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         .legend .tag {
-            padding: 2px 7px; border-radius: var(--radius-pill); font-size: 9.5px; font-weight: 700;
+            padding: 1px 6px; border-radius: var(--radius-pill); font-size: 9px; font-weight: 700;
         }
-        .legend .sep { border-left: 1px solid var(--border); height: 14px; }
+        .legend .sep { border-left: 1px solid var(--app-border); height: 12px; }
 
         /* ========== STATUS BAR ========== */
         .status-bar {
-            position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius-pill); padding: 5px 16px; z-index: 20;
-            font-size: 11.5px; font-weight: 600; color: var(--text-muted);
-            box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 8px;
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            background: rgba(31,31,31,0.95); border: 1px solid var(--app-border);
+            border-radius: var(--radius-pill); padding: 4px 14px; z-index: 20;
+            font-size: 11px; color: var(--text-muted); backdrop-filter: blur(8px);
+            display: flex; align-items: center; gap: 6px;
         }
         .status-dot {
-            width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+            width: 6px; height: 6px; border-radius: 50%; background: var(--success);
+            box-shadow: 0 0 6px var(--success);
             animation: pulse 2s ease-in-out infinite;
         }
         @keyframes pulse {
             0%,100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.85); }
+            50% { opacity: 0.4; transform: scale(0.85); }
         }
 
         /* ========== NODE DETAIL PANEL ========== */
         .detail-panel {
-            display: none; position: absolute; top: 16px; right: 16px;
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius-lg); z-index: 30; width: 320px;
-            box-shadow: var(--shadow-lg); max-height: calc(100% - 32px);
-            overflow-y: auto; animation: slideLeft 0.2s ease-out;
+            display: none; position: absolute; top: 10px; right: 10px;
+            background: rgba(46,46,46,0.98); border: 1px solid var(--app-border);
+            border-radius: var(--radius); z-index: 30; width: 310px;
+            backdrop-filter: blur(12px); box-shadow: var(--shadow-lg);
+            max-height: calc(100% - 20px); overflow-y: auto;
         }
-        @keyframes slideLeft { from { opacity:0; transform: translateX(12px); } to { opacity:1; transform: translateX(0); } }
         .detail-panel.visible { display: block; }
         .detail-panel::-webkit-scrollbar { width: 4px; }
-        .detail-panel::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+        .detail-panel::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 2px; }
         .detail-header {
             display: flex; justify-content: space-between; align-items: flex-start;
-            padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
+            padding: 14px 16px 10px; border-bottom: 1px solid var(--app-border);
         }
-        .detail-header h3 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
-        .detail-header .detail-sub { font-size: 11.5px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .detail-header h3 { font-size: 13px; font-weight: 700; margin-bottom: 2px; color: var(--text-white); }
+        .detail-header .detail-sub { font-size: 11px; color: var(--text-muted); font-family: monospace; }
         .detail-section {
-            padding: 12px 18px; border-bottom: 1px solid var(--border);
+            padding: 10px 16px; border-bottom: 1px solid rgba(60,60,60,0.6);
         }
         .detail-section:last-child { border-bottom: none; }
         .detail-section-title {
-            font-size: 10px; text-transform: uppercase; font-weight: 700;
-            color: var(--text-dim); letter-spacing: 0.8px; margin-bottom: 8px;
+            font-size: 9px; text-transform: uppercase; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 0.8px; margin-bottom: 6px;
         }
         .detail-row {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 4px 0; font-size: 11.5px;
+            padding: 3px 0; font-size: 11px;
         }
         .detail-label { color: var(--text-muted); }
-        .detail-value { color: var(--text-main); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 600; }
+        .detail-value { color: var(--text-white); font-family: monospace; font-size: 11px; font-weight: 600; }
         .source-tag {
-            display: inline-block; padding: 2px 7px; border-radius: var(--radius-pill);
-            font-size: 9.5px; font-weight: 700; margin-right: 4px;
+            display: inline-block; padding: 2px 6px; border-radius: 3px;
+            font-size: 9px; font-weight: 700; margin-right: 4px;
         }
-        .iface-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .iface-table { width: 100%; border-collapse: collapse; font-size: 10px; }
         .iface-table th {
-            text-align: left; padding: 5px 6px; color: var(--text-dim);
-            border-bottom: 1px solid var(--border); font-weight: 600; font-size: 10px; text-transform: uppercase;
+            text-align: left; padding: 4px 6px; color: var(--text-dim);
+            border-bottom: 1px solid var(--app-border); font-weight: 600; font-size: 9px; text-transform: uppercase;
         }
-        .iface-table td { padding: 6px; border-bottom: 1px solid var(--border); }
-        .iface-table tr:hover td { background: var(--bg-card-alt); }
-        .iface-status { display: inline-flex; align-items: center; gap: 5px; }
-        .iface-status .dot { width: 6px; height: 6px; border-radius: 50%; }
-        .detail-actions { padding: 14px 18px; display: flex; gap: 8px; flex-wrap: wrap; background: var(--bg-card-alt); }
-        .detail-connections { font-size: 11px; }
+        .iface-table td { padding: 4px 6px; border-bottom: 1px solid rgba(60,60,60,0.5); }
+        .iface-table tr:hover td { background: rgba(88,166,255,0.06); }
+        .iface-status { display: inline-flex; align-items: center; gap: 4px; }
+        .iface-status .dot { width: 5px; height: 5px; border-radius: 50%; }
+        .detail-actions { padding: 12px 16px; display: flex; gap: 6px; flex-wrap: wrap; background: var(--app-card-dark); }
+        .detail-connections { font-size: 10.5px; }
         .detail-connections .conn-item {
-            display: flex; align-items: center; gap: 6px; padding: 4px 0; color: var(--text-muted);
+            display: flex; align-items: center; gap: 6px; padding: 3px 0; color: var(--text-muted);
         }
         .detail-connections .conn-item .conn-dot {
-            width: 6px; height: 6px; border-radius: 50%; background: var(--primary);
+            width: 5px; height: 5px; border-radius: 50%; background: var(--success);
         }
 
         /* ========== RESULTS SIDEBAR ========== */
         .results-sidebar {
             display: none; position: absolute; top: 0; left: 0; bottom: 0;
-            width: 320px; background: var(--bg-card); border-right: 1px solid var(--border);
-            z-index: 30; flex-direction: column; box-shadow: var(--shadow-lg);
-            transition: transform 0.25s ease;
+            width: 310px; background: rgba(46,46,46,0.98); border-right: 1px solid var(--app-border);
+            z-index: 30; flex-direction: column; backdrop-filter: blur(12px);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.4); transition: transform 0.25s ease;
         }
         .results-sidebar.visible { display: flex; }
         .results-header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+            padding: 12px 14px; border-bottom: 1px solid var(--app-border); flex-shrink: 0;
         }
-        .results-header h3 { font-size: 13px; font-weight: 700; }
+        .results-header h3 { font-size: 12px; color: var(--text-white); font-weight: 600; }
         .results-count {
-            font-size: 11px; color: var(--primary); background: var(--primary-light);
-            padding: 2px 9px; border-radius: var(--radius-pill); font-weight: 700;
+            font-size: 10px; color: var(--prometheus-orange); background: var(--app-card-dark);
+            padding: 2px 8px; border-radius: 10px; font-weight: 700;
         }
         .results-actions {
-            display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border);
-            flex-shrink: 0; background: var(--bg-card-alt);
+            display: flex; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--app-border);
+            flex-shrink: 0; background: var(--app-card-dark);
         }
         .results-search {
-            padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+            padding: 6px 14px; border-bottom: 1px solid var(--app-border); flex-shrink: 0;
         }
         .results-search input {
-            width: 100%; background: var(--bg-card-alt); border: 1px solid var(--border);
-            color: var(--text-main); padding: 6px 10px; border-radius: var(--radius-sm);
-            font-size: 12px; font-family: inherit;
+            width: 100%; background: var(--background); border: 1px solid var(--app-border);
+            color: var(--text-white); padding: 5px 8px; border-radius: var(--radius-sm);
+            font-size: 11px; font-family: inherit;
         }
-        .results-search input:focus { border-color: var(--primary); outline: none; background: var(--bg-card); }
-        .results-list { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 0; }
+        .results-search input:focus { border-color: var(--prometheus-orange); outline: none; }
+        .results-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0; }
         .results-list::-webkit-scrollbar { width: 4px; }
-        .results-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+        .results-list::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 2px; }
         .result-item {
-            display: flex; align-items: flex-start; gap: 10px;
-            padding: 10px 14px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: flex-start; gap: 8px;
+            padding: 8px 12px; border-bottom: 1px solid rgba(60,60,60,0.4);
             transition: background 0.12s ease; cursor: default;
         }
-        .result-item:hover { background: var(--bg-card-alt); }
-        .result-item.already-added { opacity: 0.5; }
-        .result-icon { width: 34px; height: 34px; flex-shrink: 0; }
+        .result-item:hover { background: rgba(88,166,255,0.06); }
+        .result-item.already-added { opacity: 0.4; }
+        .result-icon { width: 32px; height: 32px; flex-shrink: 0; }
         .result-info { flex: 1; min-width: 0; overflow: hidden; }
         .result-name {
-            font-size: 12px; font-weight: 700; color: var(--text-main);
+            font-size: 11px; font-weight: 600; color: var(--text-white);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .result-meta {
-            font-size: 11px; color: var(--text-dim); display: flex; gap: 8px; margin-top: 2px;
-            flex-wrap: nowrap; overflow: hidden; font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; color: var(--text-dim); display: flex; gap: 6px; margin-top: 2px;
+            flex-wrap: nowrap; overflow: hidden; font-family: monospace;
         }
-        .result-actions-btn { display: flex; gap: 6px; flex-shrink: 0; align-self: center; }
+        .result-actions-btn { display: flex; gap: 4px; flex-shrink: 0; align-self: center; }
         .result-actions-btn button {
-            background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted);
-            border-radius: var(--radius-sm); padding: 4px 8px; font-size: 10px; font-weight: 600;
+            background: var(--app-card); border: 1px solid var(--app-border); color: var(--text-muted);
+            border-radius: var(--radius-sm); padding: 3px 6px; font-size: 9px; font-weight: 600;
             cursor: pointer; transition: all 0.15s ease; font-family: inherit;
         }
-        .result-actions-btn .btn-add { color: var(--primary); border-color: rgba(16,185,129,0.3); background: var(--primary-light); }
-        .result-actions-btn .btn-add:hover { background: var(--primary); color: #fff; }
-        .result-actions-btn .btn-dismiss:hover { color: var(--error); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1); }
+        .result-actions-btn .btn-add { color: var(--success); border-color: var(--success-border); background: rgba(16,185,129,0.1); }
+        .result-actions-btn .btn-add:hover { background: var(--success); color: #fff; }
+        .result-actions-btn .btn-dismiss:hover { color: var(--error); border-color: var(--error-border); background: rgba(239,68,68,0.1); }
         .result-checkbox {
             width: 16px; height: 16px; flex-shrink: 0; cursor: pointer;
-            accent-color: var(--primary);
+            accent-color: var(--prometheus-orange);
         }
-        .result-item.selected { background: var(--primary-light); }
+        .result-item.selected { background: rgba(88,166,255,0.08); }
         .results-count-selected {
-            font-size: 11px; color: var(--primary); background: var(--primary-light);
-            padding: 2px 8px; border-radius: var(--radius-pill); font-weight: 700;
+            font-size: 10px; color: var(--prometheus-orange); background: var(--app-card);
+            padding: 2px 8px; border-radius: 10px; font-weight: 700;
         }
 
         .sidebar-toggle {
             position: absolute; top: 50%; left: 0; transform: translateY(-50%);
-            width: 22px; height: 50px; background: var(--bg-card);
-            border: 1px solid var(--border); border-left: none;
+            width: 20px; height: 48px; background: rgba(46,46,46,0.95);
+            border: 1px solid var(--app-border); border-left: none;
             border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
             color: var(--text-muted); cursor: pointer; z-index: 31;
             display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s ease; font-size: 11px; box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease; font-size: 11px;
         }
-        .sidebar-toggle:hover { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
-        .sidebar-toggle.shifted { left: 320px; }
+        .sidebar-toggle:hover { color: var(--prometheus-orange); border-color: var(--prometheus-orange); }
+        .sidebar-toggle.shifted { left: 310px; }
 
         /* ========== CONTEXT MENU ========== */
         .context-menu {
             display: none; position: fixed; z-index: 100;
-            background: var(--bg-card); border: 1px solid var(--border);
+            background: var(--app-card-dark); border: 1px solid var(--app-border);
             border-radius: var(--radius); box-shadow: var(--shadow-lg);
-            min-width: 190px; padding: 5px 0;
+            min-width: 180px; padding: 4px 0;
         }
         .context-menu.visible { display: block; }
         .context-menu-item {
-            display: flex; align-items: center; gap: 9px;
-            padding: 7px 14px; font-size: 11.5px; font-weight: 500; color: var(--text-main);
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 12px; font-size: 11px; color: var(--text-white);
             cursor: pointer; transition: background 0.1s ease;
         }
-        .context-menu-item:hover { background: var(--bg-card-alt); color: var(--primary); }
+        .context-menu-item:hover { background: var(--app-card); color: var(--prometheus-orange); }
         .context-menu-item.danger { color: var(--error); }
-        .context-menu-item.danger:hover { background: rgba(239,68,68,0.1); }
-        .context-menu-item svg { width: 13px; height: 13px; flex-shrink: 0; }
-        .context-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+        .context-menu-item.danger:hover { background: rgba(239,68,68,0.15); }
+        .context-menu-item svg { width: 12px; height: 12px; flex-shrink: 0; }
+        .context-menu-sep { height: 1px; background: var(--app-border); margin: 4px 0; }
         .context-menu-item .shortcut {
             margin-left: auto; font-size: 10px; color: var(--text-dim); font-family: monospace;
         }
 
         /* ========== TOAST ========== */
         .toast-container {
-            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
+            position: fixed; bottom: 16px; right: 16px; z-index: 2000;
             display: flex; flex-direction: column; gap: 8px;
         }
         .toast {
-            padding: 11px 18px; border-radius: var(--radius); font-size: 12px; font-weight: 500;
-            box-shadow: var(--shadow-lg); animation: toastIn 0.2s ease-out;
-            max-width: 420px; display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px; border-radius: var(--radius-sm); font-size: 11.5px;
+            box-shadow: var(--shadow); animation: toastIn 0.2s ease-out;
+            max-width: 400px; display: flex; align-items: center; gap: 8px;
         }
-        @keyframes toastIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
-        .toast.success { background: #10b981; color: #fff; }
-        .toast.error { background: #ef4444; color: #fff; }
-        .toast.info { background: var(--text-main); color: var(--bg-card); }
-        .toast.warning { background: #f59e0b; color: #fff; }
+        @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+        .toast.success { background: rgba(16,185,129,0.2); border: 1px solid var(--success-border); color: var(--success); }
+        .toast.error { background: rgba(239,68,68,0.2); border: 1px solid var(--error-border); color: var(--error); }
+        .toast.info { background: var(--app-card); border: 1px solid var(--app-border); color: var(--text-white); }
+        .toast.warning { background: rgba(245,158,11,0.2); border: 1px solid var(--warning-border); color: var(--warning); }
 
         /* ========== MODALS ========== */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(15, 23, 42, 0.45); z-index: 1000; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.65); z-index: 1000; align-items: center; justify-content: center;
             backdrop-filter: blur(4px);
         }
         .modal-overlay.active { display: flex; }
         .modal-dialog {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
-            width: 95%; max-width: 520px; box-shadow: var(--shadow-lg);
+            background: var(--app-card); border: 1px solid var(--app-border); border-radius: var(--radius);
+            width: 95%; max-width: 500px; box-shadow: var(--shadow-lg);
             animation: modalIn 0.2s ease-out;
         }
         @keyframes modalIn { from { opacity:0; transform: scale(0.96); } to { opacity:1; transform: scale(1); } }
         .modal-header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 22px; border-bottom: 1px solid var(--border);
+            padding: 14px 18px; border-bottom: 1px solid var(--app-border);
         }
-        .modal-header h3 { font-size: 15px; font-weight: 700; }
+        .modal-header h3 { font-size: 13px; font-weight: 600; color: var(--text-white); }
         .modal-close {
-            background: none; border: none; color: var(--text-dim); font-size: 22px;
-            cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 4px;
+            background: none; border: none; color: var(--text-muted); font-size: 20px;
+            cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 3px;
         }
-        .modal-close:hover { color: var(--text-main); background: var(--bg-card-alt); }
-        .modal-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+        .modal-close:hover { color: var(--text-white); background: var(--app-card-dark); }
+        .modal-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
         .modal-footer {
-            padding: 14px 22px; display: flex; justify-content: flex-end; gap: 10px;
-            border-top: 1px solid var(--border); background: var(--bg-card-alt);
-            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            padding: 12px 18px; display: flex; justify-content: flex-end; gap: 8px;
+            border-top: 1px solid var(--app-border); background: var(--app-card-dark);
+            border-radius: 0 0 var(--radius) var(--radius);
         }
         .form-group label {
-            text-transform: uppercase; font-size: 10.5px; font-weight: 700;
-            color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;
+            text-transform: uppercase; font-size: 10px; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 0.5px; margin-bottom: 5px; display: block;
         }
         .form-group input, .form-group select {
-            width: 100%; background: var(--bg-card); border: 1px solid var(--border);
-            color: var(--text-main); padding: 8px 12px; border-radius: var(--radius-sm);
-            font-size: 12.5px; font-family: inherit;
+            width: 100%; background: var(--background); border: 1px solid var(--app-border);
+            color: var(--text-white); padding: 7px 10px; border-radius: var(--radius-sm);
+            font-size: 12px; font-family: inherit;
         }
-        .form-group input:focus, .form-group select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
-        .form-error { display: none; font-size: 11.5px; color: var(--error); margin-top: 4px; font-weight: 500; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--prometheus-orange); outline: none; }
+        .form-error { display: none; font-size: 11px; color: var(--error); margin-top: 4px; }
 
         /* ========== EMPTY STATE ========== */
         .empty-state {
@@ -468,71 +443,66 @@
             text-align: center; z-index: 5; pointer-events: none;
         }
         .empty-state.hidden { display: none; }
-        .empty-state svg { width: 72px; height: 72px; color: var(--text-dim); opacity: 0.4; margin-bottom: 14px; }
-        .empty-state h3 { font-size: 16px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
-        .empty-state p { font-size: 12px; color: var(--text-dim); max-width: 320px; line-height: 1.5; }
+        .empty-state svg { width: 70px; height: 70px; color: var(--text-dim); opacity: 0.35; margin-bottom: 12px; }
+        .empty-state h3 { font-size: 15px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+        .empty-state p { font-size: 11.5px; color: var(--text-dim); max-width: 300px; line-height: 1.4; }
 
         /* ========== TOOLTIP ========== */
         .custom-tooltip {
             display: none; position: fixed; z-index: 200;
-            background: var(--text-main); color: var(--bg-card);
-            border-radius: var(--radius); padding: 10px 14px;
-            font-size: 11.5px; max-width: 320px; box-shadow: var(--shadow-lg);
-            pointer-events: none; line-height: 1.5;
+            background: rgba(31,31,31,0.97); border: 1px solid var(--app-border);
+            border-radius: var(--radius-sm); padding: 8px 12px;
+            font-size: 11px; color: var(--text-white); max-width: 300px;
+            box-shadow: var(--shadow-lg); pointer-events: none; line-height: 1.4;
         }
         .custom-tooltip.visible { display: block; }
-        .custom-tooltip .tt-name { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
-        .custom-tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; }
-        .custom-tooltip .tt-label { opacity: 0.7; }
-        .custom-tooltip .tt-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
-        .custom-tooltip .tt-iface { margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 5px; }
-        .custom-tooltip .tt-iface-item { display: flex; align-items: center; gap: 4px; font-size: 10.5px; }
-        .custom-tooltip .tt-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .custom-tooltip .tt-name { font-weight: 700; font-size: 12px; margin-bottom: 3px; }
+        .custom-tooltip .tt-row { display: flex; justify-content: space-between; gap: 10px; }
+        .custom-tooltip .tt-label { color: var(--text-dim); }
+        .custom-tooltip .tt-val { font-family: monospace; font-weight: 600; }
 
         /* ========== SHEET TABS ========== */
         .sheet-bar {
-            display: flex; align-items: center; background: var(--bg-card);
-            border-bottom: 1px solid var(--border); padding: 0 8px; height: 36px;
+            display: flex; align-items: center; background: #2a2a2a;
+            border-bottom: 1px solid var(--app-border); padding: 0 4px; height: 32px;
             flex-shrink: 0; overflow-x: auto;
         }
         .sheet-bar::-webkit-scrollbar { height: 0; }
         .sheet-tab {
-            padding: 6px 14px; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
-            border-right: 1px solid var(--border); display: flex; align-items: center;
-            gap: 8px; color: var(--text-muted); transition: all 0.15s ease; position: relative;
-            max-width: 200px;
+            padding: 4px 12px; font-size: 11px; cursor: pointer; white-space: nowrap;
+            border-right: 1px solid var(--app-border); display: flex; align-items: center;
+            gap: 6px; color: var(--text-muted); transition: all 0.15s ease; position: relative;
+            max-width: 180px;
         }
-        .sheet-tab:hover { color: var(--text-main); background: var(--bg-card-alt); }
+        .sheet-tab:hover { color: var(--text-white); background: #333333; }
         .sheet-tab.active {
-            color: var(--primary); background: var(--bg-body);
-            border-bottom: 2px solid var(--primary);
+            color: var(--text-white); background: var(--background);
+            border-bottom: 2px solid var(--prometheus-orange);
         }
         .sheet-tab .sheet-close {
             font-size: 14px; line-height: 1; opacity: 0; transition: opacity 0.15s ease;
-            cursor: pointer; color: var(--text-dim); padding: 2px;
+            cursor: pointer; color: var(--text-muted); padding: 0 2px;
         }
         .sheet-tab:hover .sheet-close, .sheet-tab.active .sheet-close { opacity: 0.6; }
         .sheet-tab .sheet-close:hover { opacity: 1 !important; color: var(--error); }
         .sheet-add {
-            padding: 6px 12px; font-size: 16px; cursor: pointer; display: flex;
-            align-items: center; color: var(--text-muted); border-right: 1px solid var(--border);
-            transition: all 0.15s ease; font-weight: 700; line-height: 1;
+            padding: 4px 10px; font-size: 16px; cursor: pointer; display: flex;
+            align-items: center; color: var(--text-muted); border-right: 1px solid var(--app-border);
+            transition: all 0.15s ease; font-weight: 600; line-height: 1;
         }
-        .sheet-add:hover { color: var(--primary); background: var(--primary-light); }
+        .sheet-add:hover { color: var(--prometheus-orange); background: #333333; }
     </style>
 </head>
 <body>
     <!-- HEADER -->
     <div class="header">
         <div class="header-left">
-            <a href="/" class="back-link">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                Portal
-            </a>
+            <a href="/" class="back-link">&larr; Portal</a>
             <h1>
-                <span class="logo-icon">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
-                </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+                    <line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/>
+                </svg>
                 Network Topology
             </h1>
         </div>
@@ -540,25 +510,21 @@
             <span class="badge">Nodes: <strong id="stat-nodes">0</strong></span>
             <span class="badge">Edges: <strong id="stat-edges">0</strong></span>
             <span class="badge" id="stat-zoom" style="display:none;">Zoom: <strong>100%</strong></span>
-            <button class="btn-icon" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Theme">
-                <svg id="theme-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                <svg id="theme-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            </button>
         </div>
     </div>
 
     <!-- TOOLBAR -->
     <div class="toolbar" id="toolbar">
-        <button class="btn btn-primary" onclick="toggleScanBar()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <button class="btn btn-success" onclick="toggleScanBar()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             Scan
         </button>
         <button class="btn btn-ghost" onclick="openAddDeviceModal()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Device
         </button>
         <button class="btn btn-ghost" onclick="openAddEdgeModal()">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             Link
         </button>
         <div class="sep"></div>
@@ -567,11 +533,11 @@
             <input type="text" id="search-input" placeholder="Search devices... (Ctrl+F)" oninput="filterNodes(this.value)">
         </div>
         <div style="flex:1;"></div>
-        <button class="btn btn-ghost" onclick="layoutLeftToRight()" title="Flow Layout (Left to Right like Pipeline)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="15 6 21 12 15 18"/></svg>
+        <button class="btn btn-ghost" onclick="layoutLeftToRight()" title="Flow Layout (Left to Right Pipeline)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="15 6 21 12 15 18"/></svg>
             Flow Layout
         </button>
-        <button class="btn-icon" onclick="autoLayout()" title="Radial Layout">
+        <button class="btn-icon" onclick="autoLayout()" title="Auto Radial Layout">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
         </button>
         <button class="btn-icon" id="btn-fit" onclick="fitGraph()" title="Fit View (0)">
@@ -592,7 +558,7 @@
         </button>
         <input type="file" id="import-input" accept=".json" style="display:none" onchange="importTopology(event)">
         <div class="sep"></div>
-        <button class="btn btn-danger" onclick="clearAll()" style="padding:6px 10px;">
+        <button class="btn btn-danger" onclick="clearAll()" style="padding:5px 10px;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             Clear
         </button>
@@ -624,19 +590,19 @@
         </div>
         <div class="scan-group" id="scan-snmp-community">
             <label>Community</label>
-            <input type="text" id="snmp-community" value="public" style="width:90px;">
+            <input type="text" id="snmp-community" value="public" style="width:80px;">
         </div>
         <div class="scan-group" id="scan-snmp-version">
             <label>Version</label>
             <select id="snmp-version"><option value="2c">v2c</option><option value="v1">v1</option></select>
         </div>
         <div class="scan-group" id="scan-nmap-toggle" style="align-self:flex-end;">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-weight:600;color:var(--text-main);">
-                <input type="checkbox" id="use-nmap" style="accent-color:var(--primary);">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;text-transform:none;font-weight:600;color:var(--text-white);">
+                <input type="checkbox" id="use-nmap" style="accent-color:var(--prometheus-orange);">
                 Nmap Sweep
             </label>
         </div>
-        <div style="display:flex;gap:8px;align-self:flex-end;">
+        <div style="display:flex;gap:6px;align-self:flex-end;">
             <button class="btn btn-primary" id="btn-scan" onclick="runScan()">Start Scan</button>
             <button class="btn btn-ghost" onclick="toggleScanBar()">Cancel</button>
         </div>
@@ -672,10 +638,11 @@
         <!-- EMPTY STATE -->
         <div class="empty-state" id="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/>
+                <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+                <line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/>
             </svg>
             <h3>No Devices on Canvas</h3>
-            <p>Scan your network with Prometheus/SNMP or manually add devices to build your topology path.</p>
+            <p>Scan your network with Prometheus/SNMP or manually add devices to build your topology map.</p>
         </div>
 
         <!-- STATUS BAR -->
@@ -695,11 +662,11 @@
         <div class="legend">
             <span><span class="dot" style="background:#10b981;"></span> Online</span>
             <span><span class="dot" style="background:#ef4444;"></span> Offline</span>
-            <span><span class="dot" style="background:#64748b;"></span> Unknown</span>
+            <span><span class="dot" style="background:#6b7280;"></span> Unknown</span>
             <span class="sep"></span>
-            <span><span class="tag" style="background:#e0f2fe;color:#0369a1;">GATEWAY</span></span>
-            <span><span class="tag" style="background:#ecfdf5;color:#047857;">HOP</span></span>
-            <span><span class="tag" style="background:#fef3c7;color:#b45309;">TARGET</span></span>
+            <span><span class="tag" style="background:rgba(88,166,255,0.15);color:#58a6ff;">GATEWAY</span></span>
+            <span><span class="tag" style="background:rgba(16,185,129,0.15);color:#10b981;">HOP</span></span>
+            <span><span class="tag" style="background:rgba(245,158,11,0.15);color:#f59e0b;">TARGET</span></span>
         </div>
 
         <!-- NODE DETAIL PANEL -->
@@ -729,16 +696,16 @@
                 <div class="detail-connections" id="detail-connections"></div>
             </div>
             <div class="detail-actions">
-                <button class="btn btn-ghost" onclick="openEditDeviceModal()" style="font-size:10.5px;padding:5px 9px;">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit
+                <button class="btn btn-ghost" onclick="openEditDeviceModal()" style="font-size:10px;padding:4px 8px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit
                 </button>
-                <button class="btn btn-ghost" onclick="pingDevice()" style="font-size:10.5px;padding:5px 9px;">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Ping
+                <button class="btn btn-ghost" onclick="pingDevice()" style="font-size:10px;padding:4px 8px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Ping
                 </button>
-                <button class="btn btn-ghost" onclick="snmpWalkDevice()" style="font-size:10.5px;padding:5px 9px;">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg> SNMP
+                <button class="btn btn-ghost" onclick="snmpWalkDevice()" style="font-size:10px;padding:4px 8px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg> SNMP
                 </button>
-                <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10.5px;padding:5px 9px;">Delete</button>
+                <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete</button>
             </div>
         </div>
     </div>
@@ -776,7 +743,7 @@
         <div id="edge-list-items"></div>
         <div class="context-menu-item" onclick="edgeContextAction('edit')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit Label / Latency
+            Edit Badge / Latency
         </div>
         <div class="context-menu-sep"></div>
         <div class="context-menu-item danger" onclick="edgeContextAction('delete')">
@@ -796,13 +763,13 @@
     <div id="modal-add-device" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-header">
-                <h3>Add Network Device</h3>
+                <h3>Add Device</h3>
                 <button class="modal-close" onclick="closeModal('modal-add-device')">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label>Device Name / Role</label>
-                    <input type="text" id="dev-name" placeholder="e.g. HOP or TARGET or Core-Router">
+                    <input type="text" id="dev-name" placeholder="e.g. HOP, TARGET, or Router-01">
                 </div>
                 <div class="form-group">
                     <label>IP Address</label>
@@ -888,7 +855,7 @@
                     <select id="edge-target"></select>
                 </div>
                 <div class="form-group">
-                    <label>Latency / Badge Label</label>
+                    <label>Badge / Latency Label</label>
                     <input type="text" id="edge-label" placeholder="e.g. 0.536 ms or Ethernet">
                 </div>
                 <div id="edge-error" class="form-error"></div>
@@ -902,16 +869,16 @@
 
     <!-- MODAL: EDIT EDGE -->
     <div id="modal-edit-edge" class="modal-overlay">
-        <div class="modal-dialog" style="max-width:440px;">
+        <div class="modal-dialog" style="max-width:420px;">
             <div class="modal-header">
-                <h3>Edit Link Badge / Latency</h3>
+                <h3>Edit Link Badge</h3>
                 <button class="modal-close" onclick="closeModal('modal-edit-edge')">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="edit-edge-id">
                 <div class="form-group">
-                    <label>Badge Label (Latency / Type)</label>
-                    <input type="text" id="edit-edge-label" placeholder="e.g. 0.536 ms or Ethernet">
+                    <label>Badge Label (Latency / Info)</label>
+                    <input type="text" id="edit-edge-label" placeholder="e.g. 0.536 ms">
                 </div>
                 <div id="edit-edge-error" class="form-error"></div>
             </div>
@@ -930,7 +897,7 @@
                 <button class="modal-close" onclick="closeModal('modal-ping')">&times;</button>
             </div>
             <div class="modal-body">
-                <pre id="ping-output" style="background:var(--bg-body);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:12px;color:var(--primary);font-family:'JetBrains Mono',monospace;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></pre>
+                <pre id="ping-output" style="background:var(--background);border:1px solid var(--app-border);border-radius:var(--radius-sm);padding:12px;font-size:11px;color:var(--success);font-family:monospace;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></pre>
             </div>
         </div>
     </div>
@@ -963,36 +930,8 @@
     let searchQuery = '';
     let sidebarVisible = false;
     let selectedIndices = new Set();
-    let currentTheme = localStorage.getItem('hephaestus_topology_theme') || 'light';
-    applyTheme(currentTheme);
 
-    function toggleTheme() {
-        currentTheme = currentTheme === 'light' ? 'dark' : 'light';
-        localStorage.setItem('hephaestus_topology_theme', currentTheme);
-        applyTheme(currentTheme);
-        if (nodesData.length > 0) {
-            // Refresh node images & labels
-            loadGraph();
-        }
-    }
-
-    function applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        const sun = document.getElementById('theme-sun');
-        const moon = document.getElementById('theme-moon');
-        if (sun && moon) {
-            if (theme === 'dark') {
-                sun.style.display = 'none';
-                moon.style.display = 'block';
-            } else {
-                sun.style.display = 'block';
-                moon.style.display = 'none';
-            }
-        }
-    }
-
-    /* ==================== HIGH-DPI VECTOR ICON GENERATOR ==================== */
-    // Generates circular icons matching Image 2 perfectly
+    /* ==================== VECTOR ICON GENERATOR (IMAGE 2 MATCH) ==================== */
     function generateDeviceIcon(type, status, size, isFirstHop) {
         size = size || 80;
         const canvas = document.createElement('canvas');
@@ -1001,7 +940,7 @@
         const ctx = canvas.getContext('2d');
         const cx = size / 2;
         const cy = size / 2;
-        const s = size / 80; // Scale factor
+        const s = size / 80;
 
         const isOnline = status !== 'offline';
         const isOffline = status === 'offline';
@@ -1016,39 +955,39 @@
 
         ctx.clearRect(0, 0, size, size);
 
-        // Normalize device category
         const t = (type || '').toLowerCase();
         const isGateway = isFirstHop || t === 'gateway' || t === 'internet' || t === 'web';
         const isRouterOrHop = t === 'router' || t === 'switch' || t === 'hop' || t === 'network';
         const isTarget = !isGateway && !isRouterOrHop;
 
-        // 1. If Gateway / First Hop: draw outer cyan/blue border ring
+        // 1. Outer circle rendering
         if (isGateway) {
+            // Blue/cyan outer ring (like left node in Image 2)
             ctx.beginPath();
             ctx.arc(cx, cy, 34 * s, 0, Math.PI * 2);
             ctx.strokeStyle = cyanRing;
             ctx.lineWidth = 4 * s;
             ctx.stroke();
 
-            // Solid inner circle
+            // Green filled circle inside
             ctx.beginPath();
             ctx.arc(cx, cy, 29 * s, 0, Math.PI * 2);
             ctx.fillStyle = fillColor;
             ctx.fill();
         } else {
-            // Standard circular node
+            // Standard clean green circle
             ctx.beginPath();
             ctx.arc(cx, cy, 32 * s, 0, Math.PI * 2);
             ctx.fillStyle = fillColor;
             ctx.fill();
 
-            // Subtle inner glow/shadow stroke
-            ctx.lineWidth = 2 * s;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            // Subtle highlight ring
+            ctx.lineWidth = 1.5 * s;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.stroke();
         }
 
-        // 2. Crisp vector icon inside
+        // 2. White vector icon inside
         ctx.strokeStyle = '#ffffff';
         ctx.fillStyle = '#ffffff';
         ctx.lineWidth = 2.2 * s;
@@ -1056,30 +995,30 @@
         ctx.lineJoin = 'round';
 
         if (isGateway) {
-            // Globe icon with latitude & longitude
+            // Globe icon with latitude and longitude
             const r = 14 * s;
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Equator line
+            // Equator
             ctx.beginPath();
             ctx.moveTo(cx - r, cy);
             ctx.lineTo(cx + r, cy);
             ctx.stroke();
 
-            // Vertical meridian line
+            // Meridian
             ctx.beginPath();
             ctx.moveTo(cx, cy - r);
             ctx.lineTo(cx, cy + r);
             ctx.stroke();
 
-            // Meridian ellipse
+            // Ellipse
             ctx.beginPath();
             ctx.ellipse(cx, cy, r * 0.5, r, 0, 0, Math.PI * 2);
             ctx.stroke();
         } else if (isRouterOrHop) {
-            // HOP / Router icon: rounded capsule with 3 dots inside (exactly like Image 2)
+            // HOP icon: 3-dot capsule (middle nodes in Image 2)
             const w = 26 * s;
             const h = 14 * s;
             const radius = 5 * s;
@@ -1099,7 +1038,7 @@
             ctx.closePath();
             ctx.stroke();
 
-            // 3 dots inside
+            // 3 dots
             const dotRadius = 2 * s;
             const dotSpacing = 7 * s;
             [-1, 0, 1].forEach(offset => {
@@ -1108,35 +1047,28 @@
                 ctx.fill();
             });
         } else {
-            // TARGET / Bullseye icon (concentric target crosshairs, exactly like Image 2)
+            // TARGET icon: Bullseye crosshair (target nodes in Image 2)
             const rOuter = 13 * s;
             const rInner = 6.5 * s;
             const rCenter = 2.4 * s;
 
-            // Outer ring
             ctx.beginPath();
             ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Inner ring
             ctx.beginPath();
             ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
             ctx.stroke();
 
-            // Center dot
             ctx.beginPath();
             ctx.arc(cx, cy, rCenter, 0, Math.PI * 2);
             ctx.fill();
 
             // Crosshair tick marks
             const tickLen = 4 * s;
-            // Top
             ctx.beginPath(); ctx.moveTo(cx, cy - rOuter - 2 * s); ctx.lineTo(cx, cy - rOuter + tickLen); ctx.stroke();
-            // Bottom
             ctx.beginPath(); ctx.moveTo(cx, cy + rOuter + 2 * s); ctx.lineTo(cx, cy + rOuter - tickLen); ctx.stroke();
-            // Left
             ctx.beginPath(); ctx.moveTo(cx - rOuter - 2 * s, cy); ctx.lineTo(cx - rOuter + tickLen, cy); ctx.stroke();
-            // Right
             ctx.beginPath(); ctx.moveTo(cx + rOuter + 2 * s, cy); ctx.lineTo(cx + rOuter - tickLen, cy); ctx.stroke();
         }
 
@@ -1152,7 +1084,7 @@
         return iconCache[key];
     }
 
-    /* ==================== TOAST ==================== */
+    /* ==================== TOAST & MODAL ==================== */
     function showToast(type, msg) {
         const container = document.getElementById('toast-container');
         const t = document.createElement('div');
@@ -1161,8 +1093,7 @@
         container.appendChild(t);
         setTimeout(() => {
             t.style.opacity = '0';
-            t.style.transform = 'translateY(10px)';
-            t.style.transition = 'all 0.3s ease';
+            t.style.transition = 'opacity 0.3s';
             setTimeout(() => t.remove(), 300);
         }, 3500);
     }
@@ -1191,11 +1122,9 @@
     let labelShowName = true;
 
     function buildNodeData(n, index, allNodes, allEdges) {
-        // Determine role / title
         let roleTitle = (n.name || '').trim();
         const t = (n.deviceType || '').toLowerCase();
-        
-        // Is this a source / starting node?
+
         const isIncoming = allEdges && allEdges.some(e => (e.to === n.id || e.target === n.id));
         const isOutgoing = allEdges && allEdges.some(e => (e.from === n.id || e.source === n.id));
         const isFirstHop = !isIncoming && isOutgoing;
@@ -1210,10 +1139,6 @@
         if (labelShowName) labelParts.push(roleTitle.toUpperCase());
         if (labelShowIp && n.ip) labelParts.push(n.ip);
 
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const titleColor = isDark ? '#f8fafc' : '#0f172a';
-        const subtitleColor = isDark ? '#94a3b8' : '#475569';
-
         const iconUrl = getDeviceIconUrl(n.deviceType || 'unknown', n.status || 'online', 80, isFirstHop);
 
         return {
@@ -1222,14 +1147,13 @@
             label: labelParts.join('\n') || (n.ip || 'NODE'),
             title: `${roleTitle}\nIP: ${n.ip || '-'}\nType: ${n.deviceType || 'unknown'}\nStatus: ${(n.status || 'online').toUpperCase()}`,
             shape: 'image',
-            size: 30,
+            size: 28,
             borderWidth: 0,
             color: { background: 'transparent', border: 'transparent' },
             font: {
-                color: titleColor,
-                size: 11.5,
-                face: "'Inter', sans-serif",
-                bold: { color: titleColor, size: 12, face: "'Inter', sans-serif" },
+                color: '#ffffff',
+                size: 11,
+                face: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 align: 'center',
                 vadjust: 6
             },
@@ -1241,19 +1165,15 @@
     }
 
     function buildEdgeData(e) {
-        // Look up latency if available for target
         let latencyBadge = e.label || '';
         const targetLatency = deviceLatencyMap[e.target];
         if (targetLatency !== undefined && targetLatency !== null) {
             latencyBadge = `${parseFloat(targetLatency).toFixed(3)} ms`;
         } else if (!latencyBadge || latencyBadge === 'Ethernet') {
-            // If no explicit label, compute clean plausible latency badge or keep label
             if (e.targetLabel && e.sourceLabel) {
                 latencyBadge = `${e.sourceLabel} | ${e.targetLabel}`;
             }
         }
-
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
 
         return {
             id: e.id || `edge-${e.source}-${e.target}`,
@@ -1262,22 +1182,22 @@
             label: latencyBadge || undefined,
             title: `Link: ${e.source} → ${e.target}${latencyBadge ? ' (' + latencyBadge + ')' : ''}`,
             font: {
-                color: isDark ? '#f8fafc' : '#0f172a',
+                color: '#ffffff',
                 size: 11,
-                face: "'JetBrains Mono', monospace",
+                face: 'monospace',
                 align: 'horizontal',
-                background: isDark ? '#1e293b' : '#ffffff',
-                strokeWidth: 1.5,
-                strokeColor: isDark ? '#334155' : '#e2e8f0',
+                background: '#1f1f1f',
+                strokeWidth: 1,
+                strokeColor: '#3c3c3c',
                 vadjust: 0
             },
             color: {
                 color: '#10b981',
-                highlight: '#059669',
-                hover: '#059669',
+                highlight: '#34d399',
+                hover: '#34d399',
                 opacity: 1.0
             },
-            width: 3.5,
+            width: 3,
             dashes: [7, 7],
             smooth: {
                 type: 'continuous',
@@ -1380,9 +1300,9 @@
                 enabled: physicsEnabled,
                 solver: 'forceAtlas2Based',
                 forceAtlas2Based: {
-                    gravitationalConstant: -50,
+                    gravitationalConstant: -40,
                     centralGravity: 0.005,
-                    springLength: 180,
+                    springLength: 170,
                     springConstant: 0.08,
                     damping: 0.4
                 },
@@ -1401,18 +1321,10 @@
             }
         });
 
-        // Custom canvas drawing for edge badges (pill-shaped with shadow)
+        // Pill badge background drawing on edges
         network.on('afterDrawing', function(ctx) {
-            // Draw clean pill backgrounds for all edges with labels
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const pillBg = isDark ? '#1e293b' : '#ffffff';
-            const pillBorder = isDark ? '#334155' : '#e2e8f0';
-            const textColor = isDark ? '#f8fafc' : '#0f172a';
-
             edgesData.forEach(edge => {
                 if (!edge.label) return;
-                const edgePos = network.getConnectedNodes(edge.id);
-                if (!edgePos || edgePos.length < 2) return;
                 const posFrom = network.getPosition(edge.from);
                 const posTo = network.getPosition(edge.to);
                 if (!posFrom || !posTo) return;
@@ -1421,18 +1333,13 @@
                 const midY = (posFrom.y + posTo.y) / 2;
 
                 ctx.save();
-                ctx.font = "bold 11px 'JetBrains Mono', monospace";
+                ctx.font = "bold 11px monospace";
                 const textWidth = ctx.measureText(edge.label).width;
                 const badgeWidth = textWidth + 18;
                 const badgeHeight = 22;
                 const radius = 11;
                 const rx = midX - badgeWidth / 2;
                 const ry = midY - badgeHeight / 2;
-
-                // Pill Shadow
-                ctx.shadowColor = isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.08)';
-                ctx.shadowBlur = 6;
-                ctx.shadowOffsetY = 2;
 
                 // Pill Body
                 ctx.beginPath();
@@ -1447,17 +1354,14 @@
                 ctx.quadraticCurveTo(rx, ry, rx + radius, ry);
                 ctx.closePath();
 
-                ctx.fillStyle = pillBg;
+                ctx.fillStyle = '#1e1e1e';
                 ctx.fill();
 
-                // Border
-                ctx.shadowColor = 'transparent';
-                ctx.lineWidth = 1.2;
-                ctx.strokeStyle = pillBorder;
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#3c3c3c';
                 ctx.stroke();
 
-                // Text
-                ctx.fillStyle = textColor;
+                ctx.fillStyle = '#ffffff';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(edge.label, midX, midY + 0.5);
@@ -1466,7 +1370,7 @@
             });
         });
 
-        // Save position on drag end
+        // Drag handler
         network.on('dragEnd', async function(params) {
             for (const nodeId of params.nodes) {
                 const pos = network.getPosition(nodeId);
@@ -1548,7 +1452,7 @@
             el.querySelector('strong').textContent = zoom + '%';
         });
 
-        // Hover tooltips
+        // Hover tooltip
         const tooltipEl = document.getElementById('custom-tooltip');
         network.on('hoverNode', function(params) {
             const node = nodesData.find(n => n.id === params.node);
@@ -1590,15 +1494,13 @@
     /* ==================== FLOW LAYOUT (PIPELINE / IMAGE 2 MATCH) ==================== */
     function layoutLeftToRight() {
         if (!network || nodesData.length === 0) return;
-        
-        // Find roots (nodes with no incoming edges or first node)
+
         const incomingCount = {};
         nodesData.forEach(n => incomingCount[n.id] = 0);
         edgesData.forEach(e => {
             if (incomingCount[e.to] !== undefined) incomingCount[e.to]++;
         });
 
-        // Determine level (X rank) for each node using BFS
         const levels = {};
         const roots = nodesData.filter(n => incomingCount[n.id] === 0);
         if (roots.length === 0 && nodesData.length > 0) roots.push(nodesData[0]);
@@ -1620,12 +1522,10 @@
             });
         }
 
-        // Handle any disconnected nodes
         nodesData.forEach(n => {
             if (levels[n.id] === undefined) levels[n.id] = 0;
         });
 
-        // Group by level
         const nodesByLevel = {};
         nodesData.forEach(n => {
             const lvl = levels[n.id];
@@ -1634,8 +1534,8 @@
         });
 
         const levelKeys = Object.keys(nodesByLevel).map(Number).sort((a,b) => a - b);
-        const X_GAP = 260; // Horizontal spacing between hops
-        const Y_GAP = 120; // Vertical spacing between target branches
+        const X_GAP = 260;
+        const Y_GAP = 120;
         const updates = [];
 
         levelKeys.forEach(lvl => {
@@ -1647,7 +1547,6 @@
                 updates.push({ id: node.id, x, y });
                 node.x = x;
                 node.y = y;
-                // Persist position
                 apiFetch('/api/v1/topology/device/position', {
                     method: 'PUT',
                     body: JSON.stringify({ id: node.id, x, y })
@@ -1688,7 +1587,7 @@
 
         const srcEl = document.getElementById('detail-sources');
         srcEl.innerHTML = (n.sources || ['MANUAL']).map(s =>
-            `<span class="source-tag" style="background:var(--primary-light);color:var(--primary);">${s}</span>`
+            `<span class="source-tag" style="background:rgba(88,166,255,0.15);color:#58a6ff;">${s}</span>`
         ).join('');
 
         const ifaces = n.interfaces || [];
@@ -1771,7 +1670,6 @@
     async function loadGraph() {
         updateStatus('Loading topology...');
         try {
-            // Load ICMP ping latencies in parallel
             try {
                 const pingRes = await apiFetch('/api/v1/icmp/devices');
                 if (pingRes && pingRes.data) {
@@ -1791,7 +1689,6 @@
             const nodes = data.data.nodes || [];
             const edges = data.data.edges || [];
 
-            // If nodes don't have positions saved yet, auto arrange in flow
             const needsLayout = nodes.length > 0 && nodes.every(n => n.x === null || n.x === undefined || (n.x === 0 && n.y === 0));
             initGraph(nodes, edges);
 
@@ -2067,7 +1964,6 @@
     function enterConnectMode(sourceId) {
         connectMode = true;
         connectSourceId = sourceId;
-        const srcNode = nodesData.find(n => n.id === sourceId);
         showToast('info', `Click target node to connect link`);
         document.getElementById('topology-graph').style.cursor = 'crosshair';
     }
