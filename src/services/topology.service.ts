@@ -17,8 +17,8 @@ export interface TopologyNode {
   sources: string[];
   labels: Record<string, any>;
   interfaces?: NetworkInterface[];
-  x?: number;
-  y?: number;
+  x?: number | null;
+  y?: number | null;
 }
 
 export interface NetworkInterface {
@@ -665,8 +665,8 @@ export class TopologyService {
     deviceType?: string;
     tags?: string;
     labels?: Record<string, any>;
-    x?: number;
-    y?: number;
+    x?: number | null;
+    y?: number | null;
     sheetId?: number;
   }): Promise<TopologyNode> {
     const id = `manual-${device.ip}-${Date.now()}`;

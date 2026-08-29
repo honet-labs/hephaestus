@@ -95,8 +95,8 @@ export class TopologyDbService {
     name: string;
     ip: string;
     deviceType?: string;
-    x?: number;
-    y?: number;
+    x?: number | null;
+    y?: number | null;
     sheetId?: number;
   }): Promise<TopologyNode> {
     const id = `manual-${device.ip}-${Date.now()}`;
