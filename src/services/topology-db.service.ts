@@ -44,17 +44,16 @@ export class TopologyDbService {
         await query(
           `UPDATE topology_devices
            SET name = $1, device_type = $2, status = $3, sources = $4, labels = $5, interfaces = $6
-           WHERE ip_address = $7 AND (sheet_id = $8 OR ($8 IS NULL AND sheet_id IS NULL))`,
-          [node.name, node.deviceType, node.status, node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), node.ip, sheetId || null]
+           WHERE id = $7`,
+          [node.name, node.deviceType, node.status, node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), existing.rows[0].id]
         );
       } else {
-        const id = node.id || `device-${node.ip}-${Date.now()}`;
+        const cleanIp = (node.ip || 'node').replace(/[^0-9a-zA-Z]/g, '_');
+        const sheetPrefix = sheetId ? `s${sheetId}-` : '';
+        const id = `dev-${sheetPrefix}${cleanIp}-${Date.now().toString(36)}`;
         await query(
           `INSERT INTO topology_devices (id, name, ip_address, device_type, status, sources, labels, interfaces, x, y, sheet_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-           ON CONFLICT (id) DO UPDATE SET
-             name = EXCLUDED.name, device_type = EXCLUDED.device_type, status = EXCLUDED.status,
-             sources = EXCLUDED.sources, labels = EXCLUDED.labels, interfaces = EXCLUDED.interfaces`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [id, node.name, node.ip, node.deviceType || "unknown", node.status || "unknown", node.sources || [], JSON.stringify(node.labels || {}), JSON.stringify(node.interfaces || []), node.x || null, node.y || null, sheetId || null]
         );
       }
@@ -99,7 +98,9 @@ export class TopologyDbService {
     y?: number | null;
     sheetId?: number;
   }): Promise<TopologyNode> {
-    const id = `manual-${device.ip}-${Date.now()}`;
+    const cleanIp = (device.ip || 'node').replace(/[^0-9a-zA-Z]/g, '_');
+    const sheetPrefix = device.sheetId ? `s${device.sheetId}-` : '';
+    const id = `man-${sheetPrefix}${cleanIp}-${Date.now().toString(36)}`;
     const node: TopologyNode = {
       id,
       name: device.name,

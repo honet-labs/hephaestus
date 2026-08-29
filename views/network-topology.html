@@ -2384,14 +2384,12 @@
     async function addToCanvas(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
         const node = pendingNodes[idx];
-        if (node._added) { showToast('info', `"${node.name}" already on canvas`); return; }
         const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
-        if (exists) { node._added = true; renderPendingList(document.getElementById('results-title').textContent); return; }
+        if (exists) { showToast('info', `"${node.name}" already on canvas`); return; }
         try {
             const res = await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify({ ...node, sheetId: activeSheetId }) });
             if (!res.success) throw new Error(res.error || 'Save failed');
             await loadGraph();
-            node._added = true;
             renderPendingList(document.getElementById('results-title').textContent);
             showToast('success', `"${node.name}" added to canvas`);
         } catch (e) { showToast('error', 'Save failed: ' + e.message); }
@@ -2409,7 +2407,9 @@
 
     async function addSelectedToCanvas() {
         if (selectedIndices.size === 0) return;
-        const toAdd = [...selectedIndices].map(i => pendingNodes[i]).filter(n => !n._added);
+        const toAdd = [...selectedIndices].map(i => pendingNodes[i]).filter(n => {
+            return !nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id);
+        });
         if (toAdd.length === 0) { showToast('info', 'All selected devices already on canvas'); return; }
         try {
             const res = await apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: toAdd, sheetId: activeSheetId }) });
