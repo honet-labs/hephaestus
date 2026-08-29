@@ -743,7 +743,7 @@
         <div id="edge-list-items"></div>
         <div class="context-menu-item" onclick="edgeContextAction('edit')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit Badge / Latency
+            Edit Connection Label
         </div>
         <div class="context-menu-sep"></div>
         <div class="context-menu-item danger" onclick="edgeContextAction('delete')">
@@ -861,8 +861,8 @@
                     <select id="edge-target"></select>
                 </div>
                 <div class="form-group">
-                    <label>Badge / Latency Label</label>
-                    <input type="text" id="edge-label" placeholder="e.g. 0.536 ms or Ethernet">
+                    <label>Connection Label (Type / Port)</label>
+                    <input type="text" id="edge-label" placeholder="e.g. Ethernet, Wireless, Fiber, VPN, ETH1 | ETH2">
                 </div>
                 <div id="edge-error" class="form-error"></div>
             </div>
@@ -877,14 +877,14 @@
     <div id="modal-edit-edge" class="modal-overlay">
         <div class="modal-dialog" style="max-width:420px;">
             <div class="modal-header">
-                <h3>Edit Link Badge</h3>
+                <h3>Edit Connection Label</h3>
                 <button class="modal-close" onclick="closeModal('modal-edit-edge')">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="edit-edge-id">
                 <div class="form-group">
-                    <label>Badge Label (Latency / Info)</label>
-                    <input type="text" id="edit-edge-label" placeholder="e.g. 0.536 ms">
+                    <label>Connection Label (Type / Port)</label>
+                    <input type="text" id="edit-edge-label" placeholder="e.g. Ethernet, Wireless, Fiber, VPN">
                 </div>
                 <div id="edit-edge-error" class="form-error"></div>
             </div>
@@ -925,7 +925,6 @@
     let sheets = [];
     let activeSheetId = null;
     let physicsEnabled = false;
-    let deviceLatencyMap = {};
 
     // Auth check
     const token = localStorage.getItem('hephaestus_session_token') || '';
@@ -983,7 +982,6 @@
     }
 
     /* ==================== AUTHENTIC HARDWARE VECTOR ICONS ==================== */
-    // Generates high-DPI vector icons tailored for each device type inside modern clean circles
     function generateDeviceIcon(type, status, size, isFirstHop) {
         size = size || 80;
         const canvas = document.createElement('canvas');
@@ -1012,14 +1010,12 @@
 
         // 1. Circle Background & Glow
         if (isGateway) {
-            // Blue/cyan outer ring
             ctx.beginPath();
             ctx.arc(cx, cy, 34 * s, 0, Math.PI * 2);
             ctx.strokeStyle = cyanRing;
             ctx.lineWidth = 4 * s;
             ctx.stroke();
 
-            // Solid inner circle
             ctx.beginPath();
             ctx.arc(cx, cy, 29 * s, 0, Math.PI * 2);
             ctx.fillStyle = fillColor;
@@ -1030,7 +1026,6 @@
             ctx.fillStyle = fillColor;
             ctx.fill();
 
-            // Subtle white highlight edge
             ctx.lineWidth = 1.5 * s;
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.stroke();
@@ -1044,35 +1039,30 @@
         ctx.lineJoin = 'round';
 
         if (isGateway) {
-            // Globe icon with latitude and longitude
             const r = 14 * s;
             ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke();
             ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.5, r, 0, 0, Math.PI * 2); ctx.stroke();
         } else if (t.includes('server')) {
-            // Server Rack (3 stacked chassis units with LEDs and drive bays)
             const bladeW = 28 * s;
             const bladeH = 7 * s;
             [-1, 0, 1].forEach(offset => {
                 const by = cy + offset * 9.5 * s - bladeH / 2;
                 const bx = cx - bladeW / 2;
                 ctx.strokeRect(bx, by, bladeW, bladeH);
-                // Status LED dots
                 ctx.beginPath();
                 ctx.arc(bx + 4 * s, by + bladeH / 2, 1.2 * s, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
                 ctx.arc(bx + 8 * s, by + bladeH / 2, 1.2 * s, 0, Math.PI * 2);
                 ctx.fill();
-                // Drive slot line
                 ctx.beginPath();
                 ctx.moveTo(bx + 13 * s, by + bladeH / 2);
                 ctx.lineTo(bx + bladeW - 4 * s, by + bladeH / 2);
                 ctx.stroke();
             });
         } else if (t.includes('switch')) {
-            // Network Switch: Box with double row of RJ45 ports
             const swW = 30 * s;
             const swH = 18 * s;
             ctx.strokeRect(cx - swW / 2, cy - swH / 2, swW, swH);
@@ -1083,34 +1073,26 @@
                 ctx.fillRect(px - portSize / 2, cy + 2.5 * s, portSize, portSize);
             }
         } else if (t.includes('router')) {
-            // Router: Circular disc with 4 directional flow arrows
             const rRad = 12 * s;
             ctx.beginPath(); ctx.arc(cx, cy, rRad, 0, Math.PI * 2); ctx.stroke();
-            // Arrow right
             ctx.beginPath(); ctx.moveTo(cx - 7 * s, cy - 3.5 * s); ctx.lineTo(cx + 7 * s, cy - 3.5 * s); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx + 3.5 * s, cy - 7 * s); ctx.lineTo(cx + 7 * s, cy - 3.5 * s); ctx.lineTo(cx + 3.5 * s, cy); ctx.stroke();
-            // Arrow left
             ctx.beginPath(); ctx.moveTo(cx + 7 * s, cy + 3.5 * s); ctx.lineTo(cx - 7 * s, cy + 3.5 * s); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx - 3.5 * s, cy); ctx.lineTo(cx - 7 * s, cy + 3.5 * s); ctx.lineTo(cx - 3.5 * s, cy + 7 * s); ctx.stroke();
         } else if (t.includes('wireless') || t.includes('wifi') || t.includes('ap')) {
-            // Wireless Access Point: Base point with broadcasting RF wave arcs
             ctx.beginPath();
             ctx.arc(cx, cy + 9 * s, 2.5 * s, 0, Math.PI * 2);
             ctx.fill();
-            // Wave 1
             ctx.beginPath();
             ctx.arc(cx, cy + 9 * s, 8 * s, -Math.PI * 0.75, -Math.PI * 0.25);
             ctx.stroke();
-            // Wave 2
             ctx.beginPath();
             ctx.arc(cx, cy + 9 * s, 14 * s, -Math.PI * 0.75, -Math.PI * 0.25);
             ctx.stroke();
-            // Wave 3
             ctx.beginPath();
             ctx.arc(cx, cy + 9 * s, 20 * s, -Math.PI * 0.75, -Math.PI * 0.25);
             ctx.stroke();
         } else if (t.includes('firewall')) {
-            // Security Shield
             ctx.beginPath();
             ctx.moveTo(cx, cy - 14 * s);
             ctx.lineTo(cx + 12 * s, cy - 8 * s);
@@ -1120,13 +1102,11 @@
             ctx.lineTo(cx - 12 * s, cy - 8 * s);
             ctx.closePath();
             ctx.stroke();
-            // Cross in shield
             ctx.beginPath();
             ctx.moveTo(cx, cy - 7 * s); ctx.lineTo(cx, cy + 11 * s);
             ctx.moveTo(cx - 6 * s, cy + 1 * s); ctx.lineTo(cx + 6 * s, cy + 1 * s);
             ctx.stroke();
         } else if (t.includes('container') || t.includes('docker')) {
-            // Container cube box
             const cW = 24 * s, cH = 20 * s;
             ctx.strokeRect(cx - cW / 2, cy - cH / 2, cW, cH);
             ctx.beginPath();
@@ -1135,7 +1115,6 @@
             ctx.moveTo(cx + 4 * s, cy - cH / 2); ctx.lineTo(cx + 4 * s, cy + cH / 2);
             ctx.stroke();
         } else if (t.includes('hop')) {
-            // Hop 3-dot capsule
             const hW = 26 * s, hH = 14 * s, hRad = 5 * s;
             const hx = cx - hW / 2, hy = cy - hH / 2;
             ctx.beginPath();
@@ -1156,17 +1135,15 @@
                 ctx.fill();
             });
         } else if (t.includes('target')) {
-            // Target Bullseye
             const rOuter = 13 * s, rInner = 6.5 * s, rCenter = 2.4 * s;
             ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.stroke();
             ctx.beginPath(); ctx.arc(cx, cy, rInner, 0, Math.PI * 2); ctx.stroke();
             ctx.beginPath(); ctx.arc(cx, cy, rCenter, 0, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.moveTo(cx, cy - rOuter - 2 * s); ctx.lineTo(cx, cy - rOuter + 4 * s); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(cx, cy + rOuter + 2 * s); ctx.lineTo(cx, cy + rOuter - 4 * s); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx - rOuter - 2 * s, cy); ctx.lineTo(cx - rOuter + 4 * s, cy); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx + rOuter + 2 * s, cy); ctx.lineTo(cx + rOuter - 4 * s, cy); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - rOuter - 2 * s, cy); ctx.lineTo(cx - rOuter + 4 * s); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx + rOuter + 2 * s, cy); ctx.lineTo(cx + rOuter - 4 * s); ctx.stroke();
         } else {
-            // Network node cluster
             ctx.beginPath(); ctx.arc(cx, cy - 6 * s, 3.5 * s, 0, Math.PI * 2); ctx.stroke();
             ctx.beginPath(); ctx.arc(cx - 9 * s, cy + 7 * s, 3.5 * s, 0, Math.PI * 2); ctx.stroke();
             ctx.beginPath(); ctx.arc(cx + 9 * s, cy + 7 * s, 3.5 * s, 0, Math.PI * 2); ctx.stroke();
@@ -1262,13 +1239,17 @@
     }
 
     function buildEdgeData(e) {
-        let latencyBadge = e.label || '';
-        const targetLatency = deviceLatencyMap[e.target];
-        if (targetLatency !== undefined && targetLatency !== null) {
-            latencyBadge = `${parseFloat(targetLatency).toFixed(3)} ms`;
-        } else if (!latencyBadge || latencyBadge === 'Ethernet') {
-            if (e.targetLabel && e.sourceLabel) {
-                latencyBadge = `${e.sourceLabel} | ${e.targetLabel}`;
+        // Use only explicit connection label (e.g. "Ethernet", "Wireless", "Fiber", "VPN")
+        let connLabel = (e.label || '').trim();
+        if (!connLabel) {
+            if (e.sourceLabel && e.targetLabel) {
+                connLabel = `${e.sourceLabel} | ${e.targetLabel}`;
+            } else if (e.sourceLabel) {
+                connLabel = e.sourceLabel;
+            } else if (e.targetLabel) {
+                connLabel = e.targetLabel;
+            } else {
+                connLabel = 'Ethernet';
             }
         }
 
@@ -1276,12 +1257,12 @@
             id: e.id || `edge-${e.source}-${e.target}`,
             from: e.source,
             to: e.target,
-            label: latencyBadge || undefined,
-            title: `Link: ${e.source} → ${e.target}${latencyBadge ? ' (' + latencyBadge + ')' : ''}`,
+            label: connLabel || undefined,
+            title: `Connection: ${e.source} → ${e.target}${connLabel ? ' (' + connLabel + ')' : ''}`,
             font: {
                 color: '#ffffff',
                 size: 11,
-                face: 'monospace',
+                face: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 align: 'horizontal',
                 background: '#1f1f1f',
                 strokeWidth: 1,
@@ -1688,9 +1669,9 @@
 
         document.getElementById('detail-name').textContent = edge.label || 'Connection Link';
         document.getElementById('detail-ip').textContent = `${fromName} → ${toName}`;
-        document.getElementById('detail-type').textContent = 'LINK';
+        document.getElementById('detail-type').textContent = 'CONNECTION LINK';
         const st = document.getElementById('detail-status');
-        st.textContent = 'ACTIVE';
+        st.textContent = 'CONNECTED';
         st.style.color = '#10b981';
 
         document.getElementById('detail-sources').innerHTML = '';
@@ -1700,9 +1681,9 @@
         const connSection = document.getElementById('detail-connections-section');
         connSection.style.display = '';
         document.getElementById('detail-connections').innerHTML =
-            `<div class="conn-item"><span class="conn-dot"></span><strong>Source:</strong> ${esc(fromName)}</div>` +
-            `<div class="conn-item"><span class="conn-dot"></span><strong>Target:</strong> ${esc(toName)}</div>` +
-            `<div class="conn-item"><span class="conn-dot"></span><strong>Badge:</strong> ${esc(edge.label || 'None')}</div>`;
+            `<div class="conn-item"><span class="conn-dot"></span><strong>From:</strong> ${esc(fromName)}</div>` +
+            `<div class="conn-item"><span class="conn-dot"></span><strong>To:</strong> ${esc(toName)}</div>` +
+            `<div class="conn-item"><span class="conn-dot"></span><strong>Type:</strong> ${esc(edge.label || 'Ethernet')}</div>`;
 
         document.getElementById('detail-panel').classList.add('visible');
     }
@@ -1719,18 +1700,6 @@
     async function loadGraph() {
         updateStatus('Loading topology...');
         try {
-            try {
-                const pingRes = await apiFetch('/api/v1/icmp/devices');
-                if (pingRes && pingRes.data) {
-                    deviceLatencyMap = {};
-                    pingRes.data.forEach(d => {
-                        if (d.latency_ms !== null && d.latency_ms !== undefined) {
-                            deviceLatencyMap[d.id] = d.latency_ms;
-                        }
-                    });
-                }
-            } catch (err) {}
-
             const sheetParam = activeSheetId ? '?sheetId=' + activeSheetId : '';
             const data = await apiFetch('/api/v1/topology/graph' + sheetParam);
             if (!data.success) throw new Error(data.error);
@@ -1870,7 +1839,7 @@
             if (!res.success) throw new Error(res.error);
             closeModal('modal-edit-edge');
             loadGraph();
-            showToast('success', 'Link badge updated');
+            showToast('success', 'Connection label updated');
         }).catch(e => {
             document.getElementById('edit-edge-error').textContent = e.message;
             document.getElementById('edit-edge-error').style.display = 'block';
@@ -2040,7 +2009,7 @@
         });
         src.value = sourceId;
         tgt.value = targetId;
-        document.getElementById('edge-label').value = '';
+        document.getElementById('edge-label').value = 'Ethernet';
         document.getElementById('edge-error').style.display = 'none';
         openModal('modal-add-edge');
     }
@@ -2055,7 +2024,7 @@
             src.add(new Option(label, n.id));
             tgt.add(new Option(label, n.id));
         });
-        document.getElementById('edge-label').value = '';
+        document.getElementById('edge-label').value = 'Ethernet';
         document.getElementById('edge-error').style.display = 'none';
         openModal('modal-add-edge');
     }
@@ -2063,7 +2032,7 @@
     async function submitEdge() {
         const source = document.getElementById('edge-source').value;
         const target = document.getElementById('edge-target').value;
-        const label = document.getElementById('edge-label').value.trim() || undefined;
+        const label = document.getElementById('edge-label').value.trim() || 'Ethernet';
         const errEl = document.getElementById('edge-error');
         if (!source || !target) { errEl.textContent = 'Source and target required.'; errEl.style.display = 'block'; return; }
         if (source === target) { errEl.textContent = 'Cannot connect device to itself.'; errEl.style.display = 'block'; return; }
@@ -2156,7 +2125,6 @@
         document.getElementById('results-title').textContent = title || 'Discovered Devices';
         countEl.textContent = pendingNodes.length;
 
-        // Clean stale selections
         const validIndices = new Set();
         pendingNodes.forEach((_, i) => validIndices.add(i));
         selectedIndices = new Set([...selectedIndices].filter(i => validIndices.has(i)));
