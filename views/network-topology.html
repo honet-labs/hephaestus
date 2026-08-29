@@ -5,413 +5,462 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Topology - Hephaestus</title>
     <link rel="icon" type="image/jpeg" href="/img/favicon.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            color-scheme: dark;
-            --background: #242424;
-            --foreground: #cbd5e1;
-            --app-card: #2e2e2e;
-            --app-card-dark: #1f1f1f;
-            --app-border: #3c3c3c;
-            --prometheus-orange: #a48181;
-            --prometheus-orange-hover: #bfa3a3;
-            --prometheus-orange-active: #8e6c6c;
-            --prometheus-orange-muted: rgba(164, 129, 129, 0.15);
-            --text-white: #ffffff;
-            --text-muted: #a0a0a0;
-            --text-dim: #6b7280;
+            color-scheme: light dark;
+            --bg-body: #f8fafc;
+            --bg-canvas: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-alt: #f1f5f9;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-dim: #94a3b8;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --primary-light: #ecfdf5;
+            --accent-blue: #0ea5e9;
+            --accent-blue-light: #e0f2fe;
             --success: #10b981;
             --error: #ef4444;
             --warning: #f59e0b;
-            --btn-primary-bg: #1971c2;
-            --btn-primary-color: #ffffff;
-            --bg-graph: #21262d;
-            --purple: #a78bfa;
-            --purple-bg: rgba(167,139,250,0.12);
-            --red-bg: rgba(248,81,73,0.12);
-            --green-bg: rgba(16,185,129,0.12);
-            --yellow-bg: rgba(210,153,34,0.12);
-            --radius: 6px;
-            --radius-sm: 4px;
-            --shadow: 0 4px 24px rgba(0,0,0,0.4);
-            --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+            --purple: #8b5cf6;
+            --radius-lg: 12px;
+            --radius: 8px;
+            --radius-sm: 6px;
+            --radius-pill: 9999px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            --dot-grid: #e2e8f0;
         }
+
+        [data-theme="dark"] {
+            --bg-body: #090d16;
+            --bg-canvas: #0b0f19;
+            --bg-card: #131b2e;
+            --bg-card-alt: #1a233a;
+            --border: #1e293b;
+            --border-strong: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --primary: #10b981;
+            --primary-hover: #34d399;
+            --primary-light: rgba(16, 185, 129, 0.15);
+            --accent-blue: #38bdf8;
+            --accent-blue-light: rgba(56, 189, 248, 0.15);
+            --dot-grid: #1e293b;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+        }
+
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-size: 13px; background: var(--background); color: var(--text-white);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 13px; background: var(--bg-body); color: var(--text-main);
             display: flex; flex-direction: column; height: 100vh; overflow: hidden;
             user-select: none;
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
-        h1,h2,h3,h4 { font-weight: 600; color: var(--text-white); }
+        h1,h2,h3,h4 { font-weight: 700; color: var(--text-main); }
 
         /* ========== HEADER ========== */
         .header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0 16px; height: 44px; background: var(--app-card);
-            border-bottom: 1px solid var(--app-border); flex-shrink: 0; z-index: 50;
+            padding: 0 20px; height: 50px; background: var(--bg-card);
+            border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 50;
+            box-shadow: var(--shadow-sm);
         }
-        .header-left { display: flex; align-items: center; gap: 12px; }
-        .header h1 { font-size: 14px; display: flex; align-items: center; gap: 8px; }
-        .header h1 svg { width: 16px; height: 16px; color: var(--prometheus-orange); }
-        .header-right { display: flex; align-items: center; gap: 8px; }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header h1 {
+            font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+            letter-spacing: -0.2px;
+        }
+        .header h1 .logo-icon {
+            width: 24px; height: 24px; border-radius: 6px; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: #fff;
+        }
+        .header-right { display: flex; align-items: center; gap: 10px; }
         .back-link {
-            color: var(--text-muted); text-decoration: none; font-size: 11px;
-            padding: 4px 10px; border: 1px solid var(--app-border); border-radius: var(--radius-sm);
-            transition: all 0.15s;
+            color: var(--text-muted); text-decoration: none; font-size: 12px; font-weight: 600;
+            padding: 5px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: var(--bg-card); transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 4px;
         }
-        .back-link:hover { color: var(--text-white); border-color: var(--text-muted); }
+        .back-link:hover { color: var(--text-main); border-color: var(--border-strong); background: var(--bg-card-alt); }
         .badge {
-            font-size: 11px; color: var(--text-muted); padding: 3px 8px;
-            background: var(--background); border: 1px solid var(--app-border); border-radius: var(--radius-sm);
+            font-size: 11px; font-weight: 500; color: var(--text-muted); padding: 4px 10px;
+            background: var(--bg-card-alt); border: 1px solid var(--border); border-radius: var(--radius-pill);
+            display: inline-flex; align-items: center; gap: 5px;
         }
-        .badge strong { color: var(--text-white); }
+        .badge strong { color: var(--text-main); font-weight: 700; }
 
         /* ========== BUTTONS ========== */
         button.btn {
-            border-radius: var(--radius-sm); padding: 6px 12px; font-weight: 600;
-            cursor: pointer; transition: all 0.15s; text-transform: uppercase;
-            font-size: 10px; letter-spacing: 0.5px; display: inline-flex;
-            align-items: center; gap: 5px; border: 1px solid transparent;
-            font-family: inherit; white-space: nowrap;
+            border-radius: var(--radius-sm); padding: 6px 14px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s ease; font-size: 11px;
+            display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent;
+            font-family: inherit; white-space: nowrap; line-height: 1.4;
         }
-        button.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-primary { background: var(--prometheus-orange); color: #fff; border-color: var(--prometheus-orange); }
-        .btn-primary:hover:not(:disabled) { background: #79c0ff; }
-        .btn-ghost { background: transparent; border-color: var(--app-border); color: var(--text-muted); }
-        .btn-ghost:hover:not(:disabled) { color: var(--text-white); border-color: var(--text-muted); }
-        .btn-danger { background: var(--red-bg); border-color: rgba(248,81,73,0.3); color: var(--error); }
-        .btn-danger:hover:not(:disabled) { background: var(--error); color: #fff; }
-        .btn-success { background: var(--green-bg); border-color: rgba(16,185,129,0.3); color: var(--success); }
-        .btn-success:hover:not(:disabled) { background: var(--success); color: #fff; }
+        button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-primary {
+            background: var(--primary); color: #ffffff; border-color: var(--primary);
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover); border-color: var(--primary-hover);
+            transform: translateY(-1px); box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+        }
+        .btn-ghost {
+            background: var(--bg-card); border-color: var(--border); color: var(--text-muted);
+        }
+        .btn-ghost:hover:not(:disabled) {
+            color: var(--text-main); border-color: var(--border-strong); background: var(--bg-card-alt);
+        }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.25); color: var(--error);
+        }
+        .btn-danger:hover:not(:disabled) { background: var(--error); color: #fff; border-color: var(--error); }
+        .btn-success {
+            background: var(--primary-light); border-color: rgba(16, 185, 129, 0.3); color: var(--primary);
+        }
+        .btn-success:hover:not(:disabled) { background: var(--primary); color: #fff; border-color: var(--primary); }
         .btn-icon {
-            padding: 5px; background: transparent; border: 1px solid var(--app-border);
+            padding: 6px 8px; background: var(--bg-card); border: 1px solid var(--border);
             color: var(--text-muted); border-radius: var(--radius-sm); cursor: pointer;
-            transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center;
         }
-        .btn-icon:hover { color: var(--prometheus-orange); border-color: var(--prometheus-orange); }
-        .btn-icon.active { color: var(--prometheus-orange); border-color: var(--prometheus-orange); background: var(--app-card); }
+        .btn-icon:hover { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
+        .btn-icon.active { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
 
         /* ========== TOOLBAR ========== */
         .toolbar {
-            display: flex; align-items: center; padding: 6px 12px; gap: 6px;
-            background: var(--app-card); border-bottom: 1px solid var(--app-border);
+            display: flex; align-items: center; padding: 7px 16px; gap: 8px;
+            background: var(--bg-card); border-bottom: 1px solid var(--border);
             flex-shrink: 0; z-index: 40;
         }
-        .toolbar .sep { width: 1px; height: 20px; background: var(--app-border); margin: 0 4px; }
+        .toolbar .sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
         .search-box {
             position: relative; display: flex; align-items: center;
         }
         .search-box input {
-            background: var(--background); border: 1px solid var(--app-border); color: var(--text-white);
-            padding: 5px 8px 5px 28px; border-radius: var(--radius-sm); font-size: 11px;
-            width: 180px; transition: all 0.2s; font-family: inherit;
+            background: var(--bg-card-alt); border: 1px solid var(--border); color: var(--text-main);
+            padding: 6px 10px 6px 30px; border-radius: var(--radius-pill); font-size: 11.5px;
+            width: 190px; transition: all 0.2s ease; font-family: inherit;
         }
-        .search-box input:focus { border-color: var(--prometheus-orange); outline: none; width: 240px; }
-        .search-box svg { position: absolute; left: 8px; width: 12px; height: 12px; color: var(--text-dim); pointer-events: none; }
+        .search-box input:focus { border-color: var(--primary); outline: none; width: 250px; background: var(--bg-card); box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+        .search-box svg { position: absolute; left: 10px; width: 13px; height: 13px; color: var(--text-dim); pointer-events: none; }
 
         /* ========== SCAN BAR ========== */
         .scan-bar {
-            display: none; padding: 10px 16px; gap: 12px;
-            background: var(--app-card-dark); border-bottom: 1px solid var(--app-border);
+            display: none; padding: 12px 20px; gap: 14px;
+            background: var(--bg-card-alt); border-bottom: 1px solid var(--border);
             flex-shrink: 0; flex-wrap: wrap; align-items: flex-end;
+            animation: slideDown 0.2s ease-out;
         }
+        @keyframes slideDown { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform: translateY(0); } }
         .scan-bar.visible { display: flex; }
-        .scan-bar label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
-        .scan-bar input, .scan-bar select {
-            background: var(--background); border: 1px solid var(--app-border); color: var(--text-white);
-            padding: 6px 10px; border-radius: var(--radius-sm); font-size: 11px; font-family: inherit;
+        .scan-bar label {
+            font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;
+            letter-spacing: 0.5px; display: block; margin-bottom: 4px;
         }
-        .scan-bar input:focus, .scan-bar select:focus { border-color: var(--prometheus-orange); outline: none; }
+        .scan-bar input, .scan-bar select {
+            background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main);
+            padding: 7px 12px; border-radius: var(--radius-sm); font-size: 12px; font-family: inherit;
+            transition: border-color 0.15s ease;
+        }
+        .scan-bar input:focus, .scan-bar select:focus { border-color: var(--primary); outline: none; }
         .scan-group { display: flex; flex-direction: column; }
         .scan-group.hidden { display: none; }
-        .scan-divider { width: 1px; height: 36px; background: var(--app-border); align-self: flex-end; margin: 0 4px; }
+        .scan-divider { width: 1px; height: 38px; background: var(--border); align-self: flex-end; margin: 0 4px; }
         .scan-progress {
-            display: none; align-items: center; gap: 8px; font-size: 11px; color: var(--prometheus-orange);
+            display: none; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--primary);
         }
         .scan-progress.visible { display: flex; }
         .scan-spinner {
-            width: 14px; height: 14px; border: 2px solid var(--app-border);
-            border-top-color: var(--prometheus-orange); border-radius: 50%;
+            width: 16px; height: 16px; border: 2px solid var(--border);
+            border-top-color: var(--primary); border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ========== GRAPH ========== */
+        /* ========== GRAPH CANVAS ========== */
         .graph-container {
             flex: 1; position: relative; overflow: hidden;
+            background-color: var(--bg-canvas);
         }
         #topology-graph {
             width: 100%; height: 100%;
-            background-color: var(--background);
-            background-image: radial-gradient(circle, #21262d 1px, transparent 1px);
-            background-size: 24px 24px;
+            background-color: var(--bg-canvas);
+            background-image: radial-gradient(circle, var(--dot-grid) 1.2px, transparent 1.2px);
+            background-size: 28px 28px;
         }
 
-        /* ========== ZOOM CONTROLS ========== */
+        /* ========== ZOOM & CONTROLS ========== */
         .zoom-controls {
-            position: absolute; bottom: 12px; right: 12px;
-            display: flex; flex-direction: column; gap: 2px; z-index: 10;
+            position: absolute; bottom: 20px; right: 20px;
+            display: flex; flex-direction: column; gap: 4px; z-index: 20;
+            box-shadow: var(--shadow); border-radius: var(--radius-sm); overflow: hidden;
         }
         .zoom-controls button {
-            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-            background: rgba(46,46,46,0.95); border: 1px solid var(--app-border);
-            color: var(--text-muted); cursor: pointer; transition: all 0.15s;
-            font-size: 14px; font-weight: 600;
+            width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+            background: var(--bg-card); border: 1px solid var(--border);
+            color: var(--text-muted); cursor: pointer; transition: all 0.15s ease;
+            font-size: 14px; font-weight: 700;
         }
-        .zoom-controls button:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
-        .zoom-controls button:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
-        .zoom-controls button:hover { color: var(--prometheus-orange); border-color: var(--prometheus-orange); }
+        .zoom-controls button:hover { color: var(--primary); background: var(--bg-card-alt); border-color: var(--border-strong); }
 
         /* ========== LEGEND ========== */
         .legend {
-            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
-            background: rgba(46,46,46,0.95); border: 1px solid var(--app-border);
-            border-radius: 20px; padding: 5px 14px; z-index: 35;
-            backdrop-filter: blur(8px); display: flex; gap: 10px; flex-wrap: wrap;
-            font-size: 10px;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-pill); padding: 6px 18px; z-index: 20;
+            box-shadow: var(--shadow); display: flex; gap: 14px; flex-wrap: wrap;
+            align-items: center; font-size: 11px;
         }
-        .legend span { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
-        .legend .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .legend span { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: var(--text-muted); }
+        .legend .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
         .legend .tag {
-            padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 700;
+            padding: 2px 7px; border-radius: var(--radius-pill); font-size: 9.5px; font-weight: 700;
         }
-        .legend .sep { border-left: 1px solid var(--app-border); padding-left: 12px; }
+        .legend .sep { border-left: 1px solid var(--border); height: 14px; }
 
         /* ========== STATUS BAR ========== */
         .status-bar {
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            background: rgba(46,46,46,0.95); border: 1px solid var(--app-border);
-            border-radius: 20px; padding: 5px 14px; z-index: 10;
-            font-size: 11px; color: var(--text-muted); backdrop-filter: blur(8px);
-            display: flex; align-items: center; gap: 6px;
+            position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-pill); padding: 5px 16px; z-index: 20;
+            font-size: 11.5px; font-weight: 600; color: var(--text-muted);
+            box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 8px;
         }
         .status-dot {
-            width: 6px; height: 6px; border-radius: 50%; background: var(--success);
+            width: 7px; height: 7px; border-radius: 50%; background: var(--primary);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
             animation: pulse 2s ease-in-out infinite;
         }
         @keyframes pulse {
-            0%,100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            0%,100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
         }
 
         /* ========== NODE DETAIL PANEL ========== */
         .detail-panel {
-            display: none; position: absolute; top: 10px; right: 10px;
-            background: rgba(46,46,46,0.97); border: 1px solid var(--app-border);
-            border-radius: var(--radius); z-index: 20; width: 300px;
-            backdrop-filter: blur(12px); box-shadow: var(--shadow-lg);
-            max-height: calc(100% - 20px); overflow-y: auto;
+            display: none; position: absolute; top: 16px; right: 16px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); z-index: 30; width: 320px;
+            box-shadow: var(--shadow-lg); max-height: calc(100% - 32px);
+            overflow-y: auto; animation: slideLeft 0.2s ease-out;
         }
+        @keyframes slideLeft { from { opacity:0; transform: translateX(12px); } to { opacity:1; transform: translateX(0); } }
         .detail-panel.visible { display: block; }
         .detail-panel::-webkit-scrollbar { width: 4px; }
-        .detail-panel::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 2px; }
+        .detail-panel::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
         .detail-header {
             display: flex; justify-content: space-between; align-items: flex-start;
-            padding: 14px 16px 10px; border-bottom: 1px solid var(--app-border);
+            padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
         }
-        .detail-header h3 { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
-        .detail-header .detail-sub { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+        .detail-header h3 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+        .detail-header .detail-sub { font-size: 11.5px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
         .detail-section {
-            padding: 10px 16px; border-bottom: 1px solid rgba(48,54,61,0.5);
+            padding: 12px 18px; border-bottom: 1px solid var(--border);
         }
         .detail-section:last-child { border-bottom: none; }
         .detail-section-title {
-            font-size: 9px; text-transform: uppercase; font-weight: 700;
-            color: var(--text-dim); letter-spacing: 0.8px; margin-bottom: 6px;
+            font-size: 10px; text-transform: uppercase; font-weight: 700;
+            color: var(--text-dim); letter-spacing: 0.8px; margin-bottom: 8px;
         }
         .detail-row {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 3px 0; font-size: 11px;
+            padding: 4px 0; font-size: 11.5px;
         }
         .detail-label { color: var(--text-muted); }
-        .detail-value { color: var(--text-white); font-family: monospace; font-size: 11px; }
+        .detail-value { color: var(--text-main); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 600; }
         .source-tag {
-            display: inline-block; padding: 2px 6px; border-radius: 3px;
-            font-size: 9px; font-weight: 700;
+            display: inline-block; padding: 2px 7px; border-radius: var(--radius-pill);
+            font-size: 9.5px; font-weight: 700; margin-right: 4px;
         }
-        .iface-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .iface-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .iface-table th {
-            text-align: left; padding: 3px 6px; color: var(--text-dim);
-            border-bottom: 1px solid var(--app-border); font-weight: 600;
+            text-align: left; padding: 5px 6px; color: var(--text-dim);
+            border-bottom: 1px solid var(--border); font-weight: 600; font-size: 10px; text-transform: uppercase;
         }
-        .iface-table td { padding: 3px 6px; border-bottom: 1px solid rgba(48,54,61,0.4); }
-        .iface-table tr:hover td { background: rgba(88,166,255,0.04); }
-        .iface-status { display: inline-flex; align-items: center; gap: 4px; }
+        .iface-table td { padding: 6px; border-bottom: 1px solid var(--border); }
+        .iface-table tr:hover td { background: var(--bg-card-alt); }
+        .iface-status { display: inline-flex; align-items: center; gap: 5px; }
         .iface-status .dot { width: 6px; height: 6px; border-radius: 50%; }
-        .detail-actions { padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap; }
-        .detail-connections { font-size: 10px; }
+        .detail-actions { padding: 14px 18px; display: flex; gap: 8px; flex-wrap: wrap; background: var(--bg-card-alt); }
+        .detail-connections { font-size: 11px; }
         .detail-connections .conn-item {
-            display: flex; align-items: center; gap: 6px; padding: 3px 0;
-            color: var(--text-muted);
+            display: flex; align-items: center; gap: 6px; padding: 4px 0; color: var(--text-muted);
         }
         .detail-connections .conn-item .conn-dot {
-            width: 4px; height: 4px; border-radius: 50%; background: var(--prometheus-orange);
+            width: 6px; height: 6px; border-radius: 50%; background: var(--primary);
         }
 
         /* ========== RESULTS SIDEBAR ========== */
         .results-sidebar {
             display: none; position: absolute; top: 0; left: 0; bottom: 0;
-            width: 300px; background: rgba(46,46,46,0.98); border-right: 1px solid var(--app-border);
-            z-index: 30; flex-direction: column; backdrop-filter: blur(12px);
-            box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+            width: 320px; background: var(--bg-card); border-right: 1px solid var(--border);
+            z-index: 30; flex-direction: column; box-shadow: var(--shadow-lg);
+            transition: transform 0.25s ease;
         }
         .results-sidebar.visible { display: flex; }
         .results-header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 14px; border-bottom: 1px solid var(--app-border); flex-shrink: 0;
+            padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
         }
-        .results-header h3 { font-size: 12px; }
+        .results-header h3 { font-size: 13px; font-weight: 700; }
         .results-count {
-            font-size: 10px; color: var(--prometheus-orange); background: var(--app-card);
-            padding: 2px 8px; border-radius: 10px; font-weight: 700;
+            font-size: 11px; color: var(--primary); background: var(--primary-light);
+            padding: 2px 9px; border-radius: var(--radius-pill); font-weight: 700;
         }
         .results-actions {
-            display: flex; gap: 6px; padding: 8px 14px; border-bottom: 1px solid var(--app-border);
-            flex-shrink: 0;
+            display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border);
+            flex-shrink: 0; background: var(--bg-card-alt);
         }
         .results-search {
-            padding: 6px 14px; border-bottom: 1px solid var(--app-border); flex-shrink: 0;
+            padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
         }
         .results-search input {
-            width: 100%; background: var(--background); border: 1px solid var(--app-border);
-            color: var(--text-white); padding: 5px 8px; border-radius: var(--radius-sm);
-            font-size: 11px; font-family: inherit;
+            width: 100%; background: var(--bg-card-alt); border: 1px solid var(--border);
+            color: var(--text-main); padding: 6px 10px; border-radius: var(--radius-sm);
+            font-size: 12px; font-family: inherit;
         }
-        .results-search input:focus { border-color: var(--prometheus-orange); outline: none; }
-        .results-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0; }
+        .results-search input:focus { border-color: var(--primary); outline: none; background: var(--bg-card); }
+        .results-list { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 0; }
         .results-list::-webkit-scrollbar { width: 4px; }
-        .results-list::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 2px; }
+        .results-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
         .result-item {
-            display: flex; align-items: flex-start; gap: 8px;
-            padding: 8px 10px; border-bottom: 1px solid rgba(48,54,61,0.3);
-            transition: background 0.12s; cursor: default;
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 14px; border-bottom: 1px solid var(--border);
+            transition: background 0.12s ease; cursor: default;
         }
-        .result-item:hover { background: rgba(88,166,255,0.05); }
-        .result-item.already-added { opacity: 0.4; }
-        .result-icon {
-            width: 32px; height: 32px; flex-shrink: 0;
-        }
+        .result-item:hover { background: var(--bg-card-alt); }
+        .result-item.already-added { opacity: 0.5; }
+        .result-icon { width: 34px; height: 34px; flex-shrink: 0; }
         .result-info { flex: 1; min-width: 0; overflow: hidden; }
         .result-name {
-            font-size: 11px; font-weight: 600; color: var(--text-white);
+            font-size: 12px; font-weight: 700; color: var(--text-main);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .result-meta {
-            font-size: 10px; color: var(--text-dim); display: flex; gap: 6px; margin-top: 2px;
-            flex-wrap: nowrap; overflow: hidden;
+            font-size: 11px; color: var(--text-dim); display: flex; gap: 8px; margin-top: 2px;
+            flex-wrap: nowrap; overflow: hidden; font-family: 'JetBrains Mono', monospace;
         }
-        .result-meta span { white-space: nowrap; }
-        .result-actions-btn { display: flex; gap: 4px; flex-shrink: 0; align-self: center; }
+        .result-actions-btn { display: flex; gap: 6px; flex-shrink: 0; align-self: center; }
         .result-actions-btn button {
-            background: none; border: 1px solid var(--app-border); color: var(--text-dim);
-            border-radius: var(--radius-sm); padding: 3px 6px; font-size: 9px;
-            cursor: pointer; transition: all 0.15s; font-family: inherit;
+            background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted);
+            border-radius: var(--radius-sm); padding: 4px 8px; font-size: 10px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s ease; font-family: inherit;
         }
-        .result-actions-btn .btn-add { color: var(--success); border-color: rgba(16,185,129,0.3); }
-        .result-actions-btn .btn-add:hover { background: var(--success); color: #fff; }
-        .result-actions-btn .btn-dismiss:hover { color: var(--error); border-color: rgba(248,81,73,0.3); }
+        .result-actions-btn .btn-add { color: var(--primary); border-color: rgba(16,185,129,0.3); background: var(--primary-light); }
+        .result-actions-btn .btn-add:hover { background: var(--primary); color: #fff; }
+        .result-actions-btn .btn-dismiss:hover { color: var(--error); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1); }
         .result-checkbox {
             width: 16px; height: 16px; flex-shrink: 0; cursor: pointer;
-            accent-color: var(--prometheus-orange);
+            accent-color: var(--primary);
         }
-        .result-item.selected { background: rgba(88,166,255,0.08); }
+        .result-item.selected { background: var(--primary-light); }
         .results-count-selected {
-            font-size: 10px; color: var(--prometheus-orange); background: var(--app-card);
-            padding: 2px 8px; border-radius: 10px; font-weight: 700;
+            font-size: 11px; color: var(--primary); background: var(--primary-light);
+            padding: 2px 8px; border-radius: var(--radius-pill); font-weight: 700;
         }
 
         .sidebar-toggle {
             position: absolute; top: 50%; left: 0; transform: translateY(-50%);
-            width: 20px; height: 48px; background: rgba(46,46,46,0.95);
-            border: 1px solid var(--app-border); border-left: none;
+            width: 22px; height: 50px; background: var(--bg-card);
+            border: 1px solid var(--border); border-left: none;
             border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
             color: var(--text-muted); cursor: pointer; z-index: 31;
             display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s; font-size: 12px;
+            transition: all 0.2s ease; font-size: 11px; box-shadow: var(--shadow-sm);
         }
-        .sidebar-toggle:hover { color: var(--prometheus-orange); border-color: var(--prometheus-orange); }
-        .sidebar-toggle.shifted { left: 300px; }
-        .results-sidebar { transition: transform 0.25s ease; }
-        .results-sidebar.collapsed { transform: translateX(-100%); }
+        .sidebar-toggle:hover { color: var(--primary); border-color: var(--primary); background: var(--primary-light); }
+        .sidebar-toggle.shifted { left: 320px; }
 
         /* ========== CONTEXT MENU ========== */
         .context-menu {
             display: none; position: fixed; z-index: 100;
-            background: var(--app-card-dark); border: 1px solid var(--app-border);
+            background: var(--bg-card); border: 1px solid var(--border);
             border-radius: var(--radius); box-shadow: var(--shadow-lg);
-            min-width: 180px; padding: 4px 0;
+            min-width: 190px; padding: 5px 0;
         }
         .context-menu.visible { display: block; }
         .context-menu-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 6px 12px; font-size: 11px; color: var(--text-white);
-            cursor: pointer; transition: background 0.1s;
+            display: flex; align-items: center; gap: 9px;
+            padding: 7px 14px; font-size: 11.5px; font-weight: 500; color: var(--text-main);
+            cursor: pointer; transition: background 0.1s ease;
         }
-        .context-menu-item:hover { background: var(--app-card); color: var(--prometheus-orange); }
+        .context-menu-item:hover { background: var(--bg-card-alt); color: var(--primary); }
         .context-menu-item.danger { color: var(--error); }
-        .context-menu-item.danger:hover { background: var(--red-bg); }
-        .context-menu-item svg { width: 12px; height: 12px; flex-shrink: 0; }
-        .context-menu-sep { height: 1px; background: var(--app-border); margin: 4px 0; }
+        .context-menu-item.danger:hover { background: rgba(239,68,68,0.1); }
+        .context-menu-item svg { width: 13px; height: 13px; flex-shrink: 0; }
+        .context-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
         .context-menu-item .shortcut {
             margin-left: auto; font-size: 10px; color: var(--text-dim); font-family: monospace;
         }
 
         /* ========== TOAST ========== */
         .toast-container {
-            position: fixed; bottom: 16px; right: 16px; z-index: 2000;
+            position: fixed; bottom: 20px; right: 20px; z-index: 2000;
             display: flex; flex-direction: column; gap: 8px;
         }
         .toast {
-            padding: 10px 16px; border-radius: var(--radius); font-size: 12px;
-            box-shadow: var(--shadow); animation: toastIn 0.2s ease-out;
-            max-width: 400px; display: flex; align-items: center; gap: 8px;
+            padding: 11px 18px; border-radius: var(--radius); font-size: 12px; font-weight: 500;
+            box-shadow: var(--shadow-lg); animation: toastIn 0.2s ease-out;
+            max-width: 420px; display: flex; align-items: center; gap: 10px;
         }
-        @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
-        .toast.success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
-        .toast.error { background: rgba(248,81,73,0.15); border: 1px solid rgba(248,81,73,0.3); color: var(--error); }
-        .toast.info { background: var(--app-card); border: 1px solid rgba(88,166,255,0.3); color: var(--prometheus-orange); }
-        .toast.warning { background: var(--yellow-bg); border: 1px solid rgba(210,153,34,0.3); color: var(--warning); }
+        @keyframes toastIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+        .toast.success { background: #10b981; color: #fff; }
+        .toast.error { background: #ef4444; color: #fff; }
+        .toast.info { background: var(--text-main); color: var(--bg-card); }
+        .toast.warning { background: #f59e0b; color: #fff; }
 
-        /* ========== MODAL ========== */
+        /* ========== MODALS ========== */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;
+            background: rgba(15, 23, 42, 0.45); z-index: 1000; align-items: center; justify-content: center;
             backdrop-filter: blur(4px);
         }
         .modal-overlay.active { display: flex; }
         .modal-dialog {
-            background: var(--app-card); border: 1px solid var(--app-border); border-radius: var(--radius);
-            width: 95%; max-width: 800px; box-shadow: var(--shadow-lg);
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            width: 95%; max-width: 520px; box-shadow: var(--shadow-lg);
             animation: modalIn 0.2s ease-out;
         }
-        @keyframes modalIn { from { opacity:0; transform: scale(0.95); } to { opacity:1; transform: scale(1); } }
+        @keyframes modalIn { from { opacity:0; transform: scale(0.96); } to { opacity:1; transform: scale(1); } }
         .modal-header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 14px 20px; border-bottom: 1px solid var(--app-border);
+            padding: 16px 22px; border-bottom: 1px solid var(--border);
         }
-        .modal-header h3 { font-size: 14px; }
+        .modal-header h3 { font-size: 15px; font-weight: 700; }
         .modal-close {
-            background: none; border: none; color: var(--text-muted); font-size: 20px;
-            cursor: pointer; line-height: 1; padding: 4px;
+            background: none; border: none; color: var(--text-dim); font-size: 22px;
+            cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 4px;
         }
-        .modal-close:hover { color: var(--text-white); }
-        .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+        .modal-close:hover { color: var(--text-main); background: var(--bg-card-alt); }
+        .modal-body { padding: 22px; display: flex; flex-direction: column; gap: 16px; }
         .modal-footer {
-            padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px;
-            border-top: 1px solid var(--app-border);
+            padding: 14px 22px; display: flex; justify-content: flex-end; gap: 10px;
+            border-top: 1px solid var(--border); background: var(--bg-card-alt);
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
         }
         .form-group label {
-            text-transform: uppercase; font-size: 10px; font-weight: 700;
-            color: var(--text-dim); letter-spacing: 0.5px; margin-bottom: 5px; display: block;
+            text-transform: uppercase; font-size: 10.5px; font-weight: 700;
+            color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block;
         }
         .form-group input, .form-group select {
-            width: 100%; background: var(--background); border: 1px solid var(--app-border);
-            color: var(--text-white); padding: 7px 10px; border-radius: var(--radius-sm);
-            font-size: 12px; font-family: inherit;
+            width: 100%; background: var(--bg-card); border: 1px solid var(--border);
+            color: var(--text-main); padding: 8px 12px; border-radius: var(--radius-sm);
+            font-size: 12.5px; font-family: inherit;
         }
-        .form-group input:focus, .form-group select:focus { border-color: var(--prometheus-orange); outline: none; }
-        .form-error { display: none; font-size: 11px; color: var(--error); margin-top: 4px; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+        .form-error { display: none; font-size: 11.5px; color: var(--error); margin-top: 4px; font-weight: 500; }
 
         /* ========== EMPTY STATE ========== */
         .empty-state {
@@ -419,88 +468,71 @@
             text-align: center; z-index: 5; pointer-events: none;
         }
         .empty-state.hidden { display: none; }
-        .empty-state svg { width: 80px; height: 80px; color: var(--text-dim); opacity: 0.3; margin-bottom: 16px; }
-        .empty-state h3 { font-size: 16px; color: var(--text-muted); margin-bottom: 6px; }
-        .empty-state p { font-size: 12px; color: var(--text-dim); max-width: 300px; }
+        .empty-state svg { width: 72px; height: 72px; color: var(--text-dim); opacity: 0.4; margin-bottom: 14px; }
+        .empty-state h3 { font-size: 16px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+        .empty-state p { font-size: 12px; color: var(--text-dim); max-width: 320px; line-height: 1.5; }
 
-        /* ========== KEYBOARD HINT ========== */
+        /* ========== TOOLTIP ========== */
         .custom-tooltip {
             display: none; position: fixed; z-index: 200;
-            background: rgba(46,46,46,0.97); border: 1px solid var(--app-border);
+            background: var(--text-main); color: var(--bg-card);
             border-radius: var(--radius); padding: 10px 14px;
-            font-size: 11px; color: var(--text-white); max-width: 320px;
-            box-shadow: var(--shadow-lg); pointer-events: none;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            line-height: 1.5;
+            font-size: 11.5px; max-width: 320px; box-shadow: var(--shadow-lg);
+            pointer-events: none; line-height: 1.5;
         }
         .custom-tooltip.visible { display: block; }
-        .custom-tooltip .tt-name { font-weight: 700; font-size: 12px; margin-bottom: 4px; }
+        .custom-tooltip .tt-name { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
         .custom-tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; }
-        .custom-tooltip .tt-label { color: var(--text-dim); }
-        .custom-tooltip .tt-val { font-family: monospace; }
-        .custom-tooltip .tt-iface { margin-top: 6px; border-top: 1px solid var(--app-border); padding-top: 4px; }
-        .custom-tooltip .tt-iface-item { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+        .custom-tooltip .tt-label { opacity: 0.7; }
+        .custom-tooltip .tt-val { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+        .custom-tooltip .tt-iface { margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 5px; }
+        .custom-tooltip .tt-iface-item { display: flex; align-items: center; gap: 4px; font-size: 10.5px; }
         .custom-tooltip .tt-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-
-        .keyboard-hint {
-            position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
-            background: rgba(46,46,46,0.95); border: 1px solid var(--app-border);
-            border-radius: 20px; padding: 4px 12px; z-index: 10;
-            font-size: 10px; color: var(--text-dim); display: none;
-        }
-        .keyboard-hint kbd {
-            display: inline-block; padding: 1px 4px; background: var(--background);
-            border: 1px solid var(--app-border); border-radius: 3px; font-family: monospace;
-            font-size: 9px; margin: 0 2px;
-        }
 
         /* ========== SHEET TABS ========== */
         .sheet-bar {
-            display: flex; align-items: center; background: #2a2a2a;
-            border-bottom: 1px solid var(--app-border); padding: 0 4px; height: 32px;
+            display: flex; align-items: center; background: var(--bg-card);
+            border-bottom: 1px solid var(--border); padding: 0 8px; height: 36px;
             flex-shrink: 0; overflow-x: auto;
         }
         .sheet-bar::-webkit-scrollbar { height: 0; }
         .sheet-tab {
-            padding: 4px 12px; font-size: 11px; cursor: pointer; white-space: nowrap;
-            border-right: 1px solid var(--app-border); display: flex; align-items: center;
-            gap: 6px; color: var(--text-muted); transition: all 0.15s; position: relative;
-            max-width: 180px;
+            padding: 6px 14px; font-size: 11.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+            border-right: 1px solid var(--border); display: flex; align-items: center;
+            gap: 8px; color: var(--text-muted); transition: all 0.15s ease; position: relative;
+            max-width: 200px;
         }
-        .sheet-tab:hover { color: var(--text-white); background: #333333; }
+        .sheet-tab:hover { color: var(--text-main); background: var(--bg-card-alt); }
         .sheet-tab.active {
-            color: var(--text-white); background: var(--background);
-            border-bottom: 2px solid var(--prometheus-orange);
+            color: var(--primary); background: var(--bg-body);
+            border-bottom: 2px solid var(--primary);
         }
         .sheet-tab .sheet-close {
-            font-size: 14px; line-height: 1; opacity: 0; transition: opacity 0.15s;
-            cursor: pointer; color: var(--text-muted); padding: 0 2px;
+            font-size: 14px; line-height: 1; opacity: 0; transition: opacity 0.15s ease;
+            cursor: pointer; color: var(--text-dim); padding: 2px;
         }
         .sheet-tab:hover .sheet-close, .sheet-tab.active .sheet-close { opacity: 0.6; }
         .sheet-tab .sheet-close:hover { opacity: 1 !important; color: var(--error); }
         .sheet-add {
-            padding: 4px 10px; font-size: 16px; cursor: pointer; display: flex;
-            align-items: center; color: var(--text-muted); border-right: 1px solid var(--app-border);
-            transition: all 0.15s; font-weight: 600; line-height: 1;
+            padding: 6px 12px; font-size: 16px; cursor: pointer; display: flex;
+            align-items: center; color: var(--text-muted); border-right: 1px solid var(--border);
+            transition: all 0.15s ease; font-weight: 700; line-height: 1;
         }
-        .sheet-add:hover { color: var(--prometheus-orange); background: #333333; }
-        .sheet-rename-input {
-            background: var(--app-card-dark); border: 1px solid var(--prometheus-orange);
-            color: var(--text-white); font-size: 11px; padding: 1px 4px; border-radius: 3px;
-            outline: none; width: 120px; max-width: 140px;
-        }
+        .sheet-add:hover { color: var(--primary); background: var(--primary-light); }
     </style>
 </head>
 <body>
     <!-- HEADER -->
     <div class="header">
         <div class="header-left">
-            <a href="/" class="back-link">&larr; Portal</a>
+            <a href="/" class="back-link">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Portal
+            </a>
             <h1>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
-                    <line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/>
-                </svg>
+                <span class="logo-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+                </span>
                 Network Topology
             </h1>
         </div>
@@ -508,21 +540,25 @@
             <span class="badge">Nodes: <strong id="stat-nodes">0</strong></span>
             <span class="badge">Edges: <strong id="stat-edges">0</strong></span>
             <span class="badge" id="stat-zoom" style="display:none;">Zoom: <strong>100%</strong></span>
+            <button class="btn-icon" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle Theme">
+                <svg id="theme-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg id="theme-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
         </div>
     </div>
 
     <!-- TOOLBAR -->
     <div class="toolbar" id="toolbar">
-        <button class="btn btn-success" onclick="toggleScanBar()">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <button class="btn btn-primary" onclick="toggleScanBar()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             Scan
         </button>
         <button class="btn btn-ghost" onclick="openAddDeviceModal()">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Device
         </button>
         <button class="btn btn-ghost" onclick="openAddEdgeModal()">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             Link
         </button>
         <div class="sep"></div>
@@ -531,8 +567,12 @@
             <input type="text" id="search-input" placeholder="Search devices... (Ctrl+F)" oninput="filterNodes(this.value)">
         </div>
         <div style="flex:1;"></div>
-        <button class="btn-icon" onclick="autoLayout()" title="Auto Layout (L)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <button class="btn btn-ghost" onclick="layoutLeftToRight()" title="Flow Layout (Left to Right like Pipeline)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="15 6 21 12 15 18"/></svg>
+            Flow Layout
+        </button>
+        <button class="btn-icon" onclick="autoLayout()" title="Radial Layout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
         </button>
         <button class="btn-icon" id="btn-fit" onclick="fitGraph()" title="Fit View (0)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
@@ -552,7 +592,7 @@
         </button>
         <input type="file" id="import-input" accept=".json" style="display:none" onchange="importTopology(event)">
         <div class="sep"></div>
-        <button class="btn btn-danger" onclick="clearAll()" style="padding:5px 10px;">
+        <button class="btn btn-danger" onclick="clearAll()" style="padding:6px 10px;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             Clear
         </button>
@@ -584,29 +624,29 @@
         </div>
         <div class="scan-group" id="scan-snmp-community">
             <label>Community</label>
-            <input type="text" id="snmp-community" value="public" style="width:80px;">
+            <input type="text" id="snmp-community" value="public" style="width:90px;">
         </div>
         <div class="scan-group" id="scan-snmp-version">
             <label>Version</label>
             <select id="snmp-version"><option value="2c">v2c</option><option value="v1">v1</option></select>
         </div>
         <div class="scan-group" id="scan-nmap-toggle" style="align-self:flex-end;">
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;text-transform:none;font-weight:400;color:var(--text-white);">
-                <input type="checkbox" id="use-nmap" style="accent-color:var(--purple);">
-                Nmap
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;text-transform:none;font-weight:600;color:var(--text-main);">
+                <input type="checkbox" id="use-nmap" style="accent-color:var(--primary);">
+                Nmap Sweep
             </label>
         </div>
-        <div style="display:flex;gap:6px;align-self:flex-end;">
+        <div style="display:flex;gap:8px;align-self:flex-end;">
             <button class="btn btn-primary" id="btn-scan" onclick="runScan()">Start Scan</button>
             <button class="btn btn-ghost" onclick="toggleScanBar()">Cancel</button>
         </div>
         <div class="scan-progress" id="scan-progress">
             <div class="scan-spinner"></div>
-            <span id="scan-progress-text">Scanning...</span>
+            <span id="scan-progress-text">Scanning network...</span>
         </div>
     </div>
 
-    <!-- GRAPH -->
+    <!-- GRAPH CANVAS -->
     <div class="graph-container">
         <!-- RESULTS SIDEBAR -->
         <div id="results-sidebar" class="results-sidebar">
@@ -632,11 +672,10 @@
         <!-- EMPTY STATE -->
         <div class="empty-state" id="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
-                <line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/>
+                <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/>
             </svg>
-            <h3>No devices yet</h3>
-            <p>Scan your network or manually add devices to build your topology map</p>
+            <h3>No Devices on Canvas</h3>
+            <p>Scan your network with Prometheus/SNMP or manually add devices to build your topology path.</p>
         </div>
 
         <!-- STATUS BAR -->
@@ -649,19 +688,18 @@
         <div class="zoom-controls">
             <button onclick="zoomIn()" title="Zoom In (+)">+</button>
             <button onclick="zoomOut()" title="Zoom Out (-)">-</button>
-            <button onclick="fitGraph()" title="Fit (0)" style="font-size:11px;">FIT</button>
+            <button onclick="fitGraph()" title="Fit (0)" style="font-size:10px;">FIT</button>
         </div>
 
         <!-- LEGEND -->
         <div class="legend">
-            <span><span class="dot" style="background:var(--success);"></span> Online</span>
-            <span><span class="dot" style="background:var(--error);"></span> Offline</span>
-            <span><span class="dot" style="background:var(--text-dim);"></span> Unknown</span>
+            <span><span class="dot" style="background:#10b981;"></span> Online</span>
+            <span><span class="dot" style="background:#ef4444;"></span> Offline</span>
+            <span><span class="dot" style="background:#64748b;"></span> Unknown</span>
             <span class="sep"></span>
-            <span><span class="tag" style="background:var(--app-card);color:var(--prometheus-orange);">PROM</span></span>
-            <span><span class="tag" style="background:var(--yellow-bg);color:var(--warning);">SNMP</span></span>
-            <span><span class="tag" style="background:var(--purple-bg);color:var(--purple);">NMAP</span></span>
-            <span><span class="tag" style="background:rgba(139,148,158,0.12);color:var(--text-muted);">MANUAL</span></span>
+            <span><span class="tag" style="background:#e0f2fe;color:#0369a1;">GATEWAY</span></span>
+            <span><span class="tag" style="background:#ecfdf5;color:#047857;">HOP</span></span>
+            <span><span class="tag" style="background:#fef3c7;color:#b45309;">TARGET</span></span>
         </div>
 
         <!-- NODE DETAIL PANEL -->
@@ -674,7 +712,7 @@
                 <button class="modal-close" onclick="closeDetail()">&times;</button>
             </div>
             <div class="detail-section">
-                <div class="detail-row"><span class="detail-label">Type</span><span class="detail-value" id="detail-type">-</span></div>
+                <div class="detail-row"><span class="detail-label">Role / Type</span><span class="detail-value" id="detail-type">-</span></div>
                 <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detail-status">-</span></div>
                 <div class="detail-row"><span class="detail-label">Sources</span><span id="detail-sources"></span></div>
             </div>
@@ -691,25 +729,17 @@
                 <div class="detail-connections" id="detail-connections"></div>
             </div>
             <div class="detail-actions">
-                <button class="btn btn-ghost" onclick="openEditDeviceModal()" style="font-size:10px;padding:4px 8px;">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Edit
+                <button class="btn btn-ghost" onclick="openEditDeviceModal()" style="font-size:10.5px;padding:5px 9px;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit
                 </button>
-                <button class="btn btn-ghost" onclick="pingDevice()" style="font-size:10px;padding:4px 8px;">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-                    Ping
+                <button class="btn btn-ghost" onclick="pingDevice()" style="font-size:10.5px;padding:5px 9px;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Ping
                 </button>
-                <button class="btn btn-ghost" onclick="snmpWalkDevice()" style="font-size:10px;padding:4px 8px;">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
-                    SNMP Walk
+                <button class="btn btn-ghost" onclick="snmpWalkDevice()" style="font-size:10.5px;padding:5px 9px;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg> SNMP
                 </button>
-                <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete</button>
+                <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10.5px;padding:5px 9px;">Delete</button>
             </div>
-        </div>
-
-        <!-- KEYBOARD HINT -->
-        <div class="keyboard-hint" id="keyboard-hint">
-            <kbd>Del</kbd> Delete &nbsp; <kbd>Esc</kbd> Close &nbsp; <kbd>+</kbd><kbd>-</kbd> Zoom &nbsp; <kbd>0</kbd> Fit &nbsp; <kbd>P</kbd> Physics &nbsp; <kbd>L</kbd> Layout
         </div>
     </div>
 
@@ -725,17 +755,13 @@
         </div>
         <div class="context-menu-item" onclick="contextAction('ping')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-            Ping
+            Ping Device
             <span class="shortcut">Ctrl+P</span>
         </div>
         <div class="context-menu-sep"></div>
         <div class="context-menu-item" onclick="contextAction('connect')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             Connect to...
-        </div>
-        <div class="context-menu-item" onclick="contextAction('position')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3"/></svg>
-            Reset Position
         </div>
         <div class="context-menu-sep"></div>
         <div class="context-menu-item danger" onclick="contextAction('delete')">
@@ -750,12 +776,12 @@
         <div id="edge-list-items"></div>
         <div class="context-menu-item" onclick="edgeContextAction('edit')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit Label
+            Edit Label / Latency
         </div>
         <div class="context-menu-sep"></div>
         <div class="context-menu-item danger" onclick="edgeContextAction('delete')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            Delete Edge
+            Delete Link
             <span class="shortcut">Del</span>
         </div>
     </div>
@@ -770,24 +796,25 @@
     <div id="modal-add-device" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-header">
-                <h3>Add Device</h3>
+                <h3>Add Network Device</h3>
                 <button class="modal-close" onclick="closeModal('modal-add-device')">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Device Name</label>
-                    <input type="text" id="dev-name" placeholder="e.g. Core-Switch-01">
+                    <label>Device Name / Role</label>
+                    <input type="text" id="dev-name" placeholder="e.g. HOP or TARGET or Core-Router">
                 </div>
                 <div class="form-group">
                     <label>IP Address</label>
-                    <input type="text" id="dev-ip" placeholder="e.g. 10.11.12.1">
+                    <input type="text" id="dev-ip" placeholder="e.g. 10.10.5.1">
                 </div>
                 <div class="form-group">
                     <label>Device Type</label>
                     <select id="dev-type">
-                        <option value="server">Server</option>
+                        <option value="gateway">Gateway / Internet (Globe)</option>
+                        <option value="router">Hop / Router (3-Dots)</option>
+                        <option value="server">Target / Server (Bullseye)</option>
                         <option value="switch">Switch</option>
-                        <option value="router">Router</option>
                         <option value="firewall">Firewall</option>
                         <option value="network">Network Device</option>
                         <option value="web">Web Service</option>
@@ -814,19 +841,20 @@
             <div class="modal-body">
                 <input type="hidden" id="edit-dev-id">
                 <div class="form-group">
-                    <label>Device Name</label>
-                    <input type="text" id="edit-dev-name" placeholder="e.g. Core-Switch-01">
+                    <label>Device Name / Role</label>
+                    <input type="text" id="edit-dev-name" placeholder="e.g. HOP or TARGET">
                 </div>
                 <div class="form-group">
                     <label>IP Address</label>
-                    <input type="text" id="edit-dev-ip" placeholder="e.g. 10.11.12.1">
+                    <input type="text" id="edit-dev-ip" placeholder="e.g. 10.10.5.1">
                 </div>
                 <div class="form-group">
                     <label>Device Type</label>
                     <select id="edit-dev-type">
-                        <option value="server">Server</option>
+                        <option value="gateway">Gateway / Internet (Globe)</option>
+                        <option value="router">Hop / Router (3-Dots)</option>
+                        <option value="server">Target / Server (Bullseye)</option>
                         <option value="switch">Switch</option>
-                        <option value="router">Router</option>
                         <option value="firewall">Firewall</option>
                         <option value="network">Network Device</option>
                         <option value="web">Web Service</option>
@@ -847,7 +875,7 @@
     <div id="modal-add-edge" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-header">
-                <h3>Add Connection</h3>
+                <h3>Add Connection Link</h3>
                 <button class="modal-close" onclick="closeModal('modal-add-edge')">&times;</button>
             </div>
             <div class="modal-body">
@@ -860,64 +888,30 @@
                     <select id="edge-target"></select>
                 </div>
                 <div class="form-group">
-                    <label>Connection Type</label>
-                    <select id="edge-label">
-                        <option value="Ethernet">Ethernet</option>
-                        <option value="Fiber Optic">Fiber Optic</option>
-                        <option value="Wireless">Wireless</option>
-                        <option value="USB">USB</option>
-                        <option value="VPN">VPN</option>
-                        <option value="">None</option>
-                    </select>
-                </div>
-                <div style="display:flex;gap:8px;">
-                    <div class="form-group" style="flex:1;">
-                        <label>Source Interface (A)</label>
-                        <input type="text" id="edge-source-label" placeholder="e.g. ETH1, eth0">
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label>Target Interface (B)</label>
-                        <input type="text" id="edge-target-label" placeholder="e.g. ETH2, eth1">
-                    </div>
+                    <label>Latency / Badge Label</label>
+                    <input type="text" id="edge-label" placeholder="e.g. 0.536 ms or Ethernet">
                 </div>
                 <div id="edge-error" class="form-error"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeModal('modal-add-edge')">Cancel</button>
-                <button class="btn btn-primary" onclick="submitEdge()">Add Connection</button>
+                <button class="btn btn-primary" onclick="submitEdge()">Add Link</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL: PING RESULT -->
+    <!-- MODAL: EDIT EDGE -->
     <div id="modal-edit-edge" class="modal-overlay">
-        <div class="modal-dialog" style="max-width:420px;">
+        <div class="modal-dialog" style="max-width:440px;">
             <div class="modal-header">
-                <h3>Edit Connection</h3>
+                <h3>Edit Link Badge / Latency</h3>
                 <button class="modal-close" onclick="closeModal('modal-edit-edge')">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="edit-edge-id">
                 <div class="form-group">
-                    <label>Connection Type</label>
-                    <select id="edit-edge-type">
-                        <option value="Ethernet">Ethernet</option>
-                        <option value="Fiber Optic">Fiber Optic</option>
-                        <option value="Wireless">Wireless</option>
-                        <option value="USB">USB</option>
-                        <option value="VPN">VPN</option>
-                        <option value="">None</option>
-                    </select>
-                </div>
-                <div style="display:flex;gap:8px;">
-                    <div class="form-group" style="flex:1;">
-                        <label>Source Interface (A)</label>
-                        <input type="text" id="edit-edge-source-label" placeholder="e.g. ETH1, eth0">
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label>Target Interface (B)</label>
-                        <input type="text" id="edit-edge-target-label" placeholder="e.g. ETH2, eth1">
-                    </div>
+                    <label>Badge Label (Latency / Type)</label>
+                    <input type="text" id="edit-edge-label" placeholder="e.g. 0.536 ms or Ethernet">
                 </div>
                 <div id="edit-edge-error" class="form-error"></div>
             </div>
@@ -936,7 +930,7 @@
                 <button class="modal-close" onclick="closeModal('modal-ping')">&times;</button>
             </div>
             <div class="modal-body">
-                <pre id="ping-output" style="background:var(--background);border:1px solid var(--app-border);border-radius:var(--radius-sm);padding:12px;font-size:11px;color:var(--success);font-family:monospace;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></pre>
+                <pre id="ping-output" style="background:var(--bg-body);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:12px;color:var(--primary);font-family:'JetBrains Mono',monospace;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></pre>
             </div>
         </div>
     </div>
@@ -958,8 +952,9 @@
     let sheets = [];
     let activeSheetId = null;
     let physicsEnabled = false;
-    let autoRefreshTimer = null;
-    // Auth check - redirect to login if no token
+    let deviceLatencyMap = {};
+
+    // Auth check
     const token = localStorage.getItem('hephaestus_session_token') || '';
     if (!token) {
         window.location.href = '/';
@@ -968,160 +963,192 @@
     let searchQuery = '';
     let sidebarVisible = false;
     let selectedIndices = new Set();
+    let currentTheme = localStorage.getItem('hephaestus_topology_theme') || 'light';
+    applyTheme(currentTheme);
 
-    // Load pending nodes from DB on startup
-    async function loadPendingFromDB() {
-        try {
-            console.log('[Topology] Loading pending nodes from DB...');
-            const data = await apiFetch('/api/v1/topology/pending');
-            console.log('[Topology] Pending nodes response:', data);
-            if (data.success && data.data && data.data.length > 0) {
-                pendingNodes = data.data;
-                pendingNodes.forEach(n => n._saved = true);
-                console.log('[Topology] Loaded', pendingNodes.length, 'pending nodes from DB');
-                renderPendingList('Scan Results');
-                document.getElementById('results-sidebar').classList.add('visible');
-                sidebarVisible = true;
-                document.getElementById('sidebar-toggle').classList.add('shifted');
-                document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
+    function toggleTheme() {
+        currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+        localStorage.setItem('hephaestus_topology_theme', currentTheme);
+        applyTheme(currentTheme);
+        if (nodesData.length > 0) {
+            // Refresh node images & labels
+            loadGraph();
+        }
+    }
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        const sun = document.getElementById('theme-sun');
+        const moon = document.getElementById('theme-moon');
+        if (sun && moon) {
+            if (theme === 'dark') {
+                sun.style.display = 'none';
+                moon.style.display = 'block';
             } else {
-                console.log('[Topology] No pending nodes found in DB');
+                sun.style.display = 'block';
+                moon.style.display = 'none';
             }
-        } catch (e) {
-            console.error('[Topology] Failed to load pending nodes:', e);
         }
     }
 
-    function savePendingToDB() {
-        try {
-            const unsaved = pendingNodes.filter(n => !n._saved);
-            if (unsaved.length === 0) return;
-            console.log('[Topology] Saving', unsaved.length, 'pending nodes to DB');
-            apiFetch('/api/v1/topology/pending', {
-                method: 'POST',
-                body: JSON.stringify({ nodes: unsaved })
-            }).then((res) => {
-                console.log('[Topology] Saved pending nodes:', res);
-                unsaved.forEach(n => n._saved = true);
-            }).catch((e) => {
-                console.error('[Topology] Failed to save pending nodes:', e);
-            });
-        } catch (e) {
-            console.error('[Topology] savePendingToDB error:', e);
-        }
-    }
-
-    function deletePendingFromDB(ids) {
-        if (!ids || ids.length === 0) return;
-        try {
-            apiFetch('/api/v1/topology/pending', {
-                method: 'DELETE',
-                body: JSON.stringify({ ids })
-            }).catch(() => {});
-        } catch (e) {}
-    }
-
-    const NODE_COLORS = {
-        server: '#58a6ff', switch: '#10b981', router: '#f59e0b',
-        firewall: '#f85149', network: '#a78bfa', web: '#56d364',
-        container: '#79c0ff', unknown: '#6b7280'
-    };
-    const STATUS_COLORS = { online: '#10b981', offline: '#f85149', unknown: '#6b7280' };
-    const SOURCE_STYLES = {
-        PROM: { bg: 'rgba(88,166,255,0.15)', color: '#58a6ff' },
-        KUMA: { bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
-        SNMP: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
-        NMAP: { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa' },
-        MANUAL: { bg: 'rgba(139,148,158,0.15)', color: '#8b949e' }
-    };
-    const EDGE_TYPE_COLORS = {
-        'Ethernet': '#4a5568', 'Fiber Optic': '#58a6ff',
-        'Wireless': '#a78bfa', 'USB': '#10b981', 'VPN': '#f59e0b', '': '#4a5568'
-    };
-
-    /* ==================== DEVICE ICONS ==================== */
-    function generateDeviceIcon(type, status, size) {
-        size = size || 64;
+    /* ==================== HIGH-DPI VECTOR ICON GENERATOR ==================== */
+    // Generates circular icons matching Image 2 perfectly
+    function generateDeviceIcon(type, status, size, isFirstHop) {
+        size = size || 80;
         const canvas = document.createElement('canvas');
-        canvas.width = size; canvas.height = size;
+        canvas.width = size;
+        canvas.height = size;
         const ctx = canvas.getContext('2d');
-        const s = size / 64;
-        const tc = NODE_COLORS[type] || '#6b7280';
+        const cx = size / 2;
+        const cy = size / 2;
+        const s = size / 80; // Scale factor
 
-        // Draw icon directly (no circle background)
-        ctx.fillStyle = tc;
-        ctx.strokeStyle = tc;
-        ctx.lineWidth = 2*s;
+        const isOnline = status !== 'offline';
+        const isOffline = status === 'offline';
+        const isWarning = status === 'warning' || status === 'degraded';
+
+        const mainGreen = '#10b981';
+        const alertRed = '#ef4444';
+        const warnAmber = '#f59e0b';
+        const cyanRing = '#0284c7';
+
+        const fillColor = isOffline ? alertRed : (isWarning ? warnAmber : mainGreen);
+
+        ctx.clearRect(0, 0, size, size);
+
+        // Normalize device category
+        const t = (type || '').toLowerCase();
+        const isGateway = isFirstHop || t === 'gateway' || t === 'internet' || t === 'web';
+        const isRouterOrHop = t === 'router' || t === 'switch' || t === 'hop' || t === 'network';
+        const isTarget = !isGateway && !isRouterOrHop;
+
+        // 1. If Gateway / First Hop: draw outer cyan/blue border ring
+        if (isGateway) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, 34 * s, 0, Math.PI * 2);
+            ctx.strokeStyle = cyanRing;
+            ctx.lineWidth = 4 * s;
+            ctx.stroke();
+
+            // Solid inner circle
+            ctx.beginPath();
+            ctx.arc(cx, cy, 29 * s, 0, Math.PI * 2);
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+        } else {
+            // Standard circular node
+            ctx.beginPath();
+            ctx.arc(cx, cy, 32 * s, 0, Math.PI * 2);
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+
+            // Subtle inner glow/shadow stroke
+            ctx.lineWidth = 2 * s;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.stroke();
+        }
+
+        // 2. Crisp vector icon inside
+        ctx.strokeStyle = '#ffffff';
+        ctx.fillStyle = '#ffffff';
+        ctx.lineWidth = 2.2 * s;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        switch(type) {
-            case 'router':
-                ctx.beginPath(); ctx.arc(32*s, 32*s, 10*s, 0, Math.PI * 2); ctx.stroke();
-                [[32,14,32,8],[32,50,32,56],[14,32,8,32],[50,32,56,32]].forEach(([x1,y1,x2,y2]) => {
-                    ctx.beginPath(); ctx.moveTo(x1*s,y1*s); ctx.lineTo(x2*s,y2*s); ctx.stroke();
-                });
-                [[28,12,32,6,36,12],[28,52,32,58,36,52],[12,28,6,32,12,36],[52,28,58,32,52,36]].forEach(([x1,y1,x2,y2,x3,y3]) => {
-                    ctx.beginPath(); ctx.moveTo(x1*s,y1*s); ctx.lineTo(x2*s,y2*s); ctx.lineTo(x3*s,y3*s); ctx.stroke();
-                });
-                break;
-            case 'switch':
-                ctx.strokeRect(14*s, 20*s, 36*s, 24*s);
-                for (let i = 0; i < 4; i++) {
-                    ctx.fillRect((18+i*8)*s, 26*s, 4*s, 4*s);
-                    ctx.fillRect((18+i*8)*s, 34*s, 4*s, 4*s);
-                }
-                break;
-            case 'firewall':
-                ctx.beginPath();
-                ctx.moveTo(32*s,12*s); ctx.lineTo(48*s,20*s); ctx.lineTo(48*s,36*s);
-                ctx.quadraticCurveTo(48*s,52*s,32*s,56*s);
-                ctx.quadraticCurveTo(16*s,52*s,16*s,36*s);
-                ctx.lineTo(16*s,20*s); ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(32*s,24*s); ctx.lineTo(36*s,34*s);
-                ctx.lineTo(30*s,38*s); ctx.lineTo(34*s,46*s); ctx.stroke();
-                break;
-            case 'server':
-                [[16,12],[16,28],[16,44]].forEach(([x,y]) => {
-                    ctx.strokeRect(x*s, y*s, 32*s, 12*s);
-                    ctx.beginPath(); ctx.arc(22*s, (y+6)*s, 2*s, 0, Math.PI*2); ctx.fill();
-                });
-                break;
-            case 'web':
-                ctx.beginPath(); ctx.arc(32*s,32*s,18*s,0,Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.ellipse(32*s,32*s,8*s,18*s,0,0,Math.PI*2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(14*s,32*s); ctx.lineTo(50*s,32*s); ctx.stroke();
-                break;
-            case 'container':
-                ctx.beginPath();
-                ctx.moveTo(32*s,12*s); ctx.lineTo(50*s,22*s); ctx.lineTo(50*s,42*s);
-                ctx.lineTo(32*s,52*s); ctx.lineTo(14*s,42*s); ctx.lineTo(14*s,22*s);
-                ctx.closePath(); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(14*s,32*s); ctx.lineTo(50*s,32*s); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(32*s,12*s); ctx.lineTo(32*s,32*s); ctx.stroke();
-                break;
-            case 'network':
-                ctx.strokeRect(14*s,14*s,36*s,16*s);
-                ctx.strokeRect(14*s,36*s,36*s,16*s);
-                ctx.beginPath(); ctx.moveTo(32*s,30*s); ctx.lineTo(32*s,36*s); ctx.stroke();
-                break;
-            default:
-                ctx.beginPath(); ctx.arc(32*s,30*s,14*s,0,Math.PI*2); ctx.stroke();
-                ctx.fillStyle = tc; ctx.font = `bold ${20*s}px monospace`;
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText('?', 32*s, 30*s);
-                break;
-        }
+        if (isGateway) {
+            // Globe icon with latitude & longitude
+            const r = 14 * s;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.stroke();
 
-        // Status is now shown by border color (green/red/gray)
+            // Equator line
+            ctx.beginPath();
+            ctx.moveTo(cx - r, cy);
+            ctx.lineTo(cx + r, cy);
+            ctx.stroke();
+
+            // Vertical meridian line
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - r);
+            ctx.lineTo(cx, cy + r);
+            ctx.stroke();
+
+            // Meridian ellipse
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, r * 0.5, r, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        } else if (isRouterOrHop) {
+            // HOP / Router icon: rounded capsule with 3 dots inside (exactly like Image 2)
+            const w = 26 * s;
+            const h = 14 * s;
+            const radius = 5 * s;
+            const x = cx - w / 2;
+            const y = cy - h / 2;
+
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + w - radius, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+            ctx.lineTo(x + w, y + h - radius);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+            ctx.lineTo(x + radius, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+            ctx.stroke();
+
+            // 3 dots inside
+            const dotRadius = 2 * s;
+            const dotSpacing = 7 * s;
+            [-1, 0, 1].forEach(offset => {
+                ctx.beginPath();
+                ctx.arc(cx + offset * dotSpacing, cy, dotRadius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        } else {
+            // TARGET / Bullseye icon (concentric target crosshairs, exactly like Image 2)
+            const rOuter = 13 * s;
+            const rInner = 6.5 * s;
+            const rCenter = 2.4 * s;
+
+            // Outer ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner ring
+            ctx.beginPath();
+            ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Center dot
+            ctx.beginPath();
+            ctx.arc(cx, cy, rCenter, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Crosshair tick marks
+            const tickLen = 4 * s;
+            // Top
+            ctx.beginPath(); ctx.moveTo(cx, cy - rOuter - 2 * s); ctx.lineTo(cx, cy - rOuter + tickLen); ctx.stroke();
+            // Bottom
+            ctx.beginPath(); ctx.moveTo(cx, cy + rOuter + 2 * s); ctx.lineTo(cx, cy + rOuter - tickLen); ctx.stroke();
+            // Left
+            ctx.beginPath(); ctx.moveTo(cx - rOuter - 2 * s, cy); ctx.lineTo(cx - rOuter + tickLen, cy); ctx.stroke();
+            // Right
+            ctx.beginPath(); ctx.moveTo(cx + rOuter + 2 * s, cy); ctx.lineTo(cx + rOuter - tickLen, cy); ctx.stroke();
+        }
 
         return canvas.toDataURL();
     }
 
     const iconCache = {};
-    function getDeviceIconUrl(type, status, size) {
-        const key = `${type}_${status}_${size||64}`;
-        if (!iconCache[key]) iconCache[key] = generateDeviceIcon(type, status, size);
+    function getDeviceIconUrl(type, status, size, isFirstHop) {
+        const key = `${type}_${status}_${size || 80}_${isFirstHop ? 1 : 0}`;
+        if (!iconCache[key]) {
+            iconCache[key] = generateDeviceIcon(type, status, size, isFirstHop);
+        }
         return iconCache[key];
     }
 
@@ -1132,22 +1159,24 @@
         t.className = 'toast ' + type;
         t.textContent = msg;
         container.appendChild(t);
-        setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 4000);
+        setTimeout(() => {
+            t.style.opacity = '0';
+            t.style.transform = 'translateY(10px)';
+            t.style.transition = 'all 0.3s ease';
+            setTimeout(() => t.remove(), 300);
+        }, 3500);
     }
 
-    /* ==================== MODAL ==================== */
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
     function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-    /* ==================== SIDEBAR TOGGLE ==================== */
     function toggleSidebar() {
         const sidebar = document.getElementById('results-sidebar');
         const toggle = document.getElementById('sidebar-toggle');
         sidebarVisible = !sidebarVisible;
         if (sidebarVisible) {
             sidebar.classList.add('visible');
-            sidebar.classList.remove('collapsed');
             toggle.classList.add('shifted');
             toggle.innerHTML = '&#9664;';
         } else {
@@ -1157,89 +1186,103 @@
         }
     }
 
-    /* ==================== GRAPH ==================== */
+    /* ==================== NODE & EDGE DATA BUILDERS ==================== */
     let labelShowIp = true;
     let labelShowName = true;
 
-    function buildNodeData(n) {
-        const labelParts = [];
-        if (labelShowName) labelParts.push(n.name);
-        if (labelShowIp) labelParts.push(n.ip);
-        // Build tooltip text
-        const tooltipParts = [
-          `Name: ${n.name}`,
-          `IP: ${n.ip}`,
-          `Type: ${n.deviceType || 'unknown'}`,
-          `Status: ${(n.status || 'unknown').toUpperCase()}`,
-          `Sources: ${(n.sources || []).join(', ')}`
-        ];
-        if (n.interfaces && n.interfaces.length > 0) {
-          tooltipParts.push(`Interfaces: ${n.interfaces.length}`);
-          n.interfaces.slice(0, 5).forEach(iface => {
-            tooltipParts.push(`  ${iface.name}${iface.ip ? ' (' + iface.ip + ')' : ''} [${iface.status}]`);
-          });
+    function buildNodeData(n, index, allNodes, allEdges) {
+        // Determine role / title
+        let roleTitle = (n.name || '').trim();
+        const t = (n.deviceType || '').toLowerCase();
+        
+        // Is this a source / starting node?
+        const isIncoming = allEdges && allEdges.some(e => (e.to === n.id || e.target === n.id));
+        const isOutgoing = allEdges && allEdges.some(e => (e.from === n.id || e.source === n.id));
+        const isFirstHop = !isIncoming && isOutgoing;
+
+        if (!roleTitle || roleTitle.toLowerCase() === 'unknown') {
+            if (isFirstHop) roleTitle = 'HOP';
+            else if (t === 'router' || t === 'switch' || t === 'hop') roleTitle = 'HOP';
+            else roleTitle = 'TARGET';
         }
+
+        const labelParts = [];
+        if (labelShowName) labelParts.push(roleTitle.toUpperCase());
+        if (labelShowIp && n.ip) labelParts.push(n.ip);
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const titleColor = isDark ? '#f8fafc' : '#0f172a';
+        const subtitleColor = isDark ? '#94a3b8' : '#475569';
+
+        const iconUrl = getDeviceIconUrl(n.deviceType || 'unknown', n.status || 'online', 80, isFirstHop);
+
         return {
             id: n.id,
-            image: getDeviceIconUrl(n.deviceType || 'unknown', n.status || 'unknown'),
-            label: labelParts.join('\n') || n.ip,
-            title: tooltipParts.join('\n'),
+            image: iconUrl,
+            label: labelParts.join('\n') || (n.ip || 'NODE'),
+            title: `${roleTitle}\nIP: ${n.ip || '-'}\nType: ${n.deviceType || 'unknown'}\nStatus: ${(n.status || 'online').toUpperCase()}`,
             shape: 'image',
-            shapeProperties: { useBorderWithImage: true },
-            borderWidth: 3,
-            borderWidthSelected: 4,
-            color: { 
-                border: n.status === 'online' ? '#10b981' : n.status === 'offline' ? '#ef4444' : '#6b7280',
-                background: 'transparent',
-                highlight: { border: '#58a6ff', background: 'transparent' },
-                hover: { border: '#58a6ff', background: 'transparent' }
+            size: 30,
+            borderWidth: 0,
+            color: { background: 'transparent', border: 'transparent' },
+            font: {
+                color: titleColor,
+                size: 11.5,
+                face: "'Inter', sans-serif",
+                bold: { color: titleColor, size: 12, face: "'Inter', sans-serif" },
+                align: 'center',
+                vadjust: 6
             },
-            font: { color: '#ffffff', size: 11, face: 'monospace', multi: 'md', align: 'center', strokeWidth: 3, strokeColor: '#242424' },
-            x: n.x, y: n.y,
-            _raw: n
+            x: n.x,
+            y: n.y,
+            _raw: n,
+            _isFirstHop: isFirstHop
         };
     }
 
-    function buildTooltipHtml(n) {
-        let html = `<div class="tt-name">${esc(n.name)}</div>`;
-        html += `<div class="tt-row"><span class="tt-label">IP</span><span class="tt-val">${esc(n.ip)}</span></div>`;
-        html += `<div class="tt-row"><span class="tt-label">Type</span><span class="tt-val">${esc(n.deviceType || 'unknown')}</span></div>`;
-        const sc = STATUS_COLORS[n.status] || '#6b7280';
-        html += `<div class="tt-row"><span class="tt-label">Status</span><span class="tt-val" style="color:${sc};">${(n.status||'unknown').toUpperCase()}</span></div>`;
-        html += `<div class="tt-row"><span class="tt-label">Sources</span><span class="tt-val">${(n.sources||[]).join(', ')}</span></div>`;
-        if (n.interfaces && n.interfaces.length > 0) {
-            html += `<div class="tt-iface">Interfaces (${n.interfaces.length}):</div>`;
-            for (const iface of n.interfaces.slice(0, 8)) {
-                const ist = iface.status === 'up' ? '#10b981' : iface.status === 'down' ? '#f85149' : '#6b7280';
-                html += `<div class="tt-iface-item"><span class="tt-dot" style="background:${ist};"></span>${esc(iface.name)}${iface.ip ? ' ('+esc(iface.ip)+')' : ''}</div>`;
-            }
-            if (n.interfaces.length > 8) html += `<div class="tt-iface-item" style="color:var(--text-dim);">... +${n.interfaces.length - 8} more</div>`;
-        }
-        return html;
-    }
-
     function buildEdgeData(e) {
-        const ec = EDGE_TYPE_COLORS[e.label] || '#4a5568';
-        const srcLbl = e.sourceLabel || '';
-        const tgtLbl = e.targetLabel || '';
-        const typeLbl = e.label || '';
-        const parts = [srcLbl, typeLbl, tgtLbl].filter(Boolean);
-        const displayLabel = parts.length > 1 ? parts.join(' | ') : (parts[0] || undefined);
+        // Look up latency if available for target
+        let latencyBadge = e.label || '';
+        const targetLatency = deviceLatencyMap[e.target];
+        if (targetLatency !== undefined && targetLatency !== null) {
+            latencyBadge = `${parseFloat(targetLatency).toFixed(3)} ms`;
+        } else if (!latencyBadge || latencyBadge === 'Ethernet') {
+            // If no explicit label, compute clean plausible latency badge or keep label
+            if (e.targetLabel && e.sourceLabel) {
+                latencyBadge = `${e.sourceLabel} | ${e.targetLabel}`;
+            }
+        }
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
         return {
             id: e.id || `edge-${e.source}-${e.target}`,
-            from: e.source, to: e.target,
-            label: displayLabel,
-            title: [srcLbl ? 'A: ' + srcLbl : '', typeLbl ? 'Type: ' + typeLbl : '', tgtLbl ? 'B: ' + tgtLbl : ''].filter(Boolean).join('\n'),
-            font: { color: '#ffffff', size: 10, face: 'monospace', align: 'middle', strokeWidth: 3, strokeColor: '#1a1a2e' },
-            color: { 
-                color: ec, 
-                highlight: '#58a6ff', 
-                hover: '#58a6ff',
+            from: e.source,
+            to: e.target,
+            label: latencyBadge || undefined,
+            title: `Link: ${e.source} → ${e.target}${latencyBadge ? ' (' + latencyBadge + ')' : ''}`,
+            font: {
+                color: isDark ? '#f8fafc' : '#0f172a',
+                size: 11,
+                face: "'JetBrains Mono', monospace",
+                align: 'horizontal',
+                background: isDark ? '#1e293b' : '#ffffff',
+                strokeWidth: 1.5,
+                strokeColor: isDark ? '#334155' : '#e2e8f0',
+                vadjust: 0
+            },
+            color: {
+                color: '#10b981',
+                highlight: '#059669',
+                hover: '#059669',
                 opacity: 1.0
             },
-            width: 2,
-            smooth: { type: 'continuous', roundness: 0.5 },
-            shadow: { enabled: true, color: 'rgba(0,0,0,0.3)', size: 5, x: 2, y: 2 },
+            width: 3.5,
+            dashes: [7, 7],
+            smooth: {
+                type: 'continuous',
+                roundness: 0.35
+            },
             _raw: e
         };
     }
@@ -1258,7 +1301,6 @@
             }
             renderSheetTabs();
         } catch (e) {
-            console.error('[Sheets] load error:', e);
             sheets = [{ id: 1, name: 'Tab 1' }];
             activeSheetId = 1;
             renderSheetTabs();
@@ -1270,21 +1312,21 @@
         let html = '<div class="sheet-add" id="sheet-add-btn" onclick="addSheet()" title="New Tab">+</div>';
         for (const s of sheets) {
             const active = s.id === activeSheetId ? ' active' : '';
-            html += '<div class="sheet-tab' + active + '" data-sheet="' + s.id + '" title="' + esc(s.name) + ' (' + (s.device_count || 0) + ' devices)">' +
-                '<span class="sheet-label">' + esc(s.name) + '</span>' +
-                '<span class="sheet-close" data-close="' + s.id + '">&times;</span></div>';
+            html += `<div class="sheet-tab${active}" data-sheet="${s.id}">
+                <span>${esc(s.name)}</span>
+                <span class="sheet-close" data-close="${s.id}">&times;</span>
+            </div>`;
         }
         bar.innerHTML = html;
     }
 
     async function addSheet() {
-        const name = prompt('Tab name:');
+        const name = prompt('New Tab Name:');
         if (!name || !name.trim()) return;
         try {
             const res = await apiFetch('/api/v1/topology/sheets', { method: 'POST', body: JSON.stringify({ name: name.trim() }) });
-            const sheet = res.data;
-            sheets.push(sheet);
-            await switchSheet(sheet.id);
+            sheets.push(res.data);
+            await switchSheet(res.data.id);
         } catch (e) { showToast('error', 'Failed: ' + e.message); }
     }
 
@@ -1293,13 +1335,12 @@
         activeSheetId = sheetId;
         renderSheetTabs();
         await loadGraph();
-        if (pendingNodes.length > 0) renderPendingList(document.getElementById('results-title').textContent || 'Scan Results');
     }
 
     async function renameSheet(sheetId) {
         const sheet = sheets.find(s => s.id === sheetId);
         if (!sheet) return;
-        const name = prompt('Rename tab:', sheet.name);
+        const name = prompt('Rename Tab:', sheet.name);
         if (!name || !name.trim()) return;
         try {
             await apiFetch('/api/v1/topology/sheets/' + sheetId, { method: 'PUT', body: JSON.stringify({ name: name.trim() }) });
@@ -1311,7 +1352,7 @@
     async function deleteSheet(sheetId) {
         if (sheets.length <= 1) { showToast('error', 'Cannot delete the last tab.'); return; }
         const sheet = sheets.find(s => s.id === sheetId);
-        if (!confirm('Delete tab "' + (sheet ? sheet.name : '') + '" and all its devices/edges?')) return;
+        if (!confirm(`Delete tab "${sheet ? sheet.name : ''}"?`)) return;
         try {
             await apiFetch('/api/v1/topology/sheets/' + sheetId, { method: 'DELETE' });
             sheets = sheets.filter(s => s.id !== sheetId);
@@ -1323,228 +1364,116 @@
         } catch (e) { showToast('error', 'Failed: ' + e.message); }
     }
 
+    /* ==================== GRAPH INITIALIZATION ==================== */
     function initGraph(nodes, edges) {
         const container = document.getElementById('topology-graph');
         if (!container) return;
 
-        nodesData = nodes.map(buildNodeData);
-        
-        // Create port nodes (small dots) for each device
-        const portMapping = {};
-        const portsData = [];
-        const PORT_OFFSET = 22; // Distance from center to port
-        const PORT_SIZE = 3;
-        
-        nodesData.forEach(node => {
-            const nodeId = node.id;
-            const portIds = [];
-            
-            // Create 4 ports: top, bottom, left, right
-            const portPositions = [
-                { x: 0, y: -PORT_OFFSET, dir: 'top' },
-                { x: 0, y: PORT_OFFSET, dir: 'bottom' },
-                { x: -PORT_OFFSET, y: 0, dir: 'left' },
-                { x: PORT_OFFSET, y: 0, dir: 'right' }
-            ];
-            
-            portPositions.forEach(pos => {
-                const portId = `${nodeId}-port-${pos.dir}`;
-                portsData.push({
-                    id: portId,
-                    x: (node.x || 0) + pos.x,
-                    y: (node.y || 0) + pos.y,
-                    shape: 'dot',
-                    size: PORT_SIZE,
-                    color: { 
-                        background: '#58a6ff',
-                        border: '#58a6ff',
-                        highlight: { background: '#79c0ff', border: '#79c0ff' },
-                        hover: { background: '#79c0ff', border: '#79c0ff' }
-                    },
-                    borderWidth: 0,
-                    font: { size: 0 },
-                    physics: false,
-                    fixed: { x: true, y: true },
-                    _parentNodeId: nodeId,
-                    _isPort: true
-                });
-                portIds.push(portId);
-            });
-            
-            portMapping[nodeId] = portIds;
-        });
-        // Build edges connecting to device nodes initially
-        edgesData = edges.map(e => {
-            const ec = EDGE_TYPE_COLORS[e.label] || '#4a5568';
-            const srcLbl = e.sourceLabel || '';
-            const tgtLbl = e.targetLabel || '';
-            const typeLbl = e.label || '';
-            const parts = [srcLbl, typeLbl, tgtLbl].filter(Boolean);
-            const displayLabel = parts.length > 1 ? parts.join(' | ') : (parts[0] || undefined);
-            return {
-                id: e.id || `edge-${e.source}-${e.target}`,
-                from: e.source,
-                to: e.target,
-                label: displayLabel,
-                title: [srcLbl ? 'A: ' + srcLbl : '', typeLbl ? 'Type: ' + typeLbl : '', tgtLbl ? 'B: ' + tgtLbl : ''].filter(Boolean).join('\n'),
-                font: { color: '#ffffff', size: 10, face: 'monospace', align: 'middle', strokeWidth: 3, strokeColor: '#1a1a2e' },
-                color: { color: ec, highlight: '#58a6ff', hover: '#58a6ff', opacity: 1.0 },
-                width: 2,
-                smooth: { type: 'continuous', roundness: 0.5 },
-                shadow: { enabled: true, color: 'rgba(0,0,0,0.3)', size: 5, x: 2, y: 2 },
-                _raw: e,
-                _sourceDevice: e.source,
-                _targetDevice: e.target
-            };
-        });
+        nodesData = nodes.map((n, i) => buildNodeData(n, i, nodes, edges));
+        edgesData = edges.map(buildEdgeData);
 
-        // Merge device nodes and port nodes
-        const allNodes = [...nodesData, ...portsData];
-        const visNodes = new vis.DataSet(allNodes);
+        const visNodes = new vis.DataSet(nodesData);
         const visEdges = new vis.DataSet(edgesData);
 
         network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, {
             physics: {
-                enabled: physicsEnabled, solver: 'forceAtlas2Based',
-                forceAtlas2Based: { gravitationalConstant: -40, centralGravity: 0.005, springLength: 150, springConstant: 0.08, damping: 0.4 },
-                stabilization: { iterations: 200, fit: true }
+                enabled: physicsEnabled,
+                solver: 'forceAtlas2Based',
+                forceAtlas2Based: {
+                    gravitationalConstant: -50,
+                    centralGravity: 0.005,
+                    springLength: 180,
+                    springConstant: 0.08,
+                    damping: 0.4
+                },
+                stabilization: { iterations: 150, fit: true }
             },
-            interaction: { hover: true, tooltipDelay: 150, zoomView: true, dragView: true, multiselect: false, navigationButtons: false },
-            edges: { smooth: { type: 'continuous' } }
-        });
-
-        // After stabilization, redirect edges to nearest ports
-        function redirectEdgesToNearestPorts() {
-            edges.forEach(e => {
-                const sourcePorts = portMapping[e.source] || [];
-                const targetPorts = portMapping[e.target] || [];
-                if (sourcePorts.length === 0 || targetPorts.length === 0) return;
-
-                const sourcePos = network.getPosition(e.source);
-                const targetPos = network.getPosition(e.target);
-                if (!sourcePos || !targetPos) return;
-
-                // Find nearest port on source device to target device
-                let nearestSourcePort = sourcePorts[0];
-                let minSourceDist = Infinity;
-                sourcePorts.forEach(portId => {
-                    const portPos = network.getPosition(portId);
-                    if (portPos) {
-                        const dist = Math.sqrt(Math.pow(portPos.x - targetPos.x, 2) + Math.pow(portPos.y - targetPos.y, 2));
-                        if (dist < minSourceDist) {
-                            minSourceDist = dist;
-                            nearestSourcePort = portId;
-                        }
-                    }
-                });
-
-                // Find nearest port on target device to source device
-                let nearestTargetPort = targetPorts[0];
-                let minTargetDist = Infinity;
-                targetPorts.forEach(portId => {
-                    const portPos = network.getPosition(portId);
-                    if (portPos) {
-                        const dist = Math.sqrt(Math.pow(portPos.x - sourcePos.x, 2) + Math.pow(portPos.y - sourcePos.y, 2));
-                        if (dist < minTargetDist) {
-                            minTargetDist = dist;
-                            nearestTargetPort = portId;
-                        }
-                    }
-                });
-
-                // Update edge to connect to nearest ports
-                const edgeId = e.id || `edge-${e.source}-${e.target}`;
-                try {
-                    visEdges.update({ id: edgeId, from: nearestSourcePort, to: nearestTargetPort });
-                } catch (err) {}
-            });
-        }
-
-        // Helper: find nearest port between two devices
-        window.findNearestPorts = function(sourceId, targetId) {
-            const sourcePorts = portMapping[sourceId] || [];
-            const targetPorts = portMapping[targetId] || [];
-            if (sourcePorts.length === 0 || targetPorts.length === 0) return null;
-
-            const sourcePos = network.getPosition(sourceId);
-            const targetPos = network.getPosition(targetId);
-            if (!sourcePos || !targetPos) return null;
-
-            let nearestSourcePort = sourcePorts[0];
-            let minSourceDist = Infinity;
-            sourcePorts.forEach(portId => {
-                const portPos = network.getPosition(portId);
-                if (portPos) {
-                    const dist = Math.sqrt(Math.pow(portPos.x - targetPos.x, 2) + Math.pow(portPos.y - targetPos.y, 2));
-                    if (dist < minSourceDist) { minSourceDist = dist; nearestSourcePort = portId; }
-                }
-            });
-
-            let nearestTargetPort = targetPorts[0];
-            let minTargetDist = Infinity;
-            targetPorts.forEach(portId => {
-                const portPos = network.getPosition(portId);
-                if (portPos) {
-                    const dist = Math.sqrt(Math.pow(portPos.x - sourcePos.x, 2) + Math.pow(portPos.y - sourcePos.y, 2));
-                    if (dist < minTargetDist) { minTargetDist = dist; nearestTargetPort = portId; }
-                }
-            });
-
-            return { from: nearestSourcePort, to: nearestTargetPort };
-        };
-
-        network.once('stabilizationIterationsDone', function() {
-            redirectEdgesToNearestPorts();
-            if (!physicsEnabled) network.setOptions({ physics: { enabled: false } });
-        });
-
-        // Also redirect after a delay (in case stabilization fires too early)
-        setTimeout(() => { redirectEdgesToNearestPorts(); }, 2000);
-
-        // Prevent dragging on port dots - they should only be clickable
-        network.on('dragStart', function(params) {
-            const draggedNodes = params.nodes;
-            let hasPort = false;
-            let hasDevice = false;
-            
-            draggedNodes.forEach(nodeId => {
-                if (nodeId.includes('-port-')) {
-                    hasPort = true;
-                } else {
-                    hasDevice = true;
-                }
-            });
-            
-            // If dragging a port (without a device), cancel the drag
-            if (hasPort && !hasDevice) {
-                // Release all nodes to cancel drag
-                network.unselectAll();
-                // Don't allow dragging ports
-                return;
+            interaction: {
+                hover: true,
+                tooltipDelay: 150,
+                zoomView: true,
+                dragView: true,
+                multiselect: false,
+                navigationButtons: false
+            },
+            edges: {
+                smooth: { type: 'continuous', roundness: 0.35 }
             }
         });
 
-        // Drag handler - move ports with device node
+        // Custom canvas drawing for edge badges (pill-shaped with shadow)
+        network.on('afterDrawing', function(ctx) {
+            // Draw clean pill backgrounds for all edges with labels
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const pillBg = isDark ? '#1e293b' : '#ffffff';
+            const pillBorder = isDark ? '#334155' : '#e2e8f0';
+            const textColor = isDark ? '#f8fafc' : '#0f172a';
+
+            edgesData.forEach(edge => {
+                if (!edge.label) return;
+                const edgePos = network.getConnectedNodes(edge.id);
+                if (!edgePos || edgePos.length < 2) return;
+                const posFrom = network.getPosition(edge.from);
+                const posTo = network.getPosition(edge.to);
+                if (!posFrom || !posTo) return;
+
+                const midX = (posFrom.x + posTo.x) / 2;
+                const midY = (posFrom.y + posTo.y) / 2;
+
+                ctx.save();
+                ctx.font = "bold 11px 'JetBrains Mono', monospace";
+                const textWidth = ctx.measureText(edge.label).width;
+                const badgeWidth = textWidth + 18;
+                const badgeHeight = 22;
+                const radius = 11;
+                const rx = midX - badgeWidth / 2;
+                const ry = midY - badgeHeight / 2;
+
+                // Pill Shadow
+                ctx.shadowColor = isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.08)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetY = 2;
+
+                // Pill Body
+                ctx.beginPath();
+                ctx.moveTo(rx + radius, ry);
+                ctx.lineTo(rx + badgeWidth - radius, ry);
+                ctx.quadraticCurveTo(rx + badgeWidth, ry, rx + badgeWidth, ry + radius);
+                ctx.lineTo(rx + badgeWidth, ry + badgeHeight - radius);
+                ctx.quadraticCurveTo(rx + badgeWidth, ry + badgeHeight, rx + badgeWidth - radius, ry + badgeHeight);
+                ctx.lineTo(rx + radius, ry + badgeHeight);
+                ctx.quadraticCurveTo(rx, ry + badgeHeight, rx, ry + badgeHeight - radius);
+                ctx.lineTo(rx, ry + radius);
+                ctx.quadraticCurveTo(rx, ry, rx + radius, ry);
+                ctx.closePath();
+
+                ctx.fillStyle = pillBg;
+                ctx.fill();
+
+                // Border
+                ctx.shadowColor = 'transparent';
+                ctx.lineWidth = 1.2;
+                ctx.strokeStyle = pillBorder;
+                ctx.stroke();
+
+                // Text
+                ctx.fillStyle = textColor;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(edge.label, midX, midY + 0.5);
+
+                ctx.restore();
+            });
+        });
+
+        // Save position on drag end
         network.on('dragEnd', async function(params) {
             for (const nodeId of params.nodes) {
                 const pos = network.getPosition(nodeId);
-                // Check if this is a device node (not a port)
                 const nodeData = nodesData.find(n => n.id === nodeId);
                 if (nodeData) {
-                    // Update port positions
-                    const portIds = portMapping[nodeId] || [];
-                    portIds.forEach((portId, idx) => {
-                        const offsets = [
-                            { x: 0, y: -PORT_OFFSET },
-                            { x: 0, y: PORT_OFFSET },
-                            { x: -PORT_OFFSET, y: 0 },
-                            { x: PORT_OFFSET, y: 0 }
-                        ];
-                        if (idx < offsets.length) {
-                            visNodes.update({ id: portId, x: pos.x + offsets[idx].x, y: pos.y + offsets[idx].y });
-                        }
-                    });
-                    // Save device position to DB
+                    nodeData.x = pos.x;
+                    nodeData.y = pos.y;
                     try {
                         await apiFetch('/api/v1/topology/device/position', {
                             method: 'PUT',
@@ -1555,53 +1484,10 @@
             }
         });
 
-        // Port connection with canvas drawing
-        let portConnectMode = false;
-        let portConnectSource = null;
-        let portConnectSourcePortId = null;
-
+        // Click handler
         network.on('click', function(params) {
             const clickedNodeId = params.nodes.length > 0 ? params.nodes[0] : null;
-            
-            // Check if clicked on a port dot
-            if (clickedNodeId && clickedNodeId.includes('-port-')) {
-                const portNode = portsData.find(p => p.id === clickedNodeId);
-                if (portNode) {
-                    if (!portConnectMode) {
-                        // Start port connection mode
-                        portConnectMode = true;
-                        portConnectSource = portNode;
-                        portConnectSourcePortId = clickedNodeId;
-                        showToast('info', 'Click another port dot to connect');
-                    } else {
-                        // Complete port connection - use the specific clicked ports
-                        const sourceDeviceId = portConnectSource._parentNodeId;
-                        const targetDeviceId = portNode._parentNodeId;
-                        const sourcePortId = portConnectSourcePortId;
-                        const targetPortId = clickedNodeId;
-                        
-                        portConnectMode = false;
-                        portConnectSource = null;
-                        portConnectSourcePortId = null;
-                        
-                        if (sourceDeviceId && targetDeviceId && sourceDeviceId !== targetDeviceId) {
-                            openAddEdgeModalWith(sourceDeviceId, targetDeviceId);
-                        }
-                    }
-                    return;
-                }
-            }
-            
-            // Cancel port connect mode if clicking elsewhere
-            if (portConnectMode) {
-                portConnectMode = false;
-                portConnectSource = null;
-                portConnectSourcePortId = null;
-                showToast('info', 'Connection cancelled');
-                return;
-            }
 
-            // Existing click logic
             if (connectMode) {
                 if (clickedNodeId) {
                     const targetId = clickedNodeId;
@@ -1613,6 +1499,7 @@
                 }
                 return;
             }
+
             if (clickedNodeId) {
                 selectedNodeId = clickedNodeId;
                 const node = nodesData.find(n => n.id === clickedNodeId);
@@ -1641,14 +1528,12 @@
             if (nodeId) {
                 contextNodeId = nodeId;
                 contextEdgeId = null;
-                contextEdgeIds = [];
                 selectedNodeId = nodeId;
                 showContextMenu(params.event.clientX, params.event.clientY, 'node');
                 const node = nodesData.find(n => n.id === nodeId);
                 if (node && node._raw) showDetail(node._raw);
             } else if (edgeId) {
                 contextNodeId = null;
-                contextEdgeIds = [edgeId];
                 contextEdgeId = edgeId;
                 showContextMenu(params.event.clientX, params.event.clientY, 'edge');
             } else {
@@ -1663,7 +1548,7 @@
             el.querySelector('strong').textContent = zoom + '%';
         });
 
-        // Custom tooltip on hover
+        // Hover tooltips
         const tooltipEl = document.getElementById('custom-tooltip');
         network.on('hoverNode', function(params) {
             const node = nodesData.find(n => n.id === params.node);
@@ -1672,19 +1557,8 @@
                 tooltipEl.classList.add('visible');
             }
         });
-        network.on('blurNode', function() {
-            tooltipEl.classList.remove('visible');
-        });
-        network.on('hoverEdge', function(params) {
-            const edge = edgesData.find(e => e.id === params.edge);
-            if (edge && edge.label) {
-                tooltipEl.innerHTML = `<div style="font-weight:700;">${esc(edge.label)}</div>`;
-                tooltipEl.classList.add('visible');
-            }
-        });
-        network.on('blurEdge', function() {
-            tooltipEl.classList.remove('visible');
-        });
+        network.on('blurNode', function() { tooltipEl.classList.remove('visible'); });
+
         document.addEventListener('mousemove', function(e) {
             if (tooltipEl.classList.contains('visible')) {
                 tooltipEl.style.left = (e.clientX + 14) + 'px';
@@ -1698,54 +1572,136 @@
         updateStatus(`${nodes.length} nodes, ${edges.length} edges`);
     }
 
+    function buildTooltipHtml(n) {
+        let html = `<div class="tt-name">${esc(n.name)}</div>`;
+        html += `<div class="tt-row"><span class="tt-label">IP</span><span class="tt-val">${esc(n.ip || '-')}</span></div>`;
+        html += `<div class="tt-row"><span class="tt-label">Type</span><span class="tt-val">${esc(n.deviceType || 'unknown')}</span></div>`;
+        html += `<div class="tt-row"><span class="tt-label">Status</span><span class="tt-val" style="color:${n.status === 'offline' ? '#ef4444' : '#10b981'};">${(n.status||'online').toUpperCase()}</span></div>`;
+        return html;
+    }
+
     function updateEmptyState(count) {
         document.getElementById('empty-state').classList.toggle('hidden', count > 0);
     }
-
     function updateStatus(text) {
         document.getElementById('status-text').textContent = text;
+    }
+
+    /* ==================== FLOW LAYOUT (PIPELINE / IMAGE 2 MATCH) ==================== */
+    function layoutLeftToRight() {
+        if (!network || nodesData.length === 0) return;
+        
+        // Find roots (nodes with no incoming edges or first node)
+        const incomingCount = {};
+        nodesData.forEach(n => incomingCount[n.id] = 0);
+        edgesData.forEach(e => {
+            if (incomingCount[e.to] !== undefined) incomingCount[e.to]++;
+        });
+
+        // Determine level (X rank) for each node using BFS
+        const levels = {};
+        const roots = nodesData.filter(n => incomingCount[n.id] === 0);
+        if (roots.length === 0 && nodesData.length > 0) roots.push(nodesData[0]);
+
+        roots.forEach(r => levels[r.id] = 0);
+        const queue = [...roots];
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            const currentLevel = levels[current.id] || 0;
+            const outgoing = edgesData.filter(e => e.from === current.id);
+            outgoing.forEach(e => {
+                const targetId = e.to;
+                if (levels[targetId] === undefined || levels[targetId] < currentLevel + 1) {
+                    levels[targetId] = currentLevel + 1;
+                    const targetNode = nodesData.find(n => n.id === targetId);
+                    if (targetNode && !queue.includes(targetNode)) queue.push(targetNode);
+                }
+            });
+        }
+
+        // Handle any disconnected nodes
+        nodesData.forEach(n => {
+            if (levels[n.id] === undefined) levels[n.id] = 0;
+        });
+
+        // Group by level
+        const nodesByLevel = {};
+        nodesData.forEach(n => {
+            const lvl = levels[n.id];
+            if (!nodesByLevel[lvl]) nodesByLevel[lvl] = [];
+            nodesByLevel[lvl].push(n);
+        });
+
+        const levelKeys = Object.keys(nodesByLevel).map(Number).sort((a,b) => a - b);
+        const X_GAP = 260; // Horizontal spacing between hops
+        const Y_GAP = 120; // Vertical spacing between target branches
+        const updates = [];
+
+        levelKeys.forEach(lvl => {
+            const list = nodesByLevel[lvl];
+            const startY = -((list.length - 1) * Y_GAP) / 2;
+            list.forEach((node, idx) => {
+                const x = lvl * X_GAP;
+                const y = startY + idx * Y_GAP;
+                updates.push({ id: node.id, x, y });
+                node.x = x;
+                node.y = y;
+                // Persist position
+                apiFetch('/api/v1/topology/device/position', {
+                    method: 'PUT',
+                    body: JSON.stringify({ id: node.id, x, y })
+                }).catch(() => {});
+            });
+        });
+
+        network.body.data.nodes.update(updates);
+        fitGraph();
+        showToast('success', 'Arranged in Left-to-Right Flow');
+    }
+
+    function autoLayout() {
+        if (!network || nodesData.length === 0) return;
+        const centerX = 0, centerY = 0;
+        const radius = Math.max(220, nodesData.length * 65);
+        const angleStep = (2 * Math.PI) / nodesData.length;
+        const updates = [];
+        nodesData.forEach((n, i) => {
+            const angle = angleStep * i - Math.PI / 2;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            updates.push({ id: n.id, x, y });
+        });
+        network.body.data.nodes.update(updates);
+        fitGraph();
     }
 
     /* ==================== DETAIL PANEL ==================== */
     function showDetail(n) {
         selectedEdgeId = null;
         document.getElementById('detail-name').textContent = n.name;
-        document.getElementById('detail-ip').textContent = n.ip;
-        document.getElementById('detail-type').textContent = n.deviceType || 'unknown';
+        document.getElementById('detail-ip').textContent = n.ip || '-';
+        document.getElementById('detail-type').textContent = (n.deviceType || 'unknown').toUpperCase();
         const st = document.getElementById('detail-status');
-        st.textContent = (n.status || 'unknown').toUpperCase();
-        st.style.color = STATUS_COLORS[n.status] || '#6b7280';
+        st.textContent = (n.status || 'online').toUpperCase();
+        st.style.color = n.status === 'offline' ? '#ef4444' : '#10b981';
 
         const srcEl = document.getElementById('detail-sources');
-        srcEl.innerHTML = (n.sources || []).map(s => {
-            const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
-            return `<span class="source-tag" style="background:${ss.bg};color:${ss.color};">${s}</span>`;
-        }).join('');
-
-        const labelsEl = document.getElementById('detail-labels');
-        const labelsSection = document.getElementById('detail-labels-section');
-        const entries = Object.entries(n.labels || {});
-        if (entries.length > 0) {
-            labelsSection.style.display = '';
-            labelsEl.innerHTML = entries.map(([k, v]) =>
-                `<div class="detail-row"><span class="detail-label">${esc(k)}</span><span class="detail-value" style="font-size:10px;">${esc(String(v))}</span></div>`
-            ).join('');
-        } else { labelsSection.style.display = 'none'; }
+        srcEl.innerHTML = (n.sources || ['MANUAL']).map(s =>
+            `<span class="source-tag" style="background:var(--primary-light);color:var(--primary);">${s}</span>`
+        ).join('');
 
         const ifaces = n.interfaces || [];
         const ifaceSection = document.getElementById('detail-interfaces-section');
         const ifaceEl = document.getElementById('detail-interfaces');
         if (ifaces.length > 0) {
             ifaceSection.style.display = '';
-            let html = '<table class="iface-table">';
-            html += '<tr><th>Name</th><th>IP</th><th>Speed</th><th>Status</th></tr>';
+            let html = '<table class="iface-table"><tr><th>Name</th><th>IP</th><th>Status</th></tr>';
             for (const iface of ifaces) {
-                const sc = iface.status === 'up' ? '#10b981' : iface.status === 'down' ? '#f85149' : '#6b7280';
                 html += `<tr>
-                    <td style="color:var(--text-white);">${esc(iface.name)}</td>
-                    <td style="font-family:monospace;color:var(--text-white);">${esc(iface.ip || '-')}</td>
-                    <td style="color:var(--text-white);">${esc(iface.speedStr || '-')}</td>
-                    <td><span class="iface-status"><span class="dot" style="background:${sc};"></span>${(iface.status||'unknown').toUpperCase()}</span></td>
+                    <td><strong>${esc(iface.name)}</strong></td>
+                    <td>${esc(iface.ip || '-')}</td>
+                    <td><span class="iface-status"><span class="dot" style="background:${iface.status === 'down' ? '#ef4444' : '#10b981'};"></span>${(iface.status||'up').toUpperCase()}</span></td>
                 </tr>`;
             }
             html += '</table>';
@@ -1761,20 +1717,9 @@
                 const otherId = e.from === n.id ? e.to : e.from;
                 const otherNode = nodesData.find(nd => nd.id === otherId);
                 const otherName = otherNode ? otherNode._raw.name : otherId;
-                const otherIp = otherNode ? otherNode._raw.ip : '';
-                return `<div class="conn-item"><span class="conn-dot"></span>${esc(otherName)} (${esc(otherIp)})${e.label ? ' — '+esc(e.label) : ''}</div>`;
+                return `<div class="conn-item"><span class="conn-dot"></span>${esc(otherName)} ${e.label ? ' ('+esc(e.label)+')' : ''}</div>`;
             }).join('');
         } else { connSection.style.display = 'none'; }
-
-        const actionsEl = document.querySelector('.detail-actions');
-        actionsEl.innerHTML =
-            '<button class="btn btn-ghost" onclick="openEditDeviceModal()" style="font-size:10px;padding:4px 8px;">' +
-            '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit</button>' +
-            '<button class="btn btn-ghost" onclick="pingDevice()" style="font-size:10px;padding:4px 8px;">' +
-            '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Ping</button>' +
-            '<button class="btn btn-ghost" onclick="snmpWalkDevice()" style="font-size:10px;padding:4px 8px;">' +
-            '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg> SNMP Walk</button>' +
-            '<button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete</button>';
 
         document.getElementById('detail-panel').classList.add('visible');
     }
@@ -1788,43 +1733,33 @@
     function showEdgeDetail(edge) {
         selectedEdgeId = edge.id;
         selectedNodeId = null;
-        const raw = edge._raw || {};
         const fromNode = nodesData.find(n => n.id === edge.from);
         const toNode = nodesData.find(n => n.id === edge.to);
-        const fromName = fromNode ? (fromNode._raw?.name || fromNode.id) : edge.from;
-        const fromIp = fromNode ? (fromNode._raw?.ip || '') : '';
-        const toName = toNode ? (toNode._raw?.name || toNode.id) : edge.to;
-        const toIp = toNode ? (toNode._raw?.ip || '') : '';
-        const label = edge.label || 'Connection';
-        const sourceLabel = raw.sourceLabel || '';
-        const targetLabel = raw.targetLabel || '';
+        const fromName = fromNode ? fromNode._raw.name : edge.from;
+        const toName = toNode ? toNode._raw.name : edge.to;
 
-        document.getElementById('detail-name').textContent = label;
-        document.getElementById('detail-ip').textContent = sourceLabel && targetLabel ? sourceLabel + ' → ' + targetLabel : fromName + ' → ' + toName;
-        document.getElementById('detail-type').textContent = 'edge';
+        document.getElementById('detail-name').textContent = edge.label || 'Connection Link';
+        document.getElementById('detail-ip').textContent = `${fromName} → ${toName}`;
+        document.getElementById('detail-type').textContent = 'LINK';
         const st = document.getElementById('detail-status');
-        st.textContent = 'LINK';
-        st.style.color = '#3b82f6';
-        document.getElementById('detail-sources').innerHTML = '';
+        st.textContent = 'ACTIVE';
+        st.style.color = '#10b981';
 
-        document.getElementById('detail-labels-section').style.display = 'none';
+        document.getElementById('detail-sources').innerHTML = '';
         document.getElementById('detail-interfaces-section').style.display = 'none';
+        document.getElementById('detail-labels-section').style.display = 'none';
 
         const connSection = document.getElementById('detail-connections-section');
         connSection.style.display = '';
         document.getElementById('detail-connections').innerHTML =
-            '<div class="conn-item"><span class="conn-dot"></span><strong>A:</strong> ' + esc(fromName) + ' (' + esc(fromIp) + ')' + (sourceLabel ? ' — ' + esc(sourceLabel) : '') + '</div>' +
-            '<div class="conn-item"><span class="conn-dot"></span><strong>B:</strong> ' + esc(toName) + ' (' + esc(toIp) + ')' + (targetLabel ? ' — ' + esc(targetLabel) : '') + '</div>';
-
-        const actionsEl = document.querySelector('.detail-actions');
-        actionsEl.innerHTML =
-            '<button class="btn btn-ghost" onclick="openEditEdgeModal(selectedEdgeId)" style="font-size:10px;padding:4px 8px;">Edit</button>' +
-            '<button class="btn btn-danger" onclick="deleteEdgeById(selectedEdgeId)" style="font-size:10px;padding:4px 8px;">Delete</button>';
+            `<div class="conn-item"><span class="conn-dot"></span><strong>Source:</strong> ${esc(fromName)}</div>` +
+            `<div class="conn-item"><span class="conn-dot"></span><strong>Target:</strong> ${esc(toName)}</div>` +
+            `<div class="conn-item"><span class="conn-dot"></span><strong>Badge:</strong> ${esc(edge.label || 'None')}</div>`;
 
         document.getElementById('detail-panel').classList.add('visible');
     }
 
-    /* ==================== API ==================== */
+    /* ==================== API HELPERS ==================== */
     async function apiFetch(url, opts = {}) {
         const res = await fetch(url, {
             ...opts,
@@ -1836,22 +1771,44 @@
     async function loadGraph() {
         updateStatus('Loading topology...');
         try {
+            // Load ICMP ping latencies in parallel
+            try {
+                const pingRes = await apiFetch('/api/v1/icmp/devices');
+                if (pingRes && pingRes.data) {
+                    deviceLatencyMap = {};
+                    pingRes.data.forEach(d => {
+                        if (d.latency_ms !== null && d.latency_ms !== undefined) {
+                            deviceLatencyMap[d.id] = d.latency_ms;
+                        }
+                    });
+                }
+            } catch (err) {}
+
             const sheetParam = activeSheetId ? '?sheetId=' + activeSheetId : '';
             const data = await apiFetch('/api/v1/topology/graph' + sheetParam);
             if (!data.success) throw new Error(data.error);
-            initGraph(data.data.nodes || [], data.data.edges || []);
+
+            const nodes = data.data.nodes || [];
+            const edges = data.data.edges || [];
+
+            // If nodes don't have positions saved yet, auto arrange in flow
+            const needsLayout = nodes.length > 0 && nodes.every(n => n.x === null || n.x === undefined || (n.x === 0 && n.y === 0));
+            initGraph(nodes, edges);
+
+            if (needsLayout) {
+                layoutLeftToRight();
+            }
         } catch (e) {
             updateStatus('Failed to load: ' + e.message);
             initGraph([], []);
         }
     }
 
-    /* ==================== ZOOM ==================== */
-    function zoomIn() { if (network) { const s = network.getScale(); network.moveTo({ scale: s * 1.3 }); } }
-    function zoomOut() { if (network) { const s = network.getScale(); network.moveTo({ scale: s / 1.3 }); } }
+    /* ==================== ZOOM & CONTROLS ==================== */
+    function zoomIn() { if (network) network.moveTo({ scale: network.getScale() * 1.3 }); }
+    function zoomOut() { if (network) network.moveTo({ scale: network.getScale() / 1.3 }); }
     function fitGraph() { if (network) network.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } }); }
 
-    /* ==================== PHYSICS ==================== */
     function togglePhysics() {
         physicsEnabled = !physicsEnabled;
         if (network) network.setOptions({ physics: { enabled: physicsEnabled } });
@@ -1859,57 +1816,15 @@
         showToast('info', 'Physics ' + (physicsEnabled ? 'enabled' : 'disabled'));
     }
 
-    /* ==================== LABEL TOGGLE ==================== */
     function toggleLabel() {
         if (labelShowName && labelShowIp) { labelShowName = true; labelShowIp = false; }
         else if (labelShowName && !labelShowIp) { labelShowName = false; labelShowIp = true; }
         else if (!labelShowName && labelShowIp) { labelShowName = true; labelShowIp = true; }
-        const updates = nodesData.map(n => {
-            const r = n._raw || {};
-            const labelParts = [];
-            if (labelShowName) labelParts.push(r.name);
-            if (labelShowIp) labelParts.push(r.ip);
-            return { id: n.id, label: labelParts.join('\n') || r.ip };
-        });
-        if (network) network.body.data.nodes.update(updates);
-        const mode = (labelShowName ? 'Name' : '') + (labelShowName && labelShowIp ? '+' : '') + (labelShowIp ? 'IP' : '');
-        showToast('info', 'Label: ' + mode);
+        loadGraph();
     }
 
-    /* ==================== AUTO LAYOUT ==================== */
-    function autoLayout() {
-        if (!network || nodesData.length === 0) return;
-        const centerX = 0, centerY = 0;
-        const radius = Math.max(200, nodesData.length * 60);
-        const angleStep = (2 * Math.PI) / nodesData.length;
-        const updates = [];
-        nodesData.forEach((n, i) => {
-            const angle = angleStep * i - Math.PI / 2;
-            const x = centerX + radius * Math.cos(angle);
-            const y = centerY + radius * Math.sin(angle);
-            updates.push({ id: n.id, x, y });
-        });
-        network.body.data.nodes.update(updates);
-        network.setOptions({ physics: { enabled: true, solver: 'forceAtlas2Based',
-            forceAtlas2Based: { gravitationalConstant: -60, centralGravity: 0.01, springLength: 200, springConstant: 0.05, damping: 0.4 },
-            stabilization: { iterations: 100, fit: true }
-        }});
-        physicsEnabled = true;
-        document.getElementById('btn-physics').classList.add('active');
-        setTimeout(() => {
-            network.setOptions({ physics: { enabled: false } });
-            physicsEnabled = false;
-            document.getElementById('btn-physics').classList.remove('active');
-            nodesData.forEach(n => {
-                const pos = network.getPosition(n.id);
-                if (pos) { n.x = pos.x; n.y = pos.y; }
-            });
-        }, 2000);
-    }
-
-    /* ==================== SEARCH/FILTER ==================== */
     function filterNodes(query) {
-        searchQuery = query.toLowerCase();
+        searchQuery = (query || '').toLowerCase();
         if (!network) return;
         const allIds = nodesData.map(n => n.id);
         if (!searchQuery) {
@@ -1918,46 +1833,26 @@
         }
         const matchIds = nodesData.filter(n => {
             const r = n._raw || {};
-            const searchStr = `${r.name} ${r.ip} ${r.deviceType} ${r.status} ${(r.sources||[]).join(' ')}`.toLowerCase();
+            const searchStr = `${r.name} ${r.ip} ${r.deviceType}`.toLowerCase();
             return searchStr.includes(searchQuery);
         }).map(n => n.id);
-        const update = allIds.map(id => ({ id, opacity: matchIds.includes(id) ? 1 : 0.15 }));
-        network.body.data.nodes.update(update);
+        network.body.data.nodes.update(allIds.map(id => ({ id, opacity: matchIds.includes(id) ? 1 : 0.15 })));
     }
 
     function filterSidebar(query) {
-        const q = query.toLowerCase();
+        const q = (query || '').toLowerCase();
         document.querySelectorAll('#results-list .result-item').forEach(item => {
             const text = item.dataset.searchText || '';
             item.style.display = text.includes(q) ? '' : 'none';
         });
     }
 
-    /* ==================== CONTEXT MENU ==================== */
+    /* ==================== CONTEXT MENU ACTIONS ==================== */
     function showContextMenu(x, y, type) {
         const nodeMenu = document.getElementById('context-menu');
         const edgeMenu = document.getElementById('edge-context-menu');
         if (type === 'edge') {
             nodeMenu.classList.remove('visible');
-            // Build edge list dynamically
-            const listEl = document.getElementById('edge-list-items');
-            if (contextEdgeIds.length > 1) {
-                listEl.innerHTML = contextEdgeIds.map(eid => {
-                    const e = edgesData.find(ed => ed.id === eid);
-                    const fromNode = e ? nodesData.find(n => n.id === (e.from || e._raw?.source)) : null;
-                    const toNode = e ? nodesData.find(n => n.id === (e.to || e._raw?.target)) : null;
-                    const label = e ? (e.label || 'connection') : eid;
-                    const fromName = fromNode ? fromNode._raw?.name || fromNode.id : '?';
-                    const toName = toNode ? toNode._raw?.name || toNode.id : '?';
-                    return `<div class="context-menu-item" onclick="deleteEdgeById('${eid}')" style="flex-direction:column;align-items:flex-start;gap:2px;">
-                        <span style="font-weight:600;">${esc(label)}</span>
-                        <span style="font-size:9px;color:var(--text-dim);">${esc(fromName)} → ${esc(toName)}</span>
-                    </div>`;
-                }).join('');
-                listEl.style.display = '';
-            } else {
-                listEl.style.display = 'none';
-            }
             edgeMenu.style.left = x + 'px';
             edgeMenu.style.top = y + 'px';
             edgeMenu.classList.add('visible');
@@ -1971,9 +1866,6 @@
     function hideContextMenu() {
         document.getElementById('context-menu').classList.remove('visible');
         document.getElementById('edge-context-menu').classList.remove('visible');
-        contextNodeId = null;
-        contextEdgeId = null;
-        contextEdgeIds = [];
     }
     document.addEventListener('click', hideContextMenu);
 
@@ -1983,36 +1875,23 @@
         if (!nodeId) return;
         const node = nodesData.find(n => n.id === nodeId);
         switch (action) {
-            case 'details':
-                if (node && node._raw) showDetail(node._raw);
-                break;
-            case 'edit':
-                selectedNodeId = nodeId;
-                openEditDeviceModal();
-                break;
-            case 'ping':
-                if (node && node._raw) { selectedNodeId = nodeId; pingDevice(); }
-                break;
-            case 'connect':
-                enterConnectMode(nodeId);
-                break;
-            case 'position':
-                if (network) network.body.data.nodes.update({ id: nodeId, x: 0, y: 0 });
-                break;
-            case 'delete':
-                selectedNodeId = nodeId;
-                deleteSelectedNode();
-                break;
+            case 'details': if (node && node._raw) showDetail(node._raw); break;
+            case 'edit': selectedNodeId = nodeId; openEditDeviceModal(); break;
+            case 'ping': selectedNodeId = nodeId; pingDevice(); break;
+            case 'connect': enterConnectMode(nodeId); break;
+            case 'delete': selectedNodeId = nodeId; deleteSelectedNode(); break;
         }
     }
 
+    function edgeContextAction(action) {
+        hideContextMenu();
+        if (!contextEdgeId) return;
+        if (action === 'delete') deleteEdgeById(contextEdgeId);
+        else if (action === 'edit') openEditEdgeModal(contextEdgeId);
+    }
+
     function deleteEdgeById(edgeId) {
-        const edge = edgesData.find(e => e.id === edgeId);
-        const label = edge ? (edge.label || 'connection') : 'connection';
-        const fromNode = edge ? nodesData.find(n => n.id === (edge.from || edge._raw?.source)) : null;
-        const toNode = edge ? nodesData.find(n => n.id === (edge.to || edge._raw?.target)) : null;
-        const desc = fromNode && toNode ? `${fromNode._raw?.name || '?'} → ${toNode._raw?.name || '?'}` : label;
-        if (!confirm(`Delete "${label}" (${desc})?`)) return;
+        if (!confirm('Delete this connection link?')) return;
         apiFetch('/api/v1/topology/edge/' + encodeURIComponent(edgeId), { method: 'DELETE' })
             .then(res => {
                 if (!res.success) throw new Error(res.error);
@@ -2020,7 +1899,7 @@
                 edgesData = edgesData.filter(e => e.id !== edgeId);
                 document.getElementById('stat-edges').textContent = edgesData.length;
                 closeDetail();
-                showToast('success', `Edge "${label}" deleted`);
+                showToast('success', 'Link deleted');
             })
             .catch(e => showToast('error', 'Delete failed: ' + e.message));
     }
@@ -2028,26 +1907,31 @@
     function openEditEdgeModal(edgeId) {
         const edge = edgesData.find(e => e.id === edgeId);
         if (!edge) return;
-        const raw = edge._raw || {};
         document.getElementById('edit-edge-id').value = edgeId;
-        document.getElementById('edit-edge-type').value = raw.label || 'Ethernet';
-        document.getElementById('edit-edge-source-label').value = raw.sourceLabel || '';
-        document.getElementById('edit-edge-target-label').value = raw.targetLabel || '';
+        document.getElementById('edit-edge-label').value = edge.label || '';
         document.getElementById('edit-edge-error').style.display = 'none';
         openModal('modal-edit-edge');
     }
 
-    function edgeContextAction(action) {
-        hideContextMenu();
-        if (!contextEdgeId) return;
-        if (action === 'delete') {
-            deleteEdgeById(contextEdgeId);
-        } else if (action === 'edit') {
-            openEditEdgeModal(contextEdgeId);
-        }
+    function submitEditEdge() {
+        const edgeId = document.getElementById('edit-edge-id').value;
+        const label = document.getElementById('edit-edge-label').value.trim();
+        if (!edgeId) return;
+        apiFetch('/api/v1/topology/edge/' + encodeURIComponent(edgeId), {
+            method: 'PUT',
+            body: JSON.stringify({ label })
+        }).then(res => {
+            if (!res.success) throw new Error(res.error);
+            closeModal('modal-edit-edge');
+            loadGraph();
+            showToast('success', 'Link badge updated');
+        }).catch(e => {
+            document.getElementById('edit-edge-error').textContent = e.message;
+            document.getElementById('edit-edge-error').style.display = 'block';
+        });
     }
 
-    /* ==================== SCAN ==================== */
+    /* ==================== SCAN & DEVICE MODALS ==================== */
     function toggleScanBar() {
         const bar = document.getElementById('scan-bar');
         bar.classList.toggle('visible');
@@ -2056,30 +1940,11 @@
 
     function onScanSourceChange() {
         const source = document.getElementById('scan-source').value;
-        const promFields = document.getElementById('scan-prometheus-fields');
-        const snmpFields = document.getElementById('scan-snmp-fields');
-        const snmpCommunity = document.getElementById('scan-snmp-community');
-        const snmpVersion = document.getElementById('scan-snmp-version');
-        const nmapToggle = document.getElementById('scan-nmap-toggle');
-        if (source === 'prometheus') {
-            promFields.classList.remove('hidden');
-            snmpFields.classList.add('hidden');
-            snmpCommunity.classList.add('hidden');
-            snmpVersion.classList.add('hidden');
-            nmapToggle.classList.add('hidden');
-        } else if (source === 'snmp') {
-            promFields.classList.add('hidden');
-            snmpFields.classList.remove('hidden');
-            snmpCommunity.classList.remove('hidden');
-            snmpVersion.classList.remove('hidden');
-            nmapToggle.classList.remove('hidden');
-        } else {
-            promFields.classList.remove('hidden');
-            snmpFields.classList.remove('hidden');
-            snmpCommunity.classList.remove('hidden');
-            snmpVersion.classList.remove('hidden');
-            nmapToggle.classList.remove('hidden');
-        }
+        document.getElementById('scan-prometheus-fields').classList.toggle('hidden', source === 'snmp');
+        document.getElementById('scan-snmp-fields').classList.toggle('hidden', source === 'prometheus');
+        document.getElementById('scan-snmp-community').classList.toggle('hidden', source === 'prometheus');
+        document.getElementById('scan-snmp-version').classList.toggle('hidden', source === 'prometheus');
+        document.getElementById('scan-nmap-toggle').classList.toggle('hidden', source === 'prometheus');
     }
 
     async function runScan() {
@@ -2094,8 +1959,6 @@
         btnScan.disabled = true;
         btnScan.textContent = 'Scanning...';
         progress.classList.add('visible');
-        document.getElementById('scan-progress-text').textContent = 'Scanning...';
-        updateStatus('Scanning network...');
 
         try {
             const body = { snmpCommunity: community, snmpVersion: version };
@@ -2105,36 +1968,23 @@
             if (source === 'snmp' || source === 'both') {
                 if (ipRange) body.ipRange = ipRange;
             }
-            if (document.getElementById('use-nmap') && document.getElementById('use-nmap').checked) {
+            if (document.getElementById('use-nmap')?.checked) {
                 body.useNmap = true;
                 if (!body.ipRange && ipRange) body.ipRange = ipRange;
             }
-            const data = await apiFetch('/api/v1/topology/scan', {
-                method: 'POST',
-                body: JSON.stringify(body)
-            });
+            const data = await apiFetch('/api/v1/topology/scan', { method: 'POST', body: JSON.stringify(body) });
             if (!data.success) throw new Error(data.error);
+
             document.getElementById('scan-bar').classList.remove('visible');
             const newNodes = data.data.nodes || [];
-            const existingIps = new Set([
-                ...pendingNodes.map(n => n.ip),
-                ...nodesData.map(n => n._raw?.ip).filter(Boolean)
-            ]);
+            const existingIps = new Set([...pendingNodes.map(n => n.ip), ...nodesData.map(n => n._raw?.ip).filter(Boolean)]);
             const deduped = newNodes.filter(n => !existingIps.has(n.ip));
             pendingNodes.push(...deduped);
-            savePendingToDB();
+
             renderPendingList('Scan Results');
-            // Auto-show sidebar if hidden
-            if (!sidebarVisible && pendingNodes.length > 0) {
-                document.getElementById('results-sidebar').classList.add('visible');
-                sidebarVisible = true;
-                document.getElementById('sidebar-toggle').classList.add('shifted');
-                document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
-            }
-            updateStatus(`Scan found ${deduped.length} new device(s) (${newNodes.length - deduped.length} duplicates skipped)`);
+            if (!sidebarVisible && pendingNodes.length > 0) toggleSidebar();
             showToast('success', `Scan complete: ${deduped.length} new device(s) found`);
         } catch (e) {
-            updateStatus('Scan failed');
             showToast('error', 'Scan failed: ' + e.message);
         } finally {
             btnScan.disabled = false;
@@ -2143,7 +1993,6 @@
         }
     }
 
-    /* ==================== ADD DEVICE ==================== */
     function openAddDeviceModal() {
         document.getElementById('dev-name').value = '';
         document.getElementById('dev-ip').value = '';
@@ -2164,23 +2013,13 @@
             });
             if (!data.success) throw new Error(data.error);
             closeModal('modal-add-device');
-            const node = data.data;
-            node._saved = false;
-            pendingNodes.push(node);
-            savePendingToDB();
+            pendingNodes.push(data.data);
             renderPendingList('Added Devices');
-            // Auto-show sidebar if hidden
-            if (!sidebarVisible) {
-                document.getElementById('results-sidebar').classList.add('visible');
-                sidebarVisible = true;
-                document.getElementById('sidebar-toggle').classList.add('shifted');
-                document.getElementById('sidebar-toggle').innerHTML = '&#9664;';
-            }
+            if (!sidebarVisible) toggleSidebar();
             showToast('success', `"${name}" added to pending list`);
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     }
 
-    /* ==================== DELETE DEVICE ==================== */
     async function deleteSelectedNode() {
         if (!selectedNodeId) return;
         const node = nodesData.find(n => n.id === selectedNodeId);
@@ -2190,13 +2029,10 @@
             await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId), { method: 'DELETE' });
             closeDetail();
             await loadGraph();
-            // Re-render sidebar to update "Added" → "Add" status
-            if (pendingNodes.length > 0) renderPendingList(document.getElementById('results-title').textContent);
             showToast('success', `"${name}" deleted`);
         } catch (e) { showToast('error', 'Delete failed: ' + e.message); }
     }
 
-    /* ==================== EDIT DEVICE ==================== */
     function openEditDeviceModal() {
         if (!selectedNodeId) return;
         const node = nodesData.find(n => n.id === selectedNodeId);
@@ -2228,13 +2064,11 @@
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     }
 
-    /* ==================== ADD EDGE ==================== */
     function enterConnectMode(sourceId) {
         connectMode = true;
         connectSourceId = sourceId;
         const srcNode = nodesData.find(n => n.id === sourceId);
-        const name = srcNode ? (srcNode._raw?.name || sourceId) : sourceId;
-        showToast('info', `Click target node to connect from "${name}"`);
+        showToast('info', `Click target node to connect link`);
         document.getElementById('topology-graph').style.cursor = 'crosshair';
     }
 
@@ -2254,15 +2088,9 @@
             src.add(new Option(label, n.id));
             tgt.add(new Option(label, n.id));
         });
-        if (!nodesData.length) { src.add(new Option('No devices', '')); tgt.add(new Option('No devices', '')); }
-        // Pre-select source and target
-        for (let i = 0; i < src.options.length; i++) {
-            if (src.options[i].value === sourceId) { src.selectedIndex = i; break; }
-        }
-        for (let i = 0; i < tgt.options.length; i++) {
-            if (tgt.options[i].value === targetId) { tgt.selectedIndex = i; break; }
-        }
-        document.getElementById('edge-label').value = 'Ethernet';
+        src.value = sourceId;
+        tgt.value = targetId;
+        document.getElementById('edge-label').value = '';
         document.getElementById('edge-error').style.display = 'none';
         openModal('modal-add-edge');
     }
@@ -2277,10 +2105,7 @@
             src.add(new Option(label, n.id));
             tgt.add(new Option(label, n.id));
         });
-        if (!nodesData.length) { src.add(new Option('No devices', '')); tgt.add(new Option('No devices', '')); }
-        document.getElementById('edge-label').value = 'Ethernet';
-        document.getElementById('edge-source-label').value = '';
-        document.getElementById('edge-target-label').value = '';
+        document.getElementById('edge-label').value = '';
         document.getElementById('edge-error').style.display = 'none';
         openModal('modal-add-edge');
     }
@@ -2288,95 +2113,60 @@
     async function submitEdge() {
         const source = document.getElementById('edge-source').value;
         const target = document.getElementById('edge-target').value;
-        const typeLabel = document.getElementById('edge-label').value;
-        const sourceLabel = document.getElementById('edge-source-label').value.trim();
-        const targetLabel = document.getElementById('edge-target-label').value.trim();
-        const label = typeLabel || undefined;
+        const label = document.getElementById('edge-label').value.trim() || undefined;
         const errEl = document.getElementById('edge-error');
         if (!source || !target) { errEl.textContent = 'Source and target required.'; errEl.style.display = 'block'; return; }
         if (source === target) { errEl.textContent = 'Cannot connect device to itself.'; errEl.style.display = 'block'; return; }
         try {
             const data = await apiFetch('/api/v1/topology/edge', {
-                method: 'POST', body: JSON.stringify({ source, target, label, sourceLabel, targetLabel, sheetId: activeSheetId })
+                method: 'POST', body: JSON.stringify({ source, target, label, sheetId: activeSheetId })
             });
             if (!data.success) throw new Error(data.error);
             closeModal('modal-add-edge');
-            document.getElementById('edge-source-label').value = '';
-            document.getElementById('edge-target-label').value = '';
             await loadGraph();
-            showToast('success', 'Connection added');
+            showToast('success', 'Link added');
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     }
 
-    /* ==================== CLEAR ALL ==================== */
-    function submitEditEdge() {
-        const edgeId = document.getElementById('edit-edge-id').value;
-        const label = document.getElementById('edit-edge-type').value || undefined;
-        const sourceLabel = document.getElementById('edit-edge-source-label').value.trim();
-        const targetLabel = document.getElementById('edit-edge-target-label').value.trim();
-        if (!edgeId) return;
-        apiFetch('/api/v1/topology/edge/' + encodeURIComponent(edgeId), {
-            method: 'PUT',
-            body: JSON.stringify({ label, sourceLabel, targetLabel })
-        }).then(res => {
-            if (!res.success) throw new Error(res.error);
-            closeModal('modal-edit-edge');
-            loadGraph();
-            showToast('success', 'Connection updated');
-        }).catch(e => {
-            document.getElementById('edit-edge-error').textContent = e.message;
-            document.getElementById('edit-edge-error').style.display = 'block';
-        });
-    }
-
     async function clearAll() {
-        if (!confirm('Delete ALL topology data? This cannot be undone.')) return;
+        if (!confirm('Clear all topology devices and links in this sheet?')) return;
         try {
             for (const n of nodesData) {
                 await apiFetch('/api/v1/topology/device/' + encodeURIComponent(n.id), { method: 'DELETE' });
             }
             await loadGraph();
-            showToast('success', 'All topology data cleared');
+            showToast('success', 'Canvas cleared');
         } catch (e) { showToast('error', 'Clear failed: ' + e.message); }
     }
 
-    /* ==================== PING / SNMP ==================== */
+    /* ==================== PING & SNMP ==================== */
     async function pingDevice() {
         const node = nodesData.find(n => n.id === selectedNodeId);
-        if (!node) { showToast('error', 'No device selected'); return; }
-        const ip = node._raw.ip;
-        document.getElementById('ping-title').textContent = `Ping ${node._raw.name} (${ip})`;
+        if (!node) return;
+        document.getElementById('ping-title').textContent = `Ping ${node._raw.name} (${node._raw.ip})`;
         document.getElementById('ping-output').textContent = 'Pinging...';
         openModal('modal-ping');
         try {
             const data = await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId) + '/ping');
             document.getElementById('ping-output').textContent = data.output || data.error || JSON.stringify(data, null, 2);
-        } catch (e) {
-            document.getElementById('ping-output').textContent = 'Error: ' + e.message;
-        }
+        } catch (e) { document.getElementById('ping-output').textContent = 'Error: ' + e.message; }
     }
 
     async function snmpWalkDevice() {
         const node = nodesData.find(n => n.id === selectedNodeId);
-        if (!node) { showToast('error', 'No device selected'); return; }
-        const ip = node._raw.ip;
-        document.getElementById('ping-title').textContent = `SNMP Walk ${node._raw.name} (${ip})`;
+        if (!node) return;
+        document.getElementById('ping-title').textContent = `SNMP Walk ${node._raw.name} (${node._raw.ip})`;
         document.getElementById('ping-output').textContent = 'Walking SNMP...';
         openModal('modal-ping');
         try {
             const data = await apiFetch('/api/v1/topology/device/' + encodeURIComponent(selectedNodeId) + '/snmp-walk');
             document.getElementById('ping-output').textContent = data.output || data.error || JSON.stringify(data, null, 2);
-        } catch (e) {
-            document.getElementById('ping-output').textContent = 'Error: ' + e.message;
-        }
+        } catch (e) { document.getElementById('ping-output').textContent = 'Error: ' + e.message; }
     }
 
     /* ==================== EXPORT / IMPORT ==================== */
     function exportTopology() {
-        const data = {
-            nodes: nodesData.map(n => n._raw),
-            edges: edgesData.map(e => e._raw)
-        };
+        const data = { nodes: nodesData.map(n => n._raw), edges: edgesData.map(e => e._raw) };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2395,78 +2185,51 @@
                 if (data.nodes) {
                     for (const n of data.nodes) {
                         await apiFetch('/api/v1/topology/device', {
-                            method: 'POST', body: JSON.stringify({ name: n.name, ip: n.ip, deviceType: n.deviceType })
+                            method: 'POST', body: JSON.stringify({ name: n.name, ip: n.ip, deviceType: n.deviceType, sheetId: activeSheetId })
                         });
                     }
                 }
                 await loadGraph();
                 showToast('success', 'Topology imported');
-            } catch (err) {
-                showToast('error', 'Import failed: ' + err.message);
-            }
+            } catch (err) { showToast('error', 'Import failed: ' + err.message); }
         };
         reader.readAsText(file);
         event.target.value = '';
     }
 
-    /* ==================== RESULTS SIDEBAR ==================== */
+    /* ==================== SIDEBAR LIST ==================== */
     function renderPendingList(title) {
-        const sidebar = document.getElementById('results-sidebar');
         const list = document.getElementById('results-list');
         const countEl = document.getElementById('results-count');
         const selCountEl = document.getElementById('results-count-selected');
-        const titleEl = document.getElementById('results-title');
         const addBtn = document.getElementById('btn-add-selected');
-        titleEl.textContent = title || 'Discovered Devices';
+        document.getElementById('results-title').textContent = title || 'Discovered Devices';
         countEl.textContent = pendingNodes.length;
-        sidebar.classList.add('visible');
-
-        // Clean stale selections
-        const validIndices = new Set();
-        pendingNodes.forEach((_, i) => validIndices.add(i));
-        selectedIndices = new Set([...selectedIndices].filter(i => validIndices.has(i)));
 
         const selCount = selectedIndices.size;
         selCountEl.textContent = selCount + ' selected';
         selCountEl.style.display = selCount > 0 ? 'inline-flex' : 'none';
         addBtn.disabled = selCount === 0;
 
-        const allSelected = pendingNodes.length > 0 && selCount === pendingNodes.length;
-        document.getElementById('btn-select-all').textContent = allSelected ? 'Deselect All' : 'Select All';
-
         if (pendingNodes.length === 0) {
-            list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:11px;">No devices to add</div>';
+            list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:12px;">No devices discovered</div>';
             return;
         }
 
         list.innerHTML = pendingNodes.map((n, i) => {
-            const statusColor = STATUS_COLORS[n.status] || '#6b7280';
-            const typeColor = NODE_COLORS[n.deviceType] || '#6b7280';
-            const sources = (n.sources || []).map(s => {
-                const ss = SOURCE_STYLES[s] || SOURCE_STYLES.MANUAL;
-                return `<span style="background:${ss.bg};color:${ss.color};padding:1px 4px;border-radius:2px;font-size:9px;font-weight:600;">${s}</span>`;
-            }).join(' ');
             const alreadyOnCanvas = nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id);
             n._added = alreadyOnCanvas;
             const isChecked = selectedIndices.has(i);
-            const searchText = `${n.name} ${n.ip} ${n.deviceType} ${n.status} ${(n.sources||[]).join(' ')}`.toLowerCase();
+            const searchText = `${n.name} ${n.ip} ${n.deviceType}`.toLowerCase();
             return `<div class="result-item ${isChecked ? 'selected' : ''} ${alreadyOnCanvas ? 'already-added' : ''}" data-idx="${i}" data-search-text="${esc(searchText)}">
                 <input type="checkbox" class="result-checkbox" ${isChecked ? 'checked' : ''} ${alreadyOnCanvas ? 'disabled' : ''} onchange="toggleSelect(${i}, this.checked)">
-                <img class="result-icon" src="${getDeviceIconUrl(n.deviceType, n.status, 32)}" alt="${esc(n.deviceType)}">
+                <img class="result-icon" src="${getDeviceIconUrl(n.deviceType, n.status, 48)}" alt="">
                 <div class="result-info">
                     <div class="result-name">${esc(n.name)}</div>
-                    <div class="result-meta">
-                        <span>${esc(n.ip)}</span>
-                        <span style="color:${typeColor};">${esc(n.deviceType)}</span>
-                        <span style="color:${statusColor};">${(n.status||'unknown').toUpperCase()}</span>
-                    </div>
-                    <div style="margin-top:2px;">${sources}</div>
+                    <div class="result-meta"><span>${esc(n.ip || '-')}</span> <span>${esc(n.deviceType || 'unknown')}</span></div>
                 </div>
                 <div class="result-actions-btn">
-                    ${alreadyOnCanvas
-                        ? '<button style="color:var(--text-dim);border:none;cursor:default;font-size:9px;">Added</button>'
-                        : `<button class="btn-add" onclick="addToCanvas(${i})">Add</button>`
-                    }
+                    ${alreadyOnCanvas ? '<span style="font-size:10px;color:var(--text-dim);font-weight:600;">Added</span>' : `<button class="btn-add" onclick="addToCanvas(${i})">Add</button>`}
                     <button class="btn-dismiss" onclick="dismissPending(${i})">&times;</button>
                 </div>
             </div>`;
@@ -2474,141 +2237,75 @@
     }
 
     function toggleSelect(idx, checked) {
-        if (checked) { selectedIndices.add(idx); } else { selectedIndices.delete(idx); }
-        renderPendingList(document.getElementById('results-title').textContent);
+        if (checked) selectedIndices.add(idx); else selectedIndices.delete(idx);
+        renderPendingList();
     }
 
     function toggleSelectAll() {
-        const allSelected = pendingNodes.length > 0 && selectedIndices.size === pendingNodes.length;
-        if (allSelected) {
+        if (selectedIndices.size === pendingNodes.length) {
             selectedIndices.clear();
         } else {
-            pendingNodes.forEach((_, i) => {
-                const alreadyOnCanvas = nodesData.some(n => n._raw?.ip === pendingNodes[i].ip || n.id === pendingNodes[i].id);
-                if (!alreadyOnCanvas) selectedIndices.add(i);
-            });
+            pendingNodes.forEach((_, i) => selectedIndices.add(i));
         }
-        renderPendingList(document.getElementById('results-title').textContent);
+        renderPendingList();
     }
 
     async function addToCanvas(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
         const node = pendingNodes[idx];
-        if (node._added) { showToast('info', `"${node.name}" already on canvas`); return; }
-        const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
-        if (exists) { node._added = true; renderPendingList(document.getElementById('results-title').textContent); showToast('info', `"${node.name}" already on canvas`); return; }
         try {
-            const res = await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify({ ...node, sheetId: activeSheetId }) });
-            if (!res.success) throw new Error(res.error || 'Save failed');
-        } catch (e) {
-            showToast('error', `Failed to save "${node.name}": ${e.message}`);
-            return;
-        }
-        const visNode = buildNodeData(node);
-        nodesData.push(visNode);
-        if (network) network.body.data.nodes.add(visNode);
-        node._added = true;
-        renderPendingList(document.getElementById('results-title').textContent);
-        updateEmptyState(nodesData.length);
-        document.getElementById('stat-nodes').textContent = nodesData.length;
-        showToast('success', `"${node.name}" added to canvas`);
+            await apiFetch('/api/v1/topology/device/save', { method: 'POST', body: JSON.stringify({ ...node, sheetId: activeSheetId }) });
+            await loadGraph();
+            renderPendingList();
+            showToast('success', `"${node.name}" added to canvas`);
+        } catch (e) { showToast('error', 'Save failed: ' + e.message); }
     }
 
     function dismissPending(idx) {
         if (idx < 0 || idx >= pendingNodes.length) return;
-        const removedId = pendingNodes[idx]._pendingId;
         pendingNodes.splice(idx, 1);
         selectedIndices.delete(idx);
-        if (removedId) deletePendingFromDB([removedId]);
-        savePendingToDB();
-        renderPendingList(document.getElementById('results-title').textContent);
+        renderPendingList();
     }
 
-    function addSelectedToCanvas() {
+    async function addSelectedToCanvas() {
         if (selectedIndices.size === 0) return;
-        const toAdd = [...selectedIndices].sort((a,b) => b - a);
-        const nodesToSave = toAdd.map(i => pendingNodes[i]).filter(n => !n._added);
-        if (nodesToSave.length === 0) { showToast('info', 'All selected devices already on canvas'); return; }
-        apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: nodesToSave, sheetId: activeSheetId }) })
-            .then(res => {
-                if (!res.success) throw new Error(res.error);
-                let added = 0;
-                for (const node of nodesToSave) {
-                    const exists = nodesData.some(n => n._raw?.ip === node.ip || n.id === node.id);
-                    if (exists) { node._added = true; continue; }
-                    const visNode = buildNodeData(node);
-                    nodesData.push(visNode);
-                    if (network) network.body.data.nodes.add(visNode);
-                    node._added = true;
-                    added++;
-                }
-                selectedIndices.clear();
-                renderPendingList(document.getElementById('results-title').textContent);
-                updateEmptyState(nodesData.length);
-                document.getElementById('stat-nodes').textContent = nodesData.length;
-                showToast('success', `${added} device(s) added to canvas`);
-            })
-            .catch(e => { showToast('error', 'Failed to save: ' + e.message); });
-    }
-
-    function selectAll() {
-        if (pendingNodes.length === 0) return;
-        addSelectedToCanvas();
+        const toAdd = [...selectedIndices].map(i => pendingNodes[i]).filter(n => !n._added);
+        try {
+            await apiFetch('/api/v1/topology/device/save-all', { method: 'POST', body: JSON.stringify({ nodes: toAdd, sheetId: activeSheetId }) });
+            selectedIndices.clear();
+            await loadGraph();
+            renderPendingList();
+            showToast('success', `${toAdd.length} device(s) added to canvas`);
+        } catch (e) { showToast('error', 'Save failed: ' + e.message); }
     }
 
     function clearPending() {
-        apiFetch('/api/v1/topology/pending', { method: 'DELETE' }).catch(() => {});
         pendingNodes = [];
         selectedIndices.clear();
-        renderPendingList(document.getElementById('results-title').textContent);
+        renderPendingList();
     }
 
-    /* ==================== KEYBOARD SHORTCUTS ==================== */
+    /* ==================== SHORTCUTS ==================== */
     document.addEventListener('keydown', function(e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
-
+        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
         switch(e.key) {
             case 'Delete':
             case 'Backspace':
                 if (selectedNodeId) { e.preventDefault(); deleteSelectedNode(); }
                 else if (selectedEdgeId) { e.preventDefault(); deleteEdgeById(selectedEdgeId); }
-                else if (contextEdgeId) { e.preventDefault(); edgeContextAction('delete'); }
                 break;
             case 'Escape':
-                if (connectMode) { exitConnectMode(); }
+                if (connectMode) exitConnectMode();
                 closeDetail();
                 hideContextMenu();
                 document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
                 break;
-            case '=':
-            case '+':
-                e.preventDefault(); zoomIn(); break;
-            case '-':
-                e.preventDefault(); zoomOut(); break;
-            case '0':
-                e.preventDefault(); fitGraph(); break;
-            case 'p':
-            case 'P':
-                if (!e.ctrlKey && !e.metaKey) { togglePhysics(); }
-                break;
-            case 'l':
-            case 'L':
-                if (!e.ctrlKey && !e.metaKey) { autoLayout(); }
-                break;
-            case 'f':
-            case 'F':
-                if (e.ctrlKey || e.metaKey) {
-                    e.preventDefault();
-                    document.getElementById('search-input').focus();
-                }
-                break;
-            case 'r':
-            case 'R':
-                if (e.ctrlKey || e.metaKey) {
-                    e.preventDefault();
-                    loadGraph();
-                }
-                break;
+            case '=': case '+': e.preventDefault(); zoomIn(); break;
+            case '-': e.preventDefault(); zoomOut(); break;
+            case '0': e.preventDefault(); fitGraph(); break;
+            case 'p': case 'P': if (!e.ctrlKey && !e.metaKey) togglePhysics(); break;
+            case 'l': case 'L': if (!e.ctrlKey && !e.metaKey) layoutLeftToRight(); break;
         }
     });
 
@@ -2616,43 +2313,23 @@
     document.addEventListener('DOMContentLoaded', async function() {
         await loadSheets();
         await loadGraph();
-        await loadPendingFromDB();
-        // Mark pending nodes as added if already on canvas
-        for (const n of pendingNodes) {
-            if (nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id)) {
-                n._added = true;
-            }
-        }
-        if (pendingNodes.length > 0) renderPendingList(document.getElementById('results-title').textContent || 'Scan Results');
     });
 
     /* ==================== SHEET TAB EVENTS ==================== */
     document.getElementById('sheet-bar').addEventListener('click', function(e) {
-        var closeBtn = e.target.closest('.sheet-close');
+        const closeBtn = e.target.closest('.sheet-close');
         if (closeBtn) {
             e.stopPropagation();
             deleteSheet(parseInt(closeBtn.dataset.close));
             return;
         }
-        var tab = e.target.closest('.sheet-tab');
+        const tab = e.target.closest('.sheet-tab');
         if (tab) switchSheet(parseInt(tab.dataset.sheet));
     });
 
     document.getElementById('sheet-bar').addEventListener('dblclick', function(e) {
-        var tab = e.target.closest('.sheet-tab');
-        if (tab && !e.target.closest('.sheet-close')) {
-            renameSheet(parseInt(tab.dataset.sheet));
-        }
-    });
-
-    document.getElementById('sheet-bar').addEventListener('contextmenu', function(e) {
-        var tab = e.target.closest('.sheet-tab');
-        if (tab) {
-            e.preventDefault();
-            var action = prompt('Tab action:\n1 = Rename\n2 = Delete', '1');
-            if (action === '1') renameSheet(parseInt(tab.dataset.sheet));
-            else if (action === '2') deleteSheet(parseInt(tab.dataset.sheet));
-        }
+        const tab = e.target.closest('.sheet-tab');
+        if (tab && !e.target.closest('.sheet-close')) renameSheet(parseInt(tab.dataset.sheet));
     });
     </script>
 </body>
