@@ -344,6 +344,21 @@ export class TopologyController {
     }
   }
 
+  public async updatePendingNode(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ success: false, error: "Unauthorized." });
+      const pendingId = parseInt(req.params.id);
+      const { node } = req.body;
+      if (!node) return res.status(400).json({ success: false, error: "node is required." });
+      await topologyService.updatePendingNode(userId, pendingId, node);
+      return res.status(200).json({ success: true, message: "Pending device updated." });
+    } catch (err: any) {
+      logger.error("Topology", "updatePendingNode error:", err.message);
+      return res.status(500).json({ success: false, error: "Failed to update pending node." });
+    }
+  }
+
   public async clearPendingNodes(req: Request, res: Response) {
     try {
       const userId = (req as any).user?.id;

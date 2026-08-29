@@ -32,6 +32,7 @@ router.delete("/edge/:id", requireRole("ADMIN"), (req, res) => topologyControlle
 // Pending nodes (scan results)
 router.get("/pending", requireRole("ADMIN"), (req, res) => topologyController.getPendingNodes(req, res));
 router.post("/pending", requireRole("ADMIN"), (req, res) => topologyController.savePendingNodes(req, res));
+router.put("/pending/:id", requireRole("ADMIN"), (req, res) => topologyController.updatePendingNode(req, res));
 router.delete("/pending", requireRole("ADMIN"), (req, res) => topologyController.clearPendingNodes(req, res));
 
 // Device actions

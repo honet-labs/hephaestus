@@ -335,6 +335,8 @@
         }
         .result-actions-btn .btn-add { color: var(--success); border-color: var(--success-border); background: rgba(16,185,129,0.1); }
         .result-actions-btn .btn-add:hover { background: var(--success); color: #fff; }
+        .result-actions-btn .btn-edit { color: #58a6ff; border-color: rgba(88,166,255,0.3); background: rgba(88,166,255,0.1); display: inline-flex; align-items: center; justify-content: center; }
+        .result-actions-btn .btn-edit:hover { background: #58a6ff; color: #fff; border-color: #58a6ff; }
         .result-actions-btn .btn-dismiss:hover { color: var(--error); border-color: var(--error-border); background: rgba(239,68,68,0.1); }
         .result-checkbox {
             width: 16px; height: 16px; flex-shrink: 0; cursor: pointer;
@@ -959,6 +961,7 @@
     let searchQuery = '';
     let sidebarVisible = false;
     let selectedIndices = new Set();
+    let editingPendingIndex = null;
 
     /* ==================== PENDING / DISCOVERED NODES DB SYNC ==================== */
     async function loadPendingFromDB() {
@@ -2065,7 +2068,27 @@
         } catch (e) { showToast('error', 'Delete failed: ' + e.message); }
     }
 
+    function openEditPendingModal(idx) {
+        if (idx < 0 || idx >= pendingNodes.length) return;
+        editingPendingIndex = idx;
+        const node = pendingNodes[idx];
+        const raw = node || {};
+
+        const canvasNode = nodesData.find(n => n.id === node.id || n._raw?.ip === node.ip);
+        selectedNodeId = canvasNode ? canvasNode.id : (node.id || '');
+
+        document.getElementById('edit-dev-id').value = selectedNodeId;
+        document.getElementById('edit-dev-name').value = raw.name || '';
+        document.getElementById('edit-dev-ip').value = raw.ip || '';
+        document.getElementById('edit-dev-type').value = raw.deviceType || 'server';
+        const tagVal = raw.labels?.tags || raw.tags || (typeof raw.labels?.group === 'string' ? raw.labels.group : '') || '';
+        document.getElementById('edit-dev-tags').value = tagVal;
+        document.getElementById('edit-dev-error').style.display = 'none';
+        openModal('modal-edit-device');
+    }
+
     function openEditDeviceModal() {
+        editingPendingIndex = null;
         if (!selectedNodeId) return;
         const node = nodesData.find(n => n.id === selectedNodeId);
         if (!node) return;
@@ -2088,13 +2111,41 @@
         const tags = document.getElementById('edit-dev-tags').value.trim();
         const errEl = document.getElementById('edit-dev-error');
         if (!name || !ip) { errEl.textContent = 'Name and IP are required.'; errEl.style.display = 'block'; return; }
+
         try {
-            const data = await apiFetch('/api/v1/topology/device/' + encodeURIComponent(id), {
-                method: 'PUT', body: JSON.stringify({ name, ip, deviceType, tags })
-            });
-            if (!data.success) throw new Error(data.error);
+            // If editing from pending discovered list
+            if (editingPendingIndex !== null && editingPendingIndex >= 0 && editingPendingIndex < pendingNodes.length) {
+                const pNode = pendingNodes[editingPendingIndex];
+                pNode.name = name;
+                pNode.ip = ip;
+                pNode.deviceType = deviceType;
+                if (!pNode.labels) pNode.labels = {};
+                pNode.labels.tags = tags;
+                pNode.tags = tags;
+
+                if (pNode._pendingId) {
+                    await apiFetch('/api/v1/topology/pending/' + pNode._pendingId, {
+                        method: 'PUT',
+                        body: JSON.stringify({ node: pNode })
+                    }).catch(() => {});
+                } else {
+                    pNode._saved = false;
+                    savePendingToDB();
+                }
+            }
+
+            // If it is on the canvas (or has a canvas device id), also update DB
+            if (id && nodesData.some(n => n.id === id)) {
+                const data = await apiFetch('/api/v1/topology/device/' + encodeURIComponent(id), {
+                    method: 'PUT', body: JSON.stringify({ name, ip, deviceType, tags })
+                });
+                if (!data.success) throw new Error(data.error);
+                await loadGraph();
+            }
+
             closeModal('modal-edit-device');
-            await loadGraph();
+            editingPendingIndex = null;
+            renderPendingList(document.getElementById('results-title').textContent);
             showToast('success', `"${name}" updated`);
         } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
     }
@@ -2300,8 +2351,11 @@
                     </div>
                 </div>
                 <div class="result-actions-btn">
-                    ${alreadyOnCanvas ? '<span style="font-size:10px;color:var(--text-dim);font-weight:600;">Added</span>' : `<button class="btn-add" onclick="addToCanvas(${i})">Add</button>`}
-                    <button class="btn-dismiss" onclick="dismissPending(${i})">&times;</button>
+                    ${alreadyOnCanvas ? '<span style="font-size:10px;color:var(--text-dim);font-weight:600;margin-right:2px;">Added</span>' : `<button class="btn-add" onclick="addToCanvas(${i})">Add</button>`}
+                    <button class="btn-edit" onclick="openEditPendingModal(${i})" title="Edit Device">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="btn-dismiss" onclick="dismissPending(${i})" title="Dismiss">&times;</button>
                 </div>
             </div>`;
         }).join('');

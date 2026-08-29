@@ -873,6 +873,13 @@ export class TopologyService {
     await query(`DELETE FROM topology_pending WHERE id = $1 AND user_id = $2`, [pendingId, userId]);
   }
 
+  async updatePendingNode(userId: number, pendingId: number, deviceData: any): Promise<void> {
+    await query(
+      `UPDATE topology_pending SET device_data = $1 WHERE id = $2 AND user_id = $3`,
+      [JSON.stringify(deviceData), pendingId, userId]
+    );
+  }
+
   async clearPendingNodes(userId: number): Promise<void> {
     await query(`DELETE FROM topology_pending WHERE user_id = $1`, [userId]);
   }
