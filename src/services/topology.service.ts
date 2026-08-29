@@ -826,7 +826,24 @@ export class TopologyService {
   }
 
   async updateEdge(edgeId: number, label?: string, sourceLabel?: string, targetLabel?: string): Promise<void> {
-    await query(`UPDATE topology_edges SET label = $1, source_label = $2, target_label = $3 WHERE id = $4`, [label || null, sourceLabel || null, targetLabel || null, edgeId]);
+    const fields: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+    if (label !== undefined) {
+      fields.push(`label = $${idx++}`);
+      params.push(label);
+    }
+    if (sourceLabel !== undefined) {
+      fields.push(`source_label = $${idx++}`);
+      params.push(sourceLabel);
+    }
+    if (targetLabel !== undefined) {
+      fields.push(`target_label = $${idx++}`);
+      params.push(targetLabel);
+    }
+    if (fields.length === 0) return;
+    params.push(edgeId);
+    await query(`UPDATE topology_edges SET ${fields.join(', ')} WHERE id = $${idx}`, params);
   }
 
   async loadEdges(sheetId?: number): Promise<TopologyEdge[]> {

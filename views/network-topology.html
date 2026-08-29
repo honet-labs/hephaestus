@@ -709,7 +709,7 @@
                 <div class="detail-section-title">Connections</div>
                 <div class="detail-connections" id="detail-connections"></div>
             </div>
-            <div class="detail-actions">
+            <div class="detail-actions" id="detail-node-actions">
                 <button class="btn btn-ghost" onclick="openEditDeviceModal()" style="font-size:10px;padding:4px 8px;">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit
                 </button>
@@ -720,6 +720,12 @@
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg> SNMP
                 </button>
                 <button class="btn btn-danger" onclick="deleteSelectedNode()" style="font-size:10px;padding:4px 8px;">Delete</button>
+            </div>
+            <div class="detail-actions" id="detail-edge-actions" style="display:none;">
+                <button class="btn btn-ghost" onclick="openEditEdgeModal(selectedEdgeId)" style="font-size:10px;padding:4px 8px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Label
+                </button>
+                <button class="btn btn-danger" onclick="deleteEdgeById(selectedEdgeId)" style="font-size:10px;padding:4px 8px;">Delete Link</button>
             </div>
         </div>
     </div>
@@ -1735,9 +1741,24 @@
                 const otherId = e.from === n.id ? e.to : e.from;
                 const otherNode = nodesData.find(nd => nd.id === otherId);
                 const otherName = otherNode ? otherNode._raw.name : otherId;
-                return `<div class="conn-item"><span class="conn-dot"></span>${esc(otherName)} ${e.label ? ' ('+esc(e.label)+')' : ''}</div>`;
+                return `<div class="conn-item" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 6px;">
+                    <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;">
+                        <span class="conn-dot"></span>
+                        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(otherName)}</span>
+                        <span style="font-size:10px;color:var(--text-dim);flex-shrink:0;">(${esc(e.label || 'Ethernet')})</span>
+                    </div>
+                    <div style="display:flex;gap:4px;flex-shrink:0;">
+                        <button onclick="openEditEdgeModal('${e.id}')" title="Edit Connection Label" style="background:rgba(88,166,255,0.12);color:#58a6ff;border:1px solid rgba(88,166,255,0.25);border-radius:var(--radius-sm);padding:1px 5px;font-size:9px;cursor:pointer;">Edit</button>
+                        <button onclick="deleteEdgeById('${e.id}')" title="Delete Connection" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-sm);padding:1px 5px;font-size:9px;cursor:pointer;">&times;</button>
+                    </div>
+                </div>`;
             }).join('');
         } else { connSection.style.display = 'none'; }
+
+        const nodeActions = document.getElementById('detail-node-actions');
+        const edgeActions = document.getElementById('detail-edge-actions');
+        if (nodeActions) nodeActions.style.display = 'flex';
+        if (edgeActions) edgeActions.style.display = 'none';
 
         document.getElementById('detail-panel').classList.add('visible');
     }
@@ -1772,7 +1793,12 @@
         document.getElementById('detail-connections').innerHTML =
             `<div class="conn-item"><span class="conn-dot"></span><strong>From:</strong> ${esc(fromName)}</div>` +
             `<div class="conn-item"><span class="conn-dot"></span><strong>To:</strong> ${esc(toName)}</div>` +
-            `<div class="conn-item"><span class="conn-dot"></span><strong>Type:</strong> ${esc(edge.label || 'Ethernet')}</div>`;
+            `<div class="conn-item"><span class="conn-dot"></span><strong>Label:</strong> ${esc(edge.label || 'Ethernet')}</div>`;
+
+        const nodeActions = document.getElementById('detail-node-actions');
+        const edgeActions = document.getElementById('detail-edge-actions');
+        if (nodeActions) nodeActions.style.display = 'none';
+        if (edgeActions) edgeActions.style.display = 'flex';
 
         document.getElementById('detail-panel').classList.add('visible');
     }
@@ -1909,50 +1935,65 @@
 
     function edgeContextAction(action) {
         hideContextMenu();
-        if (!contextEdgeId) return;
-        if (action === 'delete') deleteEdgeById(contextEdgeId);
-        else if (action === 'edit') openEditEdgeModal(contextEdgeId);
+        const targetEdgeId = contextEdgeId || selectedEdgeId;
+        if (!targetEdgeId) return;
+        if (action === 'delete') deleteEdgeById(targetEdgeId);
+        else if (action === 'edit') openEditEdgeModal(targetEdgeId);
     }
 
-    function deleteEdgeById(edgeId) {
+    async function deleteEdgeById(edgeId) {
+        if (!edgeId) edgeId = selectedEdgeId || contextEdgeId;
+        if (!edgeId) return;
+        const edge = edgesData.find(e => e.id == edgeId);
+        const dbId = (edge && edge._raw && edge._raw.id) ? edge._raw.id : edgeId;
+        if (!dbId) return;
         if (!confirm('Delete this connection link?')) return;
-        apiFetch('/api/v1/topology/edge/' + encodeURIComponent(edgeId), { method: 'DELETE' })
-            .then(res => {
-                if (!res.success) throw new Error(res.error);
-                if (network) network.body.data.edges.remove(edgeId);
-                edgesData = edgesData.filter(e => e.id !== edgeId);
-                document.getElementById('stat-edges').textContent = edgesData.length;
-                closeDetail();
-                showToast('success', 'Link deleted');
-            })
-            .catch(e => showToast('error', 'Delete failed: ' + e.message));
+        try {
+            const res = await apiFetch('/api/v1/topology/edge/' + encodeURIComponent(dbId), { method: 'DELETE' });
+            if (!res.success) throw new Error(res.error || 'Failed to delete edge');
+            if (network && network.body && network.body.data && network.body.data.edges) {
+                network.body.data.edges.remove(edgeId);
+            }
+            edgesData = edgesData.filter(e => e.id != edgeId);
+            document.getElementById('stat-edges').textContent = edgesData.length;
+            closeDetail();
+            await loadGraph();
+            showToast('success', 'Link deleted');
+        } catch (e) {
+            showToast('error', 'Delete failed: ' + e.message);
+        }
     }
 
     function openEditEdgeModal(edgeId) {
-        const edge = edgesData.find(e => e.id === edgeId);
+        if (!edgeId) edgeId = selectedEdgeId || contextEdgeId;
+        const edge = edgesData.find(e => e.id == edgeId);
         if (!edge) return;
-        document.getElementById('edit-edge-id').value = edgeId;
+        selectedEdgeId = edge.id;
+        const dbId = (edge._raw && edge._raw.id) ? edge._raw.id : edge.id;
+        document.getElementById('edit-edge-id').value = dbId;
         document.getElementById('edit-edge-label').value = edge.label || '';
         document.getElementById('edit-edge-error').style.display = 'none';
         openModal('modal-edit-edge');
     }
 
-    function submitEditEdge() {
+    async function submitEditEdge() {
         const edgeId = document.getElementById('edit-edge-id').value;
-        const label = document.getElementById('edit-edge-label').value.trim();
+        const label = document.getElementById('edit-edge-label').value.trim() || 'Ethernet';
+        const errEl = document.getElementById('edit-edge-error');
         if (!edgeId) return;
-        apiFetch('/api/v1/topology/edge/' + encodeURIComponent(edgeId), {
-            method: 'PUT',
-            body: JSON.stringify({ label })
-        }).then(res => {
-            if (!res.success) throw new Error(res.error);
+        try {
+            const res = await apiFetch('/api/v1/topology/edge/' + encodeURIComponent(edgeId), {
+                method: 'PUT',
+                body: JSON.stringify({ label })
+            });
+            if (!res.success) throw new Error(res.error || 'Failed to update link label');
             closeModal('modal-edit-edge');
-            loadGraph();
+            await loadGraph();
             showToast('success', 'Connection label updated');
-        }).catch(e => {
-            document.getElementById('edit-edge-error').textContent = e.message;
-            document.getElementById('edit-edge-error').style.display = 'block';
-        });
+        } catch (e) {
+            errEl.textContent = e.message;
+            errEl.style.display = 'block';
+        }
     }
 
     /* ==================== SCAN & DEVICE MODALS ==================== */
