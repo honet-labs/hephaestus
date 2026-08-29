@@ -103,8 +103,8 @@ export interface TopologyDevice {
   sources: string[];
   labels: Record<string, any>;
   interfaces: NetworkInterface[];
-  x?: number;
-  y?: number;
+  x?: number | null;
+  y?: number | null;
   sheetId?: number;
   createdAt?: Date;
 }
@@ -118,8 +118,8 @@ export interface TopologyNode {
   sources: string[];
   labels: Record<string, any>;
   interfaces?: NetworkInterface[];
-  x?: number;
-  y?: number;
+  x?: number | null;
+  y?: number | null;
   _added?: boolean;
   _saved?: boolean;
   _pendingId?: number;
