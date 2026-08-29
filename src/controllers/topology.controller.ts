@@ -98,11 +98,11 @@ export class TopologyController {
 
   /**
    * POST /api/v1/topology/device — Add a manual device
-   * Body: { name, ip, deviceType?, x?, y? }
+   * Body: { name, ip, deviceType?, tags?, x?, y? }
    */
   public async addDevice(req: Request, res: Response) {
     try {
-      const { name, ip, deviceType, x, y, sheetId } = req.body;
+      const { name, ip, deviceType, tags, x, y, sheetId } = req.body;
       if (!name || !ip) {
         return res.status(400).json({ success: false, error: "name and ip are required." });
       }
@@ -110,7 +110,7 @@ export class TopologyController {
       if (!ipRegex.test(ip)) {
         return res.status(400).json({ success: false, error: "Invalid IP address format." });
       }
-      const node = await topologyService.addManualDevice({ name, ip, deviceType, x, y, sheetId: sheetId ? parseInt(sheetId) : undefined });
+      const node = await topologyService.addManualDevice({ name, ip, deviceType, tags, x, y, sheetId: sheetId ? parseInt(sheetId) : undefined });
       await logActivity("Network Topology", "Add Device", `Added manual device "${name}" (${ip})`, "SUCCESS");
       return res.status(200).json({ success: true, data: node });
     } catch (err: any) {
@@ -121,14 +121,14 @@ export class TopologyController {
 
   /**
    * PUT /api/v1/topology/device/:id — Update a device
-   * Body: { name?, ip?, deviceType? }
+   * Body: { name?, ip?, deviceType?, tags? }
    */
   public async updateDevice(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { name, ip, deviceType } = req.body;
-      if (!name && !ip && !deviceType) {
-        return res.status(400).json({ success: false, error: "At least one field (name, ip, deviceType) is required." });
+      const { name, ip, deviceType, tags } = req.body;
+      if (!name && !ip && !deviceType && tags === undefined) {
+        return res.status(400).json({ success: false, error: "At least one field (name, ip, deviceType, tags) is required." });
       }
       if (ip) {
         const ipRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
@@ -136,7 +136,7 @@ export class TopologyController {
           return res.status(400).json({ success: false, error: "Invalid IP address format." });
         }
       }
-      await topologyService.updateDevice(id, { name, ip, deviceType });
+      await topologyService.updateDevice(id, { name, ip, deviceType, tags });
       await logActivity("Network Topology", "Update Device", `Updated device "${id}"`, "SUCCESS");
       return res.status(200).json({ success: true, message: "Device updated." });
     } catch (err: any) {

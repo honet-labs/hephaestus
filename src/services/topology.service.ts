@@ -663,11 +663,18 @@ export class TopologyService {
     name: string;
     ip: string;
     deviceType?: string;
+    tags?: string;
+    labels?: Record<string, any>;
     x?: number;
     y?: number;
     sheetId?: number;
   }): Promise<TopologyNode> {
     const id = `manual-${device.ip}-${Date.now()}`;
+    const labels: Record<string, any> = { ...(device.labels || {}) };
+    if (device.tags) {
+      labels.tags = device.tags;
+    }
+
     const node: TopologyNode = {
       id,
       name: device.name,
@@ -675,7 +682,7 @@ export class TopologyService {
       deviceType: device.deviceType || "unknown",
       status: "unknown",
       sources: ["MANUAL"],
-      labels: {},
+      labels,
       x: device.x,
       y: device.y
     };
@@ -696,7 +703,7 @@ export class TopologyService {
     await query(`DELETE FROM topology_devices WHERE id = $1`, [deviceId]);
   }
 
-  async updateDevice(deviceId: string, updates: { name?: string; ip?: string; deviceType?: string }): Promise<void> {
+  async updateDevice(deviceId: string, updates: { name?: string; ip?: string; deviceType?: string; tags?: string; labels?: Record<string, any> }): Promise<void> {
     const fields: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -712,6 +719,17 @@ export class TopologyService {
     if (updates.deviceType !== undefined) {
       fields.push(`device_type = $${paramIndex++}`);
       values.push(updates.deviceType);
+    }
+    if (updates.tags !== undefined || updates.labels !== undefined) {
+      // Get existing labels first to merge
+      const cur = await query(`SELECT labels FROM topology_devices WHERE id = $1`, [deviceId]);
+      const curLabels = cur.rows.length > 0 && cur.rows[0].labels ? cur.rows[0].labels : {};
+      const newLabels = { ...curLabels, ...(updates.labels || {}) };
+      if (updates.tags !== undefined) {
+        newLabels.tags = updates.tags;
+      }
+      fields.push(`labels = $${paramIndex++}`);
+      values.push(JSON.stringify(newLabels));
     }
 
     if (fields.length === 0) return;

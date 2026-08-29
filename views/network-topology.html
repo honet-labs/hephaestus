@@ -626,8 +626,24 @@
                 <button class="btn btn-ghost" id="btn-select-all" onclick="toggleSelectAll()" style="font-size:10px;padding:4px 10px;">Select All</button>
                 <button class="btn btn-ghost" onclick="clearPending()" style="font-size:10px;padding:4px 10px;">Clear</button>
             </div>
-            <div class="results-search">
-                <input type="text" id="sidebar-search" placeholder="Filter devices..." oninput="filterSidebar(this.value)">
+            <div class="results-search" style="padding: 6px 14px 4px;">
+                <input type="text" id="sidebar-search" placeholder="Filter devices..." oninput="filterSidebar()">
+            </div>
+            <div class="sidebar-filters" style="padding: 4px 14px 8px; display: flex; gap: 6px; border-bottom: 1px solid var(--app-border);">
+                <select id="sidebar-filter-type" onchange="filterSidebar()" style="flex: 1; background: var(--background); border: 1px solid var(--app-border); color: var(--text-white); padding: 4px 6px; border-radius: var(--radius-sm); font-size: 11px;">
+                    <option value="">All Types</option>
+                    <option value="server">Server</option>
+                    <option value="switch">Switch</option>
+                    <option value="router">Router</option>
+                    <option value="wireless">Wireless / AP</option>
+                    <option value="firewall">Firewall</option>
+                    <option value="gateway">Gateway / Web</option>
+                    <option value="container">Container</option>
+                    <option value="unknown">Unknown</option>
+                </select>
+                <select id="sidebar-filter-tag" onchange="filterSidebar()" style="flex: 1; background: var(--background); border: 1px solid var(--app-border); color: var(--text-white); padding: 4px 6px; border-radius: var(--radius-sm); font-size: 11px;">
+                    <option value="">All Tags</option>
+                </select>
             </div>
             <div class="results-list" id="results-list"></div>
         </div>
@@ -792,6 +808,10 @@
                         <option value="unknown">Unknown</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Tags / Group (Optional)</label>
+                    <input type="text" id="dev-tags" placeholder="e.g. Core, Production, DC1 (comma separated)">
+                </div>
                 <div id="dev-error" class="form-error"></div>
             </div>
             <div class="modal-footer">
@@ -834,6 +854,10 @@
                         <option value="target">Target (Bullseye)</option>
                         <option value="unknown">Unknown</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>Tags / Group (Optional)</label>
+                    <input type="text" id="edit-dev-tags" placeholder="e.g. Core, Production, DC1">
                 </div>
                 <div id="edit-dev-error" class="form-error"></div>
             </div>
@@ -1528,6 +1552,10 @@
         let html = `<div class="tt-name">${esc(n.name)}</div>`;
         html += `<div class="tt-row"><span class="tt-label">IP</span><span class="tt-val">${esc(n.ip || '-')}</span></div>`;
         html += `<div class="tt-row"><span class="tt-label">Type</span><span class="tt-val">${esc((n.deviceType || 'unknown').toUpperCase())}</span></div>`;
+        const tagStr = n.labels?.tags || n.tags || '';
+        if (tagStr) {
+            html += `<div class="tt-row"><span class="tt-label">Tags</span><span class="tt-val" style="color:#10b981;">#${esc(tagStr)}</span></div>`;
+        }
         html += `<div class="tt-row"><span class="tt-label">Status</span><span class="tt-val" style="color:${n.status === 'offline' ? '#ef4444' : '#10b981'};">${(n.status||'online').toUpperCase()}</span></div>`;
         return html;
     }
@@ -1646,6 +1674,29 @@
         srcEl.innerHTML = (n.sources || ['MANUAL']).map(s =>
             `<span class="source-tag" style="background:rgba(88,166,255,0.15);color:#58a6ff;">${s}</span>`
         ).join('');
+
+        const labels = n.labels || {};
+        const labelsSection = document.getElementById('detail-labels-section');
+        const labelsEl = document.getElementById('detail-labels');
+        const tagStr = labels.tags || n.tags || (typeof labels.group === 'string' ? labels.group : '') || '';
+        const labelEntries = Object.entries(labels).filter(([k]) => k !== 'tags' && k !== 'group');
+
+        if (tagStr || labelEntries.length > 0) {
+            labelsSection.style.display = '';
+            let html = '';
+            if (tagStr) {
+                const tagArr = tagStr.split(',').map(t => t.trim()).filter(Boolean);
+                html += `<div style="margin-bottom:6px;display:flex;gap:4px;flex-wrap:wrap;">` +
+                    tagArr.map(t => `<span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:10px;padding:2px 6px;border-radius:3px;">#${esc(t)}</span>`).join('') +
+                    `</div>`;
+            }
+            for (const [k, v] of labelEntries) {
+                html += `<div class="detail-row"><span class="detail-label">${esc(k)}</span><span class="detail-value">${esc(String(v))}</span></div>`;
+            }
+            labelsEl.innerHTML = html;
+        } else {
+            labelsSection.style.display = 'none';
+        }
 
         const ifaces = n.interfaces || [];
         const ifaceSection = document.getElementById('detail-interfaces-section');
@@ -1775,17 +1826,37 @@
         }
         const matchIds = nodesData.filter(n => {
             const r = n._raw || {};
-            const searchStr = `${r.name} ${r.ip} ${r.deviceType}`.toLowerCase();
+            const tagStr = r.labels?.tags || r.tags || (typeof r.labels?.group === 'string' ? r.labels.group : '') || '';
+            const searchStr = `${r.name} ${r.ip} ${r.deviceType} ${tagStr}`.toLowerCase();
             return searchStr.includes(searchQuery);
         }).map(n => n.id);
         network.body.data.nodes.update(allIds.map(id => ({ id, opacity: matchIds.includes(id) ? 1 : 0.15 })));
     }
 
-    function filterSidebar(query) {
-        const q = (query || '').toLowerCase();
+    function filterSidebar() {
+        const q = (document.getElementById('sidebar-search')?.value || '').toLowerCase().trim();
+        const typeFilter = (document.getElementById('sidebar-filter-type')?.value || '').toLowerCase().trim();
+        const tagFilter = (document.getElementById('sidebar-filter-tag')?.value || '').toLowerCase().trim();
+
         document.querySelectorAll('#results-list .result-item').forEach(item => {
-            const text = item.dataset.searchText || '';
-            item.style.display = text.includes(q) ? '' : 'none';
+            const text = (item.dataset.searchText || '').toLowerCase();
+            const devType = (item.dataset.deviceType || '').toLowerCase();
+            const tags = (item.dataset.tags || '').toLowerCase();
+
+            const matchesQuery = !q || text.includes(q) || devType.includes(q) || tags.includes(q);
+            let matchesType = true;
+            if (typeFilter) {
+                if (typeFilter === 'wireless') matchesType = devType === 'wireless' || devType === 'wifi' || devType === 'ap';
+                else if (typeFilter === 'gateway') matchesType = devType === 'gateway' || devType === 'web' || devType === 'internet';
+                else matchesType = devType.includes(typeFilter);
+            }
+            let matchesTag = true;
+            if (tagFilter) {
+                const tArr = tags.split(',').map(t => t.trim());
+                matchesTag = tArr.includes(tagFilter);
+            }
+
+            item.style.display = (matchesQuery && matchesType && matchesTag) ? '' : 'none';
         });
     }
 
@@ -1940,6 +2011,7 @@
         document.getElementById('dev-name').value = '';
         document.getElementById('dev-ip').value = '';
         document.getElementById('dev-type').value = 'server';
+        document.getElementById('dev-tags').value = '';
         document.getElementById('dev-error').style.display = 'none';
         openModal('modal-add-device');
     }
@@ -1948,11 +2020,12 @@
         const name = document.getElementById('dev-name').value.trim();
         const ip = document.getElementById('dev-ip').value.trim();
         const deviceType = document.getElementById('dev-type').value;
+        const tags = document.getElementById('dev-tags').value.trim();
         const errEl = document.getElementById('dev-error');
         if (!name || !ip) { errEl.textContent = 'Name and IP are required.'; errEl.style.display = 'block'; return; }
         try {
             const data = await apiFetch('/api/v1/topology/device', {
-                method: 'POST', body: JSON.stringify({ name, ip, deviceType, sheetId: activeSheetId })
+                method: 'POST', body: JSON.stringify({ name, ip, deviceType, tags, sheetId: activeSheetId })
             });
             if (!data.success) throw new Error(data.error);
             closeModal('modal-add-device');
@@ -1989,6 +2062,8 @@
         document.getElementById('edit-dev-name').value = raw.name || '';
         document.getElementById('edit-dev-ip').value = raw.ip || '';
         document.getElementById('edit-dev-type').value = raw.deviceType || 'server';
+        const tagVal = raw.labels?.tags || raw.tags || (typeof raw.labels?.group === 'string' ? raw.labels.group : '') || '';
+        document.getElementById('edit-dev-tags').value = tagVal;
         document.getElementById('edit-dev-error').style.display = 'none';
         openModal('modal-edit-device');
     }
@@ -1998,11 +2073,12 @@
         const name = document.getElementById('edit-dev-name').value.trim();
         const ip = document.getElementById('edit-dev-ip').value.trim();
         const deviceType = document.getElementById('edit-dev-type').value;
+        const tags = document.getElementById('edit-dev-tags').value.trim();
         const errEl = document.getElementById('edit-dev-error');
         if (!name || !ip) { errEl.textContent = 'Name and IP are required.'; errEl.style.display = 'block'; return; }
         try {
             const data = await apiFetch('/api/v1/topology/device/' + encodeURIComponent(id), {
-                method: 'PUT', body: JSON.stringify({ name, ip, deviceType })
+                method: 'PUT', body: JSON.stringify({ name, ip, deviceType, tags })
             });
             if (!data.success) throw new Error(data.error);
             closeModal('modal-edit-device');
@@ -2152,6 +2228,27 @@
         document.getElementById('results-title').textContent = title || 'Discovered Devices';
         countEl.textContent = pendingNodes.length;
 
+        // Update Tag Filter Options dynamically from all pending & canvas devices
+        const tagSelect = document.getElementById('sidebar-filter-tag');
+        const currentTagVal = tagSelect ? tagSelect.value : '';
+        const allTags = new Set();
+        [...pendingNodes, ...nodesData.map(nd => nd._raw).filter(Boolean)].forEach(n => {
+            const tStr = n.labels?.tags || n.tags || (typeof n.labels?.group === 'string' ? n.labels.group : '') || '';
+            if (tStr) {
+                tStr.split(',').forEach(t => {
+                    const trimmed = t.trim();
+                    if (trimmed) allTags.add(trimmed);
+                });
+            }
+        });
+        if (tagSelect) {
+            let tagHtml = '<option value="">All Tags</option>';
+            Array.from(allTags).sort().forEach(tag => {
+                tagHtml += `<option value="${esc(tag)}" ${tag === currentTagVal ? 'selected' : ''}>#${esc(tag)}</option>`;
+            });
+            tagSelect.innerHTML = tagHtml;
+        }
+
         const validIndices = new Set();
         pendingNodes.forEach((_, i) => validIndices.add(i));
         selectedIndices = new Set([...selectedIndices].filter(i => validIndices.has(i)));
@@ -2173,13 +2270,22 @@
             const alreadyOnCanvas = nodesData.some(nd => nd._raw?.ip === n.ip || nd.id === n.id);
             n._added = alreadyOnCanvas;
             const isChecked = selectedIndices.has(i);
-            const searchText = `${n.name} ${n.ip} ${n.deviceType}`.toLowerCase();
-            return `<div class="result-item ${isChecked ? 'selected' : ''} ${alreadyOnCanvas ? 'already-added' : ''}" data-idx="${i}" data-search-text="${esc(searchText)}">
+            const tStr = n.labels?.tags || n.tags || (typeof n.labels?.group === 'string' ? n.labels.group : '') || '';
+            const tagArr = tStr ? tStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+            const searchText = `${n.name} ${n.ip} ${n.deviceType || ''} ${tStr}`.toLowerCase();
+            const typeLabel = (n.deviceType || 'unknown').toUpperCase();
+            const tagBadgesHtml = tagArr.map(t => `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981;font-weight:600;">#${esc(t)}</span>`).join(' ');
+
+            return `<div class="result-item ${isChecked ? 'selected' : ''} ${alreadyOnCanvas ? 'already-added' : ''}" data-idx="${i}" data-search-text="${esc(searchText)}" data-device-type="${esc(n.deviceType || 'unknown')}" data-tags="${esc(tStr)}">
                 <input type="checkbox" class="result-checkbox" ${isChecked ? 'checked' : ''} ${alreadyOnCanvas ? 'disabled' : ''} onchange="toggleSelect(${i}, this.checked)">
                 <img class="result-icon" src="${getDeviceIconUrl(n.deviceType, n.status, 48)}" alt="">
                 <div class="result-info">
                     <div class="result-name">${esc(n.name)}</div>
-                    <div class="result-meta"><span>${esc(n.ip || '-')}</span> <span>${esc((n.deviceType || 'unknown').toUpperCase())}</span></div>
+                    <div class="result-meta" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                        <span>${esc(n.ip || '-')}</span>
+                        <span style="font-size:9px;padding:1px 4px;border-radius:3px;background:rgba(88,166,255,0.15);color:#58a6ff;font-weight:600;">${esc(typeLabel)}</span>
+                        ${tagBadgesHtml}
+                    </div>
                 </div>
                 <div class="result-actions-btn">
                     ${alreadyOnCanvas ? '<span style="font-size:10px;color:var(--text-dim);font-weight:600;">Added</span>' : `<button class="btn-add" onclick="addToCanvas(${i})">Add</button>`}
@@ -2187,6 +2293,8 @@
                 </div>
             </div>`;
         }).join('');
+
+        filterSidebar();
     }
 
     function toggleSelect(idx, checked) {
