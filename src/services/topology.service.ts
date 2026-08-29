@@ -651,8 +651,8 @@ export class TopologyService {
       sources: row.sources || [],
       labels: row.labels || {},
       interfaces: row.interfaces || [],
-      x: row.x,
-      y: row.y
+      x: row.x !== null && row.x !== undefined ? parseFloat(row.x) : null,
+      y: row.y !== null && row.y !== undefined ? parseFloat(row.y) : null
     }));
   }
 
@@ -762,10 +762,16 @@ export class TopologyService {
    * Update device position (for drag-and-drop).
    */
   async updateDevicePosition(deviceId: string, x: number, y: number): Promise<void> {
-    await query(
+    const res = await query(
       `UPDATE topology_devices SET x = $1, y = $2 WHERE id = $3`,
       [x, y, deviceId]
     );
+    if (res.rowCount === 0) {
+      await query(
+        `UPDATE topology_devices SET x = $1, y = $2 WHERE ip_address = $3`,
+        [x, y, deviceId]
+      );
+    }
   }
 
   // ==================== EDGE OPERATIONS ====================

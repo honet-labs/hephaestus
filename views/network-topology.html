@@ -1231,8 +1231,8 @@
                 align: 'center',
                 vadjust: 6
             },
-            x: n.x,
-            y: n.y,
+            x: (n.x !== null && n.x !== undefined && !isNaN(Number(n.x))) ? Number(n.x) : undefined,
+            y: (n.y !== null && n.y !== undefined && !isNaN(Number(n.y))) ? Number(n.y) : undefined,
             _raw: n,
             _isFirstHop: isFirstHop
         };
@@ -1385,7 +1385,7 @@
                     springConstant: 0.08,
                     damping: 0.4
                 },
-                stabilization: { iterations: 150, fit: true }
+                stabilization: false
             },
             interaction: {
                 hover: true,
@@ -1400,20 +1400,38 @@
             }
         });
 
-        // Drag handler
+        // Drag handler — automatically save position when node is moved
         network.on('dragEnd', async function(params) {
-            for (const nodeId of params.nodes) {
+            let nodesToSave = [];
+            if (params.nodes && params.nodes.length > 0) {
+                nodesToSave = params.nodes;
+            } else if (params.pointer && params.pointer.DOM) {
+                const hoveredId = network.getNodeAt(params.pointer.DOM);
+                if (hoveredId) nodesToSave = [hoveredId];
+            }
+
+            for (const nodeId of nodesToSave) {
                 const pos = network.getPosition(nodeId);
-                const nodeData = nodesData.find(n => n.id === nodeId);
-                if (nodeData) {
-                    nodeData.x = pos.x;
-                    nodeData.y = pos.y;
+                if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
+                    const rx = Math.round(pos.x);
+                    const ry = Math.round(pos.y);
+                    const nodeData = nodesData.find(n => n.id === nodeId);
+                    if (nodeData) {
+                        nodeData.x = rx;
+                        nodeData.y = ry;
+                        if (nodeData._raw) {
+                            nodeData._raw.x = rx;
+                            nodeData._raw.y = ry;
+                        }
+                    }
                     try {
                         await apiFetch('/api/v1/topology/device/position', {
                             method: 'PUT',
-                            body: JSON.stringify({ id: nodeId, x: pos.x, y: pos.y })
+                            body: JSON.stringify({ id: nodeId, x: rx, y: ry })
                         });
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error('Failed to update node position:', e);
+                    }
                 }
             }
         });
@@ -1572,11 +1590,12 @@
             const list = nodesByLevel[lvl];
             const startY = -((list.length - 1) * Y_GAP) / 2;
             list.forEach((node, idx) => {
-                const x = lvl * X_GAP;
-                const y = startY + idx * Y_GAP;
+                const x = Math.round(lvl * X_GAP);
+                const y = Math.round(startY + idx * Y_GAP);
                 updates.push({ id: node.id, x, y });
                 node.x = x;
                 node.y = y;
+                if (node._raw) { node._raw.x = x; node._raw.y = y; }
                 apiFetch('/api/v1/topology/device/position', {
                     method: 'PUT',
                     body: JSON.stringify({ id: node.id, x, y })
@@ -1597,12 +1616,20 @@
         const updates = [];
         nodesData.forEach((n, i) => {
             const angle = angleStep * i - Math.PI / 2;
-            const x = centerX + radius * Math.cos(angle);
-            const y = centerY + radius * Math.sin(angle);
+            const x = Math.round(centerX + radius * Math.cos(angle));
+            const y = Math.round(centerY + radius * Math.sin(angle));
             updates.push({ id: n.id, x, y });
+            n.x = x;
+            n.y = y;
+            if (n._raw) { n._raw.x = x; n._raw.y = y; }
+            apiFetch('/api/v1/topology/device/position', {
+                method: 'PUT',
+                body: JSON.stringify({ id: n.id, x, y })
+            }).catch(() => {});
         });
         network.body.data.nodes.update(updates);
         fitGraph();
+        showToast('success', 'Arranged in Radial Layout');
     }
 
     /* ==================== DETAIL PANEL ==================== */
